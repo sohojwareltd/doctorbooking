@@ -1,0 +1,77 @@
+@import 'tailwindcss';
+
+/* Theme Color Variables */
+:root {
+    --thm-font: "Heebo", sans-serif;
+    --thm-b-font: "Rubik", sans-serif;
+    --thm-base: #00acb1;
+    --thm-base-hover: #00787b;
+    --thm-base-rgb: 0, 172, 177;
+    --thm-base-hue: #d0feff;
+    --thm-secondary: #005963;
+    --thm-secondary-hover: #004148;
+    --thm-secondary-rgb: 0, 89, 99;
+    --thm-b-text: #686a6f;
+    --thm-b-text-rgb: 104, 106, 111;
+    --thm-border: #ebf2f3;
+    --thm-border-rgb: 225, 225, 225;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #005963 0%, #00acb1 100%);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #00acb1 0%, #005963 100%);
+}
+
+/* Hide scrollbar for horizontal scroll containers */
+.scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}
+
+/* Smooth scrolling */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Premium font smoothing */
+* {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Selection color */
+::selection {
+    background-color: #00acb1;
+    color: white;
+}
+
+/* Backdrop blur support */
+@supports ((-webkit-backdrop-filter: blur(20px)) or (backdrop-filter: blur(20px))) {
+    .backdrop-blur-xl {
+        -webkit-backdrop-filter: blur(20px);
+        backdrop-filter: blur(20px);
+    }
+    
+    .backdrop-blur-sm {
+        -webkit-backdrop-filter: blur(4px);
+        backdrop-filter: blur(4px);
+    }
+}
