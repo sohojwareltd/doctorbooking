@@ -75,3 +75,71 @@ html {
         backdrop-filter: blur(4px);
     }
 }
+
+/* FullCalendar Custom Styles */
+.fc {
+    font-family: var(--thm-font);
+}
+
+.fc .fc-button {
+    background-color: var(--thm-base);
+    border-color: var(--thm-base);
+    text-transform: capitalize;
+    padding: 0.5rem 1rem;
+    font-weight: 500;
+}
+
+.fc .fc-button:hover {
+    background-color: var(--thm-base-hover);
+    border-color: var(--thm-base-hover);
+}
+
+.fc .fc-button-primary:not(:disabled).fc-button-active {
+    background-color: var(--thm-secondary);
+    border-color: var(--thm-secondary);
+}
+
+.fc-daygrid-day:hover {
+    background-color: rgba(0, 172, 177, 0.05);
+    cursor: pointer;
+}
+
+.fc-day-past {
+    background-color: #f9f9f9;
+}
+
+.fc .fc-daygrid-day-number {
+    color: var(--thm-secondary);
+    font-weight: 500;
+    padding: 0.5rem;
+    display: block;
+}
+
+.fc .fc-daygrid-day-frame {
+    min-height: 50px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+}
+
+.fc .fc-daygrid-day-top {
+    padding: 0.25rem;
+}
+
+.fc .fc-col-header-cell {
+    background-color: var(--thm-secondary);
+    color: white;
+    font-weight: 600;
+    padding: 0.5rem;
+}
+
+.fc .fc-toolbar-title {
+    color: var(--thm-secondary);
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+.fc .fc-daygrid-day.fc-day-selected {
+    background-color: rgba(0, 172, 177, 0.15);
+    border: 2px solid var(--thm-base);
+}

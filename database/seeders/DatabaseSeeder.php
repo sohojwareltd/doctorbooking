@@ -19,20 +19,16 @@ class DatabaseSeeder extends Seeder
             ['email' => 'test@example.com'],
             [
                 'name' => 'Test User',
-                'password' => 'password',
+                'password' => bcrypt('password'),
                 'email_verified_at' => now(),
             ]
         );
 
         // Seed dynamic data
         $this->call([
-            SettingSeeder::class,
-            StatSeeder::class,
-            ServiceSeeder::class,
-            CaseStudySeeder::class,
-            GallerySeeder::class,
-            ContactMethodSeeder::class,
-            OfficeHourSeeder::class,
+            AdminSeeder::class,
+            DoctorSeeder::class,
+            SampleDataSeeder::class,
         ]);
     }
 }

@@ -1,6 +1,7 @@
 import { Head, Link, usePage } from '@inertiajs/react';
+import UserLayout from '../layouts/UserLayout';
 
-export default function Dashboard() {
+export default function Dashboard({ stats = {} }) {
     const { auth } = usePage().props;
 
     return (
@@ -55,9 +56,18 @@ export default function Dashboard() {
 
                 <main>
                     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-                        <div className="overflow-hidden bg-white shadow-sm sm:rounded-lg">
-                            <div className="p-6 text-gray-900">
-                                You're logged in!
+                        <div className="grid gap-6 sm:grid-cols-2">
+                            <div className="overflow-hidden rounded-2xl border bg-white">
+                                <div className="p-6">
+                                    <div className="text-sm text-gray-500">Upcoming Appointments</div>
+                                    <div className="mt-2 text-3xl font-bold">{stats.upcomingAppointments ?? 0}</div>
+                                </div>
+                            </div>
+                            <div className="overflow-hidden rounded-2xl border bg-white">
+                                <div className="p-6">
+                                    <div className="text-sm text-gray-500">Prescriptions</div>
+                                    <div className="mt-2 text-3xl font-bold">{stats.prescriptions ?? 0}</div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -66,3 +76,5 @@ export default function Dashboard() {
         </>
     );
 }
+
+Dashboard.layout = (page) => <UserLayout>{page}</UserLayout>;
