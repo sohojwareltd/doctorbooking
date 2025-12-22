@@ -1,0 +1,17 @@
+{
+  "frontend/src/css/app.css": {
+    "file": "assets/app-B05Rn28N.css",
+    "src": "frontend/src/css/app.css",
+    "isEntry": true,
+    "name": "app",
+    "names": [
+      "app.css"
+    ]
+  },
+  "frontend/src/main.jsx": {
+    "file": "assets/main-8BnfTzkP.js",
+    "name": "main",
+    "src": "frontend/src/main.jsx",
+    "isEntry": true
+  }
+}
