@@ -113,20 +113,8 @@ export default function BookingSection() {
     `;
 
     return (
-        <SectionWrapper id="booking" className="relative overflow-hidden bg-gradient-to-b from-white to-gray-50">
-            {/* Background Pattern */}
-            <div className="absolute inset-0 opacity-5">
-                <div
-                    className="h-full w-full"
-                    style={{
-                        backgroundImage:
-                            'radial-gradient(circle, #005963 1px, transparent 1px)',
-                        backgroundSize: '40px 40px',
-                    }}
-                />
-            </div>
-
-            <div className="relative">
+        <SectionWrapper id="booking" className="bg-white">
+            <div>
                 <SectionTitle subtitle="Schedule your consultation and start your transformation journey">
                     Book Your Appointment
                 </SectionTitle>
@@ -147,12 +135,12 @@ export default function BookingSection() {
                 )}
 
                 <div className="mx-auto mb-6 max-w-5xl">
-                    <GlassCard className="bg-gradient-to-br from-white/60 to-white/30 p-4 sm:p-6">
+                    <GlassCard variant="solid" className="p-4 sm:p-6">
                         <h3 className="mb-4 text-xl font-bold text-[#005963]">Select Appointment Date & Time</h3>
                         
                         <div className="grid gap-4 lg:grid-cols-2">
                             {/* Calendar Section */}
-                            <div className="rounded-2xl border-2 border-[#00acb1]/20 bg-gradient-to-br from-white to-gray-50 p-3">
+                            <div className="rounded-2xl border-2 border-[#00acb1]/20 bg-white p-3">
                                 <h4 className="mb-2 text-base font-semibold text-[#005963]">Choose Date</h4>
                                 <FullCalendar
                                     plugins={[dayGridPlugin, interactionPlugin]}
@@ -178,7 +166,7 @@ export default function BookingSection() {
                             </div>
 
                             {/* Time Slots Section */}
-                            <div className="rounded-2xl border-2 border-[#00acb1]/20 bg-gradient-to-br from-white to-gray-50 p-3">
+                            <div className="rounded-2xl border-2 border-[#00acb1]/20 bg-white p-3">
                                 <h4 className="mb-2 text-base font-semibold text-[#005963]">
                                     Available Time Slots
                                     {selectedDate && <span className="ml-2 text-sm font-normal text-gray-600">({selectedDate})</span>}
@@ -245,7 +233,7 @@ export default function BookingSection() {
                     viewport={{ once: true }}
                     transition={{ duration: 0.6, ease: 'easeOut' }}
                 >
-                    <GlassCard className="bg-gradient-to-br from-white/60 to-white/30 p-8 sm:p-12">
+                    <GlassCard variant="solid" className="p-8 sm:p-12">
                         <form onSubmit={handleSubmit} className="space-y-6">
                             {/* Name */}
                             <motion.div

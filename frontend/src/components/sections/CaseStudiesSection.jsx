@@ -51,7 +51,7 @@ export default function CaseStudiesSection() {
     const { scrollXProgress } = useScroll({ container: containerRef });
 
     return (
-        <SectionWrapper id="results" className="bg-gradient-to-b from-white to-gray-50">
+        <SectionWrapper id="results" className="bg-white">
             <SectionTitle subtitle="Real transformations, real results - ethical presentation of patient journeys">
                 Patient Success Stories
             </SectionTitle>
@@ -77,7 +77,7 @@ export default function CaseStudiesSection() {
                                 ease: 'easeOut',
                             }}
                         >
-                            <GlassCard className="h-full bg-gradient-to-br from-white/80 to-white/40 p-8 lg:p-10">
+                            <GlassCard variant="solid" className="h-full p-8 lg:p-10">
                                 {/* Header */}
                                 <div className="mb-6">
                                     <div className="mb-3 flex items-center justify-between">

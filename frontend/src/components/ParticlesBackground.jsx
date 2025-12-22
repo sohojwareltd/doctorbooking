@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import Particles from 'react-tsparticles';
 import { loadSlim } from 'tsparticles-slim';
 
-export default function ParticlesBackground() {
+export default function ParticlesBackground({ id } = {}) {
     const particlesInit = useCallback(async (engine) => {
         await loadSlim(engine);
     }, []);
@@ -11,10 +11,13 @@ export default function ParticlesBackground() {
 
     return (
         <Particles
-            id="tsparticles"
+            id={id}
             init={particlesInit}
             loaded={particlesLoaded}
             options={{
+                fullScreen: {
+                    enable: false,
+                },
                 background: {
                     color: {
                         value: 'transparent',
@@ -24,12 +27,10 @@ export default function ParticlesBackground() {
                 interactivity: {
                     events: {
                         onClick: {
-                            enable: true,
-                            mode: 'push',
+                            enable: false,
                         },
                         onHover: {
-                            enable: true,
-                            mode: 'repulse',
+                            enable: false,
                         },
                         resize: true,
                     },
@@ -86,7 +87,8 @@ export default function ParticlesBackground() {
             style={{
                 position: 'absolute',
                 inset: 0,
-                zIndex: 1,
+                zIndex: 0,
+                pointerEvents: 'none',
             }}
         />
     );

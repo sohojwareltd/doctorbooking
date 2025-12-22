@@ -58,7 +58,7 @@ export default function GallerySection() {
     };
 
     return (
-        <SectionWrapper id="gallery" className="bg-gradient-to-b from-gray-50 to-white">
+        <SectionWrapper id="gallery" className="bg-white">
             <SectionTitle subtitle="Tour our state-of-the-art facility and comfortable treatment spaces">
                 Our Clinic
             </SectionTitle>

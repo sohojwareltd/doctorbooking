@@ -2,7 +2,6 @@ import { motion, useScroll, useTransform } from 'framer-motion';
 import { ArrowRight, CheckCircle2 } from 'lucide-react';
 import { useRef } from 'react';
 import PrimaryButton from '../PrimaryButton';
-import ParticlesBackground from '../ParticlesBackground';
 
 export default function HeroSection() {
     const ref = useRef(null);
@@ -25,20 +24,6 @@ export default function HeroSection() {
             ref={ref}
             className="relative w-full overflow-hidden bg-white py-20"
         >
-            {/* Particles Background */}
-            <ParticlesBackground />
-
-            {/* Background Pattern */}
-            <div className="absolute inset-0 z-0">
-                <div
-                    className="absolute inset-0 opacity-5"
-                    style={{
-                        backgroundImage: `radial-gradient(circle at 20% 50%, #00acb1 0%, transparent 50%),
-                                         radial-gradient(circle at 80% 80%, #00acb1 0%, transparent 50%)`,
-                    }}
-                />
-            </div>
-
             <div className="relative z-10 grid grid-cols-1 items-center gap-8 px-4 sm:px-8 lg:grid-cols-2 lg:gap-16 lg:px-12 xl:px-24 min-h-[calc(100vh-80px)]">
                 {/* Left Content */}
                 <motion.div
@@ -176,59 +161,14 @@ export default function HeroSection() {
                     className="relative hidden lg:flex items-center justify-center"
                 >
                     <div className="relative w-full max-w-sm">
-                        {/* Glow Background Effect */}
-                        <motion.div
-                            className="absolute inset-0 -z-10 rounded-3xl bg-gradient-to-br from-[#00acb1] to-[#005963] blur-2xl opacity-40"
-                            animate={{
-                                scale: [1, 1.1, 1],
-                            }}
-                            transition={{
-                                duration: 6,
-                                repeat: Infinity,
-                                ease: 'easeInOut',
-                            }}
-                        />
-
-                        {/* Floating Accent */}
-                        <motion.div
-                            className="absolute -top-8 -right-8 h-32 w-32 rounded-full bg-gradient-to-br from-[#00acb1]/20 to-transparent blur-2xl"
-                            animate={{
-                                y: [0, 20, 0],
-                                x: [0, 15, 0],
-                            }}
-                            transition={{
-                                duration: 6,
-                                repeat: Infinity,
-                                ease: 'easeInOut',
-                            }}
-                        />
-
                         {/* Main Image Container */}
-                        <motion.div
-                            className="relative z-20 aspect-[3/4] w-full overflow-hidden rounded-3xl shadow-2xl border-2 border-[#00acb1]/30 backdrop-blur-sm"
-                            whileHover={{ scale: 1.03, boxShadow: '0 30px 60px rgba(0, 172, 177, 0.3)' }}
-                            transition={{ duration: 0.4 }}
-                        >
+                        <div className="relative z-20 aspect-[3/4] w-full overflow-hidden rounded-3xl shadow-2xl border-2 border-[#00acb1]/30">
                             <img
                                 src="https://mediicc.netlify.app/images/thunb.png"
                                 alt="Dr. Sarah Johnson"
                                 className="h-full w-full object-cover"
                             />
-                            <div className="absolute inset-0 bg-gradient-to-t from-[#005963]/30 via-transparent to-transparent" />
-                        </motion.div>
-
-                        {/* Bottom Accent */}
-                        <motion.div
-                            className="absolute -bottom-8 -left-8 h-28 w-28 rounded-full bg-gradient-to-t from-[#00acb1]/15 to-transparent blur-2xl"
-                            animate={{
-                                y: [0, -20, 0],
-                            }}
-                            transition={{
-                                duration: 7,
-                                repeat: Infinity,
-                                ease: 'easeInOut',
-                            }}
-                        />
+                        </div>
                     </div>
                 </motion.div>
             </div>

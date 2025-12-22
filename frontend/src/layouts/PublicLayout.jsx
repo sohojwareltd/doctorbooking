@@ -35,7 +35,7 @@ export default function PublicLayout({ children }) {
             <nav className="sticky top-0 z-40 bg-gradient-to-r from-[#005963] to-[#004148] shadow-lg relative overflow-hidden">
                 {/* Particles Background */}
                 <div className="absolute inset-0 z-0">
-                    <ParticlesBackground />
+                    <ParticlesBackground id="tsparticles-nav" />
                 </div>
 
                 {/* Content */}
@@ -214,8 +214,13 @@ export default function PublicLayout({ children }) {
             </main>
 
             {/* Footer */}
-            <footer className="bg-gradient-to-r from-[#005963] to-[#004148] text-white">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            <footer className="bg-gradient-to-r from-[#005963] to-[#004148] text-white relative overflow-hidden">
+                {/* Particles Background */}
+                <div className="absolute inset-0 z-0">
+                    <ParticlesBackground id="tsparticles-footer" />
+                </div>
+
+                <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
                         <div>
                             <div className="flex items-center gap-3 mb-4">

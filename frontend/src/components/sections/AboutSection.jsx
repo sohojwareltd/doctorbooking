@@ -37,7 +37,7 @@ export default function AboutSection() {
     };
 
     return (
-        <SectionWrapper id="about" className="bg-gradient-to-b from-white to-gray-50">
+        <SectionWrapper id="about" className="bg-white">
             <SectionTitle subtitle="Excellence in dermatological care and aesthetic medicine">
                 About Dr. Sarah Johnson
             </SectionTitle>
@@ -57,30 +57,18 @@ export default function AboutSection() {
                             alt="Dr. Sarah Johnson"
                             className="h-full w-full object-cover"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-[#005963]/40 to-transparent" />
+                        {/* Image kept solid; no overlay */}
                     </div>
 
-                    {/* Floating Stats Card with Pulse */}
-                    <motion.div
-                        variants={pulseVariants}
-                        animate="pulse"
-                        transition={{
-                            duration: 2,
-                            repeat: Infinity,
-                            ease: 'easeInOut',
-                        }}
-                    >
-                        <GlassCard className="absolute -bottom-8 -right-8 bg-white/20 p-6">
+                    {/* Floating Stats Card (solid) */}
+                    <div className="relative z-10">
+                        <GlassCard variant="solid" hover={false} className="absolute -bottom-8 -right-8 p-6">
                             <div className="text-center">
-                                <div className="text-3xl font-bold text-[#005963]">
-                                    98%
-                                </div>
-                                <div className="text-sm font-medium text-gray-700">
-                                    Success Rate
-                                </div>
+                                <div className="text-3xl font-bold text-[#005963]">98%</div>
+                                <div className="text-sm font-medium text-gray-700">Success Rate</div>
                             </div>
                         </GlassCard>
-                    </motion.div>
+                    </div>
                 </motion.div>
 
                 {/* Right: Content */}
@@ -147,7 +135,7 @@ export default function AboutSection() {
                     >
                         {stats.map((stat, index) => (
                             <motion.div key={index} variants={itemVariants}>
-                                <GlassCard className="bg-gradient-to-br from-white/40 to-white/10 p-6 text-center">
+                                <GlassCard variant="solid" hover={false} className="p-6 text-center">
                                     <stat.icon className="mx-auto mb-3 h-8 w-8 text-[#00acb1]" />
                                     <div className="mb-1 text-2xl font-bold text-[#005963]">
                                         {stat.value}

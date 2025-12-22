@@ -55,7 +55,7 @@ export default function ServicesSection() {
     };
 
     return (
-        <SectionWrapper id="services" className="bg-gradient-to-b from-gray-50 to-white">
+        <SectionWrapper id="services" className="bg-white">
             <SectionTitle subtitle="Comprehensive dermatological and aesthetic treatments tailored to your unique needs">
                 Services & Expertise
             </SectionTitle>
@@ -69,15 +69,11 @@ export default function ServicesSection() {
             >
                 {services.map((service, index) => (
                     <motion.div key={index} variants={itemVariants}>
-                        <GlassCard className="group h-full bg-gradient-to-br from-white/60 to-white/30 p-8 transition-all duration-300">
+                        <GlassCard variant="solid" hover={false} className="h-full p-8">
                             {/* Icon */}
-                            <motion.div
-                                className="mb-6 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-[#00acb1] shadow-lg"
-                                whileHover={{ rotate: 360, scale: 1.1, backgroundColor: '#005963' }}
-                                transition={{ duration: 0.6, ease: 'easeInOut' }}
-                            >
+                            <div className="mb-6 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-[#00acb1] shadow-lg">
                                 <service.icon className="h-8 w-8 text-white" />
-                            </motion.div>
+                            </div>
 
                             {/* Title */}
                             <h3 className="mb-4 text-2xl font-bold text-[#005963]">
@@ -105,15 +101,6 @@ export default function ServicesSection() {
                                     </motion.div>
                                 ))}
                             </div>
-
-                            {/* Hover Glow Effect */}
-                            <motion.div
-                                className="absolute inset-0 rounded-3xl opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-                                style={{
-                                    background:
-                                        'radial-gradient(circle at 50% 0%, rgba(0, 180, 216, 0.1), transparent 50%)',
-                                }}
-                            />
                         </GlassCard>
                     </motion.div>
                 ))}
