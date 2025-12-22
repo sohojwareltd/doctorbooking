@@ -34,7 +34,7 @@ export default function ContactSection() {
                 Contact & Location
             </SectionTitle>
 
-            <div className="grid gap-12 lg:grid-cols-2">
+            <div className="grid gap-10 lg:grid-cols-2 lg:gap-16">
                 {/* Left: Contact Methods */}
                 <motion.div
                     className="space-y-6"
@@ -45,16 +45,18 @@ export default function ContactSection() {
                 >
                     {/* Address Card */}
                     <GlassCard variant="solid" className="p-8">
-                        <div className="mb-4 flex items-start">
-                            <div className="mr-4 rounded-2xl bg-[#005963] p-4">
+                        <div className="flex items-start gap-4">
+                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#005963]">
                                 <MapPin className="h-6 w-6 text-white" />
                             </div>
-                            <div>
+                            <div className="min-w-0">
                                 <h3 className="mb-2 text-xl font-bold text-[#005963]">
                                     Our Clinic
                                 </h3>
-                                <p className="text-gray-700">
-                                    <strong>Johnson Dermatology & Aesthetics</strong>
+                                <p className="text-gray-700 leading-relaxed">
+                                    <span className="font-semibold">
+                                        Johnson Dermatology & Aesthetics
+                                    </span>
                                     <br />
                                     123 Medical Plaza, Suite 500
                                     <br />
@@ -81,14 +83,12 @@ export default function ContactSection() {
                             >
                                 <GlassCard variant="solid" className="p-6">
                                     <div className="flex items-center">
-                                        <motion.div
-                                            className="mr-4 rounded-xl p-3"
+                                        <div
+                                            className="mr-4 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
                                             style={{ backgroundColor: method.color }}
-                                            whileHover={{ scale: 1.1, rotate: 5 }}
-                                            transition={{ duration: 0.3 }}
                                         >
                                             <method.icon className="h-5 w-5 text-white" />
-                                        </motion.div>
+                                        </div>
                                         <div className="flex-1">
                                             <div className="text-sm font-medium text-gray-600">
                                                 {method.title}
@@ -108,16 +108,16 @@ export default function ContactSection() {
                         <h3 className="mb-4 text-xl font-bold text-[#005963]">
                             Office Hours
                         </h3>
-                        <div className="space-y-2 text-gray-700">
-                            <div className="flex justify-between">
+                        <div className="space-y-3 text-gray-700">
+                            <div className="flex items-center justify-between rounded-xl bg-gray-50 px-4 py-3">
                                 <span className="font-medium">Monday - Friday</span>
                                 <span>9:00 AM - 6:00 PM</span>
                             </div>
-                            <div className="flex justify-between">
+                            <div className="flex items-center justify-between rounded-xl bg-gray-50 px-4 py-3">
                                 <span className="font-medium">Saturday</span>
                                 <span>10:00 AM - 4:00 PM</span>
                             </div>
-                            <div className="flex justify-between">
+                            <div className="flex items-center justify-between rounded-xl bg-gray-50 px-4 py-3">
                                 <span className="font-medium">Sunday</span>
                                 <span className="text-gray-500">Closed</span>
                             </div>
@@ -133,7 +133,16 @@ export default function ContactSection() {
                     transition={{ duration: 0.6, ease: 'easeOut' }}
                     className="h-full min-h-[500px]"
                 >
-                    <GlassCard variant="solid" className="h-full overflow-hidden p-0">
+                    <GlassCard variant="solid" className="h-full overflow-hidden">
+                        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+                            <div>
+                                <div className="text-sm font-medium text-gray-600">Location</div>
+                                <div className="text-lg font-semibold text-[#005963]">Find us on the map</div>
+                            </div>
+                            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#00acb1]/10">
+                                <MapPin className="h-5 w-5 text-[#005963]" />
+                            </div>
+                        </div>
                         <iframe
                             src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3305.4374079384843!2d-118.40168492346382!3d34.063308273156894!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x80c2bbf2c2d7d7a1%3A0x7e1b2e3f4f5e6d7c!2sBeverly%20Hills%2C%20CA%2090210!5e0!3m2!1sen!2sus!4v1234567890123!5m2!1sen!2sus"
                             width="100%"

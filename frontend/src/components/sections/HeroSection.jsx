@@ -2,6 +2,7 @@ import { motion, useScroll, useTransform } from 'framer-motion';
 import { ArrowRight, CheckCircle2 } from 'lucide-react';
 import { useRef } from 'react';
 import PrimaryButton from '../PrimaryButton';
+import ParticlesBackground from '../ParticlesBackground';
 
 export default function HeroSection() {
     const ref = useRef(null);
@@ -24,6 +25,11 @@ export default function HeroSection() {
             ref={ref}
             className="relative w-full overflow-hidden bg-white py-20"
         >
+            {/* Particles (pulse) */}
+            <div className="absolute inset-0 z-0">
+                <ParticlesBackground id="tsparticles-hero" variant="pulse" />
+            </div>
+
             <div className="relative z-10 grid grid-cols-1 items-center gap-8 px-4 sm:px-8 lg:grid-cols-2 lg:gap-16 lg:px-12 xl:px-24 min-h-[calc(100vh-80px)]">
                 {/* Left Content */}
                 <motion.div
