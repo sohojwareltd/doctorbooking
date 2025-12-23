@@ -95,7 +95,13 @@ Route::middleware(['auth', 'verified', 'role:user'])->prefix('user')->name('user
             ->get(['id','appointment_date','appointment_time','status','symptoms']);
 
         return Inertia::render('user/Appointments', [
-            'appointments' => $appointments,
+            'appointments' => $appointments->map(fn ($a) => [
+                'id' => $a->id,
+                'appointment_date' => $a->appointment_date?->toDateString(),
+                'appointment_time' => substr((string) $a->appointment_time, 0, 5),
+                'status' => $a->status,
+                'symptoms' => $a->symptoms,
+            ]),
         ]);
     })->name('appointments');
 
@@ -154,7 +160,7 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
                 'id' => $a->id,
                 'user_id' => $a->user_id,
                 'user' => $a->user ? ['id' => $a->user->id, 'name' => $a->user->name] : null,
-                'appointment_date' => (string) $a->appointment_date,
+                'appointment_date' => $a->appointment_date?->toDateString(),
                 'appointment_time' => substr((string) $a->appointment_time, 0, 5),
                 'status' => $a->status,
                 'symptoms' => $a->symptoms,

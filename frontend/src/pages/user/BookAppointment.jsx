@@ -1,6 +1,6 @@
 import { Head, usePage } from '@inertiajs/react';
 import { Calendar, Clock, Mail, Phone, User } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
@@ -11,6 +11,7 @@ import UserLayout from '../../layouts/UserLayout';
 export default function UserBookAppointment() {
   const page = usePage();
   const authUser = page?.props?.auth?.user;
+  const contactPhone = page?.props?.site?.contactPhone || '';
 
   const initial = useMemo(() => ({
     name: authUser?.name || '',
@@ -23,11 +24,14 @@ export default function UserBookAppointment() {
 
   const [formData, setFormData] = useState(initial);
   const [selectedDate, setSelectedDate] = useState(null);
+  const selectedDateRef = useRef(null);
+  const selectedTimeRef = useRef('');
   const [availableSlots, setAvailableSlots] = useState([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
 
   const fetchAvailableSlots = async (date) => {
     setLoadingSlots(true);
@@ -45,6 +49,8 @@ export default function UserBookAppointment() {
   const handleDateClick = (info) => {
     const clickedDate = info.dateStr;
     setSelectedDate(clickedDate);
+    selectedDateRef.current = clickedDate;
+    selectedTimeRef.current = '';
     setFormData((p) => ({ ...p, date: clickedDate, time: '' }));
     fetchAvailableSlots(clickedDate);
   };
@@ -68,14 +74,15 @@ export default function UserBookAppointment() {
           name: formData.name,
           phone: formData.phone,
           email: formData.email,
-          date: formData.date,
-          time: formData.time,
+          date: selectedDateRef.current || formData.date,
+          time: selectedTimeRef.current || formData.time,
           message: formData.message,
         }),
       });
 
       if (res.ok) {
         setSuccess('Appointment requested successfully. We will contact you shortly.');
+        setShowSuccessPopup(true);
         setFormData((p) => ({ ...p, date: '', time: '', message: '' }));
         setSelectedDate(null);
         setAvailableSlots([]);
@@ -95,6 +102,27 @@ export default function UserBookAppointment() {
   return (
     <>
       <Head title="Book Appointment" />
+
+      {showSuccessPopup && success && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <GlassCard variant="solid" className="w-full max-w-lg p-6">
+            <div className="text-2xl font-extrabold text-[#005963]">Appointment Submitted</div>
+            <p className="mt-2 text-sm text-gray-700">{success}</p>
+            <div className="mt-4 rounded-2xl border border-[#00acb1]/20 bg-white px-4 py-3">
+              <div className="text-sm font-semibold text-[#005963]">Need help?</div>
+              <div className="mt-1 text-sm text-gray-700">
+                Contact: <span className="font-semibold">{contactPhone || 'Please check Contact page for phone number.'}</span>
+              </div>
+            </div>
+            <div className="mt-5 flex justify-end">
+              <PrimaryButton type="button" onClick={() => setShowSuccessPopup(false)}>
+                Close
+              </PrimaryButton>
+            </div>
+          </GlassCard>
+        </div>
+      )}
+
       <div className="mx-auto max-w-6xl px-4 py-10">
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-[#005963]">Book Appointment</h1>
@@ -116,6 +144,8 @@ export default function UserBookAppointment() {
                 initialView="dayGridMonth"
                 dateClick={handleDateClick}
                 selectable
+                showNonCurrentDates={false}
+                fixedWeekCount={false}
                 headerToolbar={{ left: 'prev', center: 'title', right: 'next' }}
                 height="auto"
                 validRange={{ start: new Date().toISOString().split('T')[0] }}
@@ -157,7 +187,10 @@ export default function UserBookAppointment() {
                     <button
                       key={slot}
                       type="button"
-                      onClick={() => setFormData((p) => ({ ...p, time: slot }))}
+                      onClick={() => {
+                        selectedTimeRef.current = slot;
+                        setFormData((p) => ({ ...p, time: slot }));
+                      }}
                       className={`rounded-lg border-2 px-3 py-2 text-center text-sm font-semibold transition-all ${
                         formData.time === slot
                           ? 'border-[#005963] bg-[#005963] text-white'

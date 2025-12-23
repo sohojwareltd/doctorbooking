@@ -84,13 +84,25 @@ class AppointmentController extends Controller
     {
         $doctor = User::where('role', 'doctor')->first();
         if (!$doctor) {
-            return response()->json(['slots' => [], 'date' => $date]);
+            return response()->json([
+                'slots' => [],
+                'all' => [],
+                'booked' => [],
+                'closed' => true,
+                'date' => $date,
+            ]);
         }
 
         try {
             $carbon = now()->parse($date);
         } catch (\Throwable $e) {
-            return response()->json(['slots' => [], 'date' => $date]);
+            return response()->json([
+                'slots' => [],
+                'all' => [],
+                'booked' => [],
+                'closed' => true,
+                'date' => $date,
+            ]);
         }
 
         $dow = $carbon->dayOfWeek; // 0=Sun ... 6=Sat
@@ -103,11 +115,27 @@ class AppointmentController extends Controller
             ->orderBy('start_time')
             ->get(['start_time', 'end_time']);
 
-        $isClosed = $schedule?->is_closed ?? ($dow === 0);
+        if (!$schedule && $ranges->count() === 0) {
+            return response()->json([
+                'slots' => [],
+                'all' => [],
+                'booked' => [],
+                'closed' => true,
+                'date' => $date,
+            ]);
+        }
+
+        $isClosed = $schedule?->is_closed ?? false;
         $slotMinutes = $schedule?->slot_minutes ?? 30;
 
         if ($isClosed || $slotMinutes <= 0) {
-            return response()->json(['slots' => [], 'date' => $date]);
+            return response()->json([
+                'slots' => [],
+                'all' => [],
+                'booked' => [],
+                'closed' => true,
+                'date' => $date,
+            ]);
         }
 
         // If no explicit ranges are configured, fall back to the legacy single range.
@@ -115,7 +143,13 @@ class AppointmentController extends Controller
             $start = $schedule?->start_time ? substr((string) $schedule->start_time, 0, 5) : '09:00';
             $end = $schedule?->end_time ? substr((string) $schedule->end_time, 0, 5) : '17:00';
             if (!$start || !$end) {
-                return response()->json(['slots' => [], 'date' => $date]);
+                return response()->json([
+                    'slots' => [],
+                    'all' => [],
+                    'booked' => [],
+                    'closed' => false,
+                    'date' => $date,
+                ]);
             }
             $ranges = collect([(object) ['start_time' => $start . ':00', 'end_time' => $end . ':00']]);
         }
@@ -151,9 +185,15 @@ class AppointmentController extends Controller
             ->toArray();
 
         $availableSlots = array_values(array_diff($allSlots, $bookedSlots));
+        $bookedUnique = array_values(array_unique($bookedSlots));
+        $bookedInSchedule = array_values(array_intersect($allSlots, $bookedUnique));
+        sort($bookedInSchedule);
 
         return response()->json([
             'slots' => $availableSlots,
+            'all' => $allSlots,
+            'booked' => $bookedInSchedule,
+            'closed' => false,
             'date' => $date,
         ]);
     }

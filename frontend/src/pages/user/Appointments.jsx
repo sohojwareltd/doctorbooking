@@ -3,6 +3,24 @@ import UserLayout from '../../layouts/UserLayout';
 import GlassCard from '../../components/GlassCard';
 
 export default function UserAppointments({ appointments = [] }) {
+  const formatTime12h = (time) => {
+    if (!time || typeof time !== 'string') return '';
+    const parts = time.split(':');
+    const h = Number(parts[0] ?? 0);
+    const m = parts[1] ?? '00';
+    const hour12 = ((h + 11) % 12) + 1;
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    return `${hour12}:${m} ${ampm}`;
+  };
+
+  const statusBadge = (status) => {
+    const s = (status || '').toLowerCase();
+    if (s === 'approved') return 'border-emerald-200 bg-emerald-50 text-emerald-800';
+    if (s === 'completed') return 'border-sky-200 bg-sky-50 text-sky-800';
+    if (s === 'cancelled') return 'border-rose-200 bg-rose-50 text-rose-800';
+    return 'border-amber-200 bg-amber-50 text-amber-800';
+  };
+
   return (
     <>
       <Head title="My Appointments" />
@@ -27,8 +45,12 @@ export default function UserAppointments({ appointments = [] }) {
                 {appointments.map((a) => (
                   <tr key={a.id}>
                     <td className="px-4 py-3 text-sm text-gray-700">{a.appointment_date}</td>
-                    <td className="px-4 py-3 text-sm text-gray-700">{a.appointment_time}</td>
-                    <td className="px-4 py-3 text-sm font-semibold capitalize text-[#005963]">{a.status}</td>
+                    <td className="px-4 py-3 text-sm text-gray-700">{formatTime12h(a.appointment_time)}</td>
+                    <td className="px-4 py-3 text-sm">
+                      <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold capitalize ${statusBadge(a.status)}`}>
+                        {a.status}
+                      </span>
+                    </td>
                     <td className="px-4 py-3 text-sm text-gray-700">{a.symptoms || '-'}</td>
                   </tr>
                 ))}
