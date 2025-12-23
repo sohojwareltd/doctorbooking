@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Appointment;
 use App\Models\DoctorSchedule;
+use App\Models\DoctorScheduleRange;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -97,28 +98,51 @@ class AppointmentController extends Controller
             ->where('day_of_week', $dow)
             ->first();
 
+        $ranges = DoctorScheduleRange::where('doctor_id', $doctor->id)
+            ->where('day_of_week', $dow)
+            ->orderBy('start_time')
+            ->get(['start_time', 'end_time']);
+
         $isClosed = $schedule?->is_closed ?? ($dow === 0);
         $slotMinutes = $schedule?->slot_minutes ?? 30;
 
-        $start = $schedule?->start_time ? substr((string) $schedule->start_time, 0, 5) : '09:00';
-        $end = $schedule?->end_time ? substr((string) $schedule->end_time, 0, 5) : '17:00';
-
-        if ($isClosed || !$start || !$end) {
+        if ($isClosed || $slotMinutes <= 0) {
             return response()->json(['slots' => [], 'date' => $date]);
         }
 
-        $startAt = now()->parse($date . ' ' . $start);
-        $endAt = now()->parse($date . ' ' . $end);
-        if ($endAt->lt($startAt) || $slotMinutes <= 0) {
-            return response()->json(['slots' => [], 'date' => $date]);
+        // If no explicit ranges are configured, fall back to the legacy single range.
+        if ($ranges->count() === 0) {
+            $start = $schedule?->start_time ? substr((string) $schedule->start_time, 0, 5) : '09:00';
+            $end = $schedule?->end_time ? substr((string) $schedule->end_time, 0, 5) : '17:00';
+            if (!$start || !$end) {
+                return response()->json(['slots' => [], 'date' => $date]);
+            }
+            $ranges = collect([(object) ['start_time' => $start . ':00', 'end_time' => $end . ':00']]);
         }
 
-        $allSlots = [];
-        $cursor = $startAt->copy();
-        while ($cursor->lte($endAt)) {
-            $allSlots[] = $cursor->format('H:i');
-            $cursor->addMinutes($slotMinutes);
+        $slotMap = [];
+        foreach ($ranges as $range) {
+            $start = $range->start_time ? substr((string) $range->start_time, 0, 5) : null;
+            $end = $range->end_time ? substr((string) $range->end_time, 0, 5) : null;
+            if (!$start || !$end) {
+                continue;
+            }
+
+            $startAt = now()->parse($date . ' ' . $start);
+            $endAt = now()->parse($date . ' ' . $end);
+            if ($endAt->lt($startAt)) {
+                continue;
+            }
+
+            $cursor = $startAt->copy();
+            while ($cursor->lte($endAt)) {
+                $slotMap[$cursor->format('H:i')] = true;
+                $cursor->addMinutes($slotMinutes);
+            }
         }
+
+        $allSlots = array_keys($slotMap);
+        sort($allSlots);
 
         $bookedSlots = Appointment::where('doctor_id', $doctor->id)
             ->whereDate('appointment_date', $date)

@@ -5,6 +5,7 @@ use Inertia\Inertia;
 use Laravel\Fortify\Features;
 use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\DoctorScheduleController;
+use App\Http\Controllers\PrescriptionController;
 use App\Http\Controllers\Admin\SiteContentController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
@@ -142,14 +143,23 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
 
     Route::get('/appointments', function () {
         $doctor = Auth::user();
-        $appointments = Appointment::with('user:id,name')
+        $appointments = Appointment::with(['user:id,name', 'prescription:id,appointment_id'])
             ->where('doctor_id', $doctor->id)
             ->orderByDesc('appointment_date')
             ->orderByDesc('appointment_time')
             ->get(['id','user_id','appointment_date','appointment_time','status','symptoms']);
 
         return Inertia::render('doctor/Appointments', [
-            'appointments' => $appointments,
+            'appointments' => $appointments->map(fn ($a) => [
+                'id' => $a->id,
+                'user_id' => $a->user_id,
+                'user' => $a->user ? ['id' => $a->user->id, 'name' => $a->user->name] : null,
+                'appointment_date' => (string) $a->appointment_date,
+                'appointment_time' => substr((string) $a->appointment_time, 0, 5),
+                'status' => $a->status,
+                'symptoms' => $a->symptoms,
+                'has_prescription' => $a->prescription !== null,
+            ]),
         ]);
     })->name('appointments');
     Route::post('/appointments/{appointment}/status', [AppointmentController::class, 'updateStatus'])->name('appointments.status');
@@ -174,7 +184,30 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
     Route::get('/schedule', [DoctorScheduleController::class, 'show'])->name('schedule');
     Route::post('/schedule', [DoctorScheduleController::class, 'update'])->name('schedule.update');
     Route::get('/profile', fn () => Inertia::render('doctor/Profile'))->name('profile');
-    Route::get('/prescriptions/create', fn () => Inertia::render('doctor/CreatePrescription'))->name('prescriptions.create');
+    Route::get('/prescriptions/create', function () {
+        $doctor = Auth::user();
+
+        $appointments = Appointment::with('user:id,name')
+            ->where('doctor_id', $doctor->id)
+            ->whereIn('status', ['approved', 'completed'])
+            ->whereDoesntHave('prescription')
+            ->orderByDesc('appointment_date')
+            ->orderByDesc('appointment_time')
+            ->get(['id', 'user_id', 'appointment_date', 'appointment_time', 'status']);
+
+        return Inertia::render('doctor/CreatePrescription', [
+            'appointments' => $appointments->map(fn ($a) => [
+                'id' => $a->id,
+                'user_id' => $a->user_id,
+                'user' => $a->user ? ['id' => $a->user->id, 'name' => $a->user->name] : null,
+                'appointment_date' => (string) $a->appointment_date,
+                'appointment_time' => substr((string) $a->appointment_time, 0, 5),
+                'status' => $a->status,
+            ]),
+        ]);
+    })->name('prescriptions.create');
+
+    Route::post('/prescriptions', [PrescriptionController::class, 'store'])->name('prescriptions.store');
 });
 
 /*
