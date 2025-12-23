@@ -69,7 +69,7 @@ export default function ContactSection() {
                     </GlassCard>
 
                     {/* Contact Methods */}
-                    <div className="space-y-4">
+                    <div className="space-y-6">
                         {contactMethods.map((method, index) => (
                             <motion.a
                                 key={index}
@@ -80,17 +80,18 @@ export default function ContactSection() {
                                 whileInView={{ opacity: 1, y: 0 }}
                                 viewport={{ once: true }}
                                 transition={{ delay: index * 0.1, duration: 0.5 }}
+                                className="block"
                             >
                                 <GlassCard variant="solid" className="p-6">
-                                    <div className="flex items-center">
+                                    <div className="flex items-center gap-4">
                                         <div
-                                            className="mr-4 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
+                                            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl"
                                             style={{ backgroundColor: method.color }}
                                         >
-                                            <method.icon className="h-5 w-5 text-white" />
+                                            <method.icon className="h-6 w-6 text-white" />
                                         </div>
                                         <div className="flex-1">
-                                            <div className="text-sm font-medium text-gray-600">
+                                            <div className="mb-1 text-sm font-medium text-gray-600">
                                                 {method.title}
                                             </div>
                                             <div className="text-lg font-semibold text-[#005963]">

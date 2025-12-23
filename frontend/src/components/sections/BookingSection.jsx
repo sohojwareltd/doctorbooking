@@ -105,11 +105,11 @@ export default function BookingSection() {
 
     const inputClasses = (name) => `
         w-full rounded-2xl border-2 
-        ${focused === name ? 'border-[#00acb1] bg-white/80' : 'border-white/30 bg-white/50'}
-        px-4 py-4 pl-12 text-gray-900 backdrop-blur-sm
+        ${focused === name ? 'border-[#00acb1] bg-white' : 'border-[#00acb1]/60 bg-white'}
+        px-4 py-4 pl-12 text-gray-900
         transition-all duration-300 ease-out
-        focus:border-[#00acb1] focus:bg-white/80 focus:outline-none focus:ring-4 focus:ring-[#00acb1]/20
-        placeholder:text-gray-500
+        focus:border-[#00acb1] focus:bg-white focus:outline-none focus:ring-4 focus:ring-[#00acb1]/30
+        placeholder:text-gray-500 shadow-sm
     `;
 
     return (
@@ -233,76 +233,89 @@ export default function BookingSection() {
                     viewport={{ once: true }}
                     transition={{ duration: 0.6, ease: 'easeOut' }}
                 >
-                    <GlassCard variant="solid" className="p-8 sm:p-12">
+                    <GlassCard variant="solid" className="border-2 border-[#00acb1]/50 p-8 sm:p-12">
                         <form onSubmit={handleSubmit} className="space-y-6">
-                            {/* Name */}
-                            <motion.div
-                                initial={{ opacity: 0, x: -20 }}
-                                whileInView={{ opacity: 1, x: 0 }}
-                                viewport={{ once: true }}
-                                transition={{ delay: 0.1 }}
-                                className="relative"
-                            >
-                                <User className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#005963]" />
-                                <input
-                                    type="text"
-                                    name="name"
-                                    placeholder="Full Name"
-                                    required
-                                    value={formData.name}
-                                    onChange={handleChange}
-                                    onFocus={() => setFocused('name')}
-                                    onBlur={() => setFocused('')}
-                                    className={inputClasses('name')}
-                                    disabled={submitting}
-                                />
-                            </motion.div>
-
-                            {/* Phone & Email */}
-                            <div className="grid gap-6 sm:grid-cols-2">
+                            {/* Name, Email, Phone Section with Border */}
+                            <div className="rounded-2xl border-2 border-[#00acb1]/30 bg-white/20 p-6">
+                                {/* Name */}
                                 <motion.div
                                     initial={{ opacity: 0, x: -20 }}
                                     whileInView={{ opacity: 1, x: 0 }}
                                     viewport={{ once: true }}
-                                    transition={{ delay: 0.2 }}
-                                    className="relative"
+                                    transition={{ delay: 0.1 }}
+                                    className="mb-6"
                                 >
-                                    <Phone className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#005963]" />
-                                    <input
-                                        type="tel"
-                                        name="phone"
-                                        placeholder="Phone Number"
-                                        required
-                                        value={formData.phone}
-                                        onChange={handleChange}
-                                        onFocus={() => setFocused('phone')}
-                                        onBlur={() => setFocused('')}
-                                        className={inputClasses('phone')}
-                                        disabled={submitting}
-                                    />
+                                    <label className="mb-2 block text-sm font-semibold text-[#005963]">Full Name</label>
+                                    <p className="mb-3 text-xs text-gray-600">Enter your complete full name</p>
+                                    <div className="relative">
+                                        <User className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#005963]" />
+                                        <input
+                                            type="text"
+                                            name="name"
+                                            placeholder="Full Name"
+                                            required
+                                            value={formData.name}
+                                            onChange={handleChange}
+                                            onFocus={() => setFocused('name')}
+                                            onBlur={() => setFocused('')}
+                                            className={inputClasses('name')}
+                                            disabled={submitting}
+                                        />
+                                    </div>
                                 </motion.div>
 
-                                <motion.div
-                                    initial={{ opacity: 0, x: -20 }}
-                                    whileInView={{ opacity: 1, x: 0 }}
-                                    viewport={{ once: true }}
-                                    transition={{ delay: 0.3 }}
-                                    className="relative"
-                                >
-                                    <Mail className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#005963]" />
-                                    <input
-                                        type="email"
-                                        name="email"
-                                        placeholder="Email Address"
-                                        required
-                                        value={formData.email}
-                                        onChange={handleChange}
-                                        onFocus={() => setFocused('email')}
-                                        onBlur={() => setFocused('')}
-                                        className={inputClasses('email')}
-                                        disabled={submitting}
-                                    />
-                                </motion.div>
+                                {/* Phone & Email */}
+                                <div className="grid gap-6 sm:grid-cols-2">
+                                    <motion.div
+                                        initial={{ opacity: 0, x: -20 }}
+                                        whileInView={{ opacity: 1, x: 0 }}
+                                        viewport={{ once: true }}
+                                        transition={{ delay: 0.2 }}
+                                    >
+                                        <label className="mb-2 block text-sm font-semibold text-[#005963]">Phone Number</label>
+                                        <p className="mb-3 text-xs text-gray-600">We'll use this to contact you about your appointment</p>
+                                        <div className="relative">
+                                            <Phone className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#005963]" />
+                                            <input
+                                                type="tel"
+                                                name="phone"
+                                                placeholder="Phone Number"
+                                                required
+                                                value={formData.phone}
+                                                onChange={handleChange}
+                                                onFocus={() => setFocused('phone')}
+                                                onBlur={() => setFocused('')}
+                                                className={inputClasses('phone')}
+                                                disabled={submitting}
+                                            />
+                                        </div>
+                                    </motion.div>
+
+                                    <motion.div
+                                        initial={{ opacity: 0, x: -20 }}
+                                        whileInView={{ opacity: 1, x: 0 }}
+                                        viewport={{ once: true }}
+                                        transition={{ delay: 0.3 }}
+                                    >
+                                        <label className="mb-2 block text-sm font-semibold text-[#005963]">Email Address</label>
+                                        <p className="mb-3 text-xs text-gray-600">Provide your email for appointment confirmation</p>
+                                        <div className="relative">
+                                            <Mail className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#005963]" />
+                                            <input
+                                                type="email"
+                                                name="email"
+                                                placeholder="Email Address"
+                                                required
+                                                value={formData.email}
+                                                onChange={handleChange}
+                                                onFocus={() => setFocused('email')}
+                                                onBlur={() => setFocused('')}
+                                                className={inputClasses('email')}
+                                                disabled={submitting}
+                                            />
+                                        </div>
+                                    </motion.div>
+                                </div>
                             </div>
 
                             {/* Message */}
@@ -311,19 +324,23 @@ export default function BookingSection() {
                                 whileInView={{ opacity: 1, x: 0 }}
                                 viewport={{ once: true }}
                                 transition={{ delay: 0.6 }}
-                                className="relative"
+                                className="rounded-2xl border-2 border-[#00acb1]/30 bg-white/20 p-6"
                             >
-                                <textarea
-                                    name="message"
-                                    placeholder="Tell us about your concerns or what you'd like to address..."
-                                    rows={4}
-                                    value={formData.message}
-                                    onChange={handleChange}
-                                    onFocus={() => setFocused('message')}
-                                    onBlur={() => setFocused('')}
-                                    className={`${inputClasses('message')} resize-none !pl-4`}
-                                    disabled={submitting}
-                                />
+                                <label className="mb-2 block text-sm font-semibold text-[#005963]">Message</label>
+                                <p className="mb-3 text-xs text-gray-600">Tell us about your concerns or what you'd like to address</p>
+                                <div className="relative">
+                                    <textarea
+                                        name="message"
+                                        placeholder="Tell us about your concerns or what you'd like to address..."
+                                        rows={4}
+                                        value={formData.message}
+                                        onChange={handleChange}
+                                        onFocus={() => setFocused('message')}
+                                        onBlur={() => setFocused('')}
+                                        className={`${inputClasses('message')} resize-none !pl-4`}
+                                        disabled={submitting}
+                                    />
+                                </div>
                             </motion.div>
 
                             {/* Submit Button */}

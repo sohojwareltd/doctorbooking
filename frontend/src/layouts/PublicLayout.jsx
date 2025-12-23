@@ -235,25 +235,31 @@ export default function PublicLayout({ children }) {
                         </div>
                         <div>
                             <h4 className="font-semibold mb-4">Quick Links</h4>
-                            <div className="space-y-2">
-                                <Link href="/#about" className="text-gray-300 hover:text-white transition">
-                                    About
-                                </Link>
-                                <Link href="/#services" className="text-gray-300 hover:text-white transition">
-                                    Services
-                                </Link>
-                                <Link href="/#booking" className="text-gray-300 hover:text-white transition">
-                                    Book Appointment
-                                </Link>
-                            </div>
+                            <ul className="space-y-2">
+                                <li>
+                                    <Link href="/#about" className="text-gray-300 hover:text-white transition block">
+                                        About
+                                    </Link>
+                                </li>
+                                <li>
+                                    <Link href="/#services" className="text-gray-300 hover:text-white transition block">
+                                        Services
+                                    </Link>
+                                </li>
+                                <li>
+                                    <Link href="/#booking" className="text-gray-300 hover:text-white transition block">
+                                        Book Appointment
+                                    </Link>
+                                </li>
+                            </ul>
                         </div>
                         <div>
                             <h4 className="font-semibold mb-4">Contact</h4>
-                            <div className="space-y-2 text-gray-300">
-                                <p>Phone: (555) 123-4567</p>
-                                <p>Email: info@medicare.com</p>
-                                <p>Hours: 9 AM - 5 PM, Monday-Friday</p>
-                            </div>
+                            <ul className="space-y-2 text-gray-300">
+                                <li>Phone: (555) 123-4567</li>
+                                <li>Email: info@medicare.com</li>
+                                <li>Hours: 9 AM - 5 PM, Monday-Friday</li>
+                            </ul>
                         </div>
                     </div>
                     <div className="border-t border-white/20 pt-8 text-center text-gray-300">
