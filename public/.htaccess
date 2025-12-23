@@ -5,6 +5,10 @@
 
     RewriteEngine On
 
+    # If /storage symlink is blocked (common on some Windows/Apache setups),
+    # redirect legacy site-content uploads to the public folder.
+    RewriteRule ^storage/site-content/(.*)$ site-content/$1 [L,R=302]
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]

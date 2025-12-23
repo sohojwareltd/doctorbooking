@@ -76,11 +76,11 @@ export default function AboutSection({ content }) {
                     transition={{ duration: 0.8, ease: 'easeOut' }}
                     className="relative"
                 >
-                    <div className="relative h-[600px] overflow-hidden rounded-3xl">
+                    <div className="relative h-[600px] overflow-hidden rounded-3xl bg-white">
                         <img
                             src={imageUrl}
                             alt={imageAlt}
-                            className="h-full w-full object-cover"
+                            className="h-full w-full object-contain"
                         />
                         {/* Image kept solid; no overlay */}
                     </div>

@@ -12,17 +12,6 @@ export default function DoctorLogo({ className = "h-10 w-auto" }) {
         }
     };
 
-    const pulse = {
-        animate: {
-            opacity: [0.6, 1, 0.6],
-            r: [35, 50, 35],
-            transition: {
-                duration: 1.5,
-                repeat: Infinity,
-                ease: "easeInOut"
-            }
-        }
-    };
 
     return (
         <motion.svg
@@ -42,9 +31,9 @@ export default function DoctorLogo({ className = "h-10 w-auto" }) {
                 stroke="#00acb1"
                 strokeWidth="1"
                 fill="none"
-                opacity="0.3"
-                variants={pulse}
-                animate="animate"
+                style={{ transformOrigin: '100px 100px', transformBox: 'fill-box' }}
+                animate={{ opacity: [0.25, 0.45, 0.25], scale: [1, 1.35, 1] }}
+                transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
             />
 
             {/* Static Circle Background */}

@@ -5,6 +5,7 @@ use Inertia\Inertia;
 use Laravel\Fortify\Features;
 use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\DoctorScheduleController;
+use App\Http\Controllers\Admin\SiteContentController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
 use App\Models\Appointment;
@@ -22,8 +23,10 @@ Route::get('/', function () {
     $homeContent = null;
 
     if (Schema::hasTable('site_contents')) {
-        $homeContent = SiteContent::where('key', 'home')->value('value');
+        $homeContent = SiteContent::where('key', 'home')->first()?->value;
     }
+
+    $homeContent = SiteContent::normalizeValue($homeContent);
 
     return Inertia::render('Welcome', [
         'home' => $homeContent,
@@ -211,7 +214,9 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
 
     Route::get('/doctor', fn () => Inertia::render('admin/Doctor'))->name('doctor');
     Route::get('/reports', fn () => Inertia::render('admin/Reports'))->name('reports');
-    Route::get('/settings', fn () => Inertia::render('admin/Settings'))->name('settings');
+    Route::get('/settings', [SiteContentController::class, 'edit'])->name('settings');
+    Route::put('/settings/site-content/home', [SiteContentController::class, 'updateHome'])->name('settings.site-content.home');
+    Route::post('/settings/site-content/upload', [SiteContentController::class, 'uploadImage'])->name('settings.site-content.upload');
 });
 
 require __DIR__.'/settings.php';

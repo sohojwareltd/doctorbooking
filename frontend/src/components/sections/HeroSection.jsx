@@ -169,11 +169,11 @@ export default function HeroSection({ content }) {
                 >
                     <div className="relative w-full max-w-sm">
                         {/* Main Image Container */}
-                        <div className="relative z-20 aspect-[3/4] w-full overflow-hidden rounded-3xl shadow-2xl border-2 border-[#00acb1]/30">
+                        <div className="relative z-20 aspect-[3/4] w-full overflow-hidden rounded-3xl shadow-2xl border-2 border-[#00acb1]/30 bg-white">
                             <img
                                 src={imageUrl}
                                 alt={imageAlt}
-                                className="h-full w-full object-cover"
+                                className="h-full w-full object-contain"
                             />
                         </div>
                     </div>

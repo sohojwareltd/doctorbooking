@@ -7,7 +7,24 @@ import DoctorLogo from '../components/DoctorLogo';
 export default function PublicLayout({ children }) {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [showScrollTop, setShowScrollTop] = useState(false);
-    const { auth } = usePage().props;
+    const { auth, home } = usePage().props;
+
+    const footer = home?.footer || {};
+    const footerBrandName = footer.brandName || 'MediCare';
+    const footerDescription = footer.description || 'Premier healthcare services for your wellness.';
+    const footerLinksTitle = footer.linksTitle || 'Quick Links';
+    const footerLinks = Array.isArray(footer.links) && footer.links.length
+        ? footer.links
+        : [
+              { label: 'About', href: '/#about' },
+              { label: 'Services', href: '/#services' },
+              { label: 'Book Appointment', href: '/#booking' },
+          ];
+    const footerContactTitle = footer.contactTitle || 'Contact';
+    const footerContactLines = Array.isArray(footer.contactLines) && footer.contactLines.length
+        ? footer.contactLines
+        : ['Phone: (555) 123-4567', 'Email: info@medicare.com', 'Hours: 9 AM - 5 PM, Monday-Friday'];
+    const footerCopyright = footer.copyright || `© ${new Date().getFullYear()} ${footerBrandName}. All rights reserved.`;
 
         const dashboardHref =
                 auth?.user?.role === 'admin'
@@ -228,43 +245,33 @@ export default function PublicLayout({ children }) {
                                 <div className="bg-white rounded-lg p-1">
                                     <DoctorLogo className="h-10 w-10" />
                                 </div>
-                                <h3 className="text-lg font-bold">MediCare</h3>
+                                <h3 className="text-lg font-bold">{footerBrandName}</h3>
                             </div>
-                            <p className="text-gray-300">
-                                Premier healthcare services for your wellness.
-                            </p>
+                            <p className="text-gray-300">{footerDescription}</p>
                         </div>
                         <div>
-                            <h4 className="font-semibold mb-4">Quick Links</h4>
+                            <h4 className="font-semibold mb-4">{footerLinksTitle}</h4>
                             <ul className="space-y-2">
-                                <li>
-                                    <Link href="/#about" className="text-gray-300 hover:text-white transition block">
-                                        About
-                                    </Link>
-                                </li>
-                                <li>
-                                    <Link href="/#services" className="text-gray-300 hover:text-white transition block">
-                                        Services
-                                    </Link>
-                                </li>
-                                <li>
-                                    <Link href="/#booking" className="text-gray-300 hover:text-white transition block">
-                                        Book Appointment
-                                    </Link>
-                                </li>
+                                {footerLinks.map((l, idx) => (
+                                    <li key={idx}>
+                                        <Link href={l?.href || '/'} className="text-gray-300 hover:text-white transition block">
+                                            {l?.label || 'Link'}
+                                        </Link>
+                                    </li>
+                                ))}
                             </ul>
                         </div>
                         <div>
-                            <h4 className="font-semibold mb-4">Contact</h4>
+                            <h4 className="font-semibold mb-4">{footerContactTitle}</h4>
                             <ul className="space-y-2 text-gray-300">
-                                <li>Phone: (555) 123-4567</li>
-                                <li>Email: info@medicare.com</li>
-                                <li>Hours: 9 AM - 5 PM, Monday-Friday</li>
+                                {footerContactLines.map((line, idx) => (
+                                    <li key={idx}>{line}</li>
+                                ))}
                             </ul>
                         </div>
                     </div>
                     <div className="border-t border-white/20 pt-8 text-center text-gray-300">
-                        <p>&copy; 2025 MediCare. All rights reserved.</p>
+                        <p>{footerCopyright}</p>
                     </div>
                 </div>
             </footer>
