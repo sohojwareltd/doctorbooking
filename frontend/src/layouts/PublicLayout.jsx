@@ -9,6 +9,15 @@ export default function PublicLayout({ children }) {
     const [showScrollTop, setShowScrollTop] = useState(false);
     const { auth } = usePage().props;
 
+        const dashboardHref =
+                auth?.user?.role === 'admin'
+                        ? '/admin/dashboard'
+                        : auth?.user?.role === 'doctor'
+                            ? '/doctor/dashboard'
+                            : auth?.user?.role === 'user'
+                                ? '/user/dashboard'
+                                : '/dashboard';
+
     useEffect(() => {
         const handleScroll = () => {
             if (window.scrollY > 300) {
@@ -88,11 +97,7 @@ export default function PublicLayout({ children }) {
                             {auth.user ? (
                                 <>
                                     <Link
-                                        href={
-                                            auth.user.role === 'doctor'
-                                                ? '/doctor/dashboard'
-                                                : '/user/dashboard'
-                                        }
+                                        href={dashboardHref}
                                         className="text-white hover:text-[#00acb1] transition"
                                     >
                                         Dashboard
@@ -181,11 +186,7 @@ export default function PublicLayout({ children }) {
                             {auth.user && (
                                 <>
                                     <Link
-                                        href={
-                                            auth.user.role === 'doctor'
-                                                ? '/doctor/dashboard'
-                                                : '/user/dashboard'
-                                        }
+                                        href={dashboardHref}
                                         className="block text-white hover:text-[#00acb1] transition py-2"
                                         onClick={() => setMobileMenuOpen(false)}
                                     >

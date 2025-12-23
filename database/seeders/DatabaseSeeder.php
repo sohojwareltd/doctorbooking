@@ -13,22 +13,12 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
-        User::firstOrCreate(
-            ['email' => 'test@example.com'],
-            [
-                'name' => 'Test User',
-                'password' => bcrypt('password'),
-                'email_verified_at' => now(),
-            ]
-        );
-
         // Seed dynamic data
         $this->call([
             AdminSeeder::class,
             DoctorSeeder::class,
             SampleDataSeeder::class,
+            SiteContentSeeder::class,
         ]);
     }
 }

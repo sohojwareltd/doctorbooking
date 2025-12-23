@@ -9,37 +9,42 @@ import ServicesSection from '../components/sections/ServicesSection';
 
 import PublicLayout from '../layouts/PublicLayout';
 
-export default function Welcome({ auth }) {
+export default function Welcome({ auth, home }) {
+    const meta = home?.meta || {};
+
     return (
         <>
-            <Head title="Dr. Sarah Johnson - Premier Dermatology & Aesthetics">
+            <Head title={meta.title || 'Dr. Sarah Johnson - Premier Dermatology & Aesthetics'}>
                 <meta
                     name="description"
-                    content="Transform your skin with Dr. Sarah Johnson, a board-certified dermatologist specializing in advanced aesthetic treatments and medical dermatology."
+                    content={
+                        meta.description ||
+                        'Transform your skin with Dr. Sarah Johnson, a board-certified dermatologist specializing in advanced aesthetic treatments and medical dermatology.'
+                    }
                 />
             </Head>
 
             <div className="relative min-h-screen bg-white font-sans text-gray-900">
                 {/* Hero Section */}
-                <HeroSection />
+                <HeroSection content={home?.hero} />
 
                 {/* About Section */}
-                <AboutSection />
+                <AboutSection content={home?.about} />
 
                 {/* Services Section */}
-                <ServicesSection />
+                <ServicesSection content={home?.services} />
 
                 {/* Case Studies Section */}
-                <CaseStudiesSection />
+                <CaseStudiesSection content={home?.caseStudies} />
 
                 {/* Gallery Section */}
-                <GallerySection />
+                <GallerySection content={home?.gallery} />
 
                 {/* Booking Section */}
                 <BookingSection />
 
                 {/* Contact Section */}
-                <ContactSection />
+                <ContactSection content={home?.contact} />
             </div>
         </>
     );

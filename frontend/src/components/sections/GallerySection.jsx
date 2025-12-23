@@ -36,8 +36,14 @@ const galleryImages = [
     },
 ];
 
-export default function GallerySection() {
+export default function GallerySection({ content }) {
     const [selectedImage, setSelectedImage] = useState(null);
+
+    const title = content?.title || 'Our Clinic';
+    const subtitle =
+        content?.subtitle ||
+        'Tour our state-of-the-art facility and comfortable treatment spaces';
+    const images = content?.images || galleryImages;
 
     const containerVariants = {
         hidden: {},
@@ -59,9 +65,7 @@ export default function GallerySection() {
 
     return (
         <SectionWrapper id="gallery" className="bg-white">
-            <SectionTitle subtitle="Tour our state-of-the-art facility and comfortable treatment spaces">
-                Our Clinic
-            </SectionTitle>
+            <SectionTitle subtitle={subtitle}>{title}</SectionTitle>
 
             {/* Gallery Grid */}
             <motion.div
@@ -71,7 +75,7 @@ export default function GallerySection() {
                 whileInView="visible"
                 viewport={{ once: true, margin: '-100px' }}
             >
-                {galleryImages.map((image, index) => (
+                {images.map((image, index) => (
                     <motion.div
                         key={index}
                         variants={itemVariants}

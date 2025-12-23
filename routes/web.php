@@ -4,9 +4,12 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
 use App\Http\Controllers\AppointmentController;
+use App\Http\Controllers\DoctorScheduleController;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 use App\Models\Appointment;
 use App\Models\Prescription;
+use App\Models\SiteContent;
 use App\Models\User;
 
 /*
@@ -16,7 +19,15 @@ use App\Models\User;
 */
 
 Route::get('/', function () {
-    return Inertia::render('Welcome');
+    $homeContent = null;
+
+    if (Schema::hasTable('site_contents')) {
+        $homeContent = SiteContent::where('key', 'home')->value('value');
+    }
+
+    return Inertia::render('Welcome', [
+        'home' => $homeContent,
+    ]);
 })->name('home');
 
 Route::get('/about', function () {
@@ -35,6 +46,20 @@ Route::post('/contact', function () {
 // Public booking endpoint
 Route::post('/book-appointment', [AppointmentController::class, 'storePublic'])->name('public.book-appointment');
 Route::get('/available-slots/{date}', [AppointmentController::class, 'getAvailableSlots'])->name('available-slots');
+
+/*
+|--------------------------------------------------------------------------
+| Dashboard (Fortify default)
+|--------------------------------------------------------------------------
+|
+| Fortify's default auth scaffolding expects a named "dashboard" route.
+| We keep it as a small role-based redirect.
+|
+*/
+
+Route::middleware(['auth', 'verified'])->get('/dashboard', function () {
+    return Inertia::render('Dashboard');
+})->name('dashboard');
 
 /*
 |--------------------------------------------------------------------------
@@ -143,7 +168,8 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
         return Inertia::render('doctor/Prescriptions', [ 'prescriptions' => $prescriptions ]);
     })->name('prescriptions');
 
-    Route::get('/schedule', fn () => Inertia::render('doctor/Schedule'))->name('schedule');
+    Route::get('/schedule', [DoctorScheduleController::class, 'show'])->name('schedule');
+    Route::post('/schedule', [DoctorScheduleController::class, 'update'])->name('schedule.update');
     Route::get('/profile', fn () => Inertia::render('doctor/Profile'))->name('profile');
     Route::get('/prescriptions/create', fn () => Inertia::render('doctor/CreatePrescription'))->name('prescriptions.create');
 });

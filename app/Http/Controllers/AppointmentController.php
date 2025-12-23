@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Appointment;
+use App\Models\DoctorSchedule;
 use App\Models\User;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -16,24 +18,28 @@ class AppointmentController extends Controller
     /**
      * Store a public booking request (no auth required).
      */
-    public function storePublic(Request $request): RedirectResponse
+    public function storePublic(Request $request): JsonResponse|RedirectResponse
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'phone' => ['required', 'string', 'max:50'],
             'email' => ['required', 'email', 'max:255'],
             'date' => ['required', 'date'],
-            'time' => ['required'],
+            'time' => ['required', 'string'],
             'message' => ['nullable', 'string', 'max:2000'],
         ]);
 
-        // Ensure there is a doctor to assign appointments to
         $doctor = User::where('role', 'doctor')->first();
         if (!$doctor) {
-            return back()->withErrors(['booking' => 'No doctor is configured yet. Please contact support.'])->withInput();
+            $message = 'No doctor is configured yet. Please contact support.';
+
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $message], 422);
+            }
+
+            return back()->withErrors(['booking' => $message])->withInput();
         }
 
-        // Find or create the user by email
         $user = User::where('email', $validated['email'])->first();
         if (!$user) {
             $user = User::create([
@@ -45,11 +51,16 @@ class AppointmentController extends Controller
             ]);
         }
 
+        $time = $validated['time'];
+        if (preg_match('/^\d{2}:\d{2}$/', $time) === 1) {
+            $time .= ':00';
+        }
+
         Appointment::create([
             'user_id' => $user->id,
             'doctor_id' => $doctor->id,
             'appointment_date' => $validated['date'],
-            'appointment_time' => $validated['time'],
+            'appointment_time' => $time,
             'status' => 'pending',
             'symptoms' => $validated['message'] ?? null,
             'notes' => null,
@@ -68,28 +79,53 @@ class AppointmentController extends Controller
     /**
      * Get available time slots for a specific date.
      */
-    public function getAvailableSlots(Request $request, $date)
+    public function getAvailableSlots(Request $request, string $date): JsonResponse
     {
         $doctor = User::where('role', 'doctor')->first();
         if (!$doctor) {
-            return response()->json(['slots' => []]);
+            return response()->json(['slots' => [], 'date' => $date]);
         }
 
-        // Define all possible time slots (9 AM to 5 PM)
-        $allSlots = [
-            '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
-            '12:00', '12:30', '13:00', '13:30', '14:00', '14:30',
-            '15:00', '15:30', '16:00', '16:30', '17:00'
-        ];
+        try {
+            $carbon = now()->parse($date);
+        } catch (\Throwable $e) {
+            return response()->json(['slots' => [], 'date' => $date]);
+        }
 
-        // Get booked appointments for this date
+        $dow = $carbon->dayOfWeek; // 0=Sun ... 6=Sat
+        $schedule = DoctorSchedule::where('doctor_id', $doctor->id)
+            ->where('day_of_week', $dow)
+            ->first();
+
+        $isClosed = $schedule?->is_closed ?? ($dow === 0);
+        $slotMinutes = $schedule?->slot_minutes ?? 30;
+
+        $start = $schedule?->start_time ? substr((string) $schedule->start_time, 0, 5) : '09:00';
+        $end = $schedule?->end_time ? substr((string) $schedule->end_time, 0, 5) : '17:00';
+
+        if ($isClosed || !$start || !$end) {
+            return response()->json(['slots' => [], 'date' => $date]);
+        }
+
+        $startAt = now()->parse($date . ' ' . $start);
+        $endAt = now()->parse($date . ' ' . $end);
+        if ($endAt->lt($startAt) || $slotMinutes <= 0) {
+            return response()->json(['slots' => [], 'date' => $date]);
+        }
+
+        $allSlots = [];
+        $cursor = $startAt->copy();
+        while ($cursor->lte($endAt)) {
+            $allSlots[] = $cursor->format('H:i');
+            $cursor->addMinutes($slotMinutes);
+        }
+
         $bookedSlots = Appointment::where('doctor_id', $doctor->id)
             ->whereDate('appointment_date', $date)
             ->pluck('appointment_time')
-            ->map(fn($time) => substr($time, 0, 5))
+            ->map(fn ($time) => substr((string) $time, 0, 5))
             ->toArray();
 
-        // Filter out booked slots
         $availableSlots = array_values(array_diff($allSlots, $bookedSlots));
 
         return response()->json([
@@ -101,14 +137,14 @@ class AppointmentController extends Controller
     /**
      * Update appointment status (doctor/admin only).
      */
-    public function updateStatus(Request $request, Appointment $appointment)
+    public function updateStatus(Request $request, Appointment $appointment): JsonResponse
     {
-        $request->validate([
-            'status' => ['required', Rule::in(['pending','approved','completed','cancelled'])],
+        $validated = $request->validate([
+            'status' => ['required', Rule::in(['pending', 'approved', 'completed', 'cancelled'])],
         ]);
 
         $user = Auth::user();
-        if (!$user || !in_array($user->role, ['doctor','admin'])) {
+        if (!$user || !in_array($user->role, ['doctor', 'admin'], true)) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
@@ -116,43 +152,11 @@ class AppointmentController extends Controller
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        $appointment->update(['status' => $request->string('status')]);
+        $appointment->update(['status' => $validated['status']]);
 
         return response()->json([
             'status' => 'success',
             'message' => 'Appointment status updated.',
         ]);
-    }
-<?php
-
-namespace App\Http\Controllers;
-
-use App\Models\Appointment;
-use Illuminate\Http\Request;
-
-class AppointmentController extends Controller
-{
-    public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'phone' => 'required|string|max:20',
-            'email' => 'required|email|max:255',
-            'date' => 'required|date|after:today',
-            'time' => 'required|string',
-            'message' => 'nullable|string|max:1000',
-        ]);
-
-        Appointment::create([
-            'name' => $validated['name'],
-            'phone' => $validated['phone'],
-            'email' => $validated['email'],
-            'appointment_date' => $validated['date'],
-            'appointment_time' => $validated['time'],
-            'notes' => $validated['message'] ?? null,
-            'status' => 'pending',
-        ]);
-
-        return back()->with('success', 'Appointment request submitted successfully! We will contact you shortly.');
     }
 }

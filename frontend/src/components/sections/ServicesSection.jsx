@@ -3,38 +3,51 @@ import { Microscope, Sparkles, Syringe, Zap } from 'lucide-react';
 import GlassCard from '../GlassCard';
 import SectionWrapper, { SectionTitle } from '../SectionWrapper';
 
-const services = [
-    {
-        icon: Sparkles,
-        title: 'Advanced Skin Rejuvenation',
-        description:
-            'Cutting-edge laser treatments, chemical peels, and microneedling to restore youthful, radiant skin.',
-        treatments: ['Laser Resurfacing', 'Chemical Peels', 'Microneedling', 'IPL Therapy'],
-    },
-    {
-        icon: Syringe,
-        title: 'Cosmetic Injectables',
-        description:
-            'Expert administration of dermal fillers and neuromodulators for natural-looking enhancement.',
-        treatments: ['Dermal Fillers', 'Botox & Dysport', 'Lip Enhancement', 'Facial Contouring'],
-    },
-    {
-        icon: Microscope,
-        title: 'Medical Dermatology',
-        description:
-            'Comprehensive diagnosis and treatment of skin conditions, from acne to complex disorders.',
-        treatments: ['Acne Treatment', 'Eczema Care', 'Psoriasis Management', 'Skin Cancer Screening'],
-    },
-    {
-        icon: Zap,
-        title: 'Body Contouring',
-        description:
-            'Non-invasive body sculpting and skin tightening for confidence-boosting transformations.',
-        treatments: ['CoolSculpting', 'Radiofrequency Tightening', 'Cellulite Treatment', 'Body Laser'],
-    },
-];
+const iconMap = {
+    Sparkles,
+    Syringe,
+    Microscope,
+    Zap,
+};
 
-export default function ServicesSection() {
+export default function ServicesSection({ content }) {
+    const title = content?.title || 'Services & Expertise';
+    const subtitle =
+        content?.subtitle ||
+        'Comprehensive dermatological and aesthetic treatments tailored to your unique needs';
+    const services =
+        content?.items ||
+        [
+            {
+                icon: Sparkles,
+                title: 'Advanced Skin Rejuvenation',
+                description:
+                    'Cutting-edge laser treatments, chemical peels, and microneedling to restore youthful, radiant skin.',
+                treatments: ['Laser Resurfacing', 'Chemical Peels', 'Microneedling', 'IPL Therapy'],
+            },
+            {
+                icon: Syringe,
+                title: 'Cosmetic Injectables',
+                description:
+                    'Expert administration of dermal fillers and neuromodulators for natural-looking enhancement.',
+                treatments: ['Dermal Fillers', 'Botox & Dysport', 'Lip Enhancement', 'Facial Contouring'],
+            },
+            {
+                icon: Microscope,
+                title: 'Medical Dermatology',
+                description:
+                    'Comprehensive diagnosis and treatment of skin conditions, from acne to complex disorders.',
+                treatments: ['Acne Treatment', 'Eczema Care', 'Psoriasis Management', 'Skin Cancer Screening'],
+            },
+            {
+                icon: Zap,
+                title: 'Body Contouring',
+                description:
+                    'Non-invasive body sculpting and skin tightening for confidence-boosting transformations.',
+                treatments: ['CoolSculpting', 'Radiofrequency Tightening', 'Cellulite Treatment', 'Body Laser'],
+            },
+        ];
+
     const containerVariants = {
         hidden: {},
         visible: {
@@ -56,9 +69,7 @@ export default function ServicesSection() {
 
     return (
         <SectionWrapper id="services" className="bg-white">
-            <SectionTitle subtitle="Comprehensive dermatological and aesthetic treatments tailored to your unique needs">
-                Services & Expertise
-            </SectionTitle>
+            <SectionTitle subtitle={subtitle}>{title}</SectionTitle>
 
             <motion.div
                 className="grid gap-8 md:grid-cols-2"
@@ -67,12 +78,15 @@ export default function ServicesSection() {
                 whileInView="visible"
                 viewport={{ once: true, margin: '-100px' }}
             >
-                {services.map((service, index) => (
+                {services.map((service, index) => {
+                    const Icon = typeof service.icon === 'string' ? iconMap[service.icon] : service.icon;
+
+                    return (
                     <motion.div key={index} variants={itemVariants}>
                         <GlassCard variant="solid" hover={false} className="h-full p-8">
                             {/* Icon */}
                             <div className="mb-6 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-[#00acb1] shadow-lg">
-                                <service.icon className="h-8 w-8 text-white" />
+                                {Icon && <Icon className="h-8 w-8 text-white" />}
                             </div>
 
                             {/* Title */}
@@ -87,7 +101,7 @@ export default function ServicesSection() {
 
                             {/* Treatments List */}
                             <div className="space-y-2">
-                                {service.treatments.map((treatment, idx) => (
+                                {(service.treatments || []).map((treatment, idx) => (
                                     <motion.div
                                         key={idx}
                                         className="flex items-center text-sm text-gray-600"
@@ -103,7 +117,8 @@ export default function ServicesSection() {
                             </div>
                         </GlassCard>
                     </motion.div>
-                ))}
+                    );
+                })}
             </motion.div>
         </SectionWrapper>
     );

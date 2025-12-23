@@ -1,4 +1,10 @@
 import { Head, Link, useForm } from '@inertiajs/react';
+import { Mail, Lock, User } from 'lucide-react';
+import GlassCard from '../../components/GlassCard';
+import ParticlesBackground from '../../components/ParticlesBackground';
+import PrimaryButton from '../../components/PrimaryButton';
+import DoctorLogo from '../../components/DoctorLogo';
+import PublicLayout from '../../layouts/PublicLayout';
 
 export default function Register() {
     const { data, setData, post, processing, errors } = useForm({
@@ -16,131 +22,121 @@ export default function Register() {
     return (
         <>
             <Head title="Register" />
-            <div className="flex min-h-screen flex-col items-center bg-gray-100 pt-6 sm:justify-center sm:pt-0">
-                <div className="w-full overflow-hidden bg-white px-6 py-4 shadow-md sm:max-w-md sm:rounded-lg">
-                    <div className="mb-4 text-center">
-                        <h1 className="text-2xl font-bold text-gray-900">
-                            Doctor Booking
-                        </h1>
-                    </div>
+            <div className="relative min-h-[calc(100vh-64px)] bg-white">
+                <div className="absolute inset-0">
+                    <ParticlesBackground id="tsparticles-auth-register" variant="pulse" />
+                </div>
 
-                    <form onSubmit={submit}>
-                        <div>
-                            <label
-                                htmlFor="name"
-                                className="block text-sm font-medium text-gray-700"
-                            >
-                                Name
-                            </label>
-                            <input
-                                id="name"
-                                name="name"
-                                value={data.name}
-                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                autoComplete="name"
-                                onChange={(e) => setData('name', e.target.value)}
-                                required
-                            />
-                            {errors.name && (
-                                <div className="mt-2 text-sm text-red-600">
-                                    {errors.name}
+                <div className="relative mx-auto flex max-w-7xl items-center justify-center px-4 py-14">
+                    <GlassCard variant="solid" hover={false} className="w-full max-w-md p-8">
+                        <div className="mb-6 flex flex-col items-center gap-3 text-center">
+                            <div className="rounded-2xl bg-[#005963] p-2">
+                                <DoctorLogo className="h-10 w-10" />
+                            </div>
+                            <div>
+                                <h1 className="text-3xl font-black text-[#005963]">Create account</h1>
+                                <p className="mt-1 text-sm text-gray-600">Join MediCare to book appointments</p>
+                            </div>
+                        </div>
+
+                        {(errors.name || errors.email || errors.password || errors.password_confirmation) && (
+                            <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+                                {errors.name || errors.email || errors.password || errors.password_confirmation}
+                            </div>
+                        )}
+
+                        <form onSubmit={submit} className="space-y-5">
+                            <div>
+                                <label htmlFor="name" className="mb-2 block text-sm font-semibold text-[#005963]">
+                                    Name
+                                </label>
+                                <div className="relative">
+                                    <User className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#005963]" />
+                                    <input
+                                        id="name"
+                                        name="name"
+                                        value={data.name}
+                                        className="w-full rounded-2xl border-2 border-[#00acb1]/30 bg-white px-4 py-3 pl-12 text-gray-900 shadow-sm focus:border-[#00acb1] focus:outline-none focus:ring-4 focus:ring-[#00acb1]/30"
+                                        autoComplete="name"
+                                        onChange={(e) => setData('name', e.target.value)}
+                                        required
+                                    />
                                 </div>
-                            )}
-                        </div>
+                            </div>
 
-                        <div className="mt-4">
-                            <label
-                                htmlFor="email"
-                                className="block text-sm font-medium text-gray-700"
-                            >
-                                Email
-                            </label>
-                            <input
-                                id="email"
-                                type="email"
-                                name="email"
-                                value={data.email}
-                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                autoComplete="username"
-                                onChange={(e) => setData('email', e.target.value)}
-                                required
-                            />
-                            {errors.email && (
-                                <div className="mt-2 text-sm text-red-600">
-                                    {errors.email}
+                            <div>
+                                <label htmlFor="email" className="mb-2 block text-sm font-semibold text-[#005963]">
+                                    Email
+                                </label>
+                                <div className="relative">
+                                    <Mail className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#005963]" />
+                                    <input
+                                        id="email"
+                                        type="email"
+                                        name="email"
+                                        value={data.email}
+                                        className="w-full rounded-2xl border-2 border-[#00acb1]/30 bg-white px-4 py-3 pl-12 text-gray-900 shadow-sm focus:border-[#00acb1] focus:outline-none focus:ring-4 focus:ring-[#00acb1]/30"
+                                        autoComplete="username"
+                                        onChange={(e) => setData('email', e.target.value)}
+                                        required
+                                    />
                                 </div>
-                            )}
-                        </div>
+                            </div>
 
-                        <div className="mt-4">
-                            <label
-                                htmlFor="password"
-                                className="block text-sm font-medium text-gray-700"
-                            >
-                                Password
-                            </label>
-                            <input
-                                id="password"
-                                type="password"
-                                name="password"
-                                value={data.password}
-                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                autoComplete="new-password"
-                                onChange={(e) => setData('password', e.target.value)}
-                                required
-                            />
-                            {errors.password && (
-                                <div className="mt-2 text-sm text-red-600">
-                                    {errors.password}
+                            <div>
+                                <label htmlFor="password" className="mb-2 block text-sm font-semibold text-[#005963]">
+                                    Password
+                                </label>
+                                <div className="relative">
+                                    <Lock className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#005963]" />
+                                    <input
+                                        id="password"
+                                        type="password"
+                                        name="password"
+                                        value={data.password}
+                                        className="w-full rounded-2xl border-2 border-[#00acb1]/30 bg-white px-4 py-3 pl-12 text-gray-900 shadow-sm focus:border-[#00acb1] focus:outline-none focus:ring-4 focus:ring-[#00acb1]/30"
+                                        autoComplete="new-password"
+                                        onChange={(e) => setData('password', e.target.value)}
+                                        required
+                                    />
                                 </div>
-                            )}
-                        </div>
+                            </div>
 
-                        <div className="mt-4">
-                            <label
-                                htmlFor="password_confirmation"
-                                className="block text-sm font-medium text-gray-700"
-                            >
-                                Confirm Password
-                            </label>
-                            <input
-                                id="password_confirmation"
-                                type="password"
-                                name="password_confirmation"
-                                value={data.password_confirmation}
-                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                autoComplete="new-password"
-                                onChange={(e) =>
-                                    setData('password_confirmation', e.target.value)
-                                }
-                                required
-                            />
-                            {errors.password_confirmation && (
-                                <div className="mt-2 text-sm text-red-600">
-                                    {errors.password_confirmation}
+                            <div>
+                                <label htmlFor="password_confirmation" className="mb-2 block text-sm font-semibold text-[#005963]">
+                                    Confirm Password
+                                </label>
+                                <div className="relative">
+                                    <Lock className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#005963]" />
+                                    <input
+                                        id="password_confirmation"
+                                        type="password"
+                                        name="password_confirmation"
+                                        value={data.password_confirmation}
+                                        className="w-full rounded-2xl border-2 border-[#00acb1]/30 bg-white px-4 py-3 pl-12 text-gray-900 shadow-sm focus:border-[#00acb1] focus:outline-none focus:ring-4 focus:ring-[#00acb1]/30"
+                                        autoComplete="new-password"
+                                        onChange={(e) => setData('password_confirmation', e.target.value)}
+                                        required
+                                    />
                                 </div>
-                            )}
-                        </div>
+                            </div>
 
-                        <div className="mt-4 flex items-center justify-end">
-                            <Link
-                                href="/login"
-                                className="text-sm text-gray-600 underline hover:text-gray-900"
-                            >
-                                Already registered?
-                            </Link>
+                            <PrimaryButton type="submit" className="w-full" disabled={processing}>
+                                {processing ? 'Creating…' : 'Register'}
+                            </PrimaryButton>
 
-                            <button
-                                type="submit"
-                                className="ml-4 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-25"
-                                disabled={processing}
-                            >
-                                Register
-                            </button>
-                        </div>
-                    </form>
+                            <div className="text-center text-sm text-gray-600">
+                                Already registered?{' '}
+                                <Link href="/login" className="font-semibold text-[#005963] underline">
+                                    Log in
+                                </Link>
+                            </div>
+                        </form>
+                    </GlassCard>
                 </div>
             </div>
         </>
     );
 }
+
+Register.layout = (page) => <PublicLayout>{page}</PublicLayout>;

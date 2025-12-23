@@ -4,57 +4,61 @@ import { useRef } from 'react';
 import GlassCard from '../GlassCard';
 import SectionWrapper, { SectionTitle } from '../SectionWrapper';
 
-const caseStudies = [
-    {
-        title: 'Acne Transformation Journey',
-        category: 'Medical Dermatology',
-        duration: '6 months',
-        rating: 5,
-        story:
-            'Patient presented with severe cystic acne affecting self-confidence. Through a personalized combination of prescription treatments and advanced laser therapy, achieved clear, healthy skin.',
-        results: [
-            '95% reduction in active breakouts',
-            'Significant improvement in scarring',
-            'Restored confidence and quality of life',
-        ],
-    },
-    {
-        title: 'Age-Defying Skin Renewal',
-        category: 'Anti-Aging & Rejuvenation',
-        duration: '3 months',
-        rating: 5,
-        story:
-            'Patient seeking natural-looking rejuvenation. Combined microneedling, laser resurfacing, and strategic injectable placement for comprehensive facial renewal.',
-        results: [
-            'Dramatic improvement in skin texture',
-            'Reduced fine lines and wrinkles',
-            'Natural, refreshed appearance',
-        ],
-    },
-    {
-        title: 'Pigmentation Correction',
-        category: 'Laser & Light Therapy',
-        duration: '4 months',
-        rating: 5,
-        story:
-            'Advanced hyperpigmentation treated with customized laser protocols and medical-grade skincare regimen, resulting in even-toned, radiant complexion.',
-        results: [
-            'Even skin tone achieved',
-            'Melasma significantly reduced',
-            'Long-lasting results with maintenance',
-        ],
-    },
-];
-
-export default function CaseStudiesSection() {
+export default function CaseStudiesSection({ content }) {
     const containerRef = useRef(null);
     const { scrollXProgress } = useScroll({ container: containerRef });
 
+    const title = content?.title || 'Patient Success Stories';
+    const subtitle =
+        content?.subtitle ||
+        'Real transformations, real results - ethical presentation of patient journeys';
+    const caseStudies =
+        content?.items ||
+        [
+            {
+                title: 'Acne Transformation Journey',
+                category: 'Medical Dermatology',
+                duration: '6 months',
+                rating: 5,
+                story:
+                    'Patient presented with severe cystic acne affecting self-confidence. Through a personalized combination of prescription treatments and advanced laser therapy, achieved clear, healthy skin.',
+                results: [
+                    '95% reduction in active breakouts',
+                    'Significant improvement in scarring',
+                    'Restored confidence and quality of life',
+                ],
+            },
+            {
+                title: 'Age-Defying Skin Renewal',
+                category: 'Anti-Aging & Rejuvenation',
+                duration: '3 months',
+                rating: 5,
+                story:
+                    'Patient seeking natural-looking rejuvenation. Combined microneedling, laser resurfacing, and strategic injectable placement for comprehensive facial renewal.',
+                results: [
+                    'Dramatic improvement in skin texture',
+                    'Reduced fine lines and wrinkles',
+                    'Natural, refreshed appearance',
+                ],
+            },
+            {
+                title: 'Pigmentation Correction',
+                category: 'Laser & Light Therapy',
+                duration: '4 months',
+                rating: 5,
+                story:
+                    'Advanced hyperpigmentation treated with customized laser protocols and medical-grade skincare regimen, resulting in even-toned, radiant complexion.',
+                results: [
+                    'Even skin tone achieved',
+                    'Melasma significantly reduced',
+                    'Long-lasting results with maintenance',
+                ],
+            },
+        ];
+
     return (
         <SectionWrapper id="results" className="bg-white">
-            <SectionTitle subtitle="Real transformations, real results - ethical presentation of patient journeys">
-                Patient Success Stories
-            </SectionTitle>
+            <SectionTitle subtitle={subtitle}>{title}</SectionTitle>
 
             {/* Horizontal Scroll Container */}
             <div className="relative">
@@ -85,7 +89,7 @@ export default function CaseStudiesSection() {
                                             {study.category}
                                         </span>
                                         <div className="flex items-center gap-1">
-                                            {[...Array(study.rating)].map((_, i) => (
+                                            {[...Array(study.rating || 0)].map((_, i) => (
                                                 <Star
                                                     key={i}
                                                     className="h-4 w-4 fill-[#00acb1] text-[#00acb1]"
@@ -113,7 +117,7 @@ export default function CaseStudiesSection() {
                                         Key Results:
                                     </h4>
                                     <ul className="space-y-2">
-                                        {study.results.map((result, idx) => (
+                                        {(study.results || []).map((result, idx) => (
                                             <motion.li
                                                 key={idx}
                                                 className="flex items-start text-gray-700"
