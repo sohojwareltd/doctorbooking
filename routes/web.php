@@ -3,11 +3,9 @@
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
-use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\DoctorScheduleController;
 use App\Http\Controllers\PrescriptionController;
 use App\Http\Controllers\Admin\SiteContentController;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
 use App\Models\Appointment;
@@ -49,8 +47,8 @@ Route::post('/contact', function () {
 })->name('contact.submit');
 
 // Public booking endpoint
-Route::post('/book-appointment', [AppointmentController::class, 'storePublic'])->name('public.book-appointment');
-Route::get('/available-slots/{date}', [AppointmentController::class, 'getAvailableSlots'])->name('available-slots');
+Route::post('/book-appointment', 'App\\Http\\Controllers\\AppointmentController@storePublic')->name('public.book-appointment');
+Route::get('/available-slots/{date}', 'App\\Http\\Controllers\\AppointmentController@getAvailableSlots')->name('available-slots');
 
 /*
 |--------------------------------------------------------------------------
@@ -63,14 +61,21 @@ Route::get('/available-slots/{date}', [AppointmentController::class, 'getAvailab
 */
 
 Route::middleware(['auth', 'verified'])->get('/dashboard', function () {
-    $user = request()->user();
+    $user = Auth::user();
 
-    return match ($user?->role) {
-        'admin' => redirect()->route('admin.dashboard'),
-        'doctor' => redirect()->route('doctor.dashboard'),
-        'user' => redirect()->route('user.dashboard'),
-        default => Inertia::render('Dashboard'),
-    };
+    if ($user && $user->role === 'admin') {
+        return redirect()->route('admin.dashboard');
+    }
+
+    if ($user && $user->role === 'doctor') {
+        return redirect()->route('doctor.dashboard');
+    }
+
+    if ($user && $user->role === 'user') {
+        return redirect()->route('user.dashboard');
+    }
+
+    return Inertia::render('Dashboard');
 })->name('dashboard');
 
 /*
@@ -176,7 +181,7 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
             ]),
         ]);
     })->name('appointments');
-    Route::post('/appointments/{appointment}/status', [AppointmentController::class, 'updateStatus'])->name('appointments.status');
+    Route::post('/appointments/{appointment}/status', 'App\\Http\\Controllers\\AppointmentController@updateStatus')->name('appointments.status');
 
     Route::get('/patients', function () {
         $doctor = Auth::user();
@@ -257,7 +262,7 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
             ->get(['id','user_id','doctor_id','appointment_date','appointment_time','status']);
         return Inertia::render('admin/Appointments', ['appointments' => $appointments]);
     })->name('appointments');
-    Route::post('/appointments/{appointment}/status', [AppointmentController::class, 'updateStatus'])->name('appointments.status');
+    Route::post('/appointments/{appointment}/status', 'App\\Http\\Controllers\\AppointmentController@updateStatus')->name('appointments.status');
 
     Route::get('/doctor', fn () => Inertia::render('admin/Doctor'))->name('doctor');
     Route::get('/reports', fn () => Inertia::render('admin/Reports'))->name('reports');
