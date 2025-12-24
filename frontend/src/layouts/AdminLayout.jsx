@@ -21,7 +21,7 @@ export default function AdminLayout({ children }) {
       </div>
 
       <div className="relative z-10 flex min-h-screen">
-        <aside className="hidden md:block fixed left-0 top-0 bottom-0 w-72 p-4">
+        <aside className="hidden sm:block fixed left-0 top-0 bottom-0 w-72 p-4">
           <GlassCard variant="glass" className="h-full overflow-y-auto p-5 flex flex-col">
             <Link href="/" className="flex items-center gap-3 mb-6">
               <div className="bg-white rounded-2xl p-2">
@@ -38,7 +38,7 @@ export default function AdminLayout({ children }) {
               <Link href="/admin/users" className={navLinkClass('/admin/users')}>Users</Link>
               <Link href="/admin/appointments" className={navLinkClass('/admin/appointments')}>Appointments</Link>
               <Link href="/admin/reports" className={navLinkClass('/admin/reports')}>Reports</Link>
-              <Link href="/admin/settings" className={navLinkClass('/admin/settings')}>Settings</Link>
+              <Link href="/admin/settings" className={navLinkClass('/admin/settings')}>Content Settings</Link>
             </nav>
 
             <div className="pt-4 border-t border-white/15">
@@ -55,8 +55,8 @@ export default function AdminLayout({ children }) {
           </GlassCard>
         </aside>
 
-        <div className="flex-1 p-4 md:p-8 md:ml-80">
-          <div className="md:hidden mb-4">
+        <div className="flex-1 p-4 sm:p-8 sm:ml-80">
+          <div className="sm:hidden mb-4">
             <GlassCard variant="glass" className="p-4">
               <div className="flex items-center justify-between gap-3">
                 <Link href="/" className="flex items-center gap-2">
@@ -82,7 +82,7 @@ export default function AdminLayout({ children }) {
                 <Link href="/admin/users" className={navLinkClass('/admin/users')}>Users</Link>
                 <Link href="/admin/appointments" className={navLinkClass('/admin/appointments')}>Appointments</Link>
                 <Link href="/admin/reports" className={navLinkClass('/admin/reports')}>Reports</Link>
-                <Link href="/admin/settings" className={navLinkClass('/admin/settings')}>Settings</Link>
+                <Link href="/admin/settings" className={navLinkClass('/admin/settings')}>Content Settings</Link>
               </div>
             </GlassCard>
           </div>

@@ -176,12 +176,12 @@ export default function Settings({ auth, homeJson = '', status = null }) {
 
   return (
     <AdminLayout user={auth?.user}>
-      <Head title="Admin Settings" />
+      <Head title="Content Settings" />
 
       <div className="max-w-5xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-2xl font-semibold text-white">Settings</h1>
+            <h1 className="text-2xl font-semibold text-white">Content Settings</h1>
             <p className="text-white/70 text-sm">Edit homepage content stored in the database.</p>
           </div>
         </div>

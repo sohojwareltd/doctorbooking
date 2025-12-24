@@ -34,7 +34,7 @@ export default function AdminDashboard({ stats = {} }) {
                 href="/admin/settings"
                 className="inline-flex items-center justify-center rounded-full bg-[#00acb1] px-6 py-3 text-sm font-semibold text-white hover:bg-[#00787b] transition"
               >
-                Open Settings
+                Open Content Settings
               </Link>
             </div>
           </GlassCard>

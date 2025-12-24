@@ -7,6 +7,7 @@ use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\DoctorScheduleController;
 use App\Http\Controllers\PrescriptionController;
 use App\Http\Controllers\Admin\SiteContentController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
 use App\Models\Appointment;
@@ -62,7 +63,14 @@ Route::get('/available-slots/{date}', [AppointmentController::class, 'getAvailab
 */
 
 Route::middleware(['auth', 'verified'])->get('/dashboard', function () {
-    return Inertia::render('Dashboard');
+    $user = request()->user();
+
+    return match ($user?->role) {
+        'admin' => redirect()->route('admin.dashboard'),
+        'doctor' => redirect()->route('doctor.dashboard'),
+        'user' => redirect()->route('user.dashboard'),
+        default => Inertia::render('Dashboard'),
+    };
 })->name('dashboard');
 
 /*
