@@ -144,6 +144,16 @@ html {
     border: 2px solid var(--thm-base);
 }
 
+.fc .fc-daygrid-day.fc-unavailable {
+    background-color: #f9f9f9;
+    opacity: 0.55;
+}
+
+.fc .fc-daygrid-day.fc-unavailable:hover {
+    background-color: #f9f9f9;
+    cursor: not-allowed;
+}
+
 /* Animated gradient utilities for subtle background movement */
 @keyframes gradientShift {
     0% { background-position: 0% 50%; }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Appointment;
 use App\Models\DoctorSchedule;
 use App\Models\DoctorScheduleRange;
+use App\Models\DoctorUnavailableRange;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -16,6 +17,53 @@ use Illuminate\Validation\Rule;
 
 class AppointmentController extends Controller
 {
+    /**
+     * Public endpoint: get the configured doctor's unavailable date ranges.
+     */
+    public function getDoctorUnavailableRanges(): JsonResponse
+    {
+        $doctor = User::where('role', 'doctor')->first();
+        if (!$doctor) {
+            return response()->json(['ranges' => [], 'closed_weekdays' => [0, 1, 2, 3, 4, 5, 6]]);
+        }
+
+        $ranges = DoctorUnavailableRange::where('doctor_id', $doctor->id)
+            ->orderBy('start_date')
+            ->orderBy('end_date')
+            ->get(['start_date', 'end_date'])
+            ->map(fn ($r) => [
+                'start_date' => $r->start_date?->toDateString(),
+                'end_date' => $r->end_date?->toDateString(),
+            ])
+            ->values()
+            ->toArray();
+
+        $schedules = DoctorSchedule::where('doctor_id', $doctor->id)
+            ->get(['day_of_week', 'start_time', 'end_time', 'is_closed'])
+            ->keyBy('day_of_week');
+
+        $rangeDays = DoctorScheduleRange::where('doctor_id', $doctor->id)
+            ->distinct()
+            ->pluck('day_of_week')
+            ->map(fn ($d) => (int) $d)
+            ->toArray();
+
+        $closedWeekdays = [];
+        for ($dow = 0; $dow <= 6; $dow++) {
+            $row = $schedules->get($dow);
+            $isClosed = (bool) ($row?->is_closed ?? false);
+            $hasRanges = in_array($dow, $rangeDays, true);
+            $hasLegacyRange = !$isClosed && $row?->start_time && $row?->end_time;
+
+            $isOpen = !$isClosed && ($hasRanges || $hasLegacyRange);
+            if (!$isOpen) {
+                $closedWeekdays[] = $dow;
+            }
+        }
+
+        return response()->json(['ranges' => $ranges, 'closed_weekdays' => $closedWeekdays]);
+    }
+
     /**
      * Store a public booking request (no auth required).
      */
@@ -33,6 +81,22 @@ class AppointmentController extends Controller
         $doctor = User::where('role', 'doctor')->first();
         if (!$doctor) {
             $message = 'No doctor is configured yet. Please contact support.';
+
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $message], 422);
+            }
+
+            return back()->withErrors(['booking' => $message])->withInput();
+        }
+
+        $dateString = now()->parse($validated['date'])->toDateString();
+        $isUnavailable = DoctorUnavailableRange::where('doctor_id', $doctor->id)
+            ->whereDate('start_date', '<=', $dateString)
+            ->whereDate('end_date', '>=', $dateString)
+            ->exists();
+
+        if ($isUnavailable) {
+            $message = 'Doctor is unavailable on the selected date. Please choose another date.';
 
             if ($request->expectsJson()) {
                 return response()->json(['message' => $message], 422);
@@ -60,7 +124,7 @@ class AppointmentController extends Controller
         Appointment::create([
             'user_id' => $user->id,
             'doctor_id' => $doctor->id,
-            'appointment_date' => $validated['date'],
+            'appointment_date' => $dateString,
             'appointment_time' => $time,
             'status' => 'pending',
             'symptoms' => $validated['message'] ?? null,
@@ -96,6 +160,21 @@ class AppointmentController extends Controller
         try {
             $carbon = now()->parse($date);
         } catch (\Throwable $e) {
+            return response()->json([
+                'slots' => [],
+                'all' => [],
+                'booked' => [],
+                'closed' => true,
+                'date' => $date,
+            ]);
+        }
+
+        $isUnavailable = DoctorUnavailableRange::where('doctor_id', $doctor->id)
+            ->whereDate('start_date', '<=', $carbon->toDateString())
+            ->whereDate('end_date', '>=', $carbon->toDateString())
+            ->exists();
+
+        if ($isUnavailable) {
             return response()->json([
                 'slots' => [],
                 'all' => [],

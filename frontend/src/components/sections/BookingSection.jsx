@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { Calendar, Clock, Mail, Phone, User, X } from 'lucide-react';
 import { usePage } from '@inertiajs/react';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import GlassCard from '../GlassCard';
 import PrimaryButton from '../PrimaryButton';
 import SectionWrapper, { SectionTitle } from '../SectionWrapper';
@@ -15,6 +15,7 @@ export default function BookingSection() {
 
     const selectedDateRef = useRef(null);
     const selectedTimeRef = useRef('');
+    const slotsRequestSeq = useRef(0);
 
     const [formData, setFormData] = useState({
         name: '',
@@ -38,6 +39,40 @@ export default function BookingSection() {
     const [isClosedDay, setIsClosedDay] = useState(false);
     const [loadingSlots, setLoadingSlots] = useState(false);
     const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+    const [unavailableRanges, setUnavailableRanges] = useState([]);
+    const [closedWeekdays, setClosedWeekdays] = useState([]);
+
+    const isClosedByWeekday = (dateStr) => {
+        if (!dateStr || !Array.isArray(closedWeekdays) || closedWeekdays.length === 0) return false;
+        const dow = new Date(`${dateStr}T00:00:00`).getDay();
+        return closedWeekdays.includes(dow);
+    };
+
+    const isUnavailableDate = (dateStr) => {
+        if (!dateStr) return false;
+        if (isClosedByWeekday(dateStr)) return true;
+        if (!Array.isArray(unavailableRanges) || unavailableRanges.length === 0) return false;
+        return unavailableRanges.some((r) => r?.start_date && r?.end_date && r.start_date <= dateStr && dateStr <= r.end_date);
+    };
+
+    useEffect(() => {
+        let mounted = true;
+        const run = async () => {
+            try {
+                const res = await fetch('/doctor-unavailable-ranges');
+                const data = await res.json().catch(() => ({}));
+                if (!mounted) return;
+                setUnavailableRanges(Array.isArray(data?.ranges) ? data.ranges : []);
+                setClosedWeekdays(Array.isArray(data?.closed_weekdays) ? data.closed_weekdays : []);
+            } catch {
+                if (!mounted) return;
+                setUnavailableRanges([]);
+                setClosedWeekdays([]);
+            }
+        };
+        run();
+        return () => { mounted = false; };
+    }, []);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -46,12 +81,18 @@ export default function BookingSection() {
         setError('');
 
         try {
-            const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+            if (!token) {
+                setError('Missing CSRF token. Please refresh the page and try again.');
+                return;
+            }
             const res = await fetch('/book-appointment', {
                 method: 'POST',
+                credentials: 'same-origin',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': token,
+                    'X-Requested-With': 'XMLHttpRequest',
                     'Accept': 'application/json, text/plain, */*',
                 },
                 body: JSON.stringify({
@@ -96,6 +137,13 @@ export default function BookingSection() {
 
     const handleDateClick = (info) => {
         const clickedDate = info.dateStr;
+
+        if (isUnavailableDate(clickedDate)) {
+            setError('Doctor is unavailable on the selected date. Please choose another date.');
+            return;
+        }
+
+        setError('');
         setSelectedDate(clickedDate);
         selectedDateRef.current = clickedDate;
         selectedTimeRef.current = '';
@@ -108,20 +156,38 @@ export default function BookingSection() {
     };
 
     const fetchAvailableSlots = async (date) => {
+        const seq = ++slotsRequestSeq.current;
         setLoadingSlots(true);
         try {
             const res = await fetch(`/available-slots/${date}`);
             const data = await res.json();
+
+            // Ignore stale responses (user clicked another date quickly).
+            if (seq !== slotsRequestSeq.current) return;
+
             setAvailableSlots(data.slots || []);
             setAllSlots(data.all || data.slots || []);
             setBookedSlots(data.booked || []);
             setIsClosedDay(Boolean(data.closed));
+
+            if (Boolean(data.closed)) {
+                setError('Doctor is unavailable on the selected date. Please choose another date.');
+                setSelectedDate(null);
+                selectedDateRef.current = null;
+                selectedTimeRef.current = '';
+                setFormData((prev) => ({ ...prev, date: '', time: '' }));
+                setAvailableSlots([]);
+                setAllSlots([]);
+                setBookedSlots([]);
+            }
         } catch (err) {
+            if (seq !== slotsRequestSeq.current) return;
             setAvailableSlots([]);
             setAllSlots([]);
             setBookedSlots([]);
             setIsClosedDay(false);
         } finally {
+            if (seq !== slotsRequestSeq.current) return;
             setLoadingSlots(false);
         }
     };
@@ -207,6 +273,9 @@ export default function BookingSection() {
                                         start: new Date().toISOString().split('T')[0]
                                     }}
                                     dayCellClassNames={(arg) => {
+                                        if (isUnavailableDate(arg.dateStr)) {
+                                            return 'fc-unavailable';
+                                        }
                                         if (arg.dateStr === selectedDate) {
                                             return 'fc-day-selected';
                                         }
@@ -216,28 +285,29 @@ export default function BookingSection() {
                             </div>
 
                             {/* Time Slots Section */}
-                            <div className="rounded-2xl border-2 border-[#00acb1]/20 bg-white p-3">
+                            <div className="rounded-2xl border-2 border-[#00acb1]/20 bg-white p-3 flex flex-col">
                                 <h4 className="mb-2 text-base font-semibold text-[#005963]">
                                     Available Time Slots
                                     {selectedDate && <span className="ml-2 text-sm font-normal text-gray-600">({selectedDate})</span>}
                                 </h4>
+                                <div className="flex-1 min-h-0">
                                 
                                 {!selectedDate ? (
-                                    <div className="flex h-56 items-center justify-center text-gray-500">
+                                    <div className="flex h-full items-center justify-center text-gray-500">
                                         <div className="text-center">
                                             <Calendar className="mx-auto mb-3 h-12 w-12 text-gray-400" />
                                             <p>Please select a date first</p>
                                         </div>
                                     </div>
                                 ) : loadingSlots ? (
-                                    <div className="flex h-56 items-center justify-center">
+                                    <div className="flex h-full items-center justify-center">
                                         <div className="text-center">
                                             <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-4 border-[#00acb1] border-t-transparent"></div>
                                             <p className="text-gray-600">Loading available slots...</p>
                                         </div>
                                     </div>
                                 ) : isClosedDay ? (
-                                    <div className="flex h-56 items-center justify-center text-gray-500">
+                                    <div className="flex h-full items-center justify-center text-gray-500">
                                         <div className="text-center">
                                             <Clock className="mx-auto mb-3 h-12 w-12 text-gray-400" />
                                             <p>Doctor is closed on this date</p>
@@ -245,7 +315,7 @@ export default function BookingSection() {
                                         </div>
                                     </div>
                                 ) : allSlots.length === 0 ? (
-                                    <div className="flex h-56 items-center justify-center text-gray-500">
+                                    <div className="flex h-full items-center justify-center text-gray-500">
                                         <div className="text-center">
                                             <Clock className="mx-auto mb-3 h-12 w-12 text-gray-400" />
                                             <p>No slots available for this date</p>
@@ -253,7 +323,7 @@ export default function BookingSection() {
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="grid max-h-64 gap-2 overflow-y-auto pr-2 sm:grid-cols-3">
+                                    <div className="grid gap-2 overflow-y-auto pr-2 sm:grid-cols-3 h-full">
                                         {allSlots.map((slot) => {
                                             const isBooked = bookedSlots.includes(slot);
                                             const isSelected = formData.time === slot;
@@ -281,6 +351,7 @@ export default function BookingSection() {
                                         })}
                                     </div>
                                 )}
+                                </div>
                             </div>
                         </div>
 

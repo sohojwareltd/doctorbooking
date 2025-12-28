@@ -10,7 +10,7 @@ export default function DoctorLayout({ children }) {
   const navLinkClass = (href) => {
     const active = url === href || url.startsWith(href + '/');
     return `block rounded-2xl px-4 py-3 text-sm font-semibold transition ${
-      active ? 'bg-white/15 text-white' : 'text-white/80 hover:text-white hover:bg-white/10'
+      active ? 'bg-[#005963] text-white' : 'text-[#005963] hover:bg-[#005963]/10'
     }`;
   };
 
@@ -22,14 +22,14 @@ export default function DoctorLayout({ children }) {
 
       <div className="relative z-10 flex min-h-screen">
         <aside className="hidden md:block fixed left-0 top-0 bottom-0 w-72 p-4">
-          <GlassCard variant="glass" className="h-full overflow-y-auto p-5 flex flex-col">
+          <div className="bg-[#FFFEF7] rounded-3xl shadow-lg h-full overflow-y-auto p-5 flex flex-col">
             <Link href="/" className="flex items-center gap-3 mb-6">
-              <div className="bg-white rounded-2xl p-2">
+              <div className="bg-[#005963] rounded-2xl p-2">
                 <DoctorLogo className="h-10 w-10" />
               </div>
               <div>
-                <div className="text-white font-black leading-tight">MediCare</div>
-                <div className="text-white/70 text-xs">Doctor</div>
+                <div className="text-[#005963] font-black leading-tight">MediCare</div>
+                <div className="text-[#005963]/70 text-xs">Doctor</div>
               </div>
             </Link>
 
@@ -41,38 +41,38 @@ export default function DoctorLayout({ children }) {
               <Link href="/doctor/schedule" className={navLinkClass('/doctor/schedule')}>Schedule</Link>
             </nav>
 
-            <div className="pt-4 border-t border-white/15">
-              <div className="text-white/70 text-sm mb-3 truncate">{auth?.user?.name}</div>
+            <div className="pt-4 border-t border-[#005963]/15">
+              <div className="text-[#005963]/70 text-sm mb-3 truncate">{auth?.user?.name}</div>
               <Link
                 href="/logout"
                 method="post"
                 as="button"
-                className="w-full rounded-2xl bg-white/10 px-4 py-3 text-sm font-semibold text-white hover:bg-white/15 transition"
+                className="w-full rounded-2xl bg-[#005963]/10 px-4 py-3 text-sm font-semibold text-[#005963] hover:bg-[#005963]/20 transition"
               >
                 Logout
               </Link>
             </div>
-          </GlassCard>
+          </div>
         </aside>
 
         <div className="flex-1 p-4 md:p-8 md:ml-80">
           <div className="md:hidden mb-4">
-            <GlassCard variant="glass" className="p-4">
+            <div className="bg-[#FFFEF7] rounded-3xl shadow-lg p-4">
               <div className="flex items-center justify-between gap-3">
                 <Link href="/" className="flex items-center gap-2">
-                  <div className="bg-white rounded-xl p-1.5">
+                  <div className="bg-[#005963] rounded-xl p-1.5">
                     <DoctorLogo className="h-8 w-8" />
                   </div>
                   <div>
-                    <div className="text-white font-black leading-tight">MediCare</div>
-                    <div className="text-white/70 text-xs">Doctor</div>
+                    <div className="text-[#005963] font-black leading-tight">MediCare</div>
+                    <div className="text-[#005963]/70 text-xs">Doctor</div>
                   </div>
                 </Link>
                 <Link
                   href="/logout"
                   method="post"
                   as="button"
-                  className="rounded-xl bg-white/10 px-3 py-2 text-sm font-semibold text-white hover:bg-white/15 transition"
+                  className="rounded-xl bg-[#005963]/10 px-3 py-2 text-sm font-semibold text-[#005963] hover:bg-[#005963]/20 transition"
                 >
                   Logout
                 </Link>
@@ -84,12 +84,12 @@ export default function DoctorLayout({ children }) {
                 <Link href="/doctor/schedule" className={navLinkClass('/doctor/schedule')}>Schedule</Link>
                 <Link href="/doctor/prescriptions" className={navLinkClass('/doctor/prescriptions')}>Prescriptions</Link>
               </div>
-            </GlassCard>
+            </div>
           </div>
 
-          <GlassCard variant="solid" className="p-0 overflow-hidden">
+          <div className="bg-[#FFFEF7] rounded-3xl shadow-lg p-0 overflow-hidden">
             {children}
-          </GlassCard>
+          </div>
         </div>
       </div>
     </div>

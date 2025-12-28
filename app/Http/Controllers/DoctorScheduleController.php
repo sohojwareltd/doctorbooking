@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Appointment;
 use App\Models\DoctorSchedule;
 use App\Models\DoctorScheduleRange;
+use App\Models\DoctorUnavailableRange;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -57,8 +59,19 @@ class DoctorScheduleController extends Controller
             ];
         }
 
+        $unavailableRanges = DoctorUnavailableRange::where('doctor_id', $doctor->id)
+            ->orderBy('start_date')
+            ->orderBy('end_date')
+            ->get(['start_date', 'end_date'])
+            ->map(fn ($r) => [
+                'start_date' => $r->start_date?->toDateString(),
+                'end_date' => $r->end_date?->toDateString(),
+            ])
+            ->toArray();
+
         return Inertia::render('doctor/Schedule', [
             'schedule' => $payload,
+            'unavailable_ranges' => $unavailableRanges,
         ]);
     }
 
@@ -74,6 +87,10 @@ class DoctorScheduleController extends Controller
             'schedule.*.ranges' => ['nullable', 'array'],
             'schedule.*.ranges.*.start_time' => ['required_with:schedule.*.ranges', 'date_format:H:i'],
             'schedule.*.ranges.*.end_time' => ['required_with:schedule.*.ranges', 'date_format:H:i'],
+
+            'unavailable_ranges' => ['nullable', 'array'],
+            'unavailable_ranges.*.start_date' => ['required_with:unavailable_ranges', 'date_format:Y-m-d'],
+            'unavailable_ranges.*.end_date' => ['required_with:unavailable_ranges', 'date_format:Y-m-d'],
         ]);
 
         foreach ($validated['schedule'] as $row) {
@@ -133,9 +150,53 @@ class DoctorScheduleController extends Controller
             }
         }
 
+        $incomingUnavailable = array_values(array_filter($validated['unavailable_ranges'] ?? [], fn ($r) => !empty($r['start_date']) && !empty($r['end_date'])));
+
+        $warning = null;
+
+        foreach ($incomingUnavailable as $idx => $range) {
+            $start = now()->parse($range['start_date'])->startOfDay();
+            $end = now()->parse($range['end_date'])->startOfDay();
+            if ($end->lt($start)) {
+                return response()->json([
+                    'message' => 'Invalid date range: end date must be on or after start date.',
+                    'errors' => [
+                        "unavailable_ranges.$idx" => ['End date must be on or after start date.'],
+                    ],
+                ], 422);
+            }
+        }
+
+        if (count($incomingUnavailable) > 0) {
+            $existingCount = Appointment::where('doctor_id', $doctor->id)
+                ->where('status', '!=', 'cancelled')
+                ->whereDate('appointment_date', '>=', now()->toDateString())
+                ->where(function ($q) use ($incomingUnavailable) {
+                    foreach ($incomingUnavailable as $range) {
+                        $q->orWhereBetween('appointment_date', [$range['start_date'], $range['end_date']]);
+                    }
+                })
+                ->count();
+
+            if ($existingCount > 0) {
+                $warning = $existingCount . ' existing appointment(s) fall within your unavailable date ranges. New bookings will be blocked for those dates.';
+            }
+        }
+
+        DoctorUnavailableRange::where('doctor_id', $doctor->id)->delete();
+
+        foreach ($incomingUnavailable as $range) {
+            DoctorUnavailableRange::create([
+                'doctor_id' => $doctor->id,
+                'start_date' => $range['start_date'],
+                'end_date' => $range['end_date'],
+            ]);
+        }
+
         return response()->json([
             'status' => 'success',
             'message' => 'Schedule saved.',
+            'warning' => $warning,
         ]);
     }
 }

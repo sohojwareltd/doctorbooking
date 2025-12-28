@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
 use App\Http\Controllers\DoctorScheduleController;
+use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\PrescriptionController;
 use App\Http\Controllers\Admin\SiteContentController;
 use Illuminate\Support\Facades\Auth;
@@ -49,6 +50,7 @@ Route::post('/contact', function () {
 // Public booking endpoint
 Route::post('/book-appointment', 'App\\Http\\Controllers\\AppointmentController@storePublic')->name('public.book-appointment');
 Route::get('/available-slots/{date}', 'App\\Http\\Controllers\\AppointmentController@getAvailableSlots')->name('available-slots');
+Route::get('/doctor-unavailable-ranges', [AppointmentController::class, 'getDoctorUnavailableRanges'])->name('doctor-unavailable-ranges');
 
 /*
 |--------------------------------------------------------------------------

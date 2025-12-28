@@ -5,7 +5,7 @@ export default function DoctorDashboard({ stats = {} }) {
   return (
     <>
       <Head title="Doctor Dashboard" />
-      <div className="mx-auto max-w-6xl px-4 py-10">
+      <div className="mx-auto max-w-6xl px-4 py-10 bg-[#FFFEF7]">
         <h1 className="mb-6 text-3xl font-bold text-[#005963]">Dashboard</h1>
         <div className="grid gap-6 sm:grid-cols-2">
           <div className="rounded-2xl border p-6">

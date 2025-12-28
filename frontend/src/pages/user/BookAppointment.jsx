@@ -1,6 +1,6 @@
 import { Head, usePage } from '@inertiajs/react';
 import { Calendar, Clock, Mail, Phone, User } from 'lucide-react';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
@@ -26,28 +26,87 @@ export default function UserBookAppointment() {
   const [selectedDate, setSelectedDate] = useState(null);
   const selectedDateRef = useRef(null);
   const selectedTimeRef = useRef('');
+  const slotsRequestSeq = useRef(0);
   const [availableSlots, setAvailableSlots] = useState([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [unavailableRanges, setUnavailableRanges] = useState([]);
+  const [closedWeekdays, setClosedWeekdays] = useState([]);
+
+  const isClosedByWeekday = (dateStr) => {
+    if (!dateStr || !Array.isArray(closedWeekdays) || closedWeekdays.length === 0) return false;
+    const dow = new Date(`${dateStr}T00:00:00`).getDay();
+    return closedWeekdays.includes(dow);
+  };
+
+  const isUnavailableDate = (dateStr) => {
+    if (!dateStr) return false;
+    if (isClosedByWeekday(dateStr)) return true;
+    if (!Array.isArray(unavailableRanges) || unavailableRanges.length === 0) return false;
+    return unavailableRanges.some((r) => r?.start_date && r?.end_date && r.start_date <= dateStr && dateStr <= r.end_date);
+  };
+
+  useEffect(() => {
+    let mounted = true;
+    const run = async () => {
+      try {
+        const res = await fetch('/doctor-unavailable-ranges');
+        const data = await res.json().catch(() => ({}));
+        if (!mounted) return;
+        setUnavailableRanges(Array.isArray(data?.ranges) ? data.ranges : []);
+        setClosedWeekdays(Array.isArray(data?.closed_weekdays) ? data.closed_weekdays : []);
+      } catch {
+        if (!mounted) return;
+        setUnavailableRanges([]);
+        setClosedWeekdays([]);
+      }
+    };
+    run();
+    return () => { mounted = false; };
+  }, []);
 
   const fetchAvailableSlots = async (date) => {
+    const seq = ++slotsRequestSeq.current;
     setLoadingSlots(true);
     try {
       const res = await fetch(`/available-slots/${date}`);
       const data = await res.json().catch(() => ({}));
+
+      // Ignore stale responses (user clicked another date quickly).
+      if (seq !== slotsRequestSeq.current) return;
+
+      if (data?.closed) {
+        setError('Doctor is unavailable on the selected date. Please choose another date.');
+        setSelectedDate(null);
+        selectedDateRef.current = null;
+        selectedTimeRef.current = '';
+        setFormData((p) => ({ ...p, date: '', time: '' }));
+        setAvailableSlots([]);
+        return;
+      }
+
       setAvailableSlots(data.slots || []);
     } catch {
+      if (seq !== slotsRequestSeq.current) return;
       setAvailableSlots([]);
     } finally {
+      if (seq !== slotsRequestSeq.current) return;
       setLoadingSlots(false);
     }
   };
 
   const handleDateClick = (info) => {
     const clickedDate = info.dateStr;
+
+    if (isUnavailableDate(clickedDate)) {
+      setError('Doctor is unavailable on the selected date. Please choose another date.');
+      return;
+    }
+
+    setError('');
     setSelectedDate(clickedDate);
     selectedDateRef.current = clickedDate;
     selectedTimeRef.current = '';
@@ -62,12 +121,18 @@ export default function UserBookAppointment() {
     setError('');
 
     try {
-      const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+      const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+      if (!token) {
+        setError('Missing CSRF token. Please refresh the page and try again.');
+        return;
+      }
       const res = await fetch('/book-appointment', {
         method: 'POST',
+        credentials: 'same-origin',
         headers: {
           'Content-Type': 'application/json',
           'X-CSRF-TOKEN': token,
+          'X-Requested-With': 'XMLHttpRequest',
           Accept: 'application/json',
         },
         body: JSON.stringify({
@@ -149,30 +214,36 @@ export default function UserBookAppointment() {
                 headerToolbar={{ left: 'prev', center: 'title', right: 'next' }}
                 height="auto"
                 validRange={{ start: new Date().toISOString().split('T')[0] }}
-                dayCellClassNames={(arg) => (arg.dateStr === selectedDate ? 'fc-day-selected' : '')}
+                dayCellClassNames={(arg) => {
+                  if (isUnavailableDate(arg.dateStr)) return 'fc-unavailable';
+                  if (arg.dateStr === selectedDate) return 'fc-day-selected';
+                  return '';
+                }}
               />
             </div>
           </GlassCard>
 
-          <GlassCard variant="solid" className="p-5">
+          <GlassCard variant="solid" className="p-5 flex flex-col">
             <h3 className="mb-3 text-lg font-extrabold text-[#005963]">Available Time Slots</h3>
 
+            <div className="flex-1 min-h-0">
+
             {!selectedDate ? (
-              <div className="flex h-56 items-center justify-center text-gray-600">
+              <div className="flex h-full items-center justify-center text-gray-600">
                 <div className="text-center">
                   <Calendar className="mx-auto mb-3 h-12 w-12 text-gray-400" />
                   <p>Please select a date first</p>
                 </div>
               </div>
             ) : loadingSlots ? (
-              <div className="flex h-56 items-center justify-center">
+              <div className="flex h-full items-center justify-center">
                 <div className="text-center">
                   <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-4 border-[#00acb1] border-t-transparent"></div>
                   <p className="text-gray-600">Loading available slots...</p>
                 </div>
               </div>
             ) : availableSlots.length === 0 ? (
-              <div className="flex h-56 items-center justify-center text-gray-600">
+              <div className="flex h-full items-center justify-center text-gray-600">
                 <div className="text-center">
                   <Clock className="mx-auto mb-3 h-12 w-12 text-gray-400" />
                   <p>No slots available for this date</p>
@@ -182,7 +253,7 @@ export default function UserBookAppointment() {
             ) : (
               <div>
                 <div className="mb-3 text-sm text-gray-700">Selected date: <span className="font-semibold">{selectedDate}</span></div>
-                <div className="grid max-h-64 gap-2 overflow-y-auto pr-2 sm:grid-cols-3">
+                <div className="grid gap-2 overflow-y-auto pr-2 sm:grid-cols-3">
                   {availableSlots.map((slot) => (
                     <button
                       key={slot}
@@ -203,6 +274,8 @@ export default function UserBookAppointment() {
                 </div>
               </div>
             )}
+
+            </div>
 
             {formData.date && formData.time && (
               <div className="mt-4 rounded-2xl border border-[#00acb1]/30 bg-[#005963]/10 px-4 py-3 text-center text-sm font-semibold text-[#005963]">

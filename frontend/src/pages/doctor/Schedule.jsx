@@ -6,7 +6,7 @@ import PrimaryButton from '../../components/PrimaryButton';
 
 const DAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-export default function DoctorSchedule({ schedule = [] }) {
+export default function DoctorSchedule({ schedule = [], unavailable_ranges = [] }) {
   const initial = useMemo(() => {
     if (!Array.isArray(schedule) || schedule.length !== 7) {
       return DAY_LABELS.map((_, day_of_week) => ({
@@ -24,9 +24,21 @@ export default function DoctorSchedule({ schedule = [] }) {
     }));
   }, [schedule]);
 
+  const initialUnavailable = useMemo(() => {
+    if (!Array.isArray(unavailable_ranges)) return [];
+    return unavailable_ranges
+      .map((r) => ({
+        start_date: r?.start_date || '',
+        end_date: r?.end_date || '',
+      }))
+      .filter((r) => r.start_date && r.end_date);
+  }, [unavailable_ranges]);
+
   const [rows, setRows] = useState(initial);
+  const [unavailable, setUnavailable] = useState(initialUnavailable);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState('');
+  const [warning, setWarning] = useState('');
   const [error, setError] = useState('');
 
   const updateRow = (idx, patch) => {
@@ -64,26 +76,50 @@ export default function DoctorSchedule({ schedule = [] }) {
     );
   };
 
+  const addUnavailable = () => {
+    setUnavailable((prev) => {
+      const next = [...(Array.isArray(prev) ? prev : [])];
+      next.push({ start_date: '', end_date: '' });
+      return next;
+    });
+  };
+
+  const updateUnavailable = (idx, patch) => {
+    setUnavailable((prev) => (Array.isArray(prev) ? prev.map((r, i) => (i === idx ? { ...r, ...patch } : r)) : prev));
+  };
+
+  const removeUnavailable = (idx) => {
+    setUnavailable((prev) => (Array.isArray(prev) ? prev.filter((_, i) => i !== idx) : prev));
+  };
+
   const save = async () => {
     setSaving(true);
     setSuccess('');
+    setWarning('');
     setError('');
 
     try {
-      const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+      const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+      if (!token) {
+        setError('Missing CSRF token. Please refresh the page and try again.');
+        return;
+      }
       const res = await fetch('/doctor/schedule', {
         method: 'POST',
+        credentials: 'same-origin',
         headers: {
           'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
           'X-CSRF-TOKEN': token,
           Accept: 'application/json',
         },
-        body: JSON.stringify({ schedule: rows }),
+        body: JSON.stringify({ schedule: rows, unavailable_ranges: unavailable }),
       });
 
       if (res.ok) {
         const data = await res.json().catch(() => ({}));
         setSuccess(data?.message || 'Schedule saved.');
+        if (data?.warning) setWarning(data.warning);
       } else {
         const data = await res.json().catch(() => ({}));
         const msg = data?.message || 'Failed to save schedule.';
@@ -105,10 +141,83 @@ export default function DoctorSchedule({ schedule = [] }) {
           <p className="text-sm text-gray-700">Add one or more working time ranges for each day. Public booking uses this schedule.</p>
         </div>
 
-        {(success || error) && (
-          <GlassCard variant="solid" className={`mb-6 p-4 ${success ? 'border-emerald-200 bg-emerald-50/60' : 'border-rose-200 bg-rose-50/60'}`}>
-            <div className={`text-sm font-semibold ${success ? 'text-emerald-800' : 'text-rose-800'}`}>{success || error}</div>
-          </GlassCard>
+        <GlassCard variant="solid" className="mb-6 p-5">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <div className="text-lg font-extrabold text-[#005963]">Unavailable Date Ranges</div>
+              <div className="mt-1 text-sm text-gray-600">If you are away (e.g., 2-7), add a date range to block bookings.</div>
+            </div>
+
+            <button
+              type="button"
+              className="rounded-full border border-[#00acb1]/40 bg-white px-4 py-2 text-sm font-semibold text-[#005963]"
+              onClick={addUnavailable}
+            >
+              + Add Date Range
+            </button>
+          </div>
+
+          <div className="mt-4 space-y-3">
+            {(!Array.isArray(unavailable) || unavailable.length === 0) && (
+              <div className="rounded-2xl border border-dashed border-[#00acb1]/30 bg-white/40 px-4 py-4 text-sm text-gray-600">
+                No unavailable date ranges added.
+              </div>
+            )}
+
+            {Array.isArray(unavailable) && unavailable.map((r, idx) => (
+              <div key={`unavailable-${idx}`} className="flex flex-col gap-3 rounded-2xl border border-[#00acb1]/20 bg-white p-4 sm:flex-row sm:items-center">
+                <div className="flex flex-1 flex-wrap items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-[#005963]">From</span>
+                    <input
+                      type="date"
+                      className="rounded-xl border border-[#00acb1]/30 bg-white px-3 py-2 text-sm"
+                      value={r.start_date || ''}
+                      onChange={(e) => updateUnavailable(idx, { start_date: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-[#005963]">To</span>
+                    <input
+                      type="date"
+                      className="rounded-xl border border-[#00acb1]/30 bg-white px-3 py-2 text-sm"
+                      value={r.end_date || ''}
+                      onChange={(e) => updateUnavailable(idx, { end_date: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  className="rounded-full border border-rose-300 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-800"
+                  onClick={() => removeUnavailable(idx)}
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+          </div>
+        </GlassCard>
+
+        {(success || warning || error) && (
+          <>
+            {success && (
+              <GlassCard variant="solid" className="mb-3 border-emerald-200 bg-emerald-50/60 p-4">
+                <div className="text-sm font-semibold text-emerald-800">{success}</div>
+              </GlassCard>
+            )}
+            {warning && (
+              <GlassCard variant="solid" className="mb-3 border-amber-200 bg-amber-50/60 p-4">
+                <div className="text-sm font-semibold text-amber-800">{warning}</div>
+              </GlassCard>
+            )}
+            {error && (
+              <GlassCard variant="solid" className="mb-6 border-rose-200 bg-rose-50/60 p-4">
+                <div className="text-sm font-semibold text-rose-800">{error}</div>
+              </GlassCard>
+            )}
+          </>
         )}
 
         <div className="space-y-4">
