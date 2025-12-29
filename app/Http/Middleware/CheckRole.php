@@ -15,11 +15,22 @@ class CheckRole
      */
     public function handle(Request $request, Closure $next, string $role): Response
     {
-        if (!$request->user()) {
+        $user = $request->user();
+        $wantsJson = $request->expectsJson() || $request->is('api/*');
+
+        if (!$user) {
+            if ($wantsJson) {
+                return response()->json(['message' => 'Unauthenticated.'], 401);
+            }
+
             return redirect('/login');
         }
 
-        if ($request->user()->role !== $role) {
+        if ($user->role !== $role) {
+            if ($wantsJson) {
+                return response()->json(['message' => 'Forbidden.'], 403);
+            }
+
             abort(403, 'Unauthorized access.');
         }
 

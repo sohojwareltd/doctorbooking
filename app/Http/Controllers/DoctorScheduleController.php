@@ -77,7 +77,7 @@ class DoctorScheduleController extends Controller
 
     public function update(Request $request): JsonResponse
     {
-        $doctor = Auth::user();
+        $doctor = $request->user();
 
         $validated = $request->validate([
             'schedule' => ['required', 'array', 'size:7'],

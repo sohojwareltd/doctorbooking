@@ -7,13 +7,12 @@ use App\Models\Prescription;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 class PrescriptionController extends Controller
 {
     public function store(Request $request): JsonResponse|RedirectResponse
     {
-        $doctor = Auth::user();
+        $doctor = $request->user();
         if (!$doctor || $doctor->role !== 'doctor') {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
@@ -51,7 +50,7 @@ class PrescriptionController extends Controller
             'next_visit_date' => $validated['next_visit_date'] ?? null,
         ]);
 
-        if ($request->expectsJson()) {
+        if ($request->is('api/*') || $request->expectsJson()) {
             return response()->json([
                 'status' => 'success',
                 'message' => 'Prescription created.',

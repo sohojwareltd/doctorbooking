@@ -286,7 +286,7 @@ class AppointmentController extends Controller
             'status' => ['required', Rule::in(['pending', 'approved', 'completed', 'cancelled'])],
         ]);
 
-        $user = Auth::user();
+        $user = $request->user();
         if (!$user || !in_array($user->role, ['doctor', 'admin'], true)) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
