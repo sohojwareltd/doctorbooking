@@ -1,6 +1,7 @@
 import { Head } from '@inertiajs/react';
 import UserLayout from '../../layouts/UserLayout';
 import GlassCard from '../../components/GlassCard';
+import { formatDisplayDate } from '../../utils/dateFormat';
 
 export default function UserAppointments({ appointments = [] }) {
   const formatTime12h = (time) => {
@@ -44,7 +45,7 @@ export default function UserAppointments({ appointments = [] }) {
               <tbody className="divide-y bg-white">
                 {appointments.map((a) => (
                   <tr key={a.id}>
-                    <td className="px-4 py-3 text-sm text-gray-700">{a.appointment_date}</td>
+                    <td className="px-4 py-3 text-sm text-gray-700">{formatDisplayDate(a.appointment_date) || a.appointment_date}</td>
                     <td className="px-4 py-3 text-sm text-gray-700">{formatTime12h(a.appointment_time)}</td>
                     <td className="px-4 py-3 text-sm">
                       <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold capitalize ${statusBadge(a.status)}`}>

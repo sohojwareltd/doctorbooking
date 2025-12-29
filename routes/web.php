@@ -180,6 +180,7 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
                 'status' => $a->status,
                 'symptoms' => $a->symptoms,
                 'has_prescription' => $a->prescription !== null,
+                'prescription_id' => $a->prescription?->id,
             ]),
         ]);
     })->name('appointments');
@@ -201,6 +202,40 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
             ->get(['id','user_id','diagnosis','medications','next_visit_date','created_at']);
         return Inertia::render('doctor/Prescriptions', [ 'prescriptions' => $prescriptions ]);
     })->name('prescriptions');
+
+    Route::get('/prescriptions/{prescription}', function (Prescription $prescription) {
+        $doctor = Auth::user();
+
+        $prescription = Prescription::with([
+            'user:id,name',
+            'appointment:id,appointment_date,appointment_time,status',
+        ])
+            ->where('doctor_id', $doctor->id)
+            ->where('id', $prescription->id)
+            ->firstOrFail();
+
+        return Inertia::render('doctor/PrescriptionShow', [
+            'prescription' => [
+                'id' => $prescription->id,
+                'appointment_id' => $prescription->appointment_id,
+                'created_at' => $prescription->created_at?->toDateTimeString(),
+                'diagnosis' => $prescription->diagnosis,
+                'medications' => $prescription->medications,
+                'instructions' => $prescription->instructions,
+                'tests' => $prescription->tests,
+                'next_visit_date' => $prescription->next_visit_date?->toDateString(),
+                'user' => $prescription->user ? [
+                    'id' => $prescription->user->id,
+                    'name' => $prescription->user->name,
+                ] : null,
+                'appointment' => $prescription->appointment ? [
+                    'appointment_date' => (string) $prescription->appointment->appointment_date,
+                    'appointment_time' => substr((string) $prescription->appointment->appointment_time, 0, 5),
+                    'status' => $prescription->appointment->status,
+                ] : null,
+            ],
+        ]);
+    })->whereNumber('prescription')->name('prescriptions.show');
 
     Route::get('/schedule', [DoctorScheduleController::class, 'show'])->name('schedule');
     Route::post('/schedule', [DoctorScheduleController::class, 'update'])->name('schedule.update');

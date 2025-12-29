@@ -2,6 +2,7 @@ import { Head, Link } from '@inertiajs/react';
 import { useState } from 'react';
 import GlassCard from '../../components/GlassCard';
 import DoctorLayout from '../../layouts/DoctorLayout';
+import { formatDisplayDate } from '../../utils/dateFormat';
 
 export default function DoctorAppointments({ appointments = [] }) {
   const [rows, setRows] = useState(appointments);
@@ -9,6 +10,7 @@ export default function DoctorAppointments({ appointments = [] }) {
   const [dateFilter, setDateFilter] = useState('all');
 
   const today = new Date().toISOString().split('T')[0];
+  const todayLabel = formatDisplayDate(today) || today;
 
   const formatTime12h = (time) => {
     if (!time || typeof time !== 'string') return '';
@@ -76,7 +78,7 @@ export default function DoctorAppointments({ appointments = [] }) {
           <div className="border-b bg-white px-4 py-4">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div className="text-sm text-gray-700">
-                <span className="font-semibold text-[#005963]">Today:</span> {today}
+                <span className="font-semibold text-[#005963]">Today:</span> {todayLabel}
                 {lastBookedToday && (
                   <span className="ml-3">
                     <span className="font-semibold text-[#005963]">Last booked today:</span>{' '}
@@ -135,7 +137,7 @@ export default function DoctorAppointments({ appointments = [] }) {
                     <tr key={a.id}>
                       <td className="px-4 py-3 text-sm font-semibold text-gray-700">{idx + 1}</td>
                       <td className="px-4 py-3 text-sm font-semibold text-[#005963]">{a.user?.name || a.user_id}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{a.appointment_date}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{formatDisplayDate(a.appointment_date) || a.appointment_date}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{formatTime12h(a.appointment_time)}</td>
                       <td className="px-4 py-3 text-sm capitalize">
                         <select
@@ -151,9 +153,19 @@ export default function DoctorAppointments({ appointments = [] }) {
                       </td>
                       <td className="px-4 py-3 text-sm">
                         {a.has_prescription ? (
-                          <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">
-                            Prescription Created
-                          </span>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">
+                              Prescription Created
+                            </span>
+                            {a.prescription_id ? (
+                              <Link
+                                href={`/doctor/prescriptions/${a.prescription_id}`}
+                                className="inline-flex items-center justify-center rounded-full border border-[#00acb1]/40 bg-white px-4 py-2 text-xs font-semibold text-[#005963] hover:bg-[#00acb1]/10"
+                              >
+                                View
+                              </Link>
+                            ) : null}
+                          </div>
                         ) : canCreatePrescription ? (
                           <Link
                             href={`/doctor/prescriptions/create?appointment_id=${a.id}`}

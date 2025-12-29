@@ -1,5 +1,7 @@
 import { Head } from '@inertiajs/react';
 import { useState } from 'react';
+import AdminLayout from '../../layouts/AdminLayout';
+import { formatDisplayDate } from '../../utils/dateFormat';
 
 export default function AdminAppointments({ appointments = [] }) {
   const [rows, setRows] = useState(appointments);
@@ -36,7 +38,7 @@ export default function AdminAppointments({ appointments = [] }) {
                 <tr key={a.id}>
                   <td className="px-4 py-3 text-sm">{a.user?.name || a.user_id}</td>
                   <td className="px-4 py-3 text-sm">{a.doctor?.name || a.doctor_id}</td>
-                  <td className="px-4 py-3 text-sm">{a.appointment_date}</td>
+                  <td className="px-4 py-3 text-sm">{formatDisplayDate(a.appointment_date) || a.appointment_date}</td>
                   <td className="px-4 py-3 text-sm">{a.appointment_time}</td>
                   <td className="px-4 py-3 text-sm capitalize">
                     <select

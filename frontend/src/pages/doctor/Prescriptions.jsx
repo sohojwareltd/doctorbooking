@@ -1,6 +1,7 @@
 import { Head, Link } from '@inertiajs/react';
 import DoctorLayout from '../../layouts/DoctorLayout';
 import GlassCard from '../../components/GlassCard';
+import { formatDisplayFromDateLike, formatDisplayDate } from '../../utils/dateFormat';
 
 export default function DoctorPrescriptions({ prescriptions = [] }) {
   return (
@@ -30,21 +31,30 @@ export default function DoctorPrescriptions({ prescriptions = [] }) {
                   <th className="px-4 py-3 text-left text-sm font-semibold">Diagnosis</th>
                   <th className="px-4 py-3 text-left text-sm font-semibold">Medications</th>
                   <th className="px-4 py-3 text-left text-sm font-semibold">Next Visit</th>
+                  <th className="px-4 py-3 text-right text-sm font-semibold">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y bg-white">
                 {prescriptions.map((p) => (
                   <tr key={p.id}>
                     <td className="px-4 py-3 text-sm font-semibold text-[#005963]">{p.user?.name || p.user_id}</td>
-                    <td className="px-4 py-3 text-sm text-gray-700">{p.created_at}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{formatDisplayFromDateLike(p.created_at) || p.created_at}</td>
                     <td className="px-4 py-3 text-sm text-gray-800">{p.diagnosis}</td>
                     <td className="px-4 py-3 text-sm whitespace-pre-wrap text-gray-800">{p.medications}</td>
-                    <td className="px-4 py-3 text-sm text-gray-700">{p.next_visit_date || '-'}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{p.next_visit_date ? (formatDisplayDate(p.next_visit_date) || p.next_visit_date) : '-'}</td>
+                    <td className="px-4 py-3 text-right text-sm">
+                      <Link
+                        href={`/doctor/prescriptions/${p.id}`}
+                        className="inline-flex items-center justify-center rounded-full border border-[#00acb1]/40 bg-white px-4 py-2 text-sm font-semibold text-[#005963]"
+                      >
+                        View
+                      </Link>
+                    </td>
                   </tr>
                 ))}
                 {prescriptions.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-4 py-10 text-center text-gray-500">
+                    <td colSpan={6} className="px-4 py-10 text-center text-gray-500">
                       No prescriptions found.
                     </td>
                   </tr>

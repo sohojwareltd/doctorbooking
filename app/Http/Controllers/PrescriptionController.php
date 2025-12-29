@@ -20,8 +20,8 @@ class PrescriptionController extends Controller
 
         $validated = $request->validate([
             'appointment_id' => ['required', 'integer'],
-            'diagnosis' => ['required', 'string', 'max:5000'],
-            'medications' => ['required', 'string', 'max:10000'],
+            'diagnosis' => ['nullable', 'string', 'max:5000'],
+            'medications' => ['nullable', 'string', 'max:10000'],
             'instructions' => ['nullable', 'string', 'max:10000'],
             'tests' => ['nullable', 'string', 'max:10000'],
             'next_visit_date' => ['nullable', 'date'],
@@ -44,8 +44,8 @@ class PrescriptionController extends Controller
             'appointment_id' => $appointment->id,
             'user_id' => $appointment->user_id,
             'doctor_id' => $doctor->id,
-            'diagnosis' => $validated['diagnosis'],
-            'medications' => $validated['medications'],
+            'diagnosis' => $validated['diagnosis'] ?? '',
+            'medications' => $validated['medications'] ?? '',
             'instructions' => $validated['instructions'] ?? null,
             'tests' => $validated['tests'] ?? null,
             'next_visit_date' => $validated['next_visit_date'] ?? null,
