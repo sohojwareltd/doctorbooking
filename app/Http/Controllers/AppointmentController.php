@@ -169,6 +169,19 @@ class AppointmentController extends Controller
             ]);
         }
 
+        // Do not offer slots for dates in the past.
+        $dateYmd = $carbon->toDateString();
+        $todayYmd = now()->toDateString();
+        if ($dateYmd < $todayYmd) {
+            return response()->json([
+                'slots' => [],
+                'all' => [],
+                'booked' => [],
+                'closed' => true,
+                'date' => $date,
+            ]);
+        }
+
         $isUnavailable = DoctorUnavailableRange::where('doctor_id', $doctor->id)
             ->whereDate('start_date', '<=', $carbon->toDateString())
             ->whereDate('end_date', '>=', $carbon->toDateString())
@@ -267,6 +280,19 @@ class AppointmentController extends Controller
         $bookedUnique = array_values(array_unique($bookedSlots));
         $bookedInSchedule = array_values(array_intersect($allSlots, $bookedUnique));
         sort($bookedInSchedule);
+
+        // If booking for today, hide any slots that already passed.
+        if ($dateYmd === $todayYmd) {
+            $threshold = now();
+            $isFutureOrNow = static function (string $time) use ($threshold): bool {
+                $slotAt = $threshold->copy()->setTimeFromTimeString($time);
+                return $slotAt->gte($threshold);
+            };
+
+            $allSlots = array_values(array_filter($allSlots, $isFutureOrNow));
+            $availableSlots = array_values(array_filter($availableSlots, $isFutureOrNow));
+            $bookedInSchedule = array_values(array_filter($bookedInSchedule, $isFutureOrNow));
+        }
 
         return response()->json([
             'slots' => $availableSlots,

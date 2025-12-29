@@ -1,4 +1,5 @@
 import { Head, useForm } from '@inertiajs/react';
+import { toastError, toastSuccess } from '../../utils/toast';
 
 export default function PasswordSettings() {
   const { data, setData, put, processing, errors } = useForm({
@@ -9,7 +10,10 @@ export default function PasswordSettings() {
 
   const submit = (e) => {
     e.preventDefault();
-    put('/settings/password');
+    put('/settings/password', {
+      onSuccess: () => toastSuccess('Password updated.'),
+      onError: () => toastError('Failed to update password.'),
+    });
   };
 
   return (

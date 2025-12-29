@@ -298,6 +298,9 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
             ->get(['id','user_id','doctor_id','appointment_date','appointment_time','status']);
         return Inertia::render('admin/Appointments', ['appointments' => $appointments]);
     })->name('appointments');
+
+    Route::get('/book-appointment', fn () => Inertia::render('admin/BookAppointment'))
+        ->name('book-appointment');
     Route::post('/appointments/{appointment}/status', 'App\\Http\\Controllers\\AppointmentController@updateStatus')->name('appointments.status');
 
     Route::get('/doctor', fn () => Inertia::render('admin/Doctor'))->name('doctor');

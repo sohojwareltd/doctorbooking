@@ -1,22 +1,30 @@
 import { Head, Link } from '@inertiajs/react';
+import { FileText, PlusCircle } from 'lucide-react';
 import DoctorLayout from '../../layouts/DoctorLayout';
 import GlassCard from '../../components/GlassCard';
-import { formatDisplayFromDateLike, formatDisplayDate } from '../../utils/dateFormat';
+import { formatDisplayFromDateLike, formatDisplayDateWithYearFromDateLike } from '../../utils/dateFormat';
 
 export default function DoctorPrescriptions({ prescriptions = [] }) {
   return (
     <>
       <Head title="Prescriptions" />
-      <div className="mx-auto max-w-6xl px-4 py-10">
+      <div className="w-full px-4 py-10">
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-[#005963]">Prescriptions</h1>
-            <p className="mt-1 text-sm text-gray-700">View and create prescriptions for your patients.</p>
+          <div className="flex items-start gap-3">
+            <div className="rounded-2xl border border-[#00acb1]/20 bg-white/60 p-2">
+              <FileText className="h-6 w-6 text-[#005963]" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-[#005963]">Prescriptions</h1>
+              <p className="mt-1 text-sm text-gray-700">View and create prescriptions for your patients.</p>
+            </div>
           </div>
+
           <Link
             href="/doctor/prescriptions/create"
-            className="inline-flex items-center justify-center rounded-full bg-[#00acb1] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[#00acb1]/30"
+            className="inline-flex items-center justify-center gap-2 rounded-full bg-[#00acb1] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[#00acb1]/30"
           >
+            <PlusCircle className="h-4 w-4" />
             Create Prescription
           </Link>
         </div>
@@ -36,12 +44,12 @@ export default function DoctorPrescriptions({ prescriptions = [] }) {
               </thead>
               <tbody className="divide-y bg-white">
                 {prescriptions.map((p) => (
-                  <tr key={p.id}>
+                  <tr key={p.id} className="hover:bg-[#00acb1]/5">
                     <td className="px-4 py-3 text-sm font-semibold text-[#005963]">{p.user?.name || p.user_id}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{formatDisplayFromDateLike(p.created_at) || p.created_at}</td>
                     <td className="px-4 py-3 text-sm text-gray-800">{p.diagnosis}</td>
                     <td className="px-4 py-3 text-sm whitespace-pre-wrap text-gray-800">{p.medications}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{p.next_visit_date ? (formatDisplayDate(p.next_visit_date) || p.next_visit_date) : '-'}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{p.next_visit_date ? (formatDisplayDateWithYearFromDateLike(p.next_visit_date) || p.next_visit_date) : '-'}</td>
                     <td className="px-4 py-3 text-right text-sm">
                       <Link
                         href={`/doctor/prescriptions/${p.id}`}

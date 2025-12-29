@@ -1,8 +1,10 @@
 import { Head, Link } from '@inertiajs/react';
 import { useState } from 'react';
+import { CalendarCheck2 } from 'lucide-react';
 import GlassCard from '../../components/GlassCard';
 import DoctorLayout from '../../layouts/DoctorLayout';
 import { formatDisplayDate } from '../../utils/dateFormat';
+import { toastError, toastSuccess } from '../../utils/toast';
 
 export default function DoctorAppointments({ appointments = [] }) {
   const [rows, setRows] = useState(appointments);
@@ -39,6 +41,10 @@ export default function DoctorAppointments({ appointments = [] }) {
     });
     if (res.ok) {
       setRows(prev => prev.map(r => r.id === id ? { ...r, status } : r));
+      toastSuccess('Appointment status updated.');
+    } else {
+      const data = await res.json().catch(() => ({}));
+      toastError(data?.message || 'Failed to update status.');
     }
   };
 
@@ -68,10 +74,17 @@ export default function DoctorAppointments({ appointments = [] }) {
   return (
     <>
       <Head title="Appointments" />
-      <div className="mx-auto max-w-6xl px-4 py-10">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-[#005963]">Appointments</h1>
-          <p className="mt-1 text-sm text-gray-700">Manage appointment status and create prescriptions.</p>
+      <div className="w-full px-4 py-10">
+        <div className="mb-6 flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="rounded-2xl border border-[#00acb1]/20 bg-white/60 p-2">
+              <CalendarCheck2 className="h-6 w-6 text-[#005963]" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-[#005963]">Appointments</h1>
+              <p className="mt-1 text-sm text-gray-700">Manage appointment status and create prescriptions.</p>
+            </div>
+          </div>
         </div>
 
         <GlassCard variant="solid" className="overflow-hidden">

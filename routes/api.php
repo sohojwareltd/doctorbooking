@@ -3,8 +3,8 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\AdminApiController;
 use App\Http\Controllers\Api\DoctorApiController;
+use App\Http\Controllers\Api\SiteContentApiController;
 use App\Http\Controllers\Api\UserApiController;
-use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\DoctorScheduleController;
 use App\Http\Controllers\PrescriptionController;
 use Illuminate\Support\Facades\Route;
@@ -28,9 +28,12 @@ Route::prefix('auth')->group(function () {
 
 // Public APIs (no auth)
 Route::prefix('public')->group(function () {
-    Route::get('/available-slots/{date}', [AppointmentController::class, 'getAvailableSlots']);
-    Route::post('/book-appointment', [AppointmentController::class, 'storePublic']);
-    Route::get('/doctor-unavailable-ranges', [AppointmentController::class, 'getDoctorUnavailableRanges']);
+    Route::get('/available-slots/{date}', 'App\\Http\\Controllers\\AppointmentController@getAvailableSlots');
+    Route::post('/book-appointment', 'App\\Http\\Controllers\\AppointmentController@storePublic');
+    Route::get('/doctor-unavailable-ranges', 'App\\Http\\Controllers\\AppointmentController@getDoctorUnavailableRanges');
+
+    // Public site content (Flutter/mobile)
+    Route::get('/site-content/home', [SiteContentApiController::class, 'home']);
 });
 
 // User APIs
@@ -42,7 +45,7 @@ Route::middleware(['auth:sanctum', 'role:user'])->prefix('user')->group(function
 // Doctor APIs
 Route::middleware(['auth:sanctum', 'role:doctor'])->prefix('doctor')->group(function () {
     Route::get('/appointments', [DoctorApiController::class, 'appointments']);
-    Route::post('/appointments/{appointment}/status', [AppointmentController::class, 'updateStatus']);
+    Route::post('/appointments/{appointment}/status', 'App\\Http\\Controllers\\AppointmentController@updateStatus');
 
     Route::get('/schedule', [DoctorApiController::class, 'schedule']);
     Route::post('/schedule', [DoctorScheduleController::class, 'update']);
@@ -56,5 +59,9 @@ Route::middleware(['auth:sanctum', 'role:doctor'])->prefix('doctor')->group(func
 Route::middleware(['auth:sanctum', 'role:admin'])->prefix('admin')->group(function () {
     Route::get('/users', [AdminApiController::class, 'users']);
     Route::get('/appointments', [AdminApiController::class, 'appointments']);
-    Route::post('/appointments/{appointment}/status', [AppointmentController::class, 'updateStatus']);
+    Route::post('/appointments/{appointment}/status', 'App\\Http\\Controllers\\AppointmentController@updateStatus');
+
+    // Admin site content management (optional)
+    Route::put('/site-content/home', [SiteContentApiController::class, 'updateHome']);
+    Route::post('/site-content/upload', [SiteContentApiController::class, 'uploadImage']);
 });

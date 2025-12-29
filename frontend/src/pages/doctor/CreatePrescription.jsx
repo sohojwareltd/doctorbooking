@@ -1,8 +1,10 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useMemo, useReducer, useState } from 'react';
+import { FilePlus2 } from 'lucide-react';
 import DoctorLayout from '../../layouts/DoctorLayout';
 import GlassCard from '../../components/GlassCard';
 import PrimaryButton from '../../components/PrimaryButton';
+import { toastError, toastSuccess } from '../../utils/toast';
 
 const COMMON_TESTS = [
   'CBC',
@@ -357,7 +359,9 @@ export default function CreatePrescription({ appointments = [] }) {
     setError('');
 
     if (!selectedAppointment?.id) {
-      setError('Please select an appointment first.');
+      const message = 'Please select an appointment first.';
+      setError(message);
+      toastError(message);
       return;
     }
 
@@ -395,13 +399,17 @@ export default function CreatePrescription({ appointments = [] }) {
           (data?.errors ? Object.values(data.errors).flat().join(' ') : null) ||
           'Failed to save prescription.';
         setError(msg);
+        toastError(msg);
         return;
       }
 
       setSuccess('Prescription saved successfully. Redirecting…');
+      toastSuccess('Prescription saved successfully.');
       setTimeout(() => router.visit('/doctor/prescriptions'), 400);
     } catch {
-      setError('Network error. Please try again.');
+      const message = 'Network error. Please try again.';
+      setError(message);
+      toastError(message);
     } finally {
       setSubmitting(false);
     }
@@ -410,11 +418,15 @@ export default function CreatePrescription({ appointments = [] }) {
   return (
     <>
       <Head title="Create Prescription" />
-      <div className="mx-auto max-w-6xl px-4 py-10">
+      <div className="w-full px-4 py-10">
         <div className="mb-6 flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-[#005963]">Create Prescription</h1>
-            <p className="mt-1 text-sm text-gray-700">Fast, touch-friendly prescription form for patient visits.</p>
+          <div className="flex items-start gap-3">
+            <div className="rounded-2xl border border-[#00acb1]/20 bg-white/60 p-2">
+              <FilePlus2 className="h-6 w-6 text-[#005963]" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-[#005963]">Create Prescription</h1>
+              <p className="mt-1 text-sm text-gray-700">Fast, touch-friendly prescription form for patient visits.</p>
             {visitDateLabel && (
               <div className="mt-3">
                 <span className={chipClass}>
@@ -432,6 +444,7 @@ export default function CreatePrescription({ appointments = [] }) {
                 )}
               </div>
             )}
+            </div>
           </div>
           <Link href="/doctor/prescriptions" className="text-sm font-semibold text-[#005963] hover:underline">Back</Link>
         </div>

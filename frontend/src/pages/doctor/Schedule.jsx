@@ -1,8 +1,10 @@
 import { Head } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
+import { CalendarClock } from 'lucide-react';
 import DoctorLayout from '../../layouts/DoctorLayout';
 import GlassCard from '../../components/GlassCard';
 import PrimaryButton from '../../components/PrimaryButton';
+import { toastError, toastSuccess, toastWarning } from '../../utils/toast';
 
 const DAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -101,7 +103,9 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [] 
     try {
       const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
       if (!token) {
-        setError('Missing CSRF token. Please refresh the page and try again.');
+        const message = 'Missing CSRF token. Please refresh the page and try again.';
+        setError(message);
+        toastError(message);
         return;
       }
       const res = await fetch('/doctor/schedule', {
@@ -118,15 +122,23 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [] 
 
       if (res.ok) {
         const data = await res.json().catch(() => ({}));
-        setSuccess(data?.message || 'Schedule saved.');
-        if (data?.warning) setWarning(data.warning);
+        const successMessage = data?.message || 'Schedule saved.';
+        setSuccess(successMessage);
+        toastSuccess(successMessage);
+        if (data?.warning) {
+          setWarning(data.warning);
+          toastWarning(data.warning);
+        }
       } else {
         const data = await res.json().catch(() => ({}));
         const msg = data?.message || 'Failed to save schedule.';
         setError(msg);
+        toastError(msg);
       }
     } catch (e) {
-      setError('Network error. Please try again.');
+      const message = 'Network error. Please try again.';
+      setError(message);
+      toastError(message);
     } finally {
       setSaving(false);
     }
@@ -135,10 +147,15 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [] 
   return (
     <>
       <Head title="Schedule" />
-      <div className="mx-auto max-w-6xl px-4 py-10">
-        <div className="mb-6">
-          <h1 className="mb-2 text-3xl font-bold text-[#005963]">Schedule</h1>
-          <p className="text-sm text-gray-700">Add one or more working time ranges for each day. Public booking uses this schedule.</p>
+      <div className="w-full px-4 py-10">
+        <div className="mb-6 flex items-start gap-3">
+          <div className="rounded-2xl border border-[#00acb1]/20 bg-white/60 p-2">
+            <CalendarClock className="h-6 w-6 text-[#005963]" />
+          </div>
+          <div>
+            <h1 className="mb-2 text-3xl font-bold text-[#005963]">Schedule</h1>
+            <p className="text-sm text-gray-700">Add working time ranges and unavailable dates for public booking.</p>
+          </div>
         </div>
 
         <GlassCard variant="solid" className="mb-6 p-5">

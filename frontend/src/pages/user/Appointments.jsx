@@ -1,4 +1,5 @@
 import { Head } from '@inertiajs/react';
+import { CalendarDays } from 'lucide-react';
 import UserLayout from '../../layouts/UserLayout';
 import GlassCard from '../../components/GlassCard';
 import { formatDisplayDate } from '../../utils/dateFormat';
@@ -25,13 +26,23 @@ export default function UserAppointments({ appointments = [] }) {
   return (
     <>
       <Head title="My Appointments" />
-      <div className="mx-auto max-w-6xl px-4 py-10">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-[#005963]">My Appointments</h1>
-          <p className="mt-1 text-sm text-gray-700">Track your appointment requests and status.</p>
+      <div className="w-full px-4 py-10">
+        <div className="mb-6 flex items-center gap-3">
+          <div className="rounded-2xl bg-[#005963]/10 p-3">
+            <CalendarDays className="h-6 w-6 text-[#005963]" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-[#005963]">My Appointments</h1>
+            <p className="mt-1 text-sm text-gray-700">Track your appointment requests and status.</p>
+          </div>
         </div>
 
-        <GlassCard variant="solid" className="overflow-hidden">
+        <GlassCard variant="solid" hover={false} className="overflow-hidden">
+          <div className="border-b bg-white px-4 py-4">
+            <div className="text-sm text-gray-700">
+              Total appointments: <span className="font-semibold text-[#005963]">{appointments.length}</span>
+            </div>
+          </div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y">
               <thead className="bg-gray-50">
@@ -44,7 +55,7 @@ export default function UserAppointments({ appointments = [] }) {
               </thead>
               <tbody className="divide-y bg-white">
                 {appointments.map((a) => (
-                  <tr key={a.id}>
+                  <tr key={a.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm text-gray-700">{formatDisplayDate(a.appointment_date) || a.appointment_date}</td>
                     <td className="px-4 py-3 text-sm text-gray-700">{formatTime12h(a.appointment_time)}</td>
                     <td className="px-4 py-3 text-sm">

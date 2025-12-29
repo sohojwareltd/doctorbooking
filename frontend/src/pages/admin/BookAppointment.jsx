@@ -6,23 +6,25 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import GlassCard from '../../components/GlassCard';
 import PrimaryButton from '../../components/PrimaryButton';
-import UserLayout from '../../layouts/UserLayout';
+import AdminLayout from '../../layouts/AdminLayout';
 import { toastError, toastSuccess } from '../../utils/toast';
 import { formatDisplayDateTimeFromYmdAndTime, formatDisplayDateWithYear, formatDisplayTime12h } from '../../utils/dateFormat';
 
-export default function UserBookAppointment() {
+export default function AdminBookAppointment() {
   const page = usePage();
-  const authUser = page?.props?.auth?.user;
   const contactPhone = page?.props?.site?.contactPhone || '';
 
-  const initial = useMemo(() => ({
-    name: authUser?.name || '',
-    phone: authUser?.phone || '',
-    email: authUser?.email || '',
-    date: '',
-    time: '',
-    message: '',
-  }), [authUser]);
+  const initial = useMemo(
+    () => ({
+      name: '',
+      phone: '',
+      email: '',
+      date: '',
+      time: '',
+      message: '',
+    }),
+    []
+  );
 
   const [formData, setFormData] = useState(initial);
   const [selectedDate, setSelectedDate] = useState(null);
@@ -67,7 +69,9 @@ export default function UserBookAppointment() {
       }
     };
     run();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const fetchAvailableSlots = async (date) => {
@@ -77,7 +81,6 @@ export default function UserBookAppointment() {
       const res = await fetch(`/available-slots/${date}`);
       const data = await res.json().catch(() => ({}));
 
-      // Ignore stale responses (user clicked another date quickly).
       if (seq !== slotsRequestSeq.current) return;
 
       if (data?.closed) {
@@ -137,6 +140,7 @@ export default function UserBookAppointment() {
         toastError(message);
         return;
       }
+
       const res = await fetch('/book-appointment', {
         method: 'POST',
         credentials: 'same-origin',
@@ -157,7 +161,7 @@ export default function UserBookAppointment() {
       });
 
       if (res.ok) {
-        const message = 'Appointment requested successfully. We will contact you shortly.';
+        const message = 'Appointment requested successfully. We will contact the patient shortly.';
         setSuccess(message);
         toastSuccess(message);
         setShowSuccessPopup(true);
@@ -179,7 +183,8 @@ export default function UserBookAppointment() {
     }
   };
 
-  const inputClass = 'w-full rounded-2xl border border-[#00acb1]/30 bg-white px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-4 focus:ring-[#00acb1]/20';
+  const inputClass =
+    'w-full rounded-2xl border border-[#00acb1]/30 bg-white px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-4 focus:ring-[#00acb1]/20';
 
   return (
     <>
@@ -212,12 +217,15 @@ export default function UserBookAppointment() {
           </div>
           <div>
             <h1 className="text-3xl font-bold text-[#005963]">Book Appointment</h1>
-            <p className="mt-1 text-sm text-gray-700">Select a date and time, then submit your request.</p>
+            <p className="mt-1 text-sm text-gray-700">Book an appointment for a patient using available slots.</p>
           </div>
         </div>
 
         {(success || error) && (
-          <GlassCard variant="solid" className={`mb-6 p-4 ${success ? 'border-emerald-200 bg-emerald-50/60' : 'border-rose-200 bg-rose-50/60'}`}>
+          <GlassCard
+            variant="solid"
+            className={`mb-6 p-4 ${success ? 'border-emerald-200 bg-emerald-50/60' : 'border-rose-200 bg-rose-50/60'}`}
+          >
             <div className={`text-sm font-semibold ${success ? 'text-emerald-800' : 'text-rose-800'}`}>{success || error}</div>
           </GlassCard>
         )}
@@ -249,54 +257,54 @@ export default function UserBookAppointment() {
             <h3 className="mb-3 text-lg font-extrabold text-[#005963]">Available Time Slots</h3>
 
             <div className="flex-1 min-h-0">
-
-            {!selectedDate ? (
-              <div className="flex h-full items-center justify-center text-gray-600">
-                <div className="text-center">
-                  <Calendar className="mx-auto mb-3 h-12 w-12 text-gray-400" />
-                  <p>Please select a date first</p>
+              {!selectedDate ? (
+                <div className="flex h-full items-center justify-center text-gray-600">
+                  <div className="text-center">
+                    <Calendar className="mx-auto mb-3 h-12 w-12 text-gray-400" />
+                    <p>Please select a date first</p>
+                  </div>
                 </div>
-              </div>
-            ) : loadingSlots ? (
-              <div className="flex h-full items-center justify-center">
-                <div className="text-center">
-                  <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-4 border-[#00acb1] border-t-transparent"></div>
-                  <p className="text-gray-600">Loading available slots...</p>
+              ) : loadingSlots ? (
+                <div className="flex h-full items-center justify-center">
+                  <div className="text-center">
+                    <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-4 border-[#00acb1] border-t-transparent"></div>
+                    <p className="text-gray-600">Loading available slots...</p>
+                  </div>
                 </div>
-              </div>
-            ) : availableSlots.length === 0 ? (
-              <div className="flex h-full items-center justify-center text-gray-600">
-                <div className="text-center">
-                  <Clock className="mx-auto mb-3 h-12 w-12 text-gray-400" />
-                  <p>No slots available for this date</p>
-                  <p className="mt-1 text-sm">Please choose another date</p>
+              ) : availableSlots.length === 0 ? (
+                <div className="flex h-full items-center justify-center text-gray-600">
+                  <div className="text-center">
+                    <Clock className="mx-auto mb-3 h-12 w-12 text-gray-400" />
+                    <p>No slots available for this date</p>
+                    <p className="mt-1 text-sm">Please choose another date</p>
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <div>
-                <div className="mb-3 text-sm text-gray-700">Selected date: <span className="font-semibold">{formatDisplayDateWithYear(selectedDate) || selectedDate}</span></div>
-                <div className="grid gap-2 overflow-y-auto pr-2 sm:grid-cols-3">
-                  {availableSlots.map((slot) => (
-                    <button
-                      key={slot}
-                      type="button"
-                      onClick={() => {
-                        selectedTimeRef.current = slot;
-                        setFormData((p) => ({ ...p, time: slot }));
-                      }}
-                      className={`rounded-lg border-2 px-3 py-2 text-center text-sm font-semibold transition-all ${
-                        formData.time === slot
-                          ? 'border-[#005963] bg-[#005963] text-white'
-                          : 'border-[#00acb1]/30 bg-white text-[#005963] hover:border-[#00acb1] hover:bg-[#00acb1]/10'
-                      }`}
-                    >
-                      {formatDisplayTime12h(slot) || slot}
-                    </button>
-                  ))}
+              ) : (
+                <div>
+                  <div className="mb-3 text-sm text-gray-700">
+                    Selected date: <span className="font-semibold">{formatDisplayDateWithYear(selectedDate) || selectedDate}</span>
+                  </div>
+                  <div className="grid gap-2 overflow-y-auto pr-2 sm:grid-cols-3">
+                    {availableSlots.map((slot) => (
+                      <button
+                        key={slot}
+                        type="button"
+                        onClick={() => {
+                          selectedTimeRef.current = slot;
+                          setFormData((p) => ({ ...p, time: slot }));
+                        }}
+                        className={`rounded-lg border-2 px-3 py-2 text-center text-sm font-semibold transition-all ${
+                          formData.time === slot
+                            ? 'border-[#005963] bg-[#005963] text-white'
+                            : 'border-[#00acb1]/30 bg-white text-[#005963] hover:border-[#00acb1] hover:bg-[#00acb1]/10'
+                        }`}
+                      >
+                        {formatDisplayTime12h(slot) || slot}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
-
+              )}
             </div>
 
             {formData.date && formData.time && (
@@ -309,7 +317,7 @@ export default function UserBookAppointment() {
 
         <div className="mt-6">
           <GlassCard variant="solid" className="p-6">
-            <h3 className="mb-4 text-lg font-extrabold text-[#005963]">Your Details</h3>
+            <h3 className="mb-4 text-lg font-extrabold text-[#005963]">Patient Details</h3>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid gap-4 md:grid-cols-3">
                 <div>
@@ -325,6 +333,7 @@ export default function UserBookAppointment() {
                     />
                   </div>
                 </div>
+
                 <div>
                   <label className="mb-2 block text-sm font-semibold text-[#005963]">Phone</label>
                   <div className="relative">
@@ -338,6 +347,7 @@ export default function UserBookAppointment() {
                     />
                   </div>
                 </div>
+
                 <div>
                   <label className="mb-2 block text-sm font-semibold text-[#005963]">Email</label>
                   <div className="relative">
@@ -366,8 +376,10 @@ export default function UserBookAppointment() {
               </div>
 
               <div className="pt-1">
-                <PrimaryButton type="submit" disabled={submitting || !formData.date || !formData.time}
-                  className={(!formData.date || !formData.time) ? 'opacity-60' : ''}
+                <PrimaryButton
+                  type="submit"
+                  disabled={submitting || !formData.date || !formData.time}
+                  className={!formData.date || !formData.time ? 'opacity-60' : ''}
                 >
                   {submitting ? 'Submitting…' : 'Submit Appointment Request'}
                 </PrimaryButton>
@@ -380,4 +392,4 @@ export default function UserBookAppointment() {
   );
 }
 
-UserBookAppointment.layout = (page) => <UserLayout>{page}</UserLayout>;
+AdminBookAppointment.layout = (page) => <AdminLayout>{page}</AdminLayout>;

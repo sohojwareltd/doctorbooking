@@ -1,8 +1,10 @@
 import React, { useMemo } from 'react';
 import { Head, useForm } from '@inertiajs/react';
+import { Settings as SettingsIcon } from 'lucide-react';
 import AdminLayout from '@/layouts/AdminLayout';
 import GlassCard from '@/components/GlassCard';
 import PrimaryButton from '@/components/PrimaryButton';
+import { toastError, toastSuccess } from '@/utils/toast';
 
 function safeParseJson(value, fallback) {
   if (typeof value !== 'string' || !value.trim()) return fallback;
@@ -64,6 +66,8 @@ export default function Settings({ auth, homeJson = '', status = null }) {
     setData('home_json', JSON.stringify(home || {}, null, 2));
     put('/admin/settings/site-content/home', {
       preserveScroll: true,
+      onSuccess: () => toastSuccess('Home content saved.'),
+      onError: () => toastError('Failed to save home content.'),
     });
   };
 
@@ -178,11 +182,14 @@ export default function Settings({ auth, homeJson = '', status = null }) {
     <AdminLayout user={auth?.user}>
       <Head title="Content Settings" />
 
-      <div className="max-w-5xl mx-auto px-4 py-8">
-        <div className="flex items-center justify-between gap-4 mb-6">
+      <div className="w-full px-4 py-10">
+        <div className="mb-6 flex items-start gap-3">
+          <div className="rounded-2xl border border-[#00acb1]/20 bg-white/60 p-2">
+            <SettingsIcon className="h-6 w-6 text-[#005963]" />
+          </div>
           <div>
-            <h1 className="text-2xl font-semibold text-white">Content Settings</h1>
-            <p className="text-white/70 text-sm">Edit homepage content stored in the database.</p>
+            <h1 className="text-3xl font-bold text-[#005963]">Content Settings</h1>
+            <p className="mt-1 text-sm text-gray-700">Edit homepage content stored in the database.</p>
           </div>
         </div>
 
@@ -325,8 +332,9 @@ export default function Settings({ auth, homeJson = '', status = null }) {
                           try {
                             const url = await uploadToServer(file);
                             setHome((p) => updateAtPath(p, ['hero', 'image', 'url'], url));
-                          } catch {
-                            // ignore, server returns validation errors via response
+                            toastSuccess('Image uploaded.');
+                          } catch (err) {
+                            toastError(err?.message || 'Upload failed.');
                           } finally {
                             setUploading((p) => ({ ...p, heroImage: false }));
                             e.target.value = '';
@@ -468,7 +476,9 @@ export default function Settings({ auth, homeJson = '', status = null }) {
                           try {
                             const url = await uploadToServer(file);
                             setHome((p) => updateAtPath(p, ['about', 'image', 'url'], url));
-                          } catch {
+                            toastSuccess('Image uploaded.');
+                          } catch (err) {
+                            toastError(err?.message || 'Upload failed.');
                           } finally {
                             setUploading((p) => ({ ...p, aboutImage: false }));
                             e.target.value = '';
@@ -757,7 +767,9 @@ export default function Settings({ auth, homeJson = '', status = null }) {
                               try {
                                 const url = await uploadToServer(file);
                                 setHome((p) => updateAtPath(p, ['gallery', 'images', idx, 'url'], url));
-                              } catch {
+                                toastSuccess('Image uploaded.');
+                              } catch (err) {
+                                toastError(err?.message || 'Upload failed.');
                               } finally {
                                 setUploading((p) => ({ ...p, [`gallery_${idx}`]: false }));
                                 e.target.value = '';

@@ -1,4 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
+import { CalendarDays, CalendarPlus, FileText, LayoutDashboard } from 'lucide-react';
 import ParticlesBackground from '../components/ParticlesBackground';
 import DoctorLogo from '../components/DoctorLogo';
 import GlassCard from '../components/GlassCard';
@@ -7,9 +8,16 @@ export default function UserLayout({ children }) {
   const { auth } = usePage().props;
   const { url } = usePage();
 
+  const navItems = [
+    { href: '/user/dashboard', label: 'Dashboard', Icon: LayoutDashboard },
+    { href: '/user/appointments', label: 'Appointments', Icon: CalendarDays },
+    { href: '/user/book-appointment', label: 'Book Appointment', Icon: CalendarPlus },
+    { href: '/user/prescriptions', label: 'Prescriptions', Icon: FileText },
+  ];
+
   const navLinkClass = (href) => {
     const active = url === href || url.startsWith(href + '/');
-    return `block rounded-2xl px-4 py-3 text-sm font-semibold transition ${
+    return `flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold transition ${
       active ? 'bg-white/15 text-white' : 'text-white/80 hover:text-white hover:bg-white/10'
     }`;
   };
@@ -34,10 +42,12 @@ export default function UserLayout({ children }) {
             </Link>
 
             <nav className="space-y-2 flex-1">
-              <Link href="/user/dashboard" className={navLinkClass('/user/dashboard')}>Dashboard</Link>
-              <Link href="/user/appointments" className={navLinkClass('/user/appointments')}>Appointments</Link>
-              <Link href="/user/book-appointment" className={navLinkClass('/user/book-appointment')}>Book Appointment</Link>
-              <Link href="/user/prescriptions" className={navLinkClass('/user/prescriptions')}>Prescriptions</Link>
+              {navItems.map(({ href, label, Icon }) => (
+                <Link key={href} href={href} className={navLinkClass(href)}>
+                  <Icon className="h-5 w-5" />
+                  <span>{label}</span>
+                </Link>
+              ))}
             </nav>
 
             <div className="pt-4 border-t border-white/15">
@@ -76,11 +86,13 @@ export default function UserLayout({ children }) {
                   Logout
                 </Link>
               </div>
-              <div className="mt-4 grid grid-cols-2 gap-2">
-                <Link href="/user/dashboard" className={navLinkClass('/user/dashboard')}>Dashboard</Link>
-                <Link href="/user/appointments" className={navLinkClass('/user/appointments')}>Appointments</Link>
-                <Link href="/user/book-appointment" className={navLinkClass('/user/book-appointment')}>Book</Link>
-                <Link href="/user/prescriptions" className={navLinkClass('/user/prescriptions')}>Prescriptions</Link>
+              <div className="mt-4 grid grid-cols-1 gap-2">
+                {navItems.map(({ href, label, Icon }) => (
+                  <Link key={href} href={href} className={navLinkClass(href)}>
+                    <Icon className="h-5 w-5" />
+                    <span>{label}</span>
+                  </Link>
+                ))}
               </div>
             </GlassCard>
           </div>

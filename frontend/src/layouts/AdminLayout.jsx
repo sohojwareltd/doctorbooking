@@ -1,4 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
+import { BarChart3, CalendarCheck2, LayoutDashboard, PlusCircle, Settings, Users } from 'lucide-react';
 import ParticlesBackground from '../components/ParticlesBackground';
 import DoctorLogo from '../components/DoctorLogo';
 import GlassCard from '../components/GlassCard';
@@ -7,9 +8,18 @@ export default function AdminLayout({ children }) {
   const { auth } = usePage().props;
   const { url } = usePage();
 
+  const navItems = [
+    { href: '/admin/dashboard', label: 'Dashboard', Icon: LayoutDashboard },
+    { href: '/admin/users', label: 'Users', Icon: Users },
+    { href: '/admin/appointments', label: 'Appointments', Icon: CalendarCheck2 },
+    { href: '/admin/book-appointment', label: 'Book Appointment', Icon: PlusCircle },
+    { href: '/admin/reports', label: 'Reports', Icon: BarChart3 },
+    { href: '/admin/settings', label: 'Content Settings', Icon: Settings },
+  ];
+
   const navLinkClass = (href) => {
     const active = url === href || url.startsWith(href + '/');
-    return `block rounded-2xl px-4 py-3 text-sm font-semibold transition ${
+    return `flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold transition ${
       active ? 'bg-white/15 text-white' : 'text-white/80 hover:text-white hover:bg-white/10'
     }`;
   };
@@ -29,16 +39,17 @@ export default function AdminLayout({ children }) {
               </div>
               <div>
                 <div className="text-white font-black leading-tight">MediCare</div>
-                <div className="text-white/70 text-xs">Admin Panel</div>
+                <div className="text-white/70 text-xs">Assistant Panel</div>
               </div>
             </Link>
 
             <nav className="space-y-2 flex-1">
-              <Link href="/admin/dashboard" className={navLinkClass('/admin/dashboard')}>Dashboard</Link>
-              <Link href="/admin/users" className={navLinkClass('/admin/users')}>Users</Link>
-              <Link href="/admin/appointments" className={navLinkClass('/admin/appointments')}>Appointments</Link>
-              <Link href="/admin/reports" className={navLinkClass('/admin/reports')}>Reports</Link>
-              <Link href="/admin/settings" className={navLinkClass('/admin/settings')}>Content Settings</Link>
+              {navItems.map(({ href, label, Icon }) => (
+                <Link key={href} href={href} className={navLinkClass(href)}>
+                  <Icon className="h-5 w-5" />
+                  <span>{label}</span>
+                </Link>
+              ))}
             </nav>
 
             <div className="pt-4 border-t border-white/15">
@@ -65,7 +76,7 @@ export default function AdminLayout({ children }) {
                   </div>
                   <div>
                     <div className="text-white font-black leading-tight">MediCare</div>
-                    <div className="text-white/70 text-xs">Admin Panel</div>
+                    <div className="text-white/70 text-xs">Assistant Panel</div>
                   </div>
                 </Link>
                 <Link
@@ -77,12 +88,13 @@ export default function AdminLayout({ children }) {
                   Logout
                 </Link>
               </div>
-              <div className="mt-4 grid grid-cols-2 gap-2">
-                <Link href="/admin/dashboard" className={navLinkClass('/admin/dashboard')}>Dashboard</Link>
-                <Link href="/admin/users" className={navLinkClass('/admin/users')}>Users</Link>
-                <Link href="/admin/appointments" className={navLinkClass('/admin/appointments')}>Appointments</Link>
-                <Link href="/admin/reports" className={navLinkClass('/admin/reports')}>Reports</Link>
-                <Link href="/admin/settings" className={navLinkClass('/admin/settings')}>Content Settings</Link>
+              <div className="mt-4 grid grid-cols-1 gap-2">
+                {navItems.map(({ href, label, Icon }) => (
+                  <Link key={href} href={href} className={navLinkClass(href)}>
+                    <Icon className="h-5 w-5" />
+                    <span>{label}</span>
+                  </Link>
+                ))}
               </div>
             </GlassCard>
           </div>

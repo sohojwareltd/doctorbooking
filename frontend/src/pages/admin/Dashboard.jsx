@@ -1,26 +1,59 @@
 import { Head, Link } from '@inertiajs/react';
+import { CalendarCheck2, LayoutDashboard, Users } from 'lucide-react';
 import AdminLayout from '../../layouts/AdminLayout';
 import GlassCard from '../../components/GlassCard';
 
 export default function AdminDashboard({ stats = {} }) {
   return (
     <>
-      <Head title="Admin Dashboard" />
-      <div className="mx-auto max-w-6xl px-4 py-10">
-        <h1 className="mb-6 text-3xl font-bold text-[#005963]">Admin Overview</h1>
+      <Head title="Assistant Dashboard" />
+      <div className="w-full px-4 py-10">
+        <div className="mb-8 flex items-center gap-3">
+          <div className="rounded-2xl bg-[#005963]/10 p-3">
+            <LayoutDashboard className="h-6 w-6 text-[#005963]" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-[#005963]">Assistant Overview</h1>
+            <p className="mt-1 text-sm text-gray-700">Quick snapshot of platform activity.</p>
+          </div>
+        </div>
+
         <div className="grid gap-6 sm:grid-cols-3">
-          <div className="rounded-2xl border p-6">
-            <div className="text-sm text-gray-500">Users</div>
-            <div className="mt-2 text-3xl font-bold">{stats.users ?? 0}</div>
-          </div>
-          <div className="rounded-2xl border p-6">
-            <div className="text-sm text-gray-500">Appointments Today</div>
-            <div className="mt-2 text-3xl font-bold">{stats.appointmentsToday ?? 0}</div>
-          </div>
-          <div className="rounded-2xl border p-6">
-            <div className="text-sm text-gray-500">Pending Appointments</div>
-            <div className="mt-2 text-3xl font-bold">{stats.pendingAppointments ?? 0}</div>
-          </div>
+          <GlassCard variant="solid" hover={false} className="p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="text-sm text-gray-500">Users</div>
+                <div className="mt-2 text-3xl font-black text-[#005963]">{stats.users ?? 0}</div>
+              </div>
+              <div className="rounded-2xl bg-[#005963]/10 p-3">
+                <Users className="h-6 w-6 text-[#005963]" />
+              </div>
+            </div>
+          </GlassCard>
+
+          <GlassCard variant="solid" hover={false} className="p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="text-sm text-gray-500">Appointments Today</div>
+                <div className="mt-2 text-3xl font-black text-[#005963]">{stats.appointmentsToday ?? 0}</div>
+              </div>
+              <div className="rounded-2xl bg-[#005963]/10 p-3">
+                <CalendarCheck2 className="h-6 w-6 text-[#005963]" />
+              </div>
+            </div>
+          </GlassCard>
+
+          <GlassCard variant="solid" hover={false} className="p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="text-sm text-gray-500">Pending Appointments</div>
+                <div className="mt-2 text-3xl font-black text-[#005963]">{stats.pendingAppointments ?? 0}</div>
+              </div>
+              <div className="rounded-2xl bg-[#005963]/10 p-3">
+                <LayoutDashboard className="h-6 w-6 text-[#005963]" />
+              </div>
+            </div>
+          </GlassCard>
         </div>
 
         <div className="mt-8">

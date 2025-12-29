@@ -1,4 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
+import { CalendarDays, ClipboardList, LayoutDashboard, Settings, Users2 } from 'lucide-react';
 import ParticlesBackground from '../components/ParticlesBackground';
 import DoctorLogo from '../components/DoctorLogo';
 import GlassCard from '../components/GlassCard';
@@ -7,9 +8,17 @@ export default function DoctorLayout({ children }) {
   const { auth } = usePage().props;
   const { url } = usePage();
 
+  const navItems = [
+    { href: '/doctor/dashboard', label: 'Dashboard', Icon: LayoutDashboard },
+    { href: '/doctor/appointments', label: 'Appointments', Icon: CalendarDays },
+    { href: '/doctor/patients', label: 'Patients', Icon: Users2 },
+    { href: '/doctor/prescriptions', label: 'Prescriptions', Icon: ClipboardList },
+    { href: '/doctor/schedule', label: 'Schedule', Icon: Settings },
+  ];
+
   const navLinkClass = (href) => {
     const active = url === href || url.startsWith(href + '/');
-    return `block rounded-2xl px-4 py-3 text-sm font-semibold transition ${
+    return `flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold transition ${
       active ? 'bg-[#005963] text-white' : 'text-[#005963] hover:bg-[#005963]/10'
     }`;
   };
@@ -34,11 +43,12 @@ export default function DoctorLayout({ children }) {
             </Link>
 
             <nav className="space-y-2 flex-1">
-              <Link href="/doctor/dashboard" className={navLinkClass('/doctor/dashboard')}>Dashboard</Link>
-              <Link href="/doctor/appointments" className={navLinkClass('/doctor/appointments')}>Appointments</Link>
-              <Link href="/doctor/patients" className={navLinkClass('/doctor/patients')}>Patients</Link>
-              <Link href="/doctor/prescriptions" className={navLinkClass('/doctor/prescriptions')}>Prescriptions</Link>
-              <Link href="/doctor/schedule" className={navLinkClass('/doctor/schedule')}>Schedule</Link>
+              {navItems.map(({ href, label, Icon }) => (
+                <Link key={href} href={href} className={navLinkClass(href)}>
+                  <Icon className="h-5 w-5" />
+                  <span>{label}</span>
+                </Link>
+              ))}
             </nav>
 
             <div className="pt-4 border-t border-[#005963]/15">
@@ -77,12 +87,13 @@ export default function DoctorLayout({ children }) {
                   Logout
                 </Link>
               </div>
-              <div className="mt-4 grid grid-cols-2 gap-2">
-                <Link href="/doctor/dashboard" className={navLinkClass('/doctor/dashboard')}>Dashboard</Link>
-                <Link href="/doctor/appointments" className={navLinkClass('/doctor/appointments')}>Appointments</Link>
-                <Link href="/doctor/patients" className={navLinkClass('/doctor/patients')}>Patients</Link>
-                <Link href="/doctor/schedule" className={navLinkClass('/doctor/schedule')}>Schedule</Link>
-                <Link href="/doctor/prescriptions" className={navLinkClass('/doctor/prescriptions')}>Prescriptions</Link>
+              <div className="mt-4 grid grid-cols-1 gap-2">
+                {navItems.map(({ href, label, Icon }) => (
+                  <Link key={href} href={href} className={navLinkClass(href)}>
+                    <Icon className="h-5 w-5" />
+                    <span>{label}</span>
+                  </Link>
+                ))}
               </div>
             </div>
           </div>

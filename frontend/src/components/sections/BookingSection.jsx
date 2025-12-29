@@ -9,6 +9,7 @@ import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
+import { formatDisplayDateTimeFromYmdAndTime, formatDisplayDateWithYear, formatDisplayTime12h } from '../../utils/dateFormat';
 export default function BookingSection() {
     const page = usePage();
     const contactPhone = page?.props?.site?.contactPhone || '';
@@ -288,7 +289,7 @@ export default function BookingSection() {
                             <div className="rounded-2xl border-2 border-[#00acb1]/20 bg-white p-3 flex flex-col">
                                 <h4 className="mb-2 text-base font-semibold text-[#005963]">
                                     Available Time Slots
-                                    {selectedDate && <span className="ml-2 text-sm font-normal text-gray-600">({selectedDate})</span>}
+                                    {selectedDate && <span className="ml-2 text-sm font-normal text-gray-600">({formatDisplayDateWithYear(selectedDate) || selectedDate})</span>}
                                 </h4>
                                 <div className="flex-1 min-h-0">
                                 
@@ -344,7 +345,7 @@ export default function BookingSection() {
                                                                 : 'border-[#00acb1]/30 bg-white text-[#005963] hover:border-[#00acb1] hover:bg-[#00acb1]/10'
                                                     }`}
                                                 >
-                                                    {slot}
+                                                    {formatDisplayTime12h(slot) || slot}
                                                     {isBooked ? ' (Booked)' : ''}
                                                 </button>
                                             );
@@ -359,7 +360,7 @@ export default function BookingSection() {
                         {formData.date && formData.time && (
                             <div className="mt-3 rounded-lg bg-[#005963]/10 border border-[#00acb1]/30 px-3 py-2">
                                 <p className="text-center text-sm font-medium text-[#005963]">
-                                    Selected: {formData.date} at {formData.time}
+                                    Selected: {formatDisplayDateTimeFromYmdAndTime(formData.date, formData.time) || `${formData.date} at ${formData.time}`}
                                 </p>
                             </div>
                         )}

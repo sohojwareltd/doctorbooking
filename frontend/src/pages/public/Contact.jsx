@@ -1,5 +1,6 @@
 import { Head, useForm } from '@inertiajs/react';
 import PublicLayout from '../../layouts/PublicLayout';
+import { toastError, toastSuccess } from '../../utils/toast';
 
 export default function Contact() {
   const { data, setData, post, processing, errors, reset } = useForm({
@@ -9,7 +10,11 @@ export default function Contact() {
   const submit = (e) => {
     e.preventDefault();
     post('/contact', {
-      onSuccess: () => reset(),
+      onSuccess: () => {
+        toastSuccess('Message sent.');
+        reset();
+      },
+      onError: () => toastError('Failed to send message.'),
     });
   };
 

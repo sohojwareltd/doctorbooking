@@ -1,4 +1,5 @@
 import { Head, useForm } from '@inertiajs/react';
+import { toastError, toastSuccess } from '../../utils/toast';
 
 export default function ProfileSettings({ mustVerifyEmail, status }) {
   const { data, setData, patch, processing, errors } = useForm({
@@ -8,7 +9,10 @@ export default function ProfileSettings({ mustVerifyEmail, status }) {
 
   const submit = (e) => {
     e.preventDefault();
-    patch('/settings/profile');
+    patch('/settings/profile', {
+      onSuccess: () => toastSuccess('Profile updated.'),
+      onError: () => toastError('Failed to update profile.'),
+    });
   };
 
   return (
