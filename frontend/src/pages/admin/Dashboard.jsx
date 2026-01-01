@@ -7,19 +7,15 @@ export default function AdminDashboard({ stats = {} }) {
   return (
     <>
       <Head title="Assistant Dashboard" />
-      <div className="w-full px-4 py-10">
-        <div className="mb-8 flex items-center gap-3">
-          <div className="rounded-2xl bg-[#005963]/10 p-3">
-            <LayoutDashboard className="h-6 w-6 text-[#005963]" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold text-[#005963]">Assistant Overview</h1>
-            <p className="mt-1 text-sm text-gray-700">Quick snapshot of platform activity.</p>
-          </div>
-        </div>
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-[#005963]">Dashboard</h1>
+        <p className="mt-2 text-gray-600">Quick snapshot of platform activity.</p>
+      </div>
 
-        <div className="grid gap-6 sm:grid-cols-3">
-          <GlassCard variant="solid" hover={false} className="p-6">
+      <div className="space-y-6">
+
+        <div className="grid gap-4 md:grid-cols-3">
+          <GlassCard variant="solid" className="border-2 border-[#00acb1]/20 p-6">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <div className="text-sm text-gray-500">Users</div>
@@ -31,7 +27,7 @@ export default function AdminDashboard({ stats = {} }) {
             </div>
           </GlassCard>
 
-          <GlassCard variant="solid" hover={false} className="p-6">
+          <GlassCard variant="solid" className="border-2 border-[#00acb1]/20 p-6">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <div className="text-sm text-gray-500">Appointments Today</div>
@@ -43,7 +39,7 @@ export default function AdminDashboard({ stats = {} }) {
             </div>
           </GlassCard>
 
-          <GlassCard variant="solid" hover={false} className="p-6">
+          <GlassCard variant="solid" className="border-2 border-[#00acb1]/20 p-6">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <div className="text-sm text-gray-500">Pending Appointments</div>
@@ -56,8 +52,7 @@ export default function AdminDashboard({ stats = {} }) {
           </GlassCard>
         </div>
 
-        <div className="mt-8">
-          <GlassCard variant="solid" hover={false} className="p-6">
+        <GlassCard variant="solid" className="border-2 border-[#00acb1]/20 p-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <div className="text-lg font-bold text-[#005963]">Site Content</div>
@@ -71,7 +66,6 @@ export default function AdminDashboard({ stats = {} }) {
               </Link>
             </div>
           </GlassCard>
-        </div>
       </div>
     </>
   );

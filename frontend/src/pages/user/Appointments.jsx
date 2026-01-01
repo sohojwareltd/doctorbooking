@@ -1,19 +1,13 @@
-import { Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import { CalendarDays } from 'lucide-react';
+import { useMemo } from 'react';
 import UserLayout from '../../layouts/UserLayout';
 import GlassCard from '../../components/GlassCard';
-import { formatDisplayDate } from '../../utils/dateFormat';
+import { formatDisplayDateWithYearFromDateLike, formatDisplayTime12h } from '../../utils/dateFormat';
 
 export default function UserAppointments({ appointments = [] }) {
-  const formatTime12h = (time) => {
-    if (!time || typeof time !== 'string') return '';
-    const parts = time.split(':');
-    const h = Number(parts[0] ?? 0);
-    const m = parts[1] ?? '00';
-    const hour12 = ((h + 11) % 12) + 1;
-    const ampm = h >= 12 ? 'PM' : 'AM';
-    return `${hour12}:${m} ${ampm}`;
-  };
+  const rows = useMemo(() => (Array.isArray(appointments) ? appointments : (appointments?.data ?? [])), [appointments]);
+  const pagination = useMemo(() => (Array.isArray(appointments) ? null : appointments), [appointments]);
 
   const statusBadge = (status) => {
     const s = (status || '').toLowerCase();
@@ -40,7 +34,7 @@ export default function UserAppointments({ appointments = [] }) {
         <GlassCard variant="solid" hover={false} className="overflow-hidden">
           <div className="border-b bg-white px-4 py-4">
             <div className="text-sm text-gray-700">
-              Total appointments: <span className="font-semibold text-[#005963]">{appointments.length}</span>
+              Total appointments: <span className="font-semibold text-[#005963]">{pagination?.total ?? rows.length}</span>
             </div>
           </div>
           <div className="overflow-x-auto">
@@ -54,10 +48,10 @@ export default function UserAppointments({ appointments = [] }) {
                 </tr>
               </thead>
               <tbody className="divide-y bg-white">
-                {appointments.map((a) => (
-                  <tr key={a.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm text-gray-700">{formatDisplayDate(a.appointment_date) || a.appointment_date}</td>
-                    <td className="px-4 py-3 text-sm text-gray-700">{formatTime12h(a.appointment_time)}</td>
+                {rows.map((a) => (
+                  <tr key={a.id} className="hover:bg-[#00acb1]/5">
+                    <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">{formatDisplayDateWithYearFromDateLike(a.appointment_date) || a.appointment_date}</td>
+                    <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">{formatDisplayTime12h(a.appointment_time) || a.appointment_time}</td>
                     <td className="px-4 py-3 text-sm">
                       <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold capitalize ${statusBadge(a.status)}`}>
                         {a.status}
@@ -66,7 +60,7 @@ export default function UserAppointments({ appointments = [] }) {
                     <td className="px-4 py-3 text-sm text-gray-700">{a.symptoms || '-'}</td>
                   </tr>
                 ))}
-                {appointments.length === 0 && (
+                {rows.length === 0 && (
                   <tr>
                     <td colSpan={4} className="px-4 py-10 text-center text-gray-500">No appointments yet.</td>
                   </tr>
@@ -74,6 +68,47 @@ export default function UserAppointments({ appointments = [] }) {
               </tbody>
             </table>
           </div>
+
+          {pagination?.data && typeof pagination.current_page === 'number' ? (
+            <div className="border-t bg-white px-4 py-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="text-sm text-gray-600">
+                  Page <span className="font-semibold text-[#005963]">{pagination.current_page}</span> of{' '}
+                  <span className="font-semibold text-[#005963]">{pagination.last_page}</span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {(() => {
+                    const prev = (pagination.links || []).find((l) => String(l.label).toLowerCase().includes('previous'));
+                    const next = (pagination.links || []).find((l) => String(l.label).toLowerCase().includes('next'));
+
+                    const btnBase = 'inline-flex items-center justify-center rounded-full px-5 py-2 text-sm font-semibold transition';
+                    const btnOn = 'bg-[#00acb1] text-white hover:bg-[#00787b]';
+                    const btnOff = 'bg-gray-100 text-gray-400 cursor-not-allowed';
+
+                    return (
+                      <>
+                        {prev?.url ? (
+                          <Link href={prev.url} className={`${btnBase} ${btnOn}`}>
+                            Prev
+                          </Link>
+                        ) : (
+                          <span className={`${btnBase} ${btnOff}`}>Prev</span>
+                        )}
+                        {next?.url ? (
+                          <Link href={next.url} className={`${btnBase} ${btnOn}`}>
+                            Next
+                          </Link>
+                        ) : (
+                          <span className={`${btnBase} ${btnOff}`}>Next</span>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
+              </div>
+            </div>
+          ) : null}
         </GlassCard>
       </div>
     </>

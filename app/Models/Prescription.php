@@ -11,6 +11,7 @@ class Prescription extends Model
         'appointment_id',
         'user_id',
         'doctor_id',
+        'visit_type',
         'diagnosis',
         'medications',
         'instructions',

@@ -29,6 +29,11 @@ class User extends Authenticatable
         'address',
         'date_of_birth',
         'gender',
+        'weight',
+        'specialization',
+        'degree',
+        'registration_no',
+        'profile_picture',
     ];
 
     /**

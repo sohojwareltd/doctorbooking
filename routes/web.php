@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
 use App\Http\Controllers\DoctorScheduleController;
+use App\Http\Controllers\DoctorProfileController;
 use App\Http\Controllers\PrescriptionController;
 use App\Http\Controllers\Admin\SiteContentController;
 use Illuminate\Support\Facades\Auth;
@@ -28,8 +29,15 @@ Route::get('/', function () {
 
     $homeContent = SiteContent::normalizeValue($homeContent);
 
+    // Fetch doctor profile for hero section
+    $doctor = null;
+    if (Schema::hasTable('users')) {
+        $doctor = User::where('role', 'doctor')->first();
+    }
+
     return Inertia::render('Welcome', [
         'home' => $homeContent,
+        'doctor' => $doctor,
     ]);
 })->name('home');
 
@@ -106,10 +114,11 @@ Route::middleware(['auth', 'verified', 'role:user'])->prefix('user')->name('user
         $appointments = Appointment::where('user_id', $user->id)
             ->orderByDesc('appointment_date')
             ->orderByDesc('appointment_time')
-            ->get(['id','appointment_date','appointment_time','status','symptoms']);
+            ->paginate(10)
+            ->withQueryString();
 
         return Inertia::render('user/Appointments', [
-            'appointments' => $appointments->map(fn ($a) => [
+            'appointments' => $appointments->through(fn ($a) => [
                 'id' => $a->id,
                 'appointment_date' => $a->appointment_date?->toDateString(),
                 'appointment_time' => substr((string) $a->appointment_time, 0, 5),
@@ -149,15 +158,79 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
     Route::get('/dashboard', function () {
         $doctor = Auth::user();
         $today = now()->toDateString();
+        
+        // Today's appointments count
         $todayAppointments = Appointment::where('doctor_id', $doctor->id)
             ->whereDate('appointment_date', $today)->count();
-        $pending = Appointment::where('doctor_id', $doctor->id)->where('status','pending')->count();
+        
+        // Pending appointments count
+        $pending = Appointment::where('doctor_id', $doctor->id)
+            ->where('status', 'pending')
+            ->count();
+        
+        // Get total unique patients
+        $totalPatients = Appointment::where('doctor_id', $doctor->id)
+            ->distinct('user_id')
+            ->count('user_id');
+        
+        // Total prescriptions issued
+        $totalPrescriptions = Prescription::where('doctor_id', $doctor->id)->count();
+        
+        // Completed appointments this month
+        $completedThisMonth = Appointment::where('doctor_id', $doctor->id)
+            ->where('status', 'completed')
+            ->whereMonth('appointment_date', now()->month)
+            ->count();
+        
+        // Get recent appointments (last 7 days)
+        $recentAppointments = Appointment::with(['user:id,name'])
+            ->where('doctor_id', $doctor->id)
+            ->where('appointment_date', '>=', now()->subDays(7))
+            ->orderByDesc('appointment_date')
+            ->orderByDesc('appointment_time')
+            ->limit(5)
+            ->get()
+            ->map(fn ($a) => [
+                'id' => $a->id,
+                'user_id' => $a->user_id,
+                'user' => $a->user ? ['id' => $a->user->id, 'name' => $a->user->name] : null,
+                'appointment_date' => $a->appointment_date?->toDateString(),
+                'appointment_time' => substr((string) $a->appointment_time, 0, 5),
+                'status' => $a->status,
+                'type' => $a->type,
+                'is_video' => $a->is_video ?? false,
+            ]);
+        
+        // Get next upcoming appointment
+        $upcomingAppointment = Appointment::with(['user:id,name'])
+            ->where('doctor_id', $doctor->id)
+            ->where('appointment_date', '>=', $today)
+            ->where('status', '!=', 'cancelled')
+            ->orderBy('appointment_date')
+            ->orderBy('appointment_time')
+            ->first();
+        
+        $upcoming = $upcomingAppointment ? [
+            'id' => $upcomingAppointment->id,
+            'user_id' => $upcomingAppointment->user_id,
+            'user' => $upcomingAppointment->user ? ['id' => $upcomingAppointment->user->id, 'name' => $upcomingAppointment->user->name] : null,
+            'appointment_date' => $upcomingAppointment->appointment_date?->toDateString(),
+            'appointment_time' => substr((string) $upcomingAppointment->appointment_time, 0, 5),
+            'status' => $upcomingAppointment->status,
+            'type' => $upcomingAppointment->type,
+            'is_video' => $upcomingAppointment->is_video ?? false,
+        ] : null;
 
         return Inertia::render('doctor/Dashboard', [
             'stats' => [
                 'todayAppointments' => $todayAppointments,
                 'pending' => $pending,
+                'totalPatients' => $totalPatients,
+                'totalPrescriptions' => $totalPrescriptions,
+                'completedThisMonth' => $completedThisMonth,
             ],
+            'recentAppointments' => $recentAppointments,
+            'upcomingAppointment' => $upcoming,
         ]);
     })->name('dashboard');
 
@@ -167,10 +240,11 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
             ->where('doctor_id', $doctor->id)
             ->orderByDesc('appointment_date')
             ->orderByDesc('appointment_time')
-            ->get(['id','user_id','appointment_date','appointment_time','status','symptoms']);
+            ->paginate(10)
+            ->withQueryString();
 
         return Inertia::render('doctor/Appointments', [
-            'appointments' => $appointments->map(fn ($a) => [
+            'appointments' => $appointments->through(fn ($a) => [
                 'id' => $a->id,
                 'user_id' => $a->user_id,
                 'user' => $a->user ? ['id' => $a->user->id, 'name' => $a->user->name] : null,
@@ -238,7 +312,10 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
 
     Route::get('/schedule', [DoctorScheduleController::class, 'show'])->name('schedule');
     Route::post('/schedule', [DoctorScheduleController::class, 'update'])->name('schedule.update');
-    Route::get('/profile', fn () => Inertia::render('doctor/Profile'))->name('profile');
+    Route::get('/profile', [DoctorProfileController::class, 'show'])->name('profile');
+    Route::put('/profile', [DoctorProfileController::class, 'update'])->name('profile.update');
+    Route::post('/profile/photo', [DoctorProfileController::class, 'uploadPhoto'])->name('profile.photo.upload');
+    Route::delete('/profile/photo', [DoctorProfileController::class, 'deletePhoto'])->name('profile.photo.delete');
     Route::get('/prescriptions/create', function () {
         $doctor = Auth::user();
 
@@ -295,8 +372,21 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
         $appointments = Appointment::with(['user:id,name','doctor:id,name'])
             ->orderByDesc('appointment_date')
             ->orderByDesc('appointment_time')
-            ->get(['id','user_id','doctor_id','appointment_date','appointment_time','status']);
-        return Inertia::render('admin/Appointments', ['appointments' => $appointments]);
+            ->paginate(10)
+            ->withQueryString();
+
+        return Inertia::render('admin/Appointments', [
+            'appointments' => $appointments->through(fn ($a) => [
+                'id' => $a->id,
+                'user_id' => $a->user_id,
+                'doctor_id' => $a->doctor_id,
+                'user' => $a->user ? ['id' => $a->user->id, 'name' => $a->user->name] : null,
+                'doctor' => $a->doctor ? ['id' => $a->doctor->id, 'name' => $a->doctor->name] : null,
+                'appointment_date' => $a->appointment_date?->toDateString(),
+                'appointment_time' => substr((string) $a->appointment_time, 0, 5),
+                'status' => $a->status,
+            ]),
+        ]);
     })->name('appointments');
 
     Route::get('/book-appointment', fn () => Inertia::render('admin/BookAppointment'))

@@ -10,7 +10,7 @@ const iconMap = {
     BookOpen,
 };
 
-export default function AboutSection({ content }) {
+export default function AboutSection({ content, doctor }) {
     const containerVariants = {
         hidden: {},
         visible: {
@@ -29,36 +29,43 @@ export default function AboutSection({ content }) {
         },
     };
 
-    const title = content?.title || 'About Dr. Sarah Johnson';
+    // Use doctor data if available, fallback to content settings
+    const doctorName = doctor?.name || 'Dr. Sarah Johnson';
+    const title = content?.title || `About ${doctorName}`;
     const subtitle =
         content?.subtitle || 'Excellence in dermatological care and aesthetic medicine';
-    const imageUrl =
-        content?.image?.url ||
-        'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=800&q=80';
-    const imageAlt = content?.image?.alt || 'Dr. Sarah Johnson';
-    const highlightValue = content?.highlight?.value || '98%';
-    const highlightLabel = content?.highlight?.label || 'Success Rate';
-    const paragraphs =
-        content?.paragraphs ||
-        [
-            'Dr. Sarah Johnson is a board-certified dermatologist and cosmetic surgeon with over 20 years of experience in transforming the lives of her patients through advanced skincare treatments and aesthetic procedures.',
-            'Graduating with honors from Harvard Medical School, Dr. Johnson has dedicated her career to staying at the forefront of dermatological innovation, combining evidence-based medicine with artistic precision.',
-            'Her patient-centered approach focuses on creating natural, lasting results while prioritizing safety and comfort. Each treatment plan is customized to meet individual goals and skin health needs.',
-        ];
+    
+    // Use doctor profile picture if available
+    const imageUrl = doctor?.profile_picture 
+        ? `/storage/${doctor.profile_picture}` 
+        : (content?.image?.url || 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=800&q=80');
+    const imageAlt = content?.image?.alt || doctorName;
+    
+    const highlightValue = content?.highlight?.value || (doctor?.experience ? `${doctor.experience}+` : '20+');
+    const highlightLabel = content?.highlight?.label || 'Years Experience';
+    
+    // Build paragraphs from doctor bio or content
+    const paragraphs = content?.paragraphs || (doctor?.bio ? [doctor.bio] : [
+        'Dr. Sarah Johnson is a board-certified dermatologist and cosmetic surgeon with over 20 years of experience in transforming the lives of her patients through advanced skincare treatments and aesthetic procedures.',
+        'Graduating with honors from Harvard Medical School, Dr. Johnson has dedicated her career to staying at the forefront of dermatological innovation, combining evidence-based medicine with artistic precision.',
+        'Her patient-centered approach focuses on creating natural, lasting results while prioritizing safety and comfort. Each treatment plan is customized to meet individual goals and skin health needs.',
+    ]);
+    
     const credentialsTitle = content?.credentialsTitle || 'Credentials & Certifications';
-    const credentials =
-        content?.credentials ||
-        [
-            'MD, Harvard Medical School',
-            'Board Certified, American Academy of Dermatology',
-            'Fellow, American Society for Dermatologic Surgery',
-            'Member, International Society of Cosmetic Dermatology',
-        ];
+    
+    // Build credentials from doctor data or content
+    const credentials = content?.credentials || [
+        doctor?.degree || 'MD, Harvard Medical School',
+        doctor?.specialization || 'Board Certified, American Academy of Dermatology',
+        doctor?.registration_no ? `Registration No: ${doctor.registration_no}` : 'Fellow, American Society for Dermatologic Surgery',
+        'Member, International Society of Cosmetic Dermatology',
+    ].filter(Boolean);
+    
     const stats =
         content?.stats ||
         [
             { icon: 'Users', value: '15,000+', label: 'Patients Treated' },
-            { icon: 'Award', value: '20+', label: 'Years Experience' },
+            { icon: 'Award', value: doctor?.experience ? `${doctor.experience}+` : '20+', label: 'Years Experience' },
             { icon: 'Heart', value: '98%', label: 'Patient Satisfaction' },
             { icon: 'BookOpen', value: '50+', label: 'Published Research' },
         ];

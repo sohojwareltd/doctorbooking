@@ -1,13 +1,28 @@
 import { Head, Link } from '@inertiajs/react';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { CalendarCheck2, PlusCircle } from 'lucide-react';
 import AdminLayout from '../../layouts/AdminLayout';
 import GlassCard from '../../components/GlassCard';
-import { formatDisplayDate } from '../../utils/dateFormat';
+import { formatDisplayDateWithYearFromDateLike, formatDisplayTime12h } from '../../utils/dateFormat';
 import { toastError, toastSuccess } from '../../utils/toast';
 
 export default function AdminAppointments({ appointments = [] }) {
-  const [rows, setRows] = useState(appointments);
+  const pageRows = useMemo(() => (Array.isArray(appointments) ? appointments : (appointments?.data ?? [])), [appointments]);
+  const pagination = useMemo(() => (Array.isArray(appointments) ? null : appointments), [appointments]);
+
+  const [rows, setRows] = useState(pageRows);
+
+  useEffect(() => {
+    setRows(pageRows);
+  }, [pageRows]);
+
+  const statusSelectClass = (status) => {
+    const s = (status || '').toLowerCase();
+    if (s === 'approved') return 'border-emerald-200 bg-emerald-50 text-emerald-800';
+    if (s === 'completed') return 'border-sky-200 bg-sky-50 text-sky-800';
+    if (s === 'cancelled') return 'border-rose-200 bg-rose-50 text-rose-800';
+    return 'border-amber-200 bg-amber-50 text-amber-800';
+  };
 
   const updateStatus = async (id, status) => {
     const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
@@ -51,7 +66,7 @@ export default function AdminAppointments({ appointments = [] }) {
         <GlassCard variant="solid" hover={false} className="overflow-hidden">
           <div className="border-b bg-white px-4 py-4">
             <div className="text-sm text-gray-700">
-              Total appointments: <span className="font-semibold text-[#005963]">{rows.length}</span>
+              Total appointments: <span className="font-semibold text-[#005963]">{pagination?.total ?? rows.length}</span>
             </div>
           </div>
 
@@ -68,14 +83,14 @@ export default function AdminAppointments({ appointments = [] }) {
               </thead>
               <tbody className="divide-y bg-white">
                 {rows.map((a) => (
-                  <tr key={a.id} className="hover:bg-gray-50">
+                  <tr key={a.id} className="hover:bg-[#00acb1]/5">
                     <td className="px-4 py-3 text-sm font-semibold text-[#005963]">{a.user?.name || a.user_id}</td>
                     <td className="px-4 py-3 text-sm text-gray-700">{a.doctor?.name || a.doctor_id}</td>
-                    <td className="px-4 py-3 text-sm text-gray-700">{formatDisplayDate(a.appointment_date) || a.appointment_date}</td>
-                    <td className="px-4 py-3 text-sm text-gray-700">{a.appointment_time}</td>
+                    <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">{formatDisplayDateWithYearFromDateLike(a.appointment_date) || a.appointment_date}</td>
+                    <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">{formatDisplayTime12h(a.appointment_time) || a.appointment_time}</td>
                     <td className="px-4 py-3 text-sm capitalize">
                       <select
-                        className="w-full rounded-xl border border-[#00acb1]/30 bg-white px-3 py-2 text-sm font-semibold text-[#005963]"
+                        className={`w-full rounded-xl border px-3 py-2 text-sm font-semibold ${statusSelectClass(a.status)}`}
                         value={a.status}
                         onChange={(e) => updateStatus(a.id, e.target.value)}
                       >
@@ -95,6 +110,47 @@ export default function AdminAppointments({ appointments = [] }) {
               </tbody>
             </table>
           </div>
+
+          {pagination?.data && typeof pagination.current_page === 'number' ? (
+            <div className="border-t bg-white px-4 py-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="text-sm text-gray-600">
+                  Page <span className="font-semibold text-[#005963]">{pagination.current_page}</span> of{' '}
+                  <span className="font-semibold text-[#005963]">{pagination.last_page}</span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {(() => {
+                    const prev = (pagination.links || []).find((l) => String(l.label).toLowerCase().includes('previous'));
+                    const next = (pagination.links || []).find((l) => String(l.label).toLowerCase().includes('next'));
+
+                    const btnBase = 'inline-flex items-center justify-center rounded-full px-5 py-2 text-sm font-semibold transition';
+                    const btnOn = 'bg-[#00acb1] text-white hover:bg-[#00787b]';
+                    const btnOff = 'bg-gray-100 text-gray-400 cursor-not-allowed';
+
+                    return (
+                      <>
+                        {prev?.url ? (
+                          <Link href={prev.url} className={`${btnBase} ${btnOn}`}>
+                            Prev
+                          </Link>
+                        ) : (
+                          <span className={`${btnBase} ${btnOff}`}>Prev</span>
+                        )}
+                        {next?.url ? (
+                          <Link href={next.url} className={`${btnBase} ${btnOn}`}>
+                            Next
+                          </Link>
+                        ) : (
+                          <span className={`${btnBase} ${btnOff}`}>Next</span>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
+              </div>
+            </div>
+          ) : null}
         </GlassCard>
       </div>
     </>

@@ -1,28 +1,27 @@
 import { Head, Link } from '@inertiajs/react';
-import { useState } from 'react';
-import { CalendarCheck2 } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { CalendarCheck2, Search, CheckCircle2, XCircle } from 'lucide-react';
 import GlassCard from '../../components/GlassCard';
 import DoctorLayout from '../../layouts/DoctorLayout';
-import { formatDisplayDate } from '../../utils/dateFormat';
+import { formatDisplayDateWithYearFromDateLike, formatDisplayTime12h } from '../../utils/dateFormat';
 import { toastError, toastSuccess } from '../../utils/toast';
 
 export default function DoctorAppointments({ appointments = [] }) {
-  const [rows, setRows] = useState(appointments);
+  const pageRows = useMemo(() => (Array.isArray(appointments) ? appointments : (appointments?.data ?? [])), [appointments]);
+  const pagination = useMemo(() => (Array.isArray(appointments) ? null : appointments), [appointments]);
+
+  const [rows, setRows] = useState(pageRows);
   const [statusFilter, setStatusFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedIds, setSelectedIds] = useState([]);
+
+  useEffect(() => {
+    setRows(pageRows);
+  }, [pageRows]);
 
   const today = new Date().toISOString().split('T')[0];
-  const todayLabel = formatDisplayDate(today) || today;
-
-  const formatTime12h = (time) => {
-    if (!time || typeof time !== 'string') return '';
-    const parts = time.split(':');
-    const h = Number(parts[0] ?? 0);
-    const m = parts[1] ?? '00';
-    const hour12 = ((h + 11) % 12) + 1;
-    const ampm = h >= 12 ? 'PM' : 'AM';
-    return `${hour12}:${m} ${ampm}`;
-  };
+  const todayLabel = formatDisplayDateWithYearFromDateLike(today) || today;
 
   const statusSelectClass = (status) => {
     const s = (status || '').toLowerCase();
@@ -55,7 +54,8 @@ export default function DoctorAppointments({ appointments = [] }) {
       : dateFilter === 'today'
         ? a.appointment_date === today
         : true;
-    return statusOk && dateOk;
+    const searchOk = searchTerm === '' || (a.user?.name || a.user_id).toLowerCase().includes(searchTerm.toLowerCase());
+    return statusOk && dateOk && searchOk;
   });
 
   const lastBookedToday = (() => {
@@ -72,89 +72,160 @@ export default function DoctorAppointments({ appointments = [] }) {
   })();
 
   return (
-    <>
-      <Head title="Appointments" />
-      <div className="w-full px-4 py-10">
-        <div className="mb-6 flex items-start justify-between gap-4">
-          <div className="flex items-start gap-3">
-            <div className="rounded-2xl border border-[#00acb1]/20 bg-white/60 p-2">
-              <CalendarCheck2 className="h-6 w-6 text-[#005963]" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-[#005963]">Appointments</h1>
-              <p className="mt-1 text-sm text-gray-700">Manage appointment status and create prescriptions.</p>
-            </div>
+    <DoctorLayout title="Appointments">
+      <div className="mb-8">
+        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+          <div>
+            <h1 className="text-3xl font-bold text-[#005963]">Appointments</h1>
+            <p className="mt-2 text-gray-600">Manage and track all your patient appointments</p>
+          </div>
+          <div className="text-sm text-gray-600">
+            <span className="font-bold text-[#005963]">{filteredRows.length}</span> appointment{filteredRows.length !== 1 ? 's' : ''} found
           </div>
         </div>
+      </div>
 
-        <GlassCard variant="solid" className="overflow-hidden">
-          <div className="border-b bg-white px-4 py-4">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div className="text-sm text-gray-700">
-                <span className="font-semibold text-[#005963]">Today:</span> {todayLabel}
+      <div className="space-y-6">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+          {[
+            { label: 'Total', value: rows.length, color: 'bg-blue-50 text-blue-700 border-blue-200' },
+            { label: 'Pending', value: rows.filter(a => a.status === 'pending').length, color: 'bg-amber-50 text-amber-700 border-amber-200' },
+            { label: 'Approved', value: rows.filter(a => a.status === 'approved').length, color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+            { label: 'Completed', value: rows.filter(a => a.status === 'completed').length, color: 'bg-sky-50 text-sky-700 border-sky-200' },
+          ].map((stat, idx) => (
+            <GlassCard key={idx} variant="solid" className={`border-2 p-4 ${stat.color}`}>
+              <div className="text-sm font-semibold opacity-75">{stat.label}</div>
+              <div className="mt-2 text-2xl font-black">{stat.value}</div>
+            </GlassCard>
+          ))}
+        </div>
+
+        {/* Main Table Card */}
+        <GlassCard variant="solid" hover={false} className="overflow-hidden border border-[#00acb1]/20">
+          {/* Header with Filters and Search */}
+          <div className="space-y-4 border-b border-gray-200 bg-gradient-to-r from-white to-[#00acb1]/5 px-6 py-5">
+            <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center">
+                <div className="text-sm font-semibold text-gray-700">
+                  <span className="text-[#005963]">Today:</span> {todayLabel}
+                </div>
                 {lastBookedToday && (
-                  <span className="ml-3">
-                    <span className="font-semibold text-[#005963]">Last booked today:</span>{' '}
-                    {lastBookedToday.user?.name || lastBookedToday.user_id}{' '}at{' '}
-                    {formatTime12h(lastBookedToday.appointment_time)}
-                  </span>
+                  <div className="text-xs text-gray-600">
+                    <span className="font-semibold text-[#005963]">Last:</span> {lastBookedToday.user?.name || lastBookedToday.user_id} at {formatDisplayTime12h(lastBookedToday.appointment_time) || lastBookedToday.appointment_time}
+                  </div>
                 )}
               </div>
+              {selectedIds.length > 0 && (
+                <div className="text-sm font-semibold text-[#005963]">
+                  {selectedIds.length} selected
+                </div>
+              )}
+            </div>
 
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <div>
-                  <label className="mb-1 block text-xs font-semibold text-gray-600">Filter by date</label>
-                  <select
-                    value={dateFilter}
-                    onChange={(e) => setDateFilter(e.target.value)}
-                    className="w-full rounded-xl border border-[#00acb1]/30 bg-white px-3 py-2 text-sm font-semibold text-[#005963]"
-                  >
-                    <option value="all">All</option>
-                    <option value="today">Today</option>
-                  </select>
+            <div className="flex flex-col gap-3 md:flex-row md:items-end">
+              {/* Search */}
+              <div className="flex-1">
+                <label className="mb-2 block text-xs font-semibold text-gray-700">Search Patient</label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search by patient name..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full rounded-xl border border-[#00acb1]/30 bg-white pl-10 pr-4 py-2.5 text-sm font-semibold text-[#005963] placeholder-gray-400 focus:border-[#005963] focus:outline-none focus:ring-2 focus:ring-[#005963]/10"
+                  />
                 </div>
-                <div>
-                  <label className="mb-1 block text-xs font-semibold text-gray-600">Filter by status</label>
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    className="w-full rounded-xl border border-[#00acb1]/30 bg-white px-3 py-2 text-sm font-semibold text-[#005963]"
-                  >
-                    <option value="all">All</option>
-                    <option value="pending">Pending</option>
-                    <option value="approved">Approved</option>
-                    <option value="completed">Completed</option>
-                    <option value="cancelled">Cancelled</option>
-                  </select>
-                </div>
+              </div>
+
+              {/* Date Filter */}
+              <div>
+                <label className="mb-2 block text-xs font-semibold text-gray-700">Filter by date</label>
+                <select
+                  value={dateFilter}
+                  onChange={(e) => setDateFilter(e.target.value)}
+                  className="w-full rounded-xl border border-[#00acb1]/30 bg-white px-4 py-2.5 text-sm font-semibold text-[#005963] focus:border-[#005963] focus:outline-none focus:ring-2 focus:ring-[#005963]/10"
+                >
+                  <option value="all">All Dates</option>
+                  <option value="today">Today</option>
+                </select>
+              </div>
+
+              {/* Status Filter */}
+              <div>
+                <label className="mb-2 block text-xs font-semibold text-gray-700">Filter by status</label>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="w-full rounded-xl border border-[#00acb1]/30 bg-white px-4 py-2.5 text-sm font-semibold text-[#005963] focus:border-[#005963] focus:outline-none focus:ring-2 focus:ring-[#005963]/10"
+                >
+                  <option value="all">All Status</option>
+                  <option value="pending">Pending</option>
+                  <option value="approved">Approved</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
               </div>
             </div>
           </div>
 
+          {/* Table */}
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y">
+            <table className="w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="w-14 px-4 py-3 text-left text-sm font-semibold">#</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold">Patient</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold">Date</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold">Time</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold">Status</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold">Action</th>
+                  <th className="w-12 px-4 py-4 text-left">
+                    <input
+                      type="checkbox"
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedIds(filteredRows.map(r => r.id));
+                        } else {
+                          setSelectedIds([]);
+                        }
+                      }}
+                      checked={selectedIds.length === filteredRows.length && filteredRows.length > 0}
+                      className="rounded border-gray-300"
+                    />
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-700">#</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-700">Patient</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-700">Date</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-700">Time</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-700">Status</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-700">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y bg-white">
+              <tbody className="divide-y divide-gray-200 bg-white">
                 {filteredRows.map((a, idx) => {
                   const canCreatePrescription = !a.has_prescription && (a.status === 'approved' || a.status === 'completed');
+                  const isSelected = selectedIds.includes(a.id);
                   return (
-                    <tr key={a.id}>
-                      <td className="px-4 py-3 text-sm font-semibold text-gray-700">{idx + 1}</td>
-                      <td className="px-4 py-3 text-sm font-semibold text-[#005963]">{a.user?.name || a.user_id}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{formatDisplayDate(a.appointment_date) || a.appointment_date}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{formatTime12h(a.appointment_time)}</td>
-                      <td className="px-4 py-3 text-sm capitalize">
+                    <tr key={a.id} className={`transition ${isSelected ? 'bg-[#00acb1]/10' : 'hover:bg-gray-50'}`}>
+                      <td className="px-4 py-4">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedIds([...selectedIds, a.id]);
+                            } else {
+                              setSelectedIds(selectedIds.filter(id => id !== a.id));
+                            }
+                          }}
+                          className="rounded border-gray-300"
+                        />
+                      </td>
+                      <td className="px-6 py-4 text-sm font-semibold text-gray-700">{idx + 1}</td>
+                      <td className="px-6 py-4">
+                        <div className="font-semibold text-[#005963]">{a.user?.name || a.user_id}</div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-700 whitespace-nowrap">{formatDisplayDateWithYearFromDateLike(a.appointment_date) || a.appointment_date}</td>
+                      <td className="px-6 py-4 text-sm text-gray-700 whitespace-nowrap">{formatDisplayTime12h(a.appointment_time) || a.appointment_time}</td>
+                      <td className="px-6 py-4 text-sm">
                         <select
-                          className={`rounded-xl border px-3 py-2 text-sm font-semibold ${statusSelectClass(a.status)}`}
+                          className={`rounded-lg border px-3 py-1.5 text-xs font-bold ${statusSelectClass(a.status)}`}
                           value={a.status}
                           onChange={(e) => updateStatus(a.id, e.target.value)}
                         >
@@ -164,16 +235,17 @@ export default function DoctorAppointments({ appointments = [] }) {
                           <option value="cancelled">Cancelled</option>
                         </select>
                       </td>
-                      <td className="px-4 py-3 text-sm">
+                      <td className="px-6 py-4 text-sm">
                         {a.has_prescription ? (
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">
-                              Prescription Created
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">
+                              <CheckCircle2 className="h-3 w-3" />
+                              Prescription
                             </span>
                             {a.prescription_id ? (
                               <Link
                                 href={`/doctor/prescriptions/${a.prescription_id}`}
-                                className="inline-flex items-center justify-center rounded-full border border-[#00acb1]/40 bg-white px-4 py-2 text-xs font-semibold text-[#005963] hover:bg-[#00acb1]/10"
+                                className="inline-flex items-center justify-center rounded-lg border border-[#00acb1]/40 bg-white px-3 py-1.5 text-xs font-semibold text-[#005963] hover:bg-[#00acb1]/10 transition"
                               >
                                 View
                               </Link>
@@ -182,12 +254,12 @@ export default function DoctorAppointments({ appointments = [] }) {
                         ) : canCreatePrescription ? (
                           <Link
                             href={`/doctor/prescriptions/create?appointment_id=${a.id}`}
-                            className="inline-flex items-center justify-center rounded-full border border-[#00acb1]/40 bg-white px-4 py-2 text-xs font-semibold text-[#005963] hover:bg-[#00acb1]/10"
+                            className="inline-flex items-center justify-center rounded-lg border border-[#00acb1] bg-[#00acb1]/10 px-3 py-1.5 text-xs font-semibold text-[#005963] hover:bg-[#00acb1]/20 transition"
                           >
-                            Create Prescription
+                            Create
                           </Link>
                         ) : (
-                          <span className="text-xs text-gray-500">—</span>
+                          <span className="text-xs text-gray-400">—</span>
                         )}
                       </td>
                     </tr>
@@ -195,16 +267,57 @@ export default function DoctorAppointments({ appointments = [] }) {
                 })}
                 {filteredRows.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-4 py-10 text-center text-gray-500">No appointments scheduled.</td>
+                    <td colSpan={7} className="px-6 py-12 text-center">
+                      <div className="text-gray-400">
+                        <CalendarCheck2 className="mx-auto mb-3 h-8 w-8 opacity-50" />
+                        <p className="font-semibold">No appointments found</p>
+                      </div>
+                    </td>
                   </tr>
                 )}
               </tbody>
             </table>
           </div>
+
+          {/* Pagination */}
+          {pagination?.data && typeof pagination.current_page === 'number' ? (
+            <div className="border-t border-gray-200 bg-gray-50 px-6 py-4">
+              <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+                <div className="text-sm text-gray-600">
+                  Page <span className="font-bold text-[#005963]">{pagination.current_page}</span> of <span className="font-bold text-[#005963]">{pagination.last_page}</span> • Total: <span className="font-bold text-[#005963]">{pagination.total}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {(() => {
+                    const prev = (pagination.links || []).find((l) => String(l.label).toLowerCase().includes('previous'));
+                    const next = (pagination.links || []).find((l) => String(l.label).toLowerCase().includes('next'));
+                    const btnBase = 'inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold transition';
+                    const btnOn = 'bg-[#005963] text-white hover:bg-[#00787b]';
+                    const btnOff = 'bg-gray-200 text-gray-400 cursor-not-allowed';
+                    return (
+                      <>
+                        {prev?.url ? (
+                          <Link href={prev.url} className={`${btnBase} ${btnOn}`}>
+                            ← Previous
+                          </Link>
+                        ) : (
+                          <span className={`${btnBase} ${btnOff}`}>← Previous</span>
+                        )}
+                        {next?.url ? (
+                          <Link href={next.url} className={`${btnBase} ${btnOn}`}>
+                            Next →
+                          </Link>
+                        ) : (
+                          <span className={`${btnBase} ${btnOff}`}>Next →</span>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
+              </div>
+            </div>
+          ) : null}
         </GlassCard>
       </div>
-    </>
+    </DoctorLayout>
   );
 }
-
-DoctorAppointments.layout = (page) => <DoctorLayout>{page}</DoctorLayout>;

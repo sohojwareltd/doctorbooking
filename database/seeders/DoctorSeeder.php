@@ -14,13 +14,19 @@ class DoctorSeeder extends Seeder
      */
     public function run(): void
     {
-        $doctor = User::firstOrCreate(
+        $doctor = User::updateOrCreate(
             ['email' => 'doctor@example.com'],
             [
-                'name' => 'Default Doctor',
+                'name' => 'Dr. Sarah Johnson',
                 'password' => Hash::make('password'),
                 'role' => 'doctor',
-                'phone' => '0123456789',
+                'phone' => '+1 (555) 123-4567',
+                'specialization' => 'Board-Certified Dermatologist',
+                'degree' => 'MD, Harvard Medical School',
+                'registration_no' => 'MD-12345',
+                'experience' => 20,
+                'bio' => 'Transform your skin with advanced dermatological care and aesthetic excellence. Over 20 years of expertise dedicated to your confidence and natural beauty. Dr. Sarah Johnson is a board-certified dermatologist and cosmetic surgeon with over 20 years of experience in transforming the lives of her patients through advanced skincare treatments and aesthetic procedures.',
+                'profile_picture' => null,
             ]
         );
 

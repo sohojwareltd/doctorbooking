@@ -9,7 +9,7 @@ import ServicesSection from '../components/sections/ServicesSection';
 
 import PublicLayout from '../layouts/PublicLayout';
 
-export default function Welcome({ auth, home }) {
+export default function Welcome({ auth, home, doctor }) {
     const meta = home?.meta || {};
 
     return (
@@ -26,10 +26,10 @@ export default function Welcome({ auth, home }) {
 
             <div className="relative min-h-screen bg-white font-sans text-gray-900">
                 {/* Hero Section */}
-                <HeroSection content={home?.hero} />
+                <HeroSection content={home?.hero} doctor={doctor} />
 
                 {/* About Section */}
-                <AboutSection content={home?.about} />
+                <AboutSection content={home?.about} doctor={doctor} />
 
                 {/* Services Section */}
                 <ServicesSection content={home?.services} />

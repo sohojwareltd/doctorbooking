@@ -28,7 +28,7 @@ export default function DoctorLogo({ className = "h-10 w-auto" }) {
                 cx="100"
                 cy="100"
                 r="35"
-                stroke="#00acb1"
+                stroke="#ffffff"
                 strokeWidth="1"
                 fill="none"
                 style={{ transformOrigin: '100px 100px', transformBox: 'fill-box' }}
@@ -44,8 +44,8 @@ export default function DoctorLogo({ className = "h-10 w-auto" }) {
                 {/* Left Heart Lobe */}
                 <path
                     d="M 100 140 C 75 120, 60 105, 60 90 C 60 78, 68 70, 76 70 C 84 70, 92 76, 100 85 C 108 76, 116 70, 124 70 C 132 70, 140 78, 140 90 C 140 105, 125 120, 100 140 Z"
-                    fill="#00acb1"
-                    opacity="0.9"
+                    fill="#ffffff"
+                    opacity="0.95"
                 />
             </motion.g>
 
@@ -76,12 +76,12 @@ export default function DoctorLogo({ className = "h-10 w-auto" }) {
             {/* Heartbeat Line */}
             <path
                 d="M 50 155 L 60 155 L 65 150 L 70 160 L 75 155 L 85 155 L 95 155 L 100 155"
-                stroke="#00acb1"
+                stroke="#ffffff"
                 strokeWidth="2"
                 fill="none"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                opacity="0.8"
+                opacity="0.9"
             />
 
             {/* Center Accent */}
@@ -89,7 +89,7 @@ export default function DoctorLogo({ className = "h-10 w-auto" }) {
                 cx="100"
                 cy="100"
                 r="8"
-                fill="#00acb1"
+                fill="#ffffff"
                 animate={{
                     scale: [1, 1.3, 1],
                     opacity: [0.8, 1, 0.8]

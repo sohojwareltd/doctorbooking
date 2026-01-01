@@ -86,6 +86,7 @@ export default function Settings({ auth, homeJson = '', status = null }) {
   const contact = home?.contact || {};
   const caseStudies = home?.caseStudies || {};
   const footer = home?.footer || {};
+  const prescription = home?.prescription || {};
 
   const trust = asArray(hero.trust);
   const features = asArray(hero.features);
@@ -159,6 +160,7 @@ export default function Settings({ auth, homeJson = '', status = null }) {
     { key: 'gallery', label: 'Gallery' },
     { key: 'contact', label: 'Contact' },
     { key: 'footer', label: 'Footer' },
+    { key: 'prescription', label: 'Prescription' },
   ];
 
   const TabButton = ({ tabKey, children }) => {
@@ -1007,6 +1009,105 @@ export default function Settings({ auth, homeJson = '', status = null }) {
                     </div>
                   ))}
                 </div>
+              </div>
+            </div>
+          </GlassCard>
+          )}
+
+          {/* Prescription */}
+          {activeTab === 'prescription' && (
+          <GlassCard variant="solid" hover={false} className="p-6">
+            <div className="mb-4">
+              <div className={sectionTitleClass}>Prescription</div>
+              <div className={sectionSubClass}>Clinic name, logo, and footer used on prescription pages.</div>
+            </div>
+
+            <div className="grid gap-4">
+              <div>
+                <label className={labelClass}>Clinic Name</label>
+                <input
+                  className={inputClass}
+                  value={prescription.clinicName || ''}
+                  onChange={(e) => setHome((p) => updateAtPath(p, ['prescription', 'clinicName'], e.target.value))}
+                  placeholder="e.g. MediCare Clinic"
+                />
+                <div className={helpClass}>If empty, the app name will be used.</div>
+              </div>
+
+              <div>
+                <label className={labelClass}>Clinic Address</label>
+                <textarea
+                  className={inputClass}
+                  rows={3}
+                  value={prescription.address || ''}
+                  onChange={(e) => setHome((p) => updateAtPath(p, ['prescription', 'address'], e.target.value))}
+                  placeholder="Clinic address (multi-line supported)"
+                />
+              </div>
+
+              <div>
+                <label className={labelClass}>Clinic Phone</label>
+                <input
+                  className={inputClass}
+                  value={prescription.phone || ''}
+                  onChange={(e) => setHome((p) => updateAtPath(p, ['prescription', 'phone'], e.target.value))}
+                  placeholder="e.g. +8801XXXXXXXXX"
+                />
+              </div>
+
+              <div>
+                <label className={labelClass}>Logo URL</label>
+                <div className="flex gap-3">
+                  <input
+                    className={inputClass}
+                    value={prescription.logoUrl || ''}
+                    onChange={(e) => setHome((p) => updateAtPath(p, ['prescription', 'logoUrl'], e.target.value))}
+                    placeholder="/site-content/..."
+                  />
+                </div>
+                <div className="mt-3 flex items-center gap-3">
+                  <label className="rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition cursor-pointer">
+                    {uploading.prescriptionLogo ? 'Uploading…' : 'Upload'}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      disabled={!!uploading.prescriptionLogo}
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        setUploading((p) => ({ ...p, prescriptionLogo: true }));
+                        try {
+                          const url = await uploadToServer(file);
+                          setHome((p) => updateAtPath(p, ['prescription', 'logoUrl'], url));
+                          toastSuccess('Logo uploaded.');
+                        } catch (err) {
+                          toastError(err?.message || 'Upload failed.');
+                        } finally {
+                          setUploading((p) => ({ ...p, prescriptionLogo: false }));
+                          e.target.value = '';
+                        }
+                      }}
+                    />
+                  </label>
+                  <div className={helpClass}>Upload will generate a local URL.</div>
+                </div>
+
+                <ImagePreview
+                  url={prescription.logoUrl || ''}
+                  onClear={() => setHome((p) => updateAtPath(p, ['prescription', 'logoUrl'], ''))}
+                />
+              </div>
+
+              <div>
+                <label className={labelClass}>Footer Note</label>
+                <textarea
+                  className={inputClass}
+                  rows={3}
+                  value={prescription.footerNote || ''}
+                  onChange={(e) => setHome((p) => updateAtPath(p, ['prescription', 'footerNote'], e.target.value))}
+                  placeholder="Optional footer note"
+                />
               </div>
             </div>
           </GlassCard>

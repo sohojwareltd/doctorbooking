@@ -41,11 +41,27 @@ class HandleInertiaRequests extends Middleware
         [$message, $author] = str(Inspiring::quotes()->random())->explode('-');
 
         $contactPhone = null;
+        $prescription = null;
         if (Schema::hasTable('site_contents')) {
             $homeContent = SiteContent::where('key', 'home')->first()?->value;
             $homeContent = SiteContent::normalizeValue($homeContent);
-
             $footerLines = data_get($homeContent, 'footer.contactLines', []);
+
+            $defaultPrescription = [
+                'clinicName' => data_get($homeContent, 'hero.name') ?: null,
+                'logoUrl' => data_get($homeContent, 'hero.image.url') ?: null,
+                'address' => null,
+                'phone' => null,
+                'footerNote' => null,
+            ];
+
+            if (is_array($footerLines)) {
+                $addressLines = array_values(array_filter($footerLines, fn ($v) => is_string($v) && trim($v) !== ''));
+                if (count($addressLines)) {
+                    $defaultPrescription['address'] = implode("\n", $addressLines);
+                }
+            }
+
             if (is_array($footerLines)) {
                 foreach ($footerLines as $line) {
                     if (!is_string($line)) {
@@ -71,6 +87,15 @@ class HandleInertiaRequests extends Middleware
                     }
                 }
             }
+
+            $defaultPrescription['phone'] = $contactPhone ?: null;
+
+            $prescriptionValue = data_get($homeContent, 'prescription');
+            if (is_array($prescriptionValue)) {
+                $prescription = array_merge($defaultPrescription, $prescriptionValue);
+            } else {
+                $prescription = $defaultPrescription;
+            }
         }
 
         return [
@@ -88,6 +113,7 @@ class HandleInertiaRequests extends Middleware
             ],
             'site' => [
                 'contactPhone' => $contactPhone,
+                'prescription' => $prescription,
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];

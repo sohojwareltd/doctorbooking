@@ -4,7 +4,7 @@ import { useRef } from 'react';
 import PrimaryButton from '../PrimaryButton';
 import ParticlesBackground from '../ParticlesBackground';
 
-export default function HeroSection({ content }) {
+export default function HeroSection({ content, doctor }) {
     const ref = useRef(null);
     const { scrollYProgress } = useScroll({
         target: ref,
@@ -14,9 +14,20 @@ export default function HeroSection({ content }) {
     const y = useTransform(scrollYProgress, [0, 1], ['0%', '50%']);
     const opacity = useTransform(scrollYProgress, [0, 0.6], [1, 0]);
 
+    // Use doctor data if available, fallback to content settings
+    const doctorName = doctor?.name || content?.name || 'Dr. Sarah Johnson';
+    const doctorSubtitle = doctor?.specialization || content?.subtitle || 'Board-Certified Dermatologist';
+    const doctorDescription = doctor?.bio || content?.description || 'Transform your skin with advanced dermatological care and aesthetic excellence. Over 20 years of expertise dedicated to your confidence and natural beauty.';
+    const doctorBadge = doctor?.degree || content?.badge || 'Welcome to Excellence';
+    
+    // Build features array from doctor or content
     const features =
         content?.features ||
-        ['20+ Years Experience', 'Board Certified', 'Advanced Technology'];
+        [
+            doctor?.experience ? `${doctor.experience} Years Experience` : '20+ Years Experience',
+            doctor?.registration_no ? `Registration: ${doctor.registration_no}` : 'Board Certified',
+            'Advanced Technology'
+        ];
 
     const trust =
         content?.trust ||
@@ -26,8 +37,11 @@ export default function HeroSection({ content }) {
             { value: '20+', label: 'Years of Care' },
         ];
 
-    const imageUrl = content?.image?.url || 'https://mediicc.netlify.app/images/thunb.png';
-    const imageAlt = content?.image?.alt || 'Dr. Sarah Johnson';
+    // Use doctor profile picture if available
+    const imageUrl = doctor?.profile_picture 
+        ? `/storage/${doctor.profile_picture}` 
+        : (content?.image?.url || 'https://mediicc.netlify.app/images/thunb.png');
+    const imageAlt = doctorName;
 
     return (
         <section
@@ -53,7 +67,7 @@ export default function HeroSection({ content }) {
                         className="mb-8 inline-flex items-center gap-2 rounded-full bg-[#00acb1]/10 px-4 py-2 text-sm font-semibold text-[#005963]"
                     >
                         <div className="h-2 w-2 rounded-full bg-[#005963]" />
-                        {content?.badge || 'Welcome to Excellence'}
+                        {doctorBadge}
                     </motion.div>
 
                     {/* Main Heading */}
@@ -63,7 +77,7 @@ export default function HeroSection({ content }) {
                         transition={{ duration: 0.8, delay: 0.1 }}
                         className="mb-6 text-5xl font-black tracking-tight sm:text-6xl lg:text-7xl text-[#005963]"
                     >
-                        {content?.name || 'Dr. Sarah Johnson'}
+                        {doctorName}
                     </motion.h1>
 
                     {/* Subtitle */}
@@ -73,7 +87,7 @@ export default function HeroSection({ content }) {
                         transition={{ duration: 0.8, delay: 0.2 }}
                         className="mb-3 text-2xl font-bold text-[#005963] sm:text-3xl"
                     >
-                        {content?.subtitle || 'Board-Certified Dermatologist'}
+                        {doctorSubtitle}
                     </motion.p>
 
                     {/* Description */}
@@ -83,8 +97,7 @@ export default function HeroSection({ content }) {
                         transition={{ duration: 0.8, delay: 0.3 }}
                         className="mb-10 text-lg text-[#686a6f] leading-relaxed sm:text-xl"
                     >
-                        {content?.description ||
-                            'Transform your skin with advanced dermatological care and aesthetic excellence. Over 20 years of expertise dedicated to your confidence and natural beauty.'}
+                        {doctorDescription}
                     </motion.p>
 
                     {/* Features List */}
