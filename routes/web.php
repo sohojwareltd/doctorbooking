@@ -270,17 +270,15 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
 
     Route::get('/patients', function () {
         $doctor = Auth::user();
-        $patientIds = Appointment::where('doctor_id', $doctor->id)
-            ->distinct()->pluck('user_id');
         
-        // Get all patients for statistics
-        $allPatients = User::whereIn('id', $patientIds)->get();
+        // Get all patients (users with role 'user')
+        $allPatients = User::where('role', 'user')->get();
         $hasPhone = $allPatients->filter(fn($p) => $p->phone)->count();
         $emailOnly = $allPatients->filter(fn($p) => $p->email && !$p->phone)->count();
         $noContact = $allPatients->filter(fn($p) => !$p->email && !$p->phone)->count();
         
         // Get patients with prescription details (paginated)
-        $patients = User::whereIn('id', $patientIds)
+        $patients = User::where('role', 'user')
             ->with(['prescriptions' => function ($query) use ($doctor) {
                 $query->where('doctor_id', $doctor->id)
                     ->select('id', 'user_id', 'diagnosis', 'created_at')
@@ -414,7 +412,7 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
         if ($patientId) {
             $selectedPatient = User::where('id', $patientId)
                 ->where('role', 'user')
-                ->first(['id', 'name', 'phone', 'email', 'age', 'gender', 'weight']);
+                ->first(['id', 'name', 'phone', 'email', 'gender', 'weight']);
         }
 
         return Inertia::render('doctor/CreatePrescription', [

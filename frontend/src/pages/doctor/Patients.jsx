@@ -232,7 +232,7 @@ export default function Patients({ patients = [], stats = {} }) {
                               className="inline-flex items-center gap-1.5 rounded-lg border border-[#005963]/40 bg-[#005963]/5 px-3 py-1.5 text-xs font-semibold text-[#005963] hover:bg-[#005963]/10 transition"
                             >
                               <FilePlus className="h-3.5 w-3.5" />
-                              Create Prescription
+                              Add Prescription
                             </button>
                           )}
                         </div>

@@ -291,7 +291,6 @@ export default function CreatePrescription({ appointments = [], contactInfo, sel
     useEffect(() => {
         if (!appointmentId && appointments && appointments.length > 0) {
             const url = page?.url;
-            let found = false;
             
             // Try to get from URL first
             try {
@@ -304,17 +303,11 @@ export default function CreatePrescription({ appointments = [], contactInfo, sel
                         
                         if (exists) {
                             setAppointmentId(appointmentIdFromUrl);
-                            found = true;
                         }
                     }
                 }
             } catch (err) {
                 // URL parsing error - continue
-            }
-
-            // If not found from URL, use first appointment
-            if (!found && appointments[0]?.id) {
-                setAppointmentId(String(appointments[0].id));
             }
         }
     }, [appointments]);
