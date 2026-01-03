@@ -9,7 +9,11 @@ export default function PublicLayout({ children }) {
     const [showScrollTop, setShowScrollTop] = useState(false);
     const { auth, home } = usePage().props;
 
+    const header = home?.header || {};
+    const headerLogoUrl = header.logoUrl;
+    
     const footer = home?.footer || {};
+    const footerLogoUrl = footer.logoUrl;
     const footerBrandName = footer.brandName || 'MediCare';
     const footerDescription = footer.description || 'Premier healthcare services for your wellness.';
     const footerLinksTitle = footer.linksTitle || 'Quick Links';
@@ -69,13 +73,24 @@ export default function PublicLayout({ children }) {
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                         <div className="flex justify-between items-center h-16">
                         {/* Logo */}
-                        <Link href="/" className="flex-shrink-0 flex items-center gap-3">
-                            <div className="bg-white rounded-lg p-1">
-                                <DoctorLogo className="h-10 w-10" />
-                            </div>
-                            <span className="text-xl font-bold text-white hidden sm:inline">
-                                MediCare
-                            </span>
+                        <Link href="/" className="flex-shrink-0 flex items-center gap-3 group">
+                            {headerLogoUrl && headerLogoUrl.trim() !== '' ? (
+                                <>
+                                    <img 
+                                        src={headerLogoUrl} 
+                                        alt="Logo" 
+                                        className="h-10 w-10 object-contain transition-transform group-hover:scale-105"
+                                    />
+                                    <div className="text-base font-bold text-white hidden sm:block">MediCare</div>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="rounded-xl bg-gradient-to-br from-[#005963] to-[#00acb1] p-2.5 shadow-sm group-hover:shadow-md transition-shadow">
+                                        <DoctorLogo className="h-6 w-6" />
+                                    </div>
+                                    <div className="text-base font-bold text-white hidden sm:block">MediCare</div>
+                                </>
+                            )}
                         </Link>
 
                         {/* Desktop Navigation */}
@@ -241,12 +256,25 @@ export default function PublicLayout({ children }) {
                 <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
                         <div>
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="bg-white rounded-lg p-1">
-                                    <DoctorLogo className="h-10 w-10" />
-                                </div>
-                                <h3 className="text-lg font-bold">{footerBrandName}</h3>
-                            </div>
+                            <Link href="/" className="flex items-center gap-3 mb-4 group w-fit">
+                                {footerLogoUrl && footerLogoUrl.trim() !== '' ? (
+                                    <>
+                                        <img 
+                                            src={footerLogoUrl} 
+                                            alt="Logo" 
+                                            className="h-10 w-10 object-contain transition-transform group-hover:scale-105"
+                                        />
+                                        <div className="text-base font-bold text-white">{footerBrandName}</div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="rounded-xl bg-gradient-to-br from-[#005963] to-[#00acb1] p-2.5 shadow-sm group-hover:shadow-md transition-shadow">
+                                            <DoctorLogo className="h-6 w-6" />
+                                        </div>
+                                        <div className="text-base font-bold text-white">{footerBrandName}</div>
+                                    </>
+                                )}
+                            </Link>
                             <p className="text-gray-300">{footerDescription}</p>
                         </div>
                         <div>

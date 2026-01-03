@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from '@inertiajs/react';
-import { FileText, PlusCircle, Search } from 'lucide-react';
+import { FileText, PlusCircle, Search, Eye } from 'lucide-react';
 import DoctorLayout from '../../layouts/DoctorLayout';
 import GlassCard from '../../components/GlassCard';
+import Pagination from '../../components/Pagination';
 import { formatDisplayFromDateLike, formatDisplayDateWithYearFromDateLike } from '../../utils/dateFormat';
 
-export default function DoctorPrescriptions({ prescriptions = [] }) {
+export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) {
   const pageRows = useMemo(() => (Array.isArray(prescriptions) ? prescriptions : (prescriptions?.data ?? [])), [prescriptions]);
+  const pagination = useMemo(() => (Array.isArray(prescriptions) ? null : prescriptions), [prescriptions]);
   const [rows, setRows] = useState(pageRows);
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState('all');
@@ -37,33 +39,30 @@ export default function DoctorPrescriptions({ prescriptions = [] }) {
     });
   }, [rows, searchTerm, dateFilter, followUpFilter, todayIso]);
 
-  const stats = useMemo(() => {
-    const withFollowUp = rows.filter((p) => p.next_visit_date).length;
-    const withoutFollowUp = rows.filter((p) => !p.next_visit_date).length;
-    const upcomingFollowUps = rows.filter((p) => {
-      if (!p.next_visit_date) return false;
-      const d = new Date(p.next_visit_date);
-      return !Number.isNaN(d.getTime()) && d >= todayDate;
-    }).length;
+  const statsCards = useMemo(() => {
+    const totalCount = pagination?.total || rows.length;
+    const withFollowUp = stats?.withFollowUp ?? 0;
+    const withoutFollowUp = stats?.withoutFollowUp ?? 0;
+    const upcomingFollowUps = stats?.upcomingFollowUps ?? 0;
 
     return [
-      { label: 'Total Prescriptions', value: rows.length, color: 'bg-[#00acb1]/10 text-[#005963] border-[#00acb1]/30' },
+      { label: 'Total Prescriptions', value: totalCount, color: 'bg-[#00acb1]/10 text-[#005963] border-[#00acb1]/30' },
       { label: 'With Follow-up', value: withFollowUp, color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
       { label: 'No Follow-up', value: withoutFollowUp, color: 'bg-amber-50 text-amber-700 border-amber-200' },
       { label: 'Upcoming Visits', value: upcomingFollowUps, color: 'bg-sky-50 text-sky-700 border-sky-200' }
     ];
-  }, [rows, todayDate]);
+  }, [pagination, stats]);
 
   return (
     <DoctorLayout title="Prescriptions">
-      <div className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-start">
+      <div className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div>
           <h1 className="text-3xl font-bold text-[#005963]">Prescriptions</h1>
           <p className="mt-2 text-gray-600">View and create prescriptions for your patients</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="text-sm text-gray-600">
-            <span className="font-bold text-[#005963]">{filteredRows.length}</span> result{filteredRows.length !== 1 ? 's' : ''}
+            <span className="font-bold text-[#005963]">{filteredRows.length}</span> prescription{filteredRows.length !== 1 ? 's' : ''} found
           </div>
           <Link
             href="/doctor/prescriptions/create"
@@ -77,11 +76,13 @@ export default function DoctorPrescriptions({ prescriptions = [] }) {
 
       <div className="space-y-6">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-          {stats.map((stat, idx) => (
+          {statsCards.map((stat, idx) => (
             <GlassCard key={idx} variant="solid" className={`border-2 p-4 ${stat.color}`}>
-              <div className="text-xs font-semibold uppercase tracking-wide opacity-70">{stat.label}</div>
-              <div className="mt-2 flex items-center justify-between">
-                <div className="text-2xl font-black">{stat.value}</div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-wide opacity-70">{stat.label}</div>
+                  <div className="mt-2 text-2xl font-black">{stat.value}</div>
+                </div>
                 <div className="rounded-lg bg-white/60 p-2 text-[#005963]">
                   <FileText className="h-4 w-4" />
                 </div>
@@ -189,7 +190,7 @@ export default function DoctorPrescriptions({ prescriptions = [] }) {
                           className="rounded border-gray-300"
                         />
                       </td>
-                      <td className="px-6 py-4 text-sm font-semibold text-gray-700">{idx + 1}</td>
+                      <td className="px-6 py-4 text-sm font-semibold text-gray-700">{(pagination?.current_page - 1) * pagination?.per_page + idx + 1}</td>
                       <td className="px-6 py-4">
                         <div className="font-semibold text-[#005963]">{p.user?.name || p.user_id}</div>
                       </td>
@@ -198,12 +199,15 @@ export default function DoctorPrescriptions({ prescriptions = [] }) {
                       <td className="px-6 py-4 text-sm text-gray-800 whitespace-pre-wrap">{p.medications || '—'}</td>
                       <td className="px-6 py-4 text-sm text-gray-700 whitespace-nowrap">{p.next_visit_date ? (formatDisplayDateWithYearFromDateLike(p.next_visit_date) || p.next_visit_date) : '—'}</td>
                       <td className="px-6 py-4 text-sm">
-                        <Link
-                          href={`/doctor/prescriptions/${p.id}`}
-                          className="inline-flex items-center justify-center rounded-lg border border-[#00acb1]/40 bg-white px-3 py-1.5 text-xs font-semibold text-[#005963] hover:bg-[#00acb1]/10 transition"
-                        >
-                          View
-                        </Link>
+                        <div className="flex items-center gap-2">
+                          <Link
+                            href={`/doctor/prescriptions/${p.id}`}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-[#00acb1]/40 bg-white px-3 py-1.5 text-xs font-semibold text-[#005963] hover:bg-[#00acb1]/10 transition"
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                            View
+                          </Link>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -220,6 +224,8 @@ export default function DoctorPrescriptions({ prescriptions = [] }) {
               </tbody>
             </table>
           </div>
+
+          <Pagination data={pagination} />
         </GlassCard>
       </div>
     </DoctorLayout>

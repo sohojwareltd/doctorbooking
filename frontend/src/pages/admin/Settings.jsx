@@ -80,6 +80,7 @@ export default function Settings({ auth, homeJson = '', status = null }) {
 
   const hero = home?.hero || {};
   const meta = home?.meta || {};
+  const header = home?.header || {};
   const about = home?.about || {};
   const services = home?.services || {};
   const gallery = home?.gallery || {};
@@ -153,6 +154,7 @@ export default function Settings({ auth, homeJson = '', status = null }) {
 
   const tabs = [
     { key: 'meta', label: 'Meta' },
+    { key: 'header', label: 'Header' },
     { key: 'hero', label: 'Hero' },
     { key: 'about', label: 'About' },
     { key: 'services', label: 'Services' },
@@ -260,6 +262,58 @@ export default function Settings({ auth, homeJson = '', status = null }) {
                   value={meta.description || ''}
                   onChange={(e) => setHome((p) => updateAtPath(p, ['meta', 'description'], e.target.value))}
                   placeholder="Home page meta description"
+                />
+              </div>
+            </div>
+          </GlassCard>
+          )}
+
+          {/* Header */}
+          {activeTab === 'header' && (
+          <GlassCard variant="solid" hover={false} className="p-6">
+            <div className="mb-4">
+              <div className={sectionTitleClass}>Header</div>
+              <div className={sectionSubClass}>Header logo configuration.</div>
+            </div>
+            <div className="grid gap-4">
+              <div>
+                <label className={labelClass}>Header Logo URL</label>
+                <input
+                  className={inputClass}
+                  value={header.logoUrl || ''}
+                  onChange={(e) => setHome((p) => updateAtPath(p, ['header', 'logoUrl'], e.target.value))}
+                  placeholder="https://example.com/logo.png or /storage/logo.png"
+                />
+                <div className={helpClass}>Paste an image URL or upload below.</div>
+              </div>
+
+              <div>
+                <label className={labelClass}>Upload Header Logo</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  disabled={uploading['header-logo']}
+                  className={inputClass}
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    setUploading((u) => ({ ...u, 'header-logo': true }));
+                    try {
+                      const url = await uploadToServer(file);
+                      setHome((p) => updateAtPath(p, ['header', 'logoUrl'], url));
+                      toastSuccess('Header logo uploaded!');
+                    } catch (err) {
+                      toastError(err.message || 'Header logo upload failed');
+                    } finally {
+                      setUploading((u) => ({ ...u, 'header-logo': false }));
+                      e.target.value = '';
+                    }
+                  }}
+                />
+                {uploading['header-logo'] && <div className={helpClass}>Uploading...</div>}
+                <ImagePreview
+                  url={header.logoUrl}
+                  onClear={() => setHome((p) => updateAtPath(p, ['header', 'logoUrl'], ''))}
                 />
               </div>
             </div>
@@ -886,6 +940,47 @@ export default function Settings({ auth, homeJson = '', status = null }) {
             </div>
 
             <div className="grid gap-4">
+              <div>
+                <label className={labelClass}>Footer Logo URL</label>
+                <input
+                  className={inputClass}
+                  value={footer.logoUrl || ''}
+                  onChange={(e) => setHome((p) => updateAtPath(p, ['footer', 'logoUrl'], e.target.value))}
+                  placeholder="https://example.com/logo.png or /storage/logo.png"
+                />
+                <div className={helpClass}>Paste an image URL or upload below.</div>
+              </div>
+
+              <div>
+                <label className={labelClass}>Upload Footer Logo</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  disabled={uploading['footer-logo']}
+                  className={inputClass}
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    setUploading((u) => ({ ...u, 'footer-logo': true }));
+                    try {
+                      const url = await uploadToServer(file);
+                      setHome((p) => updateAtPath(p, ['footer', 'logoUrl'], url));
+                      toastSuccess('Footer logo uploaded!');
+                    } catch (err) {
+                      toastError(err.message || 'Footer logo upload failed');
+                    } finally {
+                      setUploading((u) => ({ ...u, 'footer-logo': false }));
+                      e.target.value = '';
+                    }
+                  }}
+                />
+                {uploading['footer-logo'] && <div className={helpClass}>Uploading...</div>}
+                <ImagePreview
+                  url={footer.logoUrl}
+                  onClear={() => setHome((p) => updateAtPath(p, ['footer', 'logoUrl'], ''))}
+                />
+              </div>
+
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <label className={labelClass}>Brand Name</label>

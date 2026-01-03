@@ -136,10 +136,19 @@ Route::middleware(['auth', 'verified', 'role:user'])->prefix('user')->name('user
         $user = Auth::user();
         $prescriptions = Prescription::where('user_id', $user->id)
             ->orderByDesc('created_at')
-            ->get(['id','diagnosis','medications','instructions','tests','next_visit_date','created_at']);
+            ->paginate(10)
+            ->withQueryString();
 
         return Inertia::render('user/Prescriptions', [
-            'prescriptions' => $prescriptions,
+            'prescriptions' => $prescriptions->through(fn ($p) => [
+                'id' => $p->id,
+                'diagnosis' => $p->diagnosis,
+                'medications' => $p->medications,
+                'instructions' => $p->instructions,
+                'tests' => $p->tests,
+                'next_visit_date' => $p->next_visit_date,
+                'created_at' => $p->created_at,
+            ]),
         ]);
     })->name('prescriptions');
 
@@ -263,17 +272,80 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
         $doctor = Auth::user();
         $patientIds = Appointment::where('doctor_id', $doctor->id)
             ->distinct()->pluck('user_id');
-        $patients = User::whereIn('id', $patientIds)->get(['id','name','email','phone']);
-        return Inertia::render('doctor/Patients', [ 'patients' => $patients ]);
+        
+        // Get all patients for statistics
+        $allPatients = User::whereIn('id', $patientIds)->get();
+        $hasPhone = $allPatients->filter(fn($p) => $p->phone)->count();
+        $emailOnly = $allPatients->filter(fn($p) => $p->email && !$p->phone)->count();
+        $noContact = $allPatients->filter(fn($p) => !$p->email && !$p->phone)->count();
+        
+        // Get patients with prescription details (paginated)
+        $patients = User::whereIn('id', $patientIds)
+            ->with(['prescriptions' => function ($query) use ($doctor) {
+                $query->where('doctor_id', $doctor->id)
+                    ->select('id', 'user_id', 'diagnosis', 'created_at')
+                    ->orderByDesc('created_at');
+            }])
+            ->orderByDesc('created_at')
+            ->paginate(10)
+            ->withQueryString();
+
+        return Inertia::render('doctor/Patients', [
+            'patients' => $patients->through(function ($patient) {
+                $prescriptions = $patient->prescriptions->map(function ($p) {
+                    return [
+                        'id' => $p->id,
+                        'diagnosis' => $p->diagnosis,
+                        'created_at' => $p->created_at,
+                    ];
+                });
+                
+                return [
+                    'id' => $patient->id,
+                    'name' => $patient->name,
+                    'email' => $patient->email,
+                    'phone' => $patient->phone,
+                    'created_at' => $patient->created_at,
+                    'has_prescription' => $prescriptions->isNotEmpty(),
+                    'prescriptions_count' => $prescriptions->count(),
+                    'prescriptions' => $prescriptions->toArray(),
+                ];
+            }),
+            'stats' => [
+                'hasPhone' => $hasPhone,
+                'emailOnly' => $emailOnly,
+                'noContact' => $noContact,
+            ]
+        ]);
     })->name('patients');
 
     Route::get('/prescriptions', function () {
         $doctor = Auth::user();
+        
+        // Get paginated prescriptions
         $prescriptions = Prescription::with('user:id,name')
             ->where('doctor_id', $doctor->id)
             ->orderByDesc('created_at')
-            ->get(['id','user_id','diagnosis','medications','next_visit_date','created_at']);
-        return Inertia::render('doctor/Prescriptions', [ 'prescriptions' => $prescriptions ]);
+            ->paginate(10)
+            ->withQueryString();
+        
+        // Get statistics from all prescriptions (not just current page)
+        $allPrescriptions = Prescription::where('doctor_id', $doctor->id)->get();
+        $withFollowUp = $allPrescriptions->filter(fn($p) => $p->next_visit_date)->count();
+        $withoutFollowUp = $allPrescriptions->filter(fn($p) => !$p->next_visit_date)->count();
+        $upcomingFollowUps = $allPrescriptions->filter(function($p) {
+            if (!$p->next_visit_date) return false;
+            return \Carbon\Carbon::parse($p->next_visit_date)->gte(now()->startOfDay());
+        })->count();
+        
+        return Inertia::render('doctor/Prescriptions', [
+            'prescriptions' => $prescriptions,
+            'stats' => [
+                'withFollowUp' => $withFollowUp,
+                'withoutFollowUp' => $withoutFollowUp,
+                'upcomingFollowUps' => $upcomingFollowUps,
+            ]
+        ]);
     })->name('prescriptions');
 
     Route::get('/prescriptions/{prescription}', function (Prescription $prescription) {
@@ -286,6 +358,10 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
             ->where('doctor_id', $doctor->id)
             ->where('id', $prescription->id)
             ->firstOrFail();
+
+        // Get site content for contact info
+        $homeContent = SiteContent::where('key', 'home')->first()?->value;
+        $contactInfo = $homeContent['contact'] ?? null;
 
         return Inertia::render('doctor/PrescriptionShow', [
             'prescription' => [
@@ -307,6 +383,7 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
                     'status' => $prescription->appointment->status,
                 ] : null,
             ],
+            'contactInfo' => $contactInfo,
         ]);
     })->whereNumber('prescription')->name('prescriptions.show');
 
@@ -327,6 +404,10 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
             ->orderByDesc('appointment_time')
             ->get(['id', 'user_id', 'appointment_date', 'appointment_time', 'status']);
 
+        // Get site content for contact info
+        $homeContent = SiteContent::where('key', 'home')->first()?->value;
+        $contactInfo = $homeContent['contact'] ?? null;
+
         return Inertia::render('doctor/CreatePrescription', [
             'appointments' => $appointments->map(fn ($a) => [
                 'id' => $a->id,
@@ -336,6 +417,7 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
                 'appointment_time' => substr((string) $a->appointment_time, 0, 5),
                 'status' => $a->status,
             ]),
+            'contactInfo' => $contactInfo,
         ]);
     })->name('prescriptions.create');
 
@@ -364,8 +446,30 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
     })->name('dashboard');
 
     Route::get('/users', function () {
-        $users = User::orderByDesc('created_at')->get(['id','name','email','role','created_at']);
-        return Inertia::render('admin/Users', ['users' => $users]);
+        $users = User::withCount(['prescriptions'])
+            ->with(['prescriptions:id,user_id,created_at'])
+            ->orderByDesc('created_at')
+            ->paginate(10)
+            ->withQueryString();
+
+        return Inertia::render('admin/Users', [
+            'users' => $users->through(function ($user) {
+                return [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'phone' => $user->phone,
+                    'role' => $user->role,
+                    'created_at' => $user->created_at,
+                    'has_prescription' => $user->prescriptions_count > 0,
+                    'prescriptions_count' => $user->prescriptions_count,
+                    'prescriptions' => $user->prescriptions->map(fn($p) => [
+                        'id' => $p->id,
+                        'created_at' => $p->created_at,
+                    ]),
+                ];
+            }),
+        ]);
     })->name('users');
 
     Route::get('/appointments', function () {
@@ -394,7 +498,55 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
     Route::post('/appointments/{appointment}/status', 'App\\Http\\Controllers\\AppointmentController@updateStatus')->name('appointments.status');
 
     Route::get('/doctor', fn () => Inertia::render('admin/Doctor'))->name('doctor');
-    Route::get('/reports', fn () => Inertia::render('admin/Reports'))->name('reports');
+    
+    Route::get('/reports', function () {
+        $stats = [
+            'total_users' => User::count(),
+            'total_appointments' => Appointment::count(),
+            'total_prescriptions' => Prescription::count(),
+            'pending_appointments' => Appointment::where('status', 'pending')->count(),
+            'approved_appointments' => Appointment::where('status', 'approved')->count(),
+            'completed_appointments' => Appointment::where('status', 'completed')->count(),
+            'cancelled_appointments' => Appointment::where('status', 'cancelled')->count(),
+            'total_patients' => User::where('role', 'user')->count(),
+            'total_doctors' => User::where('role', 'doctor')->count(),
+        ];
+        
+        $recent_appointments = Appointment::with(['user:id,name', 'doctor:id,name'])
+            ->latest()
+            ->take(10)
+            ->get();
+            
+        return Inertia::render('admin/Reports', [
+            'stats' => $stats,
+            'recent_appointments' => $recent_appointments,
+        ]);
+    })->name('reports');
+    
+    Route::get('/prescriptions', function () {
+        $prescriptions = Prescription::with(['user:id,name,email', 'doctor:id,name'])
+            ->latest()
+            ->paginate(10)
+            ->withQueryString();
+        return Inertia::render('admin/Prescriptions', [
+            'prescriptions' => $prescriptions,
+        ]);
+    })->name('prescriptions');
+    
+    Route::get('/prescriptions/{prescription}', function (Prescription $prescription) {
+        $prescription->load([
+            'user:id,name,email,phone',
+            'doctor:id,name,email,specialization'
+        ]);
+
+        $contactInfo = SiteContent::where('key', 'contact')->first();
+
+        return Inertia::render('admin/PrescriptionShow', [
+            'prescription' => $prescription,
+            'contactInfo' => $contactInfo,
+        ]);
+    })->whereNumber('prescription')->name('prescriptions.show');
+    
     Route::get('/settings', [SiteContentController::class, 'edit'])->name('settings');
     Route::put('/settings/site-content/home', [SiteContentController::class, 'updateHome'])->name('settings.site-content.home');
     Route::post('/settings/site-content/upload', [SiteContentController::class, 'uploadImage'])->name('settings.site-content.upload');

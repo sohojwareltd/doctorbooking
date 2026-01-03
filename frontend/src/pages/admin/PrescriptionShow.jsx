@@ -1,7 +1,7 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import { Calendar, ClipboardList, Heart, Phone, Mail, User, Stethoscope, Pill, FlaskConical, FileText, MapPin, Printer, ArrowLeft, MessageCircle } from 'lucide-react';
 import { useMemo } from 'react';
-import DoctorLayout from '../../layouts/DoctorLayout';
+import AdminLayout from '../../layouts/AdminLayout';
 import { formatDisplayDate, formatDisplayFromDateLike, formatTime12hFromDateTime } from '../../utils/dateFormat';
 
 export default function PrescriptionShow({ prescription, contactInfo }) {
@@ -29,13 +29,13 @@ export default function PrescriptionShow({ prescription, contactInfo }) {
   const clinicEmail = emailMethod?.value || prescriptionSettings?.email || page?.props?.site?.contactEmail || '';
   
   const clinicLogoUrl = prescriptionSettings?.logoUrl || '';
-  const clinicRegistration = prescriptionSettings?.registrationNo || authUser?.registration_no || '';
+  const clinicRegistration = prescriptionSettings?.registrationNo || prescription?.doctor?.registration_no || '';
   const clinicWebsite = prescriptionSettings?.website || page?.props?.site?.website || '';
 
   const patientName = prescription?.patient_name || prescription?.user?.name || `User #${prescription?.user_id || ''}`;
-  const doctorName = prescription?.doctor?.name || authUser?.name || 'Doctor';
-  const doctorEmail = prescription?.doctor?.email || authUser?.email || '';
-  const doctorPhone = authUser?.phone || '';
+  const doctorName = prescription?.doctor?.name || 'Doctor';
+  const doctorEmail = prescription?.doctor?.email || '';
+  const doctorPhone = prescription?.doctor?.phone || '';
   const createdAtDateLabel = useMemo(() => formatDisplayFromDateLike(prescription?.created_at), [prescription?.created_at]);
   const createdAtTimeLabel = useMemo(() => formatTime12hFromDateTime(prescription?.created_at), [prescription?.created_at]);
   const nextVisitLabel = useMemo(() => formatDisplayDate(prescription?.next_visit_date), [prescription?.next_visit_date]);
@@ -50,10 +50,10 @@ export default function PrescriptionShow({ prescription, contactInfo }) {
   const visitType = prescription?.visit_type;
 
   return (
-    <DoctorLayout title="Prescription Details">
+    <AdminLayout title="Prescription Details">
       {/* Action Buttons - Above prescription */}
       <div className="mb-4 flex items-center justify-between print:hidden">
-        <Link href="/doctor/prescriptions" className="flex items-center gap-2 rounded-xl border-2 border-[#005963]/30 bg-white px-5 py-2.5 text-sm font-semibold text-[#005963] shadow-sm transition hover:bg-[#005963]/5">
+        <Link href="/admin/prescriptions" className="flex items-center gap-2 rounded-xl border-2 border-[#005963]/30 bg-white px-5 py-2.5 text-sm font-semibold text-[#005963] shadow-sm transition hover:bg-[#005963]/5">
           <ArrowLeft className="h-4 w-4" />
           Back to List
         </Link>
@@ -77,7 +77,7 @@ export default function PrescriptionShow({ prescription, contactInfo }) {
               {/* Doctor Info - Left */}
               <div className="flex-1">
                 <div className="text-2xl font-black tracking-wide">{doctorName}</div>
-                <div className="mt-1 text-sm font-medium opacity-90">MBBS, FCPS (Medicine)</div>
+                <div className="mt-1 text-sm font-medium opacity-90">{prescription?.doctor?.specialization || 'MBBS, FCPS (Medicine)'}</div>
                 {doctorPhone && (
                   <div className="mt-3 flex items-center gap-2 text-sm">
                     <Phone className="h-4 w-4" />
@@ -281,6 +281,6 @@ export default function PrescriptionShow({ prescription, contactInfo }) {
           }
         }
       `}</style>
-    </DoctorLayout>
+    </AdminLayout>
   );
 }

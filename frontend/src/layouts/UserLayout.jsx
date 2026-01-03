@@ -59,17 +59,17 @@ export default function UserLayout({ children, title = '' }) {
 
           {/* Sidebar */}
           <aside
-            className={`fixed top-16 lg:top-0 left-0 h-[calc(100vh-4rem)] lg:h-screen w-72 lg:w-80 bg-white z-40 transform transition-transform duration-300 lg:translate-x-0 ${
+            className={`fixed top-16 lg:top-0 left-0 h-[calc(100vh-4rem)] lg:h-screen w-72 lg:w-64 bg-white z-40 transform transition-transform duration-300 lg:translate-x-0 ${
               sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
             }`}
           >
-            <div className="h-full overflow-y-auto scrollbar-thin scrollbar-thumb-[#005963]/30 scrollbar-track-transparent hover:scrollbar-thumb-[#005963]/50">
+            <div className="h-full overflow-y-auto">
               <UserSidebar currentPath={url} />
             </div>
           </aside>
 
           {/* Main Content */}
-          <main className="flex-1 lg:ml-80 min-h-screen">
+          <main className="flex-1 lg:ml-64 min-h-screen">
             <div className="h-full overflow-y-auto scrollbar-thin scrollbar-thumb-[#005963]/30 scrollbar-track-transparent hover:scrollbar-thumb-[#005963]/50">
               <div className="p-4 md:p-6 lg:p-8">
                 {children}

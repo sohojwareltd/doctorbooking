@@ -13,10 +13,13 @@ class AdminSeeder extends Seeder
         User::firstOrCreate(
             ['email' => 'admin@example.com'],
             [
-                'name' => 'Site Admin',
+                'name' => 'Ayesha Rahman',
                 'password' => Hash::make('password'),
                 'role' => 'admin',
-                'phone' => '0123456790',
+                'phone' => '+880 1711-234567',
+                'address' => 'Dhaka, Bangladesh',
+                'gender' => 'female',
+                'date_of_birth' => '1990-05-15',
                 'email_verified_at' => now(),
             ]
         );

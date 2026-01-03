@@ -16,17 +16,17 @@ export default function HeroSection({ content, doctor }) {
 
     // Use doctor data if available, fallback to content settings
     const doctorName = doctor?.name || content?.name || 'Dr. Sarah Johnson';
-    const doctorSubtitle = doctor?.specialization || content?.subtitle || 'Board-Certified Dermatologist';
-    const doctorDescription = doctor?.bio || content?.description || 'Transform your skin with advanced dermatological care and aesthetic excellence. Over 20 years of expertise dedicated to your confidence and natural beauty.';
-    const doctorBadge = doctor?.degree || content?.badge || 'Welcome to Excellence';
+    const doctorSubtitle = doctor?.specialization || content?.subtitle || 'Board-Certified Physician';
+    const doctorDescription = doctor?.bio || content?.description || 'Providing compassionate and comprehensive healthcare with expertise and dedication to your well-being.';
+    const doctorBadge = content?.badge || 'Your Healthcare Partner';
     
     // Build features array from doctor or content
     const features =
         content?.features ||
         [
-            doctor?.experience ? `${doctor.experience} Years Experience` : '20+ Years Experience',
-            doctor?.registration_no ? `Registration: ${doctor.registration_no}` : 'Board Certified',
-            'Advanced Technology'
+            doctor?.specialization || 'General Medicine',
+            doctor?.degree || 'MBBS',
+            doctor?.registration_no || 'Licensed Practitioner'
         ];
 
     const trust =

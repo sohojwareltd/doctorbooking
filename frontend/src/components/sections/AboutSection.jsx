@@ -33,7 +33,7 @@ export default function AboutSection({ content, doctor }) {
     const doctorName = doctor?.name || 'Dr. Sarah Johnson';
     const title = content?.title || `About ${doctorName}`;
     const subtitle =
-        content?.subtitle || 'Excellence in dermatological care and aesthetic medicine';
+        content?.subtitle || 'Dedicated to Your Health and Well-being';
     
     // Use doctor profile picture if available
     const imageUrl = doctor?.profile_picture 
@@ -41,33 +41,33 @@ export default function AboutSection({ content, doctor }) {
         : (content?.image?.url || 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=800&q=80');
     const imageAlt = content?.image?.alt || doctorName;
     
-    const highlightValue = content?.highlight?.value || (doctor?.experience ? `${doctor.experience}+` : '20+');
+    const highlightValue = content?.highlight?.value || (doctor?.experience ? `${doctor.experience}+` : '15+');
     const highlightLabel = content?.highlight?.label || 'Years Experience';
     
-    // Build paragraphs from doctor bio or content
+    // Build detailed about paragraphs from doctor bio or content
     const paragraphs = content?.paragraphs || (doctor?.bio ? [doctor.bio] : [
-        'Dr. Sarah Johnson is a board-certified dermatologist and cosmetic surgeon with over 20 years of experience in transforming the lives of her patients through advanced skincare treatments and aesthetic procedures.',
-        'Graduating with honors from Harvard Medical School, Dr. Johnson has dedicated her career to staying at the forefront of dermatological innovation, combining evidence-based medicine with artistic precision.',
-        'Her patient-centered approach focuses on creating natural, lasting results while prioritizing safety and comfort. Each treatment plan is customized to meet individual goals and skin health needs.',
+        `${doctorName} is a dedicated medical professional committed to providing comprehensive healthcare to all patients. With extensive training and experience in general medicine, she brings a compassionate and thorough approach to every consultation.`,
+        'Her practice philosophy centers on preventive care, early diagnosis, and personalized treatment plans. She believes in taking the time to listen to each patient\'s concerns and working collaboratively to achieve optimal health outcomes.',
+        'Beyond clinical excellence, she is passionate about patient education and empowering individuals to take charge of their health through informed decisions and healthy lifestyle choices.',
     ]);
     
-    const credentialsTitle = content?.credentialsTitle || 'Credentials & Certifications';
+    const credentialsTitle = content?.credentialsTitle || 'Professional Qualifications';
     
     // Build credentials from doctor data or content
     const credentials = content?.credentials || [
-        doctor?.degree || 'MD, Harvard Medical School',
-        doctor?.specialization || 'Board Certified, American Academy of Dermatology',
-        doctor?.registration_no ? `Registration No: ${doctor.registration_no}` : 'Fellow, American Society for Dermatologic Surgery',
-        'Member, International Society of Cosmetic Dermatology',
+        doctor?.degree || 'MBBS - Dhaka Medical College',
+        doctor?.specialization || 'FCPS (Medicine) - Bangladesh College of Physicians & Surgeons',
+        doctor?.registration_no ? `Registration: ${doctor.registration_no}` : 'Licensed Medical Practitioner',
+        'Member, Bangladesh Medical Association (BMA)',
     ].filter(Boolean);
     
     const stats =
         content?.stats ||
         [
-            { icon: 'Users', value: '15,000+', label: 'Patients Treated' },
-            { icon: 'Award', value: doctor?.experience ? `${doctor.experience}+` : '20+', label: 'Years Experience' },
-            { icon: 'Heart', value: '98%', label: 'Patient Satisfaction' },
-            { icon: 'BookOpen', value: '50+', label: 'Published Research' },
+            { icon: 'Users', value: '10,000+', label: 'Patients Treated' },
+            { icon: 'Award', value: doctor?.experience ? `${doctor.experience}+` : '15+', label: 'Years Experience' },
+            { icon: 'Heart', value: '95%', label: 'Patient Satisfaction' },
+            { icon: 'BookOpen', value: '100+', label: 'Medical Cases' },
         ];
 
     return (

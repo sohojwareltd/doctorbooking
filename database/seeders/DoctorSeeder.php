@@ -17,22 +17,25 @@ class DoctorSeeder extends Seeder
         $doctor = User::updateOrCreate(
             ['email' => 'doctor@example.com'],
             [
-                'name' => 'Dr. Sarah Johnson',
+                'name' => 'Dr. Fatima Ahmed',
                 'password' => Hash::make('password'),
                 'role' => 'doctor',
-                'phone' => '+1 (555) 123-4567',
-                'specialization' => 'Board-Certified Dermatologist',
-                'degree' => 'MD, Harvard Medical School',
-                'registration_no' => 'MD-12345',
-                'experience' => 20,
-                'bio' => 'Transform your skin with advanced dermatological care and aesthetic excellence. Over 20 years of expertise dedicated to your confidence and natural beauty. Dr. Sarah Johnson is a board-certified dermatologist and cosmetic surgeon with over 20 years of experience in transforming the lives of her patients through advanced skincare treatments and aesthetic procedures.',
+                'phone' => '+880 1712-345678',
+                'address' => 'Gulshan, Dhaka',
+                'gender' => 'female',
+                'date_of_birth' => '1985-08-20',
+                'specialization' => 'MBBS, FCPS (Medicine), Consultant Physician',
+                'degree' => 'MBBS, FCPS - Dhaka Medical College',
+                'registration_no' => 'BM-54321',
+                'bio' => 'Dr. Fatima Ahmed is a highly experienced consultant physician with over 15 years of medical practice. She specializes in general medicine, diabetes care, hypertension management, and women\'s health. Known for her compassionate approach and thorough diagnosis, she is dedicated to providing personalized care to all her patients.',
                 'profile_picture' => null,
+                'email_verified_at' => now(),
             ]
         );
 
-        // Default schedule: Mon-Sat 09:00-17:00, Sun closed.
+        // Default schedule: Sat-Thu 09:00-17:00, Fri closed (Bangladesh weekend).
         for ($dow = 0; $dow <= 6; $dow++) {
-            $isClosed = ($dow === 0);
+            $isClosed = ($dow === 5); // Friday closed
 
             DoctorSchedule::updateOrCreate(
                 [

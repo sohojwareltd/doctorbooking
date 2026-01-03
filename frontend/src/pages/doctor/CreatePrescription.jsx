@@ -7,6 +7,10 @@ import {
     FilePlus2,
     FlaskConical,
     Heart,
+    Mail,
+    MapPin,
+    MessageCircle,
+    Phone,
     Pill,
     Plus,
     RotateCcw,
@@ -227,20 +231,33 @@ function reducer(state, action) {
     }
 }
 
-export default function CreatePrescription({ appointments = [] }) {
+export default function CreatePrescription({ appointments = [], contactInfo }) {
     const page = usePage();
     const authUser = page?.props?.auth?.user;
     const prescriptionSettings = page?.props?.site?.prescription || {};
-    const clinicName =
-        prescriptionSettings?.clinicName || page?.props?.name || 'MediCare';
-    const contactPhone =
-        prescriptionSettings?.phone ||
-        authUser?.phone ||
-        page?.props?.site?.contactPhone ||
-        '';
-    const contactAddress =
-        prescriptionSettings?.address || authUser?.address || '';
+    
+    // Clinic info from contactInfo or fallback to prescriptionSettings
+    const clinicData = contactInfo?.clinic || {};
+    const clinicName = clinicData?.name || prescriptionSettings?.clinicName || page?.props?.name || 'MediCare';
+    const clinicAddress = [
+        clinicData?.line1,
+        clinicData?.line2,
+        clinicData?.line3
+    ].filter(Boolean).join(', ') || prescriptionSettings?.address || authUser?.address || '';
+    
+    // Contact methods from contactInfo
+    const contactMethods = contactInfo?.methods || [];
+    const phoneMethod = contactMethods.find(m => m.icon === 'Phone' || m.title?.toLowerCase().includes('call'));
+    const whatsappMethod = contactMethods.find(m => m.icon === 'MessageCircle' || m.title?.toLowerCase().includes('whatsapp'));
+    const emailMethod = contactMethods.find(m => m.icon === 'Mail' || m.title?.toLowerCase().includes('email'));
+    
+    const contactPhone = phoneMethod?.value || prescriptionSettings?.phone || authUser?.phone || page?.props?.site?.contactPhone || '';
+    const contactWhatsApp = whatsappMethod?.value || '';
+    const contactEmail = emailMethod?.value || prescriptionSettings?.email || authUser?.email || page?.props?.site?.contactEmail || '';
+    
     const clinicLogoUrl = prescriptionSettings?.logoUrl || '';
+    const clinicRegistration = prescriptionSettings?.registrationNo || authUser?.registration_no || '';
+    const clinicWebsite = prescriptionSettings?.website || page?.props?.site?.website || '';
     const footerNote = prescriptionSettings?.footerNote || '';
 
     const [state, dispatch] = useReducer(reducer, initialState);
@@ -520,102 +537,131 @@ export default function CreatePrescription({ appointments = [] }) {
                 </div>
             )}
 
-            {/* Prescription Header Card - Enhanced */}
+            {/* Prescription Header Card - Like real prescription pad (Matching PrescriptionShow) */}
 
-            <GlassCard
-                variant="solid"
-                className="border-2 border-[#005963]/30 p-8 shadow-xl"
-            >
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
-                    <div className="flex items-center gap-3">
-                        <ClipboardList className="h-6 w-6 text-[#005963]" />
-                        <div className="text-xl font-black text-[#005963]">
-                            Prescription Form
-                        </div>
-                    </div>
-                    <div className="text-sm text-gray-700">
-                        {visitDateLabel ? (
-                            <span className="inline-flex items-center gap-2 rounded-full border-2 border-[#005963]/30 bg-white px-4 py-2 font-semibold text-[#005963] shadow-sm">
-                                <Calendar className="h-4 w-4" />
-                                {visitDateLabel}
-                            </span>
-                        ) : (
-                            <span className="text-gray-500">Visit date: -</span>
-                        )}
-                    </div>
-                </div>
-                <GlassCard
-                    variant="solid"
-                    className="mb-2 overflow-hidden border-2 border-[#005963]/20 shadow-lg mt-6"
-                >
-                    <div className="bg-gradient-to-r from-[#005963]/5 to-transparent p-4">
-                        <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
-                            {/* Doctor Information - Left Side */}
-                            <div className="flex items-start gap-4">
-                                {clinicLogoUrl ? (
-                                    <div className="rounded-2xl border-2 border-[#005963]/20 bg-white p-3 shadow-md">
-                                        <img
-                                            src={clinicLogoUrl}
-                                            alt="Logo"
-                                            className="h-16 w-16 object-contain"
-                                        />
-                                    </div>
-                                ) : (
-                                    <div className="rounded-2xl bg-gradient-to-br from-[#005963] to-[#00acb1] p-3 shadow-md">
-                                        <Stethoscope className="h-16 w-16 text-white" />
-                                    </div>
-                                )}
-                                <div>
-                                    <div className="text-2xl font-black text-[#005963]">
-                                        {authUser?.name || 'Doctor'}
-                                    </div>
-                                    {authUser?.degree && (
-                                        <div className="mt-1 text-sm font-semibold text-gray-700">
-                                            {authUser.degree}
-                                        </div>
-                                    )}
-                                    {authUser?.specialization && (
-                                        <div className="mt-0.5 text-sm text-[#00acb1] font-medium">
-                                            {authUser.specialization}
-                                        </div>
-                                    )}
-                                    {authUser?.registration_no && (
-                                        <div className="mt-1 text-xs text-gray-600">
-                                            Reg. No: {authUser.registration_no}
-                                        </div>
-                                    )}
-                                    {contactPhone && (
-                                        <div className="mt-1 text-sm text-gray-700">
-                                            📞 {contactPhone}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Clinic/Chamber Info - Right Side */}
-                            <div className="rounded-2xl bg-white/80 p-4 text-sm shadow-sm md:text-right">
-                                <div className="text-lg font-black text-[#005963]">
-                                    {clinicName}
-                                </div>
-                                {contactAddress ? (
-                                    <div className="mt-2 whitespace-pre-wrap text-sm text-gray-700 max-w-xs">
-                                        {contactAddress}
-                                    </div>
-                                ) : (
-                                    <div className="mt-2 text-sm text-gray-500">
-                                        -
+            <div className="mx-auto max-w-4xl">
+                <div className="overflow-hidden rounded-lg border border-gray-300 bg-white shadow-2xl">
+                    
+                    {/* Prescription Header - Like real prescription pad with gradient */}
+                    <div className="border-b-4 border-[#005963] bg-gradient-to-r from-[#005963] via-[#007a7a] to-[#00acb1] p-6 text-white">
+                        <div className="flex items-start justify-between">
+                            {/* Doctor Info - Left */}
+                            <div className="flex-1">
+                                <div className="text-2xl font-black tracking-wide">{authUser?.name || 'Doctor'}</div>
+                                <div className="mt-1 text-sm font-medium opacity-90">{authUser?.specialization || authUser?.degree || 'MBBS, FCPS'}</div>
+                                {authUser?.phone && (
+                                    <div className="mt-3 flex items-center gap-2 text-sm">
+                                        <Phone className="h-4 w-4" />
+                                        <span>{authUser.phone}</span>
                                     </div>
                                 )}
                                 {authUser?.email && (
-                                    <div className="mt-1 text-gray-600">
-                                        ✉ {authUser.email}
+                                    <div className="mt-1 flex items-center gap-2 text-sm">
+                                        <Mail className="h-4 w-4" />
+                                        <span>{authUser.email}</span>
                                     </div>
                                 )}
                             </div>
+
+                            {/* Clinic Info - Right */}
+                            <div className="text-right">
+                                <div className="text-lg font-bold">{clinicName}</div>
+                                {clinicRegistration && (
+                                    <div className="text-[10px] font-medium opacity-70">Reg. No: {clinicRegistration}</div>
+                                )}
+                                
+                                {/* Our Clinic Info */}
+                                {clinicAddress && (
+                                    <div className="mt-2 pt-1.5 border-t border-white/20">
+                                        <div className="text-[10px] font-semibold opacity-80 mb-0.5">Our Clinic</div>
+                                        <div className="flex items-start justify-end gap-1 text-[10px] opacity-75">
+                                            <MapPin className="h-2.5 w-2.5 mt-0.5 flex-shrink-0" />
+                                            <span className="max-w-xs leading-tight">{clinicAddress}</span>
+                                        </div>
+                                    </div>
+                                )}
+                                
+                                {/* Contact Information */}
+                                <div className="mt-2 pt-1.5 border-t border-white/20 space-y-0.5">
+                                    {contactPhone && (
+                                        <div className="flex items-center justify-end gap-1 text-[10px]">
+                                            <Phone className="h-2.5 w-2.5" />
+                                            <span className="font-medium">Call:</span>
+                                            <span className="opacity-90">{contactPhone}</span>
+                                        </div>
+                                    )}
+                                    {contactWhatsApp && (
+                                        <div className="flex items-center justify-end gap-1 text-[10px]">
+                                            <MessageCircle className="h-2.5 w-2.5" />
+                                            <span className="font-medium">WhatsApp:</span>
+                                            <span className="opacity-90">{contactWhatsApp}</span>
+                                        </div>
+                                    )}
+                                    {contactEmail && (
+                                        <div className="flex items-center justify-end gap-1 text-[10px]">
+                                            <Mail className="h-2.5 w-2.5" />
+                                            <span className="font-medium">Email:</span>
+                                            <span className="opacity-90">{contactEmail}</span>
+                                        </div>
+                                    )}
+                                    {clinicWebsite && (
+                                        <div className="text-[9px] opacity-60 mt-0.5">{clinicWebsite}</div>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </GlassCard>
-                <form onSubmit={onSubmit} className="space-y-10">
+
+                    {/* Patient Info Bar - Dynamic */}
+                    <div className="border-b-2 border-dashed border-gray-300 bg-gray-50 px-6 py-4">
+                        <div className="flex flex-wrap items-center justify-between gap-4">
+                            <div className="flex flex-wrap items-center gap-4">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs font-bold uppercase text-gray-500">Patient:</span>
+                                    <span className="text-base font-bold text-gray-900">{state.patient.name || '—'}</span>
+                                </div>
+                                {state.patient.age_value && (
+                                    <div className="flex items-center gap-1 text-sm text-gray-700">
+                                        <span className="font-semibold">{state.patient.age_value}</span>
+                                        <span>{state.patient.age_unit}</span>
+                                    </div>
+                                )}
+                                {state.patient.gender && (
+                                    <div className="text-sm text-gray-700">{state.patient.gender}</div>
+                                )}
+                                {state.patient.weight && (
+                                    <div className="text-sm text-gray-700">{state.patient.weight} kg</div>
+                                )}
+                                {state.patient.contact && (
+                                    <div className="flex items-center gap-1 text-sm text-gray-600">
+                                        <Phone className="h-3 w-3" />
+                                        {state.patient.contact}
+                                    </div>
+                                )}
+                                {state.visit.type && (
+                                    <div className="rounded-full border border-[#00acb1]/40 bg-[#00acb1]/10 px-2 py-0.5 text-xs font-semibold text-[#005963]">
+                                        {state.visit.type}
+                                    </div>
+                                )}
+                                {visitDateLabel && (
+                                    <div className="flex items-center gap-1 text-sm text-gray-600">
+                                        <Calendar className="h-3 w-3" />
+                                        {visitDateLabel}
+                                    </div>
+                                )}
+                            </div>
+                            {state.follow_up.date && (
+                                <div className="flex items-center gap-2 rounded-lg border border-[#005963]/30 bg-[#005963]/5 px-3 py-1.5">
+                                    <Calendar className="h-4 w-4 text-[#005963]" />
+                                    <span className="text-xs font-bold text-[#005963]">Follow-up: {followUpDateLabel}</span>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Form Main Content */}
+                    <div className="min-h-[500px] bg-white p-6">
+                        <form onSubmit={onSubmit} className="space-y-10">
                     {/* Patient Information Section */}
                     <div className="group">
                         <div className="mb-6 flex items-center gap-2">
@@ -1455,14 +1501,9 @@ export default function CreatePrescription({ appointments = [] }) {
                                                         value={test}
                                                         onChange={(e) =>
                                                             dispatch({
-                                                                type: 'setArrayItem',
-                                                                path: [
-                                                                    'investigations',
-                                                                    'custom',
-                                                                ],
+                                                                type: 'setCustomTest',
                                                                 index: idx,
-                                                                patch: e.target
-                                                                    .value,
+                                                                value: e.target.value,
                                                             })
                                                         }
                                                         placeholder="Add custom test"
@@ -1476,11 +1517,8 @@ export default function CreatePrescription({ appointments = [] }) {
                                                             className="rounded-lg border border-rose-300 bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-800"
                                                             onClick={() =>
                                                                 dispatch({
-                                                                    type: 'removeArrayItem',
-                                                                    section:
-                                                                        'investigations.custom',
+                                                                    type: 'removeCustomTest',
                                                                     index: idx,
-                                                                    min: 1,
                                                                 })
                                                             }
                                                         >
@@ -1494,10 +1532,7 @@ export default function CreatePrescription({ appointments = [] }) {
                                                 className="w-full rounded-lg border border-[#005963]/50 bg-[#005963]/5 px-2 py-1 text-xs font-semibold text-[#005963]"
                                                 onClick={() =>
                                                     dispatch({
-                                                        type: 'addArrayItem',
-                                                        section:
-                                                            'investigations.custom',
-                                                        item: '',
+                                                        type: 'addCustomTest',
                                                     })
                                                 }
                                             >
@@ -1633,7 +1668,9 @@ export default function CreatePrescription({ appointments = [] }) {
                         </div>
                     </div>
                 </form>
-            </GlassCard>
+                    </div>
+                </div>
+            </div>
         </DoctorLayout>
     );
 }

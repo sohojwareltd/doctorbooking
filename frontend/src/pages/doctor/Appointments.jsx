@@ -217,7 +217,7 @@ export default function DoctorAppointments({ appointments = [] }) {
                           className="rounded border-gray-300"
                         />
                       </td>
-                      <td className="px-6 py-4 text-sm font-semibold text-gray-700">{idx + 1}</td>
+                      <td className="px-6 py-4 text-sm font-semibold text-gray-700">{(pagination?.current_page - 1) * pagination?.per_page + idx + 1}</td>
                       <td className="px-6 py-4">
                         <div className="font-semibold text-[#005963]">{a.user?.name || a.user_id}</div>
                       </td>
