@@ -493,11 +493,18 @@ export default function CreatePrescription({ appointments = [], contactInfo, sel
 
         setSubmitting(true);
         try {
+            // Get CSRF token from cookie
+            const token = document.cookie
+                .split('; ')
+                .find(row => row.startsWith('XSRF-TOKEN='))
+                ?.split('=')[1];
+            
             const res = await fetch('/doctor/prescriptions', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     Accept: 'application/json',
+                    'X-XSRF-TOKEN': token ? decodeURIComponent(token) : '',
                 },
                 credentials: 'include',
                 body: JSON.stringify({
