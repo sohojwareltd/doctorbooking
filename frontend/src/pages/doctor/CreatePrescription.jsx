@@ -19,7 +19,7 @@ import {
     Trash2,
     User,
 } from 'lucide-react';
-import { useMemo, useReducer, useState } from 'react';
+import { useEffect, useMemo, useReducer, useState } from 'react';
 import DoctorLayout from '../../layouts/DoctorLayout';
 import GlassCard from '../../components/GlassCard';
 import { toastError, toastSuccess } from '../../utils/toast';
@@ -79,6 +79,26 @@ function formatDisplayDate(ymd) {
         day: '2-digit',
     });
     return fmt.format(date);
+}
+
+function formatDisplayTime12h(time) {
+    if (!time) return '';
+    const s = String(time);
+    const m = s.match(/^(\d{2}):(\d{2})(?::\d{2})?$/);
+    if (!m) return '';
+
+    const hh = Number(m[1]);
+    const mm = Number(m[2]);
+    if (Number.isNaN(hh) || Number.isNaN(mm)) return '';
+
+    const date = new Date(1970, 0, 1, hh, mm, 0);
+    if (Number.isNaN(date.getTime())) return '';
+
+    return new Intl.DateTimeFormat('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+    }).format(date);
 }
 
 const initialState = {
@@ -231,7 +251,7 @@ function reducer(state, action) {
     }
 }
 
-export default function CreatePrescription({ appointments = [], contactInfo }) {
+export default function CreatePrescription({ appointments = [], contactInfo, selectedPatient }) {
     const page = usePage();
     const authUser = page?.props?.auth?.user;
     const prescriptionSettings = page?.props?.site?.prescription || {};
@@ -265,30 +285,82 @@ export default function CreatePrescription({ appointments = [], contactInfo }) {
     const [error, setError] = useState('');
     const [submitting, setSubmitting] = useState(false);
 
-    const [appointmentId, setAppointmentId] = useState(() => {
-        const url = page?.url;
-        try {
-            if (url) {
-                const u = new URL(url, window.location.origin);
-                const q = u.searchParams.get('appointment_id');
-                const id = q ? Number(q) : null;
-                if (id && (appointments || []).some((a) => a.id === id)) {
-                    return String(id);
-                }
-            }
-        } catch {
-            // ignore
-        }
+    const [appointmentId, setAppointmentId] = useState('');
 
-        const first = appointments?.[0]?.id;
-        return first ? String(first) : '';
-    });
+    // Initialize appointment from URL query parameter
+    useEffect(() => {
+        if (!appointmentId && appointments && appointments.length > 0) {
+            const url = page?.url;
+            let found = false;
+            
+            // Try to get from URL first
+            try {
+                if (url) {
+                    const urlObj = new URL(url, window.location.origin);
+                    const appointmentIdFromUrl = urlObj.searchParams.get('appointment_id');
+                    
+                    if (appointmentIdFromUrl) {
+                        const exists = appointments.some((a) => Number(a.id) === Number(appointmentIdFromUrl));
+                        
+                        if (exists) {
+                            setAppointmentId(appointmentIdFromUrl);
+                            found = true;
+                        }
+                    }
+                }
+            } catch (err) {
+                // URL parsing error - continue
+            }
+
+            // If not found from URL, use first appointment
+            if (!found && appointments[0]?.id) {
+                setAppointmentId(String(appointments[0].id));
+            }
+        }
+    }, [appointments]);
 
     const selectedAppointment = useMemo(() => {
         const id = Number(appointmentId);
         if (!id) return null;
         return (appointments || []).find((a) => a.id === id) || null;
     }, [appointments, appointmentId]);
+
+    // Auto-fill patient info when patient is selected from patients table
+    useEffect(() => {
+        if (selectedPatient?.name) {
+            dispatch({
+                type: 'setField',
+                path: ['patient', 'name'],
+                value: selectedPatient.name,
+            });
+            if (selectedPatient?.phone) {
+                dispatch({
+                    type: 'setField',
+                    path: ['patient', 'contact'],
+                    value: selectedPatient.phone,
+                });
+            }
+        }
+    }, [selectedPatient?.id]);
+
+    // Auto-fill patient info when appointment is selected
+    useEffect(() => {
+        if (selectedAppointment?.user?.name) {
+            dispatch({
+                type: 'setField',
+                path: ['patient', 'name'],
+                value: selectedAppointment.user.name,
+            });
+            // Set visit date to appointment date
+            if (selectedAppointment?.appointment_date) {
+                dispatch({
+                    type: 'setField',
+                    path: ['visit', 'date'],
+                    value: selectedAppointment.appointment_date,
+                });
+            }
+        }
+    }, [selectedAppointment?.id, selectedAppointment?.user?.name, selectedAppointment?.appointment_date]);
 
     const appointmentDateLabel = useMemo(
         () => formatDisplayDate(selectedAppointment?.appointment_date),
@@ -426,11 +498,6 @@ export default function CreatePrescription({ appointments = [], contactInfo }) {
         const testsText = buildTestsText();
         const instructionsText = buildInstructionsText();
 
-        const csrf =
-            document
-                .querySelector('meta[name="csrf-token"]')
-                ?.getAttribute('content') || '';
-
         setSubmitting(true);
         try {
             const res = await fetch('/doctor/prescriptions', {
@@ -438,9 +505,8 @@ export default function CreatePrescription({ appointments = [], contactInfo }) {
                 headers: {
                     'Content-Type': 'application/json',
                     Accept: 'application/json',
-                    ...(csrf ? { 'X-CSRF-TOKEN': csrf } : {}),
                 },
-                credentials: 'same-origin',
+                credentials: 'include',
                 body: JSON.stringify({
                     appointment_id: selectedAppointment?.id || null,
                     patient_name: state.patient.name,
@@ -681,6 +747,26 @@ export default function CreatePrescription({ appointments = [], contactInfo }) {
                             className="border border-[#00acb1]/30 bg-white p-6 shadow-md"
                         >
                             <div className="grid gap-4 md:grid-cols-2">
+                                <div className="md:col-span-2">
+                                    <label className={labelClass}>
+                                        Select Appointment
+                                    </label>
+                                    <select
+                                        className={inputClass}
+                                        value={appointmentId}
+                                        onChange={(e) =>
+                                            setAppointmentId(e.target.value)
+                                        }
+                                    >
+                                        <option value="">Choose an appointment</option>
+                                        {(appointments || []).map((apt) => (
+                                            <option key={apt.id} value={String(apt.id)}>
+                                                {apt.user?.name} - {formatDisplayDate(apt.appointment_date)} at {formatDisplayTime12h(apt.appointment_time)}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
                                 <div>
                                     <label className={labelClass}>
                                         Patient Name *

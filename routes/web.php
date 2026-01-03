@@ -408,6 +408,15 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
         $homeContent = SiteContent::where('key', 'home')->first()?->value;
         $contactInfo = $homeContent['contact'] ?? null;
 
+        // Get patient info if patient ID is provided in query
+        $selectedPatient = null;
+        $patientId = request()->query('patient');
+        if ($patientId) {
+            $selectedPatient = User::where('id', $patientId)
+                ->where('role', 'user')
+                ->first(['id', 'name', 'phone', 'email', 'age', 'gender', 'weight']);
+        }
+
         return Inertia::render('doctor/CreatePrescription', [
             'appointments' => $appointments->map(fn ($a) => [
                 'id' => $a->id,
@@ -417,6 +426,12 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
                 'appointment_time' => substr((string) $a->appointment_time, 0, 5),
                 'status' => $a->status,
             ]),
+            'selectedPatient' => $selectedPatient ? [
+                'id' => $selectedPatient->id,
+                'name' => $selectedPatient->name,
+                'phone' => $selectedPatient->phone,
+                'email' => $selectedPatient->email,
+            ] : null,
             'contactInfo' => $contactInfo,
         ]);
     })->name('prescriptions.create');
