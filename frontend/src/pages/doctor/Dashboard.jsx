@@ -1,11 +1,13 @@
-import { Link, usePage } from '@inertiajs/react';
-import { CalendarDays, ClipboardList, LayoutDashboard, Settings, Users, TrendingUp, Clock, CheckCircle, XCircle, FileText, AlertCircle } from 'lucide-react';
+import { Link, usePage, router } from '@inertiajs/react';
+import { CalendarDays, Users, TrendingUp, Clock, FileText, Plus } from 'lucide-react';
 import DoctorLayout from '../../layouts/DoctorLayout';
 import GlassCard from '../../components/GlassCard';
+import { useEffect, useState } from 'react';
 
-export default function DoctorDashboard({ stats = {}, recentAppointments = [], upcomingAppointment = null }) {
+export default function DoctorDashboard({ stats = {}, recentAppointments = [], todaysAppointments: todaysAppointmentsProp = [], upcomingAppointment = null }) {
   const { auth } = usePage().props;
   const user = auth?.user;
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Safe default values
   const defaultStats = {
@@ -43,6 +45,38 @@ export default function DoctorDashboard({ stats = {}, recentAppointments = [], u
       default:
         return 'bg-gray-500/20 text-gray-700 border border-gray-200';
     }
+  };
+
+  const todayIso = new Date().toISOString().split('T')[0];
+  const todayLabel = formatDate(todayIso) || todayIso;
+
+  const todaysAppointments = Array.isArray(todaysAppointmentsProp)
+    ? todaysAppointmentsProp
+    : [];
+
+  // Auto-refresh dashboard data every 60s
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setIsRefreshing(true);
+      router.reload({
+        only: ['stats', 'recentAppointments', 'todaysAppointments', 'upcomingAppointment'],
+        preserveScroll: true,
+        preserveState: true,
+        onFinish: () => setIsRefreshing(false),
+      });
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleManualRefresh = () => {
+    setIsRefreshing(true);
+    router.reload({
+      only: ['stats', 'recentAppointments', 'todaysAppointments', 'upcomingAppointment'],
+      preserveScroll: true,
+      preserveState: true,
+      onFinish: () => setIsRefreshing(false),
+    });
   };
 
   return (
@@ -106,80 +140,44 @@ export default function DoctorDashboard({ stats = {}, recentAppointments = [], u
                 <p className="text-sm text-gray-600">
                   {recentAppointments.length} appointments in last 7 days
                 </p>
-              </div>
-            </div>
-          </GlassCard>
+                <div className="flex items-center gap-3 text-sm font-semibold text-gray-700">
+                  <span className="text-[#005963]">Today:</span> {todayLabel}
+                  <button
+                    type="button"
+                    onClick={handleManualRefresh}
+                    className="rounded-lg border border-[#005963]/30 px-3 py-1 text-xs font-semibold text-[#005963] hover:bg-[#005963]/5 transition disabled:opacity-60"
+                    disabled={isRefreshing}
+                  >
+                    {isRefreshing ? 'Refreshing...' : 'Refresh now'}
+                  </button>
+                </div>
         </div>
+              </div>
+            </GlassCard>
+          </div>
 
         {/* Main Content Grid */}
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Appointments List - Left Column */}
           <div className="lg:col-span-2 space-y-4">
-            {/* Upcoming Appointment Featured Card */}
-            {upcomingAppointment ? (
-              <GlassCard variant="solid" hover={false} className="overflow-hidden bg-gradient-to-br from-[#005963] via-[#00acb1] to-[#00d4db] p-6 text-white shadow-lg">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="text-xs font-semibold uppercase tracking-widest opacity-90">Next Appointment</div>
-                    <div className="mt-3 text-2xl font-black">{upcomingAppointment.user?.name || 'Patient'}</div>
-                    <div className="mt-2 text-sm opacity-95">
-                      <span className="font-semibold">{upcomingAppointment.type || 'General Visit'}</span> • {formatDate(upcomingAppointment.appointment_date)}, {formatTime(upcomingAppointment.appointment_time)}
-                    </div>
-                    {upcomingAppointment.is_video && (
-                      <div className="mt-3 inline-flex items-center gap-2 rounded-lg bg-white/20 px-3 py-1.5 text-xs font-semibold backdrop-blur-sm">
-                        <span className="text-lg">📹</span>
-                        Video Appointment
-                      </div>
-                    )}
-                  </div>
-                  <div className="h-20 w-20 overflow-hidden rounded-2xl border-2 border-white/50 bg-white/10 backdrop-blur-sm flex-shrink-0">
-                    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-white/20 to-white/10 text-3xl font-bold text-white">
-                      {(upcomingAppointment.user?.name || 'P')[0].toUpperCase()}
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-5 flex gap-2">
-                  <Link
-                    href={`/doctor/appointments?id=${upcomingAppointment.id}`}
-                    className="flex-1 rounded-xl bg-white px-4 py-2.5 text-center text-sm font-semibold text-[#005963] hover:bg-gray-100 transition shadow"
-                  >
-                    Chat Now
-                  </Link>
-                  <Link
-                    href="/doctor/appointments"
-                    className="flex-1 rounded-xl border border-white/30 bg-white/10 px-4 py-2.5 text-center text-sm font-semibold text-white backdrop-blur-sm hover:bg-white/20 transition"
-                  >
-                    Start
-                  </Link>
-                </div>
-              </GlassCard>
-            ) : (
-              <GlassCard variant="solid" hover={false} className="p-6 bg-blue-50 border-l-4 border-l-blue-400">
-                <div className="flex items-start gap-4">
-                  <AlertCircle className="h-6 w-6 text-blue-600 mt-1 flex-shrink-0" />
-                  <div>
-                    <h3 className="font-semibold text-blue-900">No Upcoming Appointments</h3>
-                    <p className="text-sm text-blue-700 mt-1">You don't have any scheduled appointments yet.</p>
-                  </div>
-                </div>
-              </GlassCard>
-            )}
-
-            {/* Recent Appointments List */}
             <GlassCard variant="solid" hover={false} className="p-6">
               <div className="mb-6 flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-bold text-[#005963]">Recent Appointments</h3>
-                  <p className="text-sm text-gray-500 mt-1">Last 7 days activity</p>
+                  <h3 className="text-lg font-bold text-[#005963]">Today's Appointments</h3>
+                  <p className="text-sm text-gray-500 mt-1">Appointments scheduled for today</p>
                 </div>
                 <Link href="/doctor/appointments" className="text-[#005963] text-sm font-semibold hover:underline flex items-center gap-1">
                   View All →
                 </Link>
               </div>
               <div className="space-y-3">
-                {recentAppointments && recentAppointments.length > 0 ? (
-                  recentAppointments.map((appointment, index) => (
-                    <div key={appointment.id || index} className="flex items-center justify-between rounded-xl border border-gray-200 p-4 hover:bg-gray-50 hover:border-gray-300 transition">
+                {todaysAppointments && todaysAppointments.length > 0 ? (
+                  todaysAppointments.map((appointment, index) => (
+                    <div
+                      key={appointment.id || index}
+                      className="flex items-center justify-between rounded-xl border border-gray-200 p-4 hover:bg-gray-50 hover:border-gray-300 transition cursor-pointer"
+                      onClick={() => router.visit(`/doctor/appointments?focus=${appointment.id || ''}`)}
+                    >
                       <div className="flex items-center gap-4 flex-1">
                         <div className="h-12 w-12 overflow-hidden rounded-xl bg-gradient-to-br from-[#005963] to-[#00acb1] flex-shrink-0">
                           <div className="flex h-full w-full items-center justify-center text-sm font-bold text-white">
@@ -203,7 +201,7 @@ export default function DoctorDashboard({ stats = {}, recentAppointments = [], u
                 ) : (
                   <div className="py-12 text-center">
                     <CalendarDays className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                    <p className="text-gray-500">No appointments in the last 7 days</p>
+                    <p className="text-gray-500">No appointments scheduled for today</p>
                   </div>
                 )}
               </div>
@@ -217,8 +215,15 @@ export default function DoctorDashboard({ stats = {}, recentAppointments = [], u
               <h3 className="mb-4 text-sm font-bold uppercase tracking-wider text-[#005963]">Quick Actions</h3>
               <div className="space-y-2">
                 <Link
-                  href="/doctor/prescriptions/create"
+                  href="/doctor/appointments"
                   className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#005963] px-4 py-3 text-sm font-semibold text-white hover:bg-[#00434a] transition shadow-sm"
+                >
+                  <Plus className="h-4 w-4" />
+                  Create Appointment
+                </Link>
+                <Link
+                  href="/doctor/prescriptions/create"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#005963]/30 bg-white px-4 py-3 text-sm font-semibold text-[#005963] hover:bg-[#005963]/5 transition"
                 >
                   <FileText className="h-4 w-4" />
                   Create Prescription

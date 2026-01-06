@@ -1,6 +1,6 @@
 {
   "frontend/src/css/app.css": {
-    "file": "assets/app-D7_rZRDp.css",
+    "file": "assets/app-B4O6WSMp.css",
     "src": "frontend/src/css/app.css",
     "isEntry": true,
     "name": "app",
@@ -9,7 +9,7 @@
     ]
   },
   "frontend/src/main.jsx": {
-    "file": "assets/main-jyDTTkmt.js",
+    "file": "assets/main-CC_OTgPp.js",
     "name": "main",
     "src": "frontend/src/main.jsx",
     "isEntry": true

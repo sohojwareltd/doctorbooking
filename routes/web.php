@@ -8,7 +8,10 @@ use App\Http\Controllers\DoctorProfileController;
 use App\Http\Controllers\PrescriptionController;
 use App\Http\Controllers\Admin\SiteContentController;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
+use Illuminate\Http\Request;
 use App\Models\Appointment;
 use App\Models\Prescription;
 use App\Models\SiteContent;
@@ -191,6 +194,23 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
             ->whereMonth('appointment_date', now()->month)
             ->count();
         
+        // Today's appointments list
+        $todaysAppointments = Appointment::with(['user:id,name'])
+            ->where('doctor_id', $doctor->id)
+            ->whereDate('appointment_date', $today)
+            ->orderBy('appointment_time')
+            ->get()
+            ->map(fn ($a) => [
+                'id' => $a->id,
+                'user_id' => $a->user_id,
+                'user' => $a->user ? ['id' => $a->user->id, 'name' => $a->user->name] : null,
+                'appointment_date' => $a->appointment_date?->toDateString(),
+                'appointment_time' => substr((string) $a->appointment_time, 0, 5),
+                'status' => $a->status,
+                'type' => $a->type,
+                'is_video' => $a->is_video ?? false,
+            ]);
+
         // Get recent appointments (last 7 days)
         $recentAppointments = Appointment::with(['user:id,name'])
             ->where('doctor_id', $doctor->id)
@@ -238,6 +258,7 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
                 'totalPrescriptions' => $totalPrescriptions,
                 'completedThisMonth' => $completedThisMonth,
             ],
+            'todaysAppointments' => $todaysAppointments,
             'recentAppointments' => $recentAppointments,
             'upcomingAppointment' => $upcoming,
         ]);
@@ -245,10 +266,15 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
 
     Route::get('/appointments', function () {
         $doctor = Auth::user();
+
+        $totalAppointments = Appointment::where('doctor_id', $doctor->id)->count();
+        $pendingAppointments = Appointment::where('doctor_id', $doctor->id)->where('status', 'pending')->count();
+        $approvedAppointments = Appointment::where('doctor_id', $doctor->id)->where('status', 'approved')->count();
+        $completedAppointments = Appointment::where('doctor_id', $doctor->id)->where('status', 'completed')->count();
+
         $appointments = Appointment::with(['user:id,name', 'prescription:id,appointment_id'])
             ->where('doctor_id', $doctor->id)
-            ->orderByDesc('appointment_date')
-            ->orderByDesc('appointment_time')
+            ->orderByDesc('id')
             ->paginate(10)
             ->withQueryString();
 
@@ -264,21 +290,85 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
                 'has_prescription' => $a->prescription !== null,
                 'prescription_id' => $a->prescription?->id,
             ]),
+            'stats' => [
+                'total' => $totalAppointments,
+                'pending' => $pendingAppointments,
+                'approved' => $approvedAppointments,
+                'completed' => $completedAppointments,
+            ],
         ]);
     })->name('appointments');
     Route::post('/appointments/{appointment}/status', 'App\\Http\\Controllers\\AppointmentController@updateStatus')->name('appointments.status');
+    
+    Route::post('/appointments/create', function (Request $request) {
+        $doctor = Auth::user();
+        
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'phone' => 'required|string|max:20',
+            'age' => 'required|integer|min:1|max:150',
+            'gender' => 'required|in:male,female,other',
+        ]);
+        
+        // Calculate date_of_birth from age
+        $dateOfBirth = now()->subYears($validated['age'])->toDateString();
+        
+        // Find or create user with the phone number
+        $user = User::where('phone', $validated['phone'])->first();
+        
+        if (!$user) {
+            // Create new user/patient
+            $user = User::create([
+                'name' => $validated['name'],
+                'phone' => $validated['phone'],
+                'email' => 'patient_' . time() . '@temp.com', // Temporary email
+                'password' => Hash::make(Str::random(16)), // Random password
+                'role' => 'user',
+                'age' => $validated['age'],
+                'gender' => $validated['gender'],
+                'date_of_birth' => $dateOfBirth,
+            ]);
+        } else {
+            // Update existing user information
+            $user->update([
+                'name' => $validated['name'],
+                'age' => $validated['age'],
+                'gender' => $validated['gender'],
+                'date_of_birth' => $dateOfBirth,
+            ]);
+        }
+        
+        // Create appointment with current date and time
+        $appointment = Appointment::create([
+            'user_id' => $user->id,
+            'doctor_id' => $doctor->id,
+            'appointment_date' => now()->toDateString(),
+            'appointment_time' => now()->format('H:i:s'),
+            'status' => 'pending',
+        ]);
+        
+        return response()->json([
+            'message' => 'Appointment created successfully',
+            'appointment' => $appointment,
+        ], 201);
+    })->name('appointments.create');
 
     Route::get('/patients', function () {
         $doctor = Auth::user();
         
-        // Get all patients (users with role 'user')
-        $allPatients = User::where('role', 'user')->get();
+        // Limit patients to those who have had appointments with this doctor
+        $patientQuery = User::where('role', 'user')
+            ->whereHas('appointments', function ($query) use ($doctor) {
+                $query->where('doctor_id', $doctor->id);
+            });
+
+        $allPatients = (clone $patientQuery)->get();
         $hasPhone = $allPatients->filter(fn($p) => $p->phone)->count();
         $emailOnly = $allPatients->filter(fn($p) => $p->email && !$p->phone)->count();
         $noContact = $allPatients->filter(fn($p) => !$p->email && !$p->phone)->count();
         
         // Get patients with prescription details (paginated)
-        $patients = User::where('role', 'user')
+        $patients = (clone $patientQuery)
             ->with(['prescriptions' => function ($query) use ($doctor) {
                 $query->where('doctor_id', $doctor->id)
                     ->select('id', 'user_id', 'diagnosis', 'created_at')
@@ -320,11 +410,30 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
     Route::get('/prescriptions', function () {
         $doctor = Auth::user();
         
-        // Get paginated prescriptions
-        $prescriptions = Prescription::with('user:id,name')
+        // Get paginated prescriptions with patient details
+        $prescriptions = Prescription::with('user:id,name,phone,age,gender')
             ->where('doctor_id', $doctor->id)
-            ->orderByDesc('created_at')
+            ->orderByDesc('id')
             ->paginate(10)
+            ->through(function ($p) {
+                return [
+                    'id' => $p->id,
+                    'user_id' => $p->user_id,
+                    'user' => $p->user ? [
+                        'id' => $p->user->id,
+                        'name' => $p->user->name,
+                        'phone' => $p->user->phone,
+                        'age' => $p->user->age,
+                        'gender' => $p->user->gender,
+                    ] : null,
+                    'diagnosis' => $p->diagnosis,
+                    'medications' => $p->medications,
+                    'instructions' => $p->instructions,
+                    'tests' => $p->tests,
+                    'next_visit_date' => $p->next_visit_date?->toDateString(),
+                    'created_at' => $p->created_at,
+                ];
+            })
             ->withQueryString();
         
         // Get statistics from all prescriptions (not just current page)
@@ -350,7 +459,7 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
         $doctor = Auth::user();
 
         $prescription = Prescription::with([
-            'user:id,name',
+            'user:id,name,phone,age,gender,weight',
             'appointment:id,appointment_date,appointment_time,status',
         ])
             ->where('doctor_id', $doctor->id)
@@ -371,9 +480,19 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
                 'instructions' => $prescription->instructions,
                 'tests' => $prescription->tests,
                 'next_visit_date' => $prescription->next_visit_date?->toDateString(),
+                'visit_type' => $prescription->visit_type,
+                'patient_contact' => $prescription->user?->phone,
+                'patient_age' => $prescription->user?->age,
+                'patient_age_unit' => 'years',
+                'patient_gender' => $prescription->user?->gender,
+                'patient_weight' => $prescription->user?->weight,
                 'user' => $prescription->user ? [
                     'id' => $prescription->user->id,
                     'name' => $prescription->user->name,
+                    'phone' => $prescription->user->phone,
+                    'age' => $prescription->user->age,
+                    'gender' => $prescription->user->gender,
+                    'weight' => $prescription->user->weight,
                 ] : null,
                 'appointment' => $prescription->appointment ? [
                     'appointment_date' => (string) $prescription->appointment->appointment_date,
@@ -385,6 +504,10 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
         ]);
     })->whereNumber('prescription')->name('prescriptions.show');
 
+    Route::put('/prescriptions/{prescription}', [PrescriptionController::class, 'update'])
+        ->whereNumber('prescription')
+        ->name('prescriptions.update');
+
     Route::get('/schedule', [DoctorScheduleController::class, 'show'])->name('schedule');
     Route::post('/schedule', [DoctorScheduleController::class, 'update'])->name('schedule.update');
     Route::get('/profile', [DoctorProfileController::class, 'show'])->name('profile');
@@ -394,42 +517,37 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
     Route::get('/prescriptions/create', function () {
         $doctor = Auth::user();
 
-        $appointments = Appointment::with('user:id,name')
-            ->where('doctor_id', $doctor->id)
-            ->whereIn('status', ['approved', 'completed'])
-            ->whereDoesntHave('prescription')
-            ->orderByDesc('appointment_date')
-            ->orderByDesc('appointment_time')
-            ->get(['id', 'user_id', 'appointment_date', 'appointment_time', 'status']);
-
         // Get site content for contact info
         $homeContent = SiteContent::where('key', 'home')->first()?->value;
         $contactInfo = $homeContent['contact'] ?? null;
 
-        // Get patient info if patient ID is provided in query
+        // Get appointment ID from query if provided
+        $appointmentId = request()->query('appointment_id');
         $selectedPatient = null;
-        $patientId = request()->query('patient');
-        if ($patientId) {
-            $selectedPatient = User::where('id', $patientId)
-                ->where('role', 'user')
-                ->first(['id', 'name', 'phone', 'email', 'gender', 'weight']);
+
+        if ($appointmentId) {
+            $appointment = Appointment::with('user:id,name,phone,email,gender,age,date_of_birth,weight')
+                ->where('doctor_id', $doctor->id)
+                ->where('id', $appointmentId)
+                ->first();
+            
+            if ($appointment && $appointment->user) {
+                $user = $appointment->user;
+                $selectedPatient = [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'phone' => $user->phone,
+                    'email' => $user->email,
+                    'gender' => $user->gender,
+                    'age' => $user->age,
+                    'weight' => $user->weight,
+                ];
+            }
         }
 
         return Inertia::render('doctor/CreatePrescription', [
-            'appointments' => $appointments->map(fn ($a) => [
-                'id' => $a->id,
-                'user_id' => $a->user_id,
-                'user' => $a->user ? ['id' => $a->user->id, 'name' => $a->user->name] : null,
-                'appointment_date' => (string) $a->appointment_date,
-                'appointment_time' => substr((string) $a->appointment_time, 0, 5),
-                'status' => $a->status,
-            ]),
-            'selectedPatient' => $selectedPatient ? [
-                'id' => $selectedPatient->id,
-                'name' => $selectedPatient->name,
-                'phone' => $selectedPatient->phone,
-                'email' => $selectedPatient->email,
-            ] : null,
+            'appointmentId' => $appointmentId ? (int) $appointmentId : null,
+            'selectedPatient' => $selectedPatient,
             'contactInfo' => $contactInfo,
         ]);
     })->name('prescriptions.create');
@@ -446,14 +564,22 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
 Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', function () {
         $users = User::count();
+        $patients = User::where('role', 'user')->count();
+        $doctors = User::where('role', 'doctor')->count();
         $appointmentsToday = Appointment::whereDate('appointment_date', now()->toDateString())->count();
         $pending = Appointment::where('status','pending')->count();
+        $totalAppointments = Appointment::count();
+        $totalPrescriptions = Prescription::count();
 
         return Inertia::render('admin/Dashboard', [
             'stats' => [
                 'users' => $users,
+                'patients' => $patients,
+                'doctors' => $doctors,
                 'appointmentsToday' => $appointmentsToday,
                 'pendingAppointments' => $pending,
+                'totalAppointments' => $totalAppointments,
+                'totalPrescriptions' => $totalPrescriptions,
             ],
         ]);
     })->name('dashboard');
@@ -487,10 +613,17 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
 
     Route::get('/appointments', function () {
         $appointments = Appointment::with(['user:id,name','doctor:id,name'])
-            ->orderByDesc('appointment_date')
-            ->orderByDesc('appointment_time')
+            ->orderByDesc('id')
             ->paginate(10)
             ->withQueryString();
+
+        $stats = [
+            'total' => Appointment::count(),
+            'pending' => Appointment::where('status','pending')->count(),
+            'approved' => Appointment::where('status','approved')->count(),
+            'completed' => Appointment::where('status','completed')->count(),
+            'cancelled' => Appointment::where('status','cancelled')->count(),
+        ];
 
         return Inertia::render('admin/Appointments', [
             'appointments' => $appointments->through(fn ($a) => [
@@ -503,6 +636,7 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
                 'appointment_time' => substr((string) $a->appointment_time, 0, 5),
                 'status' => $a->status,
             ]),
+            'stats' => $stats,
         ]);
     })->name('appointments');
 

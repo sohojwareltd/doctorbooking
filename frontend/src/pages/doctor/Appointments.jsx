@@ -1,12 +1,12 @@
 import { Head, Link } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarCheck2, Search, CheckCircle2, XCircle } from 'lucide-react';
+import { CalendarCheck2, Search, CheckCircle2, XCircle, Plus, X } from 'lucide-react';
 import GlassCard from '../../components/GlassCard';
 import DoctorLayout from '../../layouts/DoctorLayout';
 import { formatDisplayDateWithYearFromDateLike, formatDisplayTime12h } from '../../utils/dateFormat';
 import { toastError, toastSuccess } from '../../utils/toast';
 
-export default function DoctorAppointments({ appointments = [] }) {
+export default function DoctorAppointments({ appointments = [], stats = {} }) {
   const pageRows = useMemo(() => (Array.isArray(appointments) ? appointments : (appointments?.data ?? [])), [appointments]);
   const pagination = useMemo(() => (Array.isArray(appointments) ? null : appointments), [appointments]);
 
@@ -15,6 +15,13 @@ export default function DoctorAppointments({ appointments = [] }) {
   const [dateFilter, setDateFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedIds, setSelectedIds] = useState([]);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    phone: '',
+    age: '',
+    gender: ''
+  });
 
   useEffect(() => {
     setRows(pageRows);
@@ -58,6 +65,19 @@ export default function DoctorAppointments({ appointments = [] }) {
     return statusOk && dateOk && searchOk;
   });
 
+  const filtersActive = statusFilter !== 'all' || dateFilter !== 'all' || searchTerm !== '';
+  const displayCount = filtersActive
+    ? filteredRows.length
+    : (pagination?.total ?? filteredRows.length);
+
+  const statusCounts = useMemo(() => {
+    const total = stats.total ?? (pagination?.total ?? rows.length);
+    const pending = stats.pending ?? rows.filter(a => a.status === 'pending').length;
+    const approved = stats.approved ?? rows.filter(a => a.status === 'approved').length;
+    const completed = stats.completed ?? rows.filter(a => a.status === 'completed').length;
+    return { total, pending, approved, completed };
+  }, [stats, pagination, rows]);
+
   const lastBookedToday = (() => {
     const todays = rows.filter((a) => a.appointment_date === today);
     if (todays.length === 0) return null;
@@ -71,6 +91,25 @@ export default function DoctorAppointments({ appointments = [] }) {
     return sorted[0] || null;
   })();
 
+  const handleCreateAppointment = async (e) => {
+    e.preventDefault();
+    const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    const res = await fetch('/doctor/appointments/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': token, 'Accept': 'application/json' },
+      body: JSON.stringify(formData)
+    });
+    if (res.ok) {
+      toastSuccess('Appointment created successfully.');
+      setShowCreateModal(false);
+      setFormData({ name: '', phone: '', age: '', gender: '' });
+      window.location.reload();
+    } else {
+      const data = await res.json();
+      toastError(data.message || 'Failed to create appointment.');
+    }
+  };
+
   return (
     <DoctorLayout title="Appointments">
       <div className="mb-8">
@@ -79,8 +118,17 @@ export default function DoctorAppointments({ appointments = [] }) {
             <h1 className="text-3xl font-bold text-[#005963]">Appointments</h1>
             <p className="mt-2 text-gray-600">Manage and track all your patient appointments</p>
           </div>
-          <div className="text-sm text-gray-600">
-            <span className="font-bold text-[#005963]">{filteredRows.length}</span> appointment{filteredRows.length !== 1 ? 's' : ''} found
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="flex items-center gap-2 rounded-xl bg-[#005963] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#00434a] transition shadow-sm"
+            >
+              <Plus className="h-4 w-4" />
+              Create Appointment
+            </button>
+            <div className="text-sm text-gray-600">
+              <span className="font-bold text-[#005963]">{displayCount}</span> appointment{displayCount !== 1 ? 's' : ''} found
+            </div>
           </div>
         </div>
       </div>
@@ -89,10 +137,10 @@ export default function DoctorAppointments({ appointments = [] }) {
         {/* Stats Cards */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
           {[
-            { label: 'Total', value: rows.length, color: 'bg-blue-50 text-blue-700 border-blue-200' },
-            { label: 'Pending', value: rows.filter(a => a.status === 'pending').length, color: 'bg-amber-50 text-amber-700 border-amber-200' },
-            { label: 'Approved', value: rows.filter(a => a.status === 'approved').length, color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-            { label: 'Completed', value: rows.filter(a => a.status === 'completed').length, color: 'bg-sky-50 text-sky-700 border-sky-200' },
+            { label: 'Total', value: statusCounts.total, color: 'bg-blue-50 text-blue-700 border-blue-200' },
+            { label: 'Pending', value: statusCounts.pending, color: 'bg-amber-50 text-amber-700 border-amber-200' },
+            { label: 'Approved', value: statusCounts.approved, color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+            { label: 'Completed', value: statusCounts.completed, color: 'bg-sky-50 text-sky-700 border-sky-200' },
           ].map((stat, idx) => (
             <GlassCard key={idx} variant="solid" className={`border-2 p-4 ${stat.color}`}>
               <div className="text-sm font-semibold opacity-75">{stat.label}</div>
@@ -217,7 +265,7 @@ export default function DoctorAppointments({ appointments = [] }) {
                           className="rounded border-gray-300"
                         />
                       </td>
-                      <td className="px-6 py-4 text-sm font-semibold text-gray-700">{(pagination?.current_page - 1) * pagination?.per_page + idx + 1}</td>
+                      <td className="px-6 py-4 text-sm font-semibold text-gray-700">{a.id}</td>
                       <td className="px-6 py-4">
                         <div className="font-semibold text-[#005963]">{a.user?.name || a.user_id}</div>
                       </td>
@@ -236,27 +284,19 @@ export default function DoctorAppointments({ appointments = [] }) {
                         </select>
                       </td>
                       <td className="px-6 py-4 text-sm">
-                        {a.has_prescription ? (
-                          <div className="flex items-center gap-2">
-                            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">
-                              <CheckCircle2 className="h-3 w-3" />
-                              Prescription
-                            </span>
-                            {a.prescription_id ? (
-                              <Link
-                                href={`/doctor/prescriptions/${a.prescription_id}`}
-                                className="inline-flex items-center justify-center rounded-lg border border-[#00acb1]/40 bg-white px-3 py-1.5 text-xs font-semibold text-[#005963] hover:bg-[#00acb1]/10 transition"
-                              >
-                                View
-                              </Link>
-                            ) : null}
-                          </div>
+                        {a.has_prescription && a.prescription_id ? (
+                          <Link
+                            href={`/doctor/prescriptions/${a.prescription_id}`}
+                            className="inline-flex items-center justify-center rounded-lg border border-[#00acb1]/40 bg-white px-3 py-1.5 text-xs font-semibold text-[#005963] hover:bg-[#00acb1]/10 transition"
+                          >
+                            Prescription
+                          </Link>
                         ) : canCreatePrescription ? (
                           <Link
                             href={`/doctor/prescriptions/create?appointment_id=${a.id}`}
                             className="inline-flex items-center justify-center rounded-lg border border-[#00acb1] bg-[#00acb1]/10 px-3 py-1.5 text-xs font-semibold text-[#005963] hover:bg-[#00acb1]/20 transition"
                           >
-                            Create
+                            Prescription
                           </Link>
                         ) : (
                           <span className="text-xs text-gray-400">—</span>
@@ -318,6 +358,91 @@ export default function DoctorAppointments({ appointments = [] }) {
           ) : null}
         </GlassCard>
       </div>
+
+      {/* Create Appointment Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-gray-200 p-6">
+              <h2 className="text-xl font-bold text-[#005963]">Create New Appointment</h2>
+              <button
+                onClick={() => setShowCreateModal(false)}
+                className="rounded-lg p-2 hover:bg-gray-100 transition"
+              >
+                <X className="h-5 w-5 text-gray-500" />
+              </button>
+            </div>
+            <form onSubmit={handleCreateAppointment} className="p-6">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-gray-700">Patient Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-[#00acb1] focus:ring-2 focus:ring-[#00acb1]/20"
+                    placeholder="Enter patient name"
+                  />
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-gray-700">Phone Number *</label>
+                  <input
+                    type="tel"
+                    required
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-[#00acb1] focus:ring-2 focus:ring-[#00acb1]/20"
+                    placeholder="Enter phone number"
+                  />
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-gray-700">Age *</label>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    max="150"
+                    value={formData.age}
+                    onChange={(e) => setFormData({ ...formData, age: e.target.value })}
+                    className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-[#00acb1] focus:ring-2 focus:ring-[#00acb1]/20"
+                    placeholder="Enter age"
+                  />
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-gray-700">Gender *</label>
+                  <select
+                    required
+                    value={formData.gender}
+                    onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                    className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-[#00acb1] focus:ring-2 focus:ring-[#00acb1]/20"
+                  >
+                    <option value="">Select gender</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+              </div>
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateModal(false)}
+                  className="rounded-lg border border-gray-300 px-6 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-lg bg-[#005963] px-6 py-2.5 text-sm font-semibold text-white hover:bg-[#00434a] transition"
+                >
+                  Create Appointment
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </DoctorLayout>
   );
 }
