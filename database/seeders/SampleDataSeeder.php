@@ -277,13 +277,16 @@ class SampleDataSeeder extends Seeder
 
                 $appointmentDay = now()->parse($date)->startOfDay();
                 
-                // Determine status based on date
+                // Determine status based on date - new status flow
                 if ($appointmentDay->lt($today)) {
-                    $statusPool = ['completed', 'completed', 'completed', 'cancelled'];
+                    // Past appointments: mostly prescribed, some cancelled
+                    $statusPool = ['prescribed', 'prescribed', 'prescribed', 'prescribed', 'cancelled'];
                 } elseif ($appointmentDay->eq($today)) {
-                    $statusPool = ['pending', 'approved', 'approved'];
+                    // Today's appointments: mix of scheduled, arrived, in consultation, awaiting tests
+                    $statusPool = ['scheduled', 'scheduled', 'arrived', 'arrived', 'in_consultation', 'awaiting_tests'];
                 } else {
-                    $statusPool = ['pending', 'pending', 'approved', 'approved'];
+                    // Future appointments: mostly scheduled
+                    $statusPool = ['scheduled', 'scheduled', 'scheduled', 'scheduled', 'arrived'];
                 }
 
                 $status = $statusPool[array_rand($statusPool)];
@@ -298,8 +301,8 @@ class SampleDataSeeder extends Seeder
                     'notes' => null,
                 ]);
 
-                // Create prescription for 80% of completed appointments
-                if ($appointment->status === 'completed' && random_int(1, 100) <= 80) {
+                // Create prescription for 80% of prescribed appointments
+                if ($appointment->status === 'prescribed' && random_int(1, 100) <= 80) {
                     $hasNextVisit = random_int(1, 100) <= 60;
                     
                     Prescription::create([

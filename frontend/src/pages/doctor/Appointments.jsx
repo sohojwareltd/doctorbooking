@@ -1,20 +1,21 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarCheck2, Search, CheckCircle2, XCircle } from 'lucide-react';
+import { CalendarCheck2, Search, CheckCircle2, XCircle, Clock, UserCheck, Stethoscope, TestTube, Calendar, Filter, X, Phone, Mail, MapPin } from 'lucide-react';
 import GlassCard from '../../components/GlassCard';
 import DoctorLayout from '../../layouts/DoctorLayout';
 import { formatDisplayDateWithYearFromDateLike, formatDisplayTime12h } from '../../utils/dateFormat';
 import { toastError, toastSuccess } from '../../utils/toast';
 
-export default function DoctorAppointments({ appointments = [] }) {
+export default function DoctorAppointments({ appointments = [], filters = {} }) {
   const pageRows = useMemo(() => (Array.isArray(appointments) ? appointments : (appointments?.data ?? [])), [appointments]);
   const pagination = useMemo(() => (Array.isArray(appointments) ? null : appointments), [appointments]);
 
   const [rows, setRows] = useState(pageRows);
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [dateFilter, setDateFilter] = useState('all');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState(filters.status_filter || 'all');
+  const [dateFilter, setDateFilter] = useState(filters.date_filter || 'today');
+  const [searchTerm, setSearchTerm] = useState(filters.search || '');
   const [selectedIds, setSelectedIds] = useState([]);
+  const [selectedPatient, setSelectedPatient] = useState(null);
 
   useEffect(() => {
     setRows(pageRows);
@@ -23,12 +24,72 @@ export default function DoctorAppointments({ appointments = [] }) {
   const today = new Date().toISOString().split('T')[0];
   const todayLabel = formatDisplayDateWithYearFromDateLike(today) || today;
 
-  const statusSelectClass = (status) => {
+  const getStatusColor = (status) => {
     const s = (status || '').toLowerCase();
-    if (s === 'approved') return 'border-emerald-200 bg-emerald-50 text-emerald-800';
-    if (s === 'completed') return 'border-sky-200 bg-sky-50 text-sky-800';
+    if (s === 'scheduled') return 'border-blue-200 bg-blue-50 text-blue-800';
+    if (s === 'arrived') return 'border-amber-200 bg-amber-50 text-amber-800';
+    if (s === 'in_consultation') return 'border-purple-200 bg-purple-50 text-purple-800';
+    if (s === 'awaiting_tests') return 'border-orange-200 bg-orange-50 text-orange-800';
+    if (s === 'prescribed') return 'border-emerald-200 bg-emerald-50 text-emerald-800';
     if (s === 'cancelled') return 'border-rose-200 bg-rose-50 text-rose-800';
-    return 'border-amber-200 bg-amber-50 text-amber-800';
+    return 'border-gray-200 bg-gray-50 text-gray-800';
+  };
+
+  const getStatusLabel = (status) => {
+    const s = (status || '').toLowerCase();
+    const labels = {
+      'scheduled': 'Scheduled',
+      'arrived': 'Arrived',
+      'in_consultation': 'In Consultation',
+      'awaiting_tests': 'Awaiting Tests',
+      'prescribed': 'Prescribed',
+      'cancelled': 'Cancelled',
+    };
+    return labels[s] || status || 'Unknown';
+  };
+
+  const handleFilterChange = (type, value) => {
+    if (type === 'status') {
+      setStatusFilter(value);
+    } else if (type === 'date') {
+      setDateFilter(value);
+    }
+    
+    router.get('/doctor/appointments', {
+      date_filter: type === 'date' ? value : dateFilter,
+      status_filter: type === 'status' ? value : statusFilter,
+      search: searchTerm,
+    }, {
+      preserveState: true,
+      preserveScroll: true,
+    });
+  };
+
+  const handleCall = (phone) => {
+    if (phone) {
+      window.location.href = `tel:${phone}`;
+    }
+  };
+
+  const handleEmail = (email) => {
+    if (email) {
+      window.location.href = `mailto:${email}`;
+    }
+  };
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '';
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const formatTime = (timeStr) => {
+    if (!timeStr) return '';
+    return timeStr;
   };
 
   const updateStatus = async (id, status) => {
@@ -47,15 +108,10 @@ export default function DoctorAppointments({ appointments = [] }) {
     }
   };
 
+  // Filtering is now done on the backend, but we keep this for client-side search
   const filteredRows = rows.filter((a) => {
-    const statusOk = statusFilter === 'all' ? true : a.status === statusFilter;
-    const dateOk = dateFilter === 'all'
-      ? true
-      : dateFilter === 'today'
-        ? a.appointment_date === today
-        : true;
     const searchOk = searchTerm === '' || (a.user?.name || a.user_id).toLowerCase().includes(searchTerm.toLowerCase());
-    return statusOk && dateOk && searchOk;
+    return searchOk;
   });
 
   const lastBookedToday = (() => {
@@ -87,18 +143,28 @@ export default function DoctorAppointments({ appointments = [] }) {
 
       <div className="space-y-6">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-6">
           {[
-            { label: 'Total', value: rows.length, color: 'bg-blue-50 text-blue-700 border-blue-200' },
-            { label: 'Pending', value: rows.filter(a => a.status === 'pending').length, color: 'bg-amber-50 text-amber-700 border-amber-200' },
-            { label: 'Approved', value: rows.filter(a => a.status === 'approved').length, color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-            { label: 'Completed', value: rows.filter(a => a.status === 'completed').length, color: 'bg-sky-50 text-sky-700 border-sky-200' },
-          ].map((stat, idx) => (
-            <GlassCard key={idx} variant="solid" className={`border-2 p-4 ${stat.color}`}>
-              <div className="text-sm font-semibold opacity-75">{stat.label}</div>
-              <div className="mt-2 text-2xl font-black">{stat.value}</div>
-            </GlassCard>
-          ))}
+            { label: 'Total', value: rows.length, color: 'bg-gray-50 text-gray-700 border-gray-200', icon: CalendarCheck2 },
+            { label: 'Scheduled', value: rows.filter(a => a.status === 'scheduled').length, color: 'bg-blue-50 text-blue-700 border-blue-200', icon: Calendar },
+            { label: 'Arrived', value: rows.filter(a => a.status === 'arrived').length, color: 'bg-amber-50 text-amber-700 border-amber-200', icon: UserCheck },
+            { label: 'In Visit', value: rows.filter(a => a.status === 'in_consultation').length, color: 'bg-purple-50 text-purple-700 border-purple-200', icon: Stethoscope },
+            { label: 'Awaiting Tests', value: rows.filter(a => a.status === 'awaiting_tests').length, color: 'bg-orange-50 text-orange-700 border-orange-200', icon: TestTube },
+            { label: 'Prescribed', value: rows.filter(a => a.status === 'prescribed').length, color: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: CheckCircle2 },
+          ].map((stat, idx) => {
+            const Icon = stat.icon;
+            return (
+              <GlassCard key={idx} variant="solid" className={`border-2 p-4 ${stat.color}`}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-xs font-semibold opacity-75">{stat.label}</div>
+                    <div className="mt-2 text-2xl font-black">{stat.value}</div>
+                  </div>
+                  <Icon className="h-6 w-6 opacity-50" />
+                </div>
+              </GlassCard>
+            );
+          })}
         </div>
 
         {/* Main Table Card */}
@@ -133,7 +199,22 @@ export default function DoctorAppointments({ appointments = [] }) {
                     type="text"
                     placeholder="Search by patient name..."
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setSearchTerm(value);
+                      // Debounce search
+                      clearTimeout(window.searchTimeout);
+                      window.searchTimeout = setTimeout(() => {
+                        router.get('/doctor/appointments', {
+                          date_filter: dateFilter,
+                          status_filter: statusFilter,
+                          search: value,
+                        }, {
+                          preserveState: true,
+                          preserveScroll: true,
+                        });
+                      }, 500);
+                    }}
                     className="w-full rounded-xl border border-[#00acb1]/30 bg-white pl-10 pr-4 py-2.5 text-sm font-semibold text-[#005963] placeholder-gray-400 focus:border-[#005963] focus:outline-none focus:ring-2 focus:ring-[#005963]/10"
                   />
                 </div>
@@ -141,29 +222,33 @@ export default function DoctorAppointments({ appointments = [] }) {
 
               {/* Date Filter */}
               <div>
-                <label className="mb-2 block text-xs font-semibold text-gray-700">Filter by date</label>
+                <label className="mb-2 block text-xs font-semibold text-gray-700">Date Range</label>
                 <select
                   value={dateFilter}
-                  onChange={(e) => setDateFilter(e.target.value)}
+                  onChange={(e) => handleFilterChange('date', e.target.value)}
                   className="w-full rounded-xl border border-[#00acb1]/30 bg-white px-4 py-2.5 text-sm font-semibold text-[#005963] focus:border-[#005963] focus:outline-none focus:ring-2 focus:ring-[#005963]/10"
                 >
-                  <option value="all">All Dates</option>
                   <option value="today">Today</option>
+                  <option value="week">This Week</option>
+                  <option value="month">This Month</option>
+                  <option value="all">All Dates</option>
                 </select>
               </div>
 
               {/* Status Filter */}
               <div>
-                <label className="mb-2 block text-xs font-semibold text-gray-700">Filter by status</label>
+                <label className="mb-2 block text-xs font-semibold text-gray-700">Status</label>
                 <select
                   value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
+                  onChange={(e) => handleFilterChange('status', e.target.value)}
                   className="w-full rounded-xl border border-[#00acb1]/30 bg-white px-4 py-2.5 text-sm font-semibold text-[#005963] focus:border-[#005963] focus:outline-none focus:ring-2 focus:ring-[#005963]/10"
                 >
                   <option value="all">All Status</option>
-                  <option value="pending">Pending</option>
-                  <option value="approved">Approved</option>
-                  <option value="completed">Completed</option>
+                  <option value="scheduled">Scheduled</option>
+                  <option value="arrived">Arrived</option>
+                  <option value="in_consultation">In Consultation</option>
+                  <option value="awaiting_tests">Awaiting Tests</option>
+                  <option value="prescribed">Prescribed</option>
                   <option value="cancelled">Cancelled</option>
                 </select>
               </div>
@@ -199,7 +284,7 @@ export default function DoctorAppointments({ appointments = [] }) {
               </thead>
               <tbody className="divide-y divide-gray-200 bg-white">
                 {filteredRows.map((a, idx) => {
-                  const canCreatePrescription = !a.has_prescription && (a.status === 'approved' || a.status === 'completed');
+                  const canCreatePrescription = !a.has_prescription && ['in_consultation', 'awaiting_tests', 'prescribed'].includes(a.status);
                   const isSelected = selectedIds.includes(a.id);
                   return (
                     <tr key={a.id} className={`transition ${isSelected ? 'bg-[#00acb1]/10' : 'hover:bg-gray-50'}`}>
@@ -217,23 +302,56 @@ export default function DoctorAppointments({ appointments = [] }) {
                           className="rounded border-gray-300"
                         />
                       </td>
-                      <td className="px-6 py-4 text-sm font-semibold text-gray-700">{(pagination?.current_page - 1) * pagination?.per_page + idx + 1}</td>
+                      <td className="px-6 py-4 text-sm font-semibold text-gray-700">{(pagination?.current_page - 1) * (pagination?.per_page || 15) + idx + 1}</td>
                       <td className="px-6 py-4">
-                        <div className="font-semibold text-[#005963]">{a.user?.name || a.user_id}</div>
+                        <button
+                          onClick={() => setSelectedPatient(a)}
+                          className="text-left hover:underline"
+                        >
+                          <div className="font-semibold text-[#005963] hover:text-[#00acb1] transition">{a.user?.name || a.user_id}</div>
+                          {a.user?.phone && (
+                            <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                              <Phone className="h-3 w-3" />
+                              {a.user.phone}
+                            </div>
+                          )}
+                          {a.symptoms && (
+                            <div className="text-xs text-gray-500 mt-1 truncate max-w-xs">{a.symptoms}</div>
+                          )}
+                        </button>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-700 whitespace-nowrap">{formatDisplayDateWithYearFromDateLike(a.appointment_date) || a.appointment_date}</td>
-                      <td className="px-6 py-4 text-sm text-gray-700 whitespace-nowrap">{formatDisplayTime12h(a.appointment_time) || a.appointment_time}</td>
+                      <td className="px-6 py-4 text-sm text-gray-700 whitespace-nowrap">
+                        <div className="flex items-center gap-1">
+                          <Clock className="h-3 w-3 text-gray-400" />
+                          {formatDisplayTime12h(a.appointment_time) || a.appointment_time}
+                        </div>
+                      </td>
                       <td className="px-6 py-4 text-sm">
-                        <select
-                          className={`rounded-lg border px-3 py-1.5 text-xs font-bold ${statusSelectClass(a.status)}`}
-                          value={a.status}
-                          onChange={(e) => updateStatus(a.id, e.target.value)}
-                        >
-                          <option value="pending">Pending</option>
-                          <option value="approved">Approved</option>
-                          <option value="completed">Completed</option>
-                          <option value="cancelled">Cancelled</option>
-                        </select>
+                        <div className="relative inline-block min-w-[160px]">
+                          <select
+                            className={`appearance-none rounded-lg border-2 px-4 py-2.5 pr-10 text-xs font-bold transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 shadow-sm hover:shadow-md active:shadow-sm ${getStatusColor(a.status)}`}
+                            style={{
+                              WebkitAppearance: 'none',
+                              MozAppearance: 'none',
+                              appearance: 'none',
+                              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 14 14' fill='none'%3E%3Cpath d='M3.5 5.25L7 8.75L10.5 5.25' stroke='%236B7280' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
+                              backgroundRepeat: 'no-repeat',
+                              backgroundPosition: 'right 0.75rem center',
+                              backgroundSize: '14px',
+                              paddingRight: '2.5rem',
+                            }}
+                            value={a.status}
+                            onChange={(e) => updateStatus(a.id, e.target.value)}
+                          >
+                            <option value="scheduled">Scheduled</option>
+                            <option value="arrived">Arrived</option>
+                            <option value="in_consultation">In Consultation</option>
+                            <option value="awaiting_tests">Awaiting Tests</option>
+                            <option value="prescribed">Prescribed</option>
+                            <option value="cancelled">Cancelled</option>
+                          </select>
+                        </div>
                       </td>
                       <td className="px-6 py-4 text-sm">
                         {a.has_prescription ? (
@@ -256,7 +374,7 @@ export default function DoctorAppointments({ appointments = [] }) {
                             href={`/doctor/prescriptions/create?appointment_id=${a.id}`}
                             className="inline-flex items-center justify-center rounded-lg border border-[#00acb1] bg-[#00acb1]/10 px-3 py-1.5 text-xs font-semibold text-[#005963] hover:bg-[#00acb1]/20 transition"
                           >
-                            Create
+                            Create Prescription
                           </Link>
                         ) : (
                           <span className="text-xs text-gray-400">—</span>
@@ -318,6 +436,137 @@ export default function DoctorAppointments({ appointments = [] }) {
           ) : null}
         </GlassCard>
       </div>
+
+      {/* Patient Info Modal */}
+      {selectedPatient && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+          onClick={() => setSelectedPatient(null)}
+        >
+          <div 
+            className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl max-h-[90vh] overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-[#005963] to-[#00acb1] px-6 py-5">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="h-16 w-16 overflow-hidden rounded-xl bg-white/20 backdrop-blur-sm flex-shrink-0 border-2 border-white/30">
+                    <div className="flex h-full w-full items-center justify-center text-2xl font-bold text-white">
+                      {(selectedPatient.user?.name || 'P')[0].toUpperCase()}
+                    </div>
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-white">{selectedPatient.user?.name || 'Patient'}</h3>
+                    <p className="text-sm text-white/90 mt-1">
+                      Appointment: {formatDate(selectedPatient.appointment_date)} at {formatTime(selectedPatient.appointment_time)}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedPatient(null)}
+                  className="rounded-lg p-2 text-white/80 hover:bg-white/20 transition"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
+              <div className="space-y-4">
+                {/* Contact Information */}
+                <div>
+                  <h4 className="text-sm font-bold uppercase tracking-wider text-gray-500 mb-3">Contact Information</h4>
+                  <div className="space-y-3">
+                    {selectedPatient.user?.phone && (
+                      <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 border border-gray-200">
+                        <div className="rounded-lg bg-blue-100 p-2">
+                          <Phone className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="text-xs font-semibold text-gray-500 uppercase">Phone</div>
+                          <div className="text-sm font-semibold text-gray-900">{selectedPatient.user.phone}</div>
+                        </div>
+                        <button
+                          onClick={() => handleCall(selectedPatient.user.phone)}
+                          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition flex items-center gap-2"
+                        >
+                          <Phone className="h-4 w-4" />
+                          Call
+                        </button>
+                      </div>
+                    )}
+                    {selectedPatient.user?.email && (
+                      <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 border border-gray-200">
+                        <div className="rounded-lg bg-green-100 p-2">
+                          <Mail className="h-5 w-5 text-green-600" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="text-xs font-semibold text-gray-500 uppercase">Email</div>
+                          <div className="text-sm font-semibold text-gray-900">{selectedPatient.user.email}</div>
+                        </div>
+                        <button
+                          onClick={() => handleEmail(selectedPatient.user.email)}
+                          className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 transition flex items-center gap-2"
+                        >
+                          <Mail className="h-4 w-4" />
+                          Email
+                        </button>
+                      </div>
+                    )}
+                    {selectedPatient.user?.address && (
+                      <div className="flex items-start gap-3 p-3 rounded-lg bg-gray-50 border border-gray-200">
+                        <div className="rounded-lg bg-purple-100 p-2">
+                          <MapPin className="h-5 w-5 text-purple-600" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="text-xs font-semibold text-gray-500 uppercase">Address</div>
+                          <div className="text-sm font-semibold text-gray-900">{selectedPatient.user.address}</div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Appointment Details */}
+                {selectedPatient.symptoms && (
+                  <div>
+                    <h4 className="text-sm font-bold uppercase tracking-wider text-gray-500 mb-3">Symptoms / Notes</h4>
+                    <div className="p-4 rounded-lg bg-blue-50 border border-blue-200">
+                      <p className="text-sm text-gray-700">{selectedPatient.symptoms}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Status */}
+                <div>
+                  <h4 className="text-sm font-bold uppercase tracking-wider text-gray-500 mb-3">Status</h4>
+                  <span className={`inline-flex rounded-full px-4 py-2 text-xs font-bold ${getStatusColor(selectedPatient.status)}`}>
+                    {getStatusLabel(selectedPatient.status)}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="border-t bg-gray-50 px-6 py-4 flex items-center justify-end gap-3">
+              <button
+                onClick={() => setSelectedPatient(null)}
+                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
+              >
+                Close
+              </button>
+              <Link
+                href={`/doctor/appointments?id=${selectedPatient.id}`}
+                className="rounded-lg bg-[#005963] px-4 py-2 text-sm font-semibold text-white hover:bg-[#00434a] transition"
+              >
+                View Appointment
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
     </DoctorLayout>
   );
 }

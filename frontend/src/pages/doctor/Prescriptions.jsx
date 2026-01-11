@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from '@inertiajs/react';
-import { FileText, PlusCircle, Search, Eye } from 'lucide-react';
+import { FileText, PlusCircle, Search, Eye, Download, Share2, Printer } from 'lucide-react';
 import DoctorLayout from '../../layouts/DoctorLayout';
 import GlassCard from '../../components/GlassCard';
 import Pagination from '../../components/Pagination';
 import { formatDisplayFromDateLike, formatDisplayDateWithYearFromDateLike } from '../../utils/dateFormat';
+import { toastSuccess, toastError } from '../../utils/toast';
 
 export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) {
   const pageRows = useMemo(() => (Array.isArray(prescriptions) ? prescriptions : (prescriptions?.data ?? [])), [prescriptions]);
@@ -206,6 +207,41 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
                           >
                             <Eye className="h-3.5 w-3.5" />
                             View
+                          </Link>
+                          <button
+                            onClick={() => {
+                              const printWindow = window.open(`/doctor/prescriptions/${p.id}?action=print`, '_blank');
+                              if (printWindow) {
+                                toastSuccess('Opening prescription for printing...');
+                              }
+                            }}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-blue-300 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100 transition"
+                            title="Print"
+                          >
+                            <Printer className="h-3.5 w-3.5" />
+                          </button>
+                          <Link
+                            href={`/doctor/prescriptions/${p.id}?action=share`}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              if (navigator.share) {
+                                navigator.share({
+                                  title: `Prescription for ${p.user?.name || 'Patient'}`,
+                                  text: `Prescription ID: #${p.id}`,
+                                  url: `${window.location.origin}/doctor/prescriptions/${p.id}`,
+                                }).catch(() => {
+                                  navigator.clipboard.writeText(`${window.location.origin}/doctor/prescriptions/${p.id}`);
+                                  toastSuccess('Prescription link copied to clipboard');
+                                });
+                              } else {
+                                navigator.clipboard.writeText(`${window.location.origin}/doctor/prescriptions/${p.id}`);
+                                toastSuccess('Prescription link copied to clipboard');
+                              }
+                            }}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-green-300 bg-green-50 px-3 py-1.5 text-xs font-semibold text-green-700 hover:bg-green-100 transition"
+                            title="Share"
+                          >
+                            <Share2 className="h-3.5 w-3.5" />
                           </Link>
                         </div>
                       </td>

@@ -1,4 +1,4 @@
-﻿import { Link, router, usePage } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import {
     AlertCircle,
     Calendar,
@@ -286,6 +286,15 @@ export default function CreatePrescription({ appointments = [], contactInfo, sel
     const [submitting, setSubmitting] = useState(false);
 
     const [appointmentId, setAppointmentId] = useState('');
+    
+    // Medicine form state (fix for getElementById issue)
+    const [newMedicine, setNewMedicine] = useState({
+        name: '',
+        strength: '',
+        dosage: '',
+        duration: '',
+        instruction: 'After meal',
+    });
 
     // Initialize appointment from URL query parameter
     useEffect(() => {
@@ -1218,7 +1227,8 @@ export default function CreatePrescription({ appointments = [], contactInfo, sel
                                         <input
                                             list="medicine-suggestions"
                                             className="w-full rounded-xl border-2 border-[#00acb1]/40 bg-white px-3 py-2.5 text-sm text-gray-900 transition focus:border-[#005963] focus:outline-none focus:ring-2 focus:ring-[#00acb1]/20"
-                                            id="new-medicine-name"
+                                            value={newMedicine.name}
+                                            onChange={(e) => setNewMedicine({ ...newMedicine, name: e.target.value })}
                                             placeholder="e.g., Paracetamol"
                                         />
                                         <datalist id="medicine-suggestions">
@@ -1234,7 +1244,8 @@ export default function CreatePrescription({ appointments = [], contactInfo, sel
                                         </label>
                                         <input
                                             className="w-full rounded-xl border-2 border-[#00acb1]/40 bg-white px-3 py-2.5 text-sm text-gray-900 transition focus:border-[#005963] focus:outline-none focus:ring-2 focus:ring-[#00acb1]/20"
-                                            id="new-medicine-strength"
+                                            value={newMedicine.strength}
+                                            onChange={(e) => setNewMedicine({ ...newMedicine, strength: e.target.value })}
                                             placeholder="500mg"
                                         />
                                     </div>
@@ -1245,7 +1256,8 @@ export default function CreatePrescription({ appointments = [], contactInfo, sel
                                         </label>
                                         <input
                                             className="w-full rounded-xl border-2 border-[#00acb1]/40 bg-white px-3 py-2.5 text-sm text-gray-900 transition focus:border-[#005963] focus:outline-none focus:ring-2 focus:ring-[#00acb1]/20"
-                                            id="new-medicine-dosage"
+                                            value={newMedicine.dosage}
+                                            onChange={(e) => setNewMedicine({ ...newMedicine, dosage: e.target.value })}
                                             placeholder="1+0+1"
                                         />
                                     </div>
@@ -1256,7 +1268,8 @@ export default function CreatePrescription({ appointments = [], contactInfo, sel
                                         </label>
                                         <input
                                             className="w-full rounded-xl border-2 border-[#00acb1]/40 bg-white px-3 py-2.5 text-sm text-gray-900 transition focus:border-[#005963] focus:outline-none focus:ring-2 focus:ring-[#00acb1]/20"
-                                            id="new-medicine-duration"
+                                            value={newMedicine.duration}
+                                            onChange={(e) => setNewMedicine({ ...newMedicine, duration: e.target.value })}
                                             placeholder="5 days"
                                         />
                                     </div>
@@ -1269,35 +1282,23 @@ export default function CreatePrescription({ appointments = [], contactInfo, sel
                                     <div className="flex gap-2">
                                         <button
                                             type="button"
-                                            id="btn-before-meal"
-                                            className="flex-1 rounded-xl border-2 border-[#005963] bg-[#005963] px-4 py-2.5 text-sm font-semibold text-white shadow-md transition"
-                                            onClick={(e) => {
-                                                document.getElementById(
-                                                    'btn-before-meal',
-                                                ).className =
-                                                    'flex-1 rounded-xl border-2 border-[#005963] bg-[#005963] px-4 py-2.5 text-sm font-semibold text-white shadow-md transition';
-                                                document.getElementById(
-                                                    'btn-after-meal',
-                                                ).className =
-                                                    'flex-1 rounded-xl border-2 border-[#00acb1]/30 bg-white px-4 py-2.5 text-sm font-semibold text-[#005963] transition hover:border-[#005963]/50';
-                                            }}
+                                            className={`flex-1 rounded-xl border-2 px-4 py-2.5 text-sm font-semibold shadow-md transition ${
+                                                newMedicine.instruction === 'Before meal'
+                                                    ? 'border-[#005963] bg-[#005963] text-white'
+                                                    : 'border-[#00acb1]/30 bg-white text-[#005963] hover:border-[#005963]/50'
+                                            }`}
+                                            onClick={() => setNewMedicine({ ...newMedicine, instruction: 'Before meal' })}
                                         >
                                             🍽️ Before Meal
                                         </button>
                                         <button
                                             type="button"
-                                            id="btn-after-meal"
-                                            className="flex-1 rounded-xl border-2 border-[#00acb1]/30 bg-white px-4 py-2.5 text-sm font-semibold text-[#005963] transition hover:border-[#005963]/50"
-                                            onClick={(e) => {
-                                                document.getElementById(
-                                                    'btn-after-meal',
-                                                ).className =
-                                                    'flex-1 rounded-xl border-2 border-[#005963] bg-[#005963] px-4 py-2.5 text-sm font-semibold text-white shadow-md transition';
-                                                document.getElementById(
-                                                    'btn-before-meal',
-                                                ).className =
-                                                    'flex-1 rounded-xl border-2 border-[#00acb1]/30 bg-white px-4 py-2.5 text-sm font-semibold text-[#005963] transition hover:border-[#005963]/50';
-                                            }}
+                                            className={`flex-1 rounded-xl border-2 px-4 py-2.5 text-sm font-semibold shadow-md transition ${
+                                                newMedicine.instruction === 'After meal'
+                                                    ? 'border-[#005963] bg-[#005963] text-white'
+                                                    : 'border-[#00acb1]/30 bg-white text-[#005963] hover:border-[#005963]/50'
+                                            }`}
+                                            onClick={() => setNewMedicine({ ...newMedicine, instruction: 'After meal' })}
                                         >
                                             🍴 After Meal
                                         </button>
@@ -1307,61 +1308,34 @@ export default function CreatePrescription({ appointments = [], contactInfo, sel
                                 <div className="mt-5 flex justify-end">
                                     <button
                                         type="button"
-                                        className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-[#005963] to-[#00acb1] px-6 py-2.5 text-sm font-bold text-white shadow-md transition hover:shadow-lg"
+                                        className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-[#005963] to-[#00acb1] px-6 py-2.5 text-sm font-bold text-white shadow-md transition hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                                         onClick={() => {
-                                            const name =
-                                                document.getElementById(
-                                                    'new-medicine-name',
-                                                ).value;
-                                            const strength =
-                                                document.getElementById(
-                                                    'new-medicine-strength',
-                                                ).value;
-                                            const dosage =
-                                                document.getElementById(
-                                                    'new-medicine-dosage',
-                                                ).value;
-                                            const duration =
-                                                document.getElementById(
-                                                    'new-medicine-duration',
-                                                ).value;
-                                            const instruction = document
-                                                .getElementById(
-                                                    'btn-before-meal',
-                                                )
-                                                .className.includes(
-                                                    'bg-[#005963]',
-                                                )
-                                                ? 'Before meal'
-                                                : 'After meal';
-
-                                            if (name) {
+                                            if (newMedicine.name.trim()) {
                                                 dispatch({
                                                     type: 'addArrayItem',
                                                     section: 'medicines',
                                                     item: {
-                                                        name,
-                                                        strength,
-                                                        dosage,
-                                                        duration,
-                                                        instruction,
+                                                        name: newMedicine.name.trim(),
+                                                        strength: newMedicine.strength.trim(),
+                                                        dosage: newMedicine.dosage.trim(),
+                                                        duration: newMedicine.duration.trim(),
+                                                        instruction: newMedicine.instruction,
                                                     },
                                                 });
                                                 // Clear form
-                                                document.getElementById(
-                                                    'new-medicine-name',
-                                                ).value = '';
-                                                document.getElementById(
-                                                    'new-medicine-strength',
-                                                ).value = '';
-                                                document.getElementById(
-                                                    'new-medicine-dosage',
-                                                ).value = '';
-                                                document.getElementById(
-                                                    'new-medicine-duration',
-                                                ).value = '';
+                                                setNewMedicine({
+                                                    name: '',
+                                                    strength: '',
+                                                    dosage: '',
+                                                    duration: '',
+                                                    instruction: 'After meal',
+                                                });
+                                                toastSuccess('Medicine added successfully');
+                                            } else {
+                                                toastError('Please enter medicine name');
                                             }
                                         }}
+                                        disabled={!newMedicine.name.trim()}
                                     >
                                         <Plus className="h-4 w-4" />
                                         Add Medicine

@@ -16,11 +16,17 @@ export default function AdminAppointments({ appointments = [] }) {
     setRows(pageRows);
   }, [pageRows]);
 
-  const statusSelectClass = (status) => {
+  const getStatusColor = (status) => {
     const s = (status || '').toLowerCase();
+    if (s === 'scheduled') return 'border-blue-200 bg-blue-50 text-blue-800';
+    if (s === 'arrived') return 'border-amber-200 bg-amber-50 text-amber-800';
+    if (s === 'in_consultation') return 'border-purple-200 bg-purple-50 text-purple-800';
+    if (s === 'awaiting_tests') return 'border-orange-200 bg-orange-50 text-orange-800';
+    if (s === 'prescribed') return 'border-emerald-200 bg-emerald-50 text-emerald-800';
+    if (s === 'cancelled') return 'border-rose-200 bg-rose-50 text-rose-800';
+    // Legacy statuses for backward compatibility
     if (s === 'approved') return 'border-emerald-200 bg-emerald-50 text-emerald-800';
     if (s === 'completed') return 'border-sky-200 bg-sky-50 text-sky-800';
-    if (s === 'cancelled') return 'border-rose-200 bg-rose-50 text-rose-800';
     return 'border-amber-200 bg-amber-50 text-amber-800';
   };
 
@@ -89,16 +95,34 @@ export default function AdminAppointments({ appointments = [] }) {
                     <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">{formatDisplayDateWithYearFromDateLike(a.appointment_date) || a.appointment_date}</td>
                     <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">{formatDisplayTime12h(a.appointment_time) || a.appointment_time}</td>
                     <td className="px-4 py-3 text-sm capitalize">
-                      <select
-                        className={`w-full rounded-xl border px-3 py-2 text-sm font-semibold ${statusSelectClass(a.status)}`}
-                        value={a.status}
-                        onChange={(e) => updateStatus(a.id, e.target.value)}
-                      >
-                        <option value="pending">Pending</option>
-                        <option value="approved">Approved</option>
-                        <option value="completed">Completed</option>
-                        <option value="cancelled">Cancelled</option>
-                      </select>
+                      <div className="relative inline-block min-w-[140px] w-full">
+                        <select
+                          className={`appearance-none w-full rounded-lg border-2 px-4 py-2.5 pr-10 text-sm font-semibold transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 shadow-sm hover:shadow-md active:shadow-sm ${getStatusColor(a.status)}`}
+                          style={{
+                            WebkitAppearance: 'none',
+                            MozAppearance: 'none',
+                            appearance: 'none',
+                            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 14 14' fill='none'%3E%3Cpath d='M3.5 5.25L7 8.75L10.5 5.25' stroke='%236B7280' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
+                            backgroundRepeat: 'no-repeat',
+                            backgroundPosition: 'right 0.75rem center',
+                            backgroundSize: '14px',
+                            paddingRight: '2.5rem',
+                          }}
+                          value={a.status}
+                          onChange={(e) => updateStatus(a.id, e.target.value)}
+                        >
+                          <option value="scheduled">Scheduled</option>
+                          <option value="arrived">Arrived</option>
+                          <option value="in_consultation">In Consultation</option>
+                          <option value="awaiting_tests">Awaiting Tests</option>
+                          <option value="prescribed">Prescribed</option>
+                          <option value="cancelled">Cancelled</option>
+                          {/* Legacy options for backward compatibility */}
+                          <option value="pending">Pending</option>
+                          <option value="approved">Approved</option>
+                          <option value="completed">Completed</option>
+                        </select>
+                      </div>
                     </td>
                   </tr>
                 ))}

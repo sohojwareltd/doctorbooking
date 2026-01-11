@@ -1,6 +1,19 @@
 {
+  "_html2pdf-Cm7NILjg.js": {
+    "file": "assets/html2pdf-Cm7NILjg.js",
+    "name": "html2pdf",
+    "isDynamicEntry": true,
+    "imports": [
+      "frontend/src/main.jsx"
+    ],
+    "dynamicImports": [
+      "node_modules/html2canvas/dist/html2canvas.esm.js",
+      "node_modules/dompurify/dist/purify.es.mjs",
+      "node_modules/canvg/lib/index.es.js"
+    ]
+  },
   "frontend/src/css/app.css": {
-    "file": "assets/app-D7_rZRDp.css",
+    "file": "assets/app-C1dMtJRc.css",
     "src": "frontend/src/css/app.css",
     "isEntry": true,
     "name": "app",
@@ -9,9 +22,34 @@
     ]
   },
   "frontend/src/main.jsx": {
-    "file": "assets/main-jyDTTkmt.js",
+    "file": "assets/main-CGn_bTs0.js",
     "name": "main",
     "src": "frontend/src/main.jsx",
-    "isEntry": true
+    "isEntry": true,
+    "dynamicImports": [
+      "_html2pdf-Cm7NILjg.js"
+    ]
+  },
+  "node_modules/canvg/lib/index.es.js": {
+    "file": "assets/index.es-N3l4zgQx.js",
+    "name": "index.es",
+    "src": "node_modules/canvg/lib/index.es.js",
+    "isDynamicEntry": true,
+    "imports": [
+      "frontend/src/main.jsx",
+      "_html2pdf-Cm7NILjg.js"
+    ]
+  },
+  "node_modules/dompurify/dist/purify.es.mjs": {
+    "file": "assets/purify.es-Bzr520pe.js",
+    "name": "purify.es",
+    "src": "node_modules/dompurify/dist/purify.es.mjs",
+    "isDynamicEntry": true
+  },
+  "node_modules/html2canvas/dist/html2canvas.esm.js": {
+    "file": "assets/html2canvas.esm-Ge7aVWlp.js",
+    "name": "html2canvas.esm",
+    "src": "node_modules/html2canvas/dist/html2canvas.esm.js",
+    "isDynamicEntry": true
   }
 }

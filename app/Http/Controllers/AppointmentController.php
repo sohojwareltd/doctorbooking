@@ -126,7 +126,7 @@ class AppointmentController extends Controller
             'doctor_id' => $doctor->id,
             'appointment_date' => $dateString,
             'appointment_time' => $time,
-            'status' => 'pending',
+            'status' => 'scheduled',
             'symptoms' => $validated['message'] ?? null,
             'notes' => null,
         ]);
@@ -309,7 +309,7 @@ class AppointmentController extends Controller
     public function updateStatus(Request $request, Appointment $appointment): JsonResponse
     {
         $validated = $request->validate([
-            'status' => ['required', Rule::in(['pending', 'approved', 'completed', 'cancelled'])],
+            'status' => ['required', Rule::in(['scheduled', 'arrived', 'in_consultation', 'awaiting_tests', 'prescribed', 'cancelled'])],
         ]);
 
         $user = $request->user();
@@ -321,7 +321,27 @@ class AppointmentController extends Controller
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        $appointment->update(['status' => $validated['status']]);
+        $newStatus = $validated['status'];
+        $doctorId = $appointment->doctor_id;
+
+        // If setting status to "in_consultation", ensure only one patient can be in consultation at a time
+        if ($newStatus === 'in_consultation') {
+            // Find all other appointments for this doctor that are currently "in_consultation"
+            $otherInConsultation = Appointment::where('doctor_id', $doctorId)
+                ->where('status', 'in_consultation')
+                ->where('id', '!=', $appointment->id)
+                ->get();
+
+            // Change them back to "arrived" status (they were in consultation but now another patient is being seen)
+            if ($otherInConsultation->count() > 0) {
+                Appointment::where('doctor_id', $doctorId)
+                    ->where('status', 'in_consultation')
+                    ->where('id', '!=', $appointment->id)
+                    ->update(['status' => 'arrived']);
+            }
+        }
+
+        $appointment->update(['status' => $newStatus]);
 
         return response()->json([
             'status' => 'success',
