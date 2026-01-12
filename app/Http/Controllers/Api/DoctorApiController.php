@@ -21,12 +21,19 @@ class DoctorApiController extends Controller
             ->where('doctor_id', $doctor->id)
             ->orderByDesc('appointment_date')
             ->orderByDesc('appointment_time')
-            ->get(['id','user_id','appointment_date','appointment_time','status','symptoms']);
+            ->get(['id','user_id','appointment_date','appointment_time','status','symptoms','name','phone','email','age','gender','is_guest']);
 
         return response()->json([
             'appointments' => $appointments->map(fn ($a) => [
                 'id' => $a->id,
                 'user_id' => $a->user_id,
+                'is_guest' => $a->is_guest,
+                // Show user info if registered, otherwise show guest info
+                'patient_name' => $a->user?->name ?? $a->name,
+                'patient_phone' => $a->user?->phone ?? $a->phone,
+                'patient_email' => $a->user?->email ?? $a->email,
+                'patient_age' => $a->age,
+                'patient_gender' => $a->gender,
                 'user' => $a->user ? ['id' => $a->user->id, 'name' => $a->user->name] : null,
                 'appointment_date' => $a->appointment_date?->toDateString() ?? (string) $a->appointment_date,
                 'appointment_time' => substr((string) $a->appointment_time, 0, 5),

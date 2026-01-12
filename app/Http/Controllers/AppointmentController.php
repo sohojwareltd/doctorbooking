@@ -65,7 +65,7 @@ class AppointmentController extends Controller
     }
 
     /**
-     * Store a public booking request (no auth required).
+     * Store a public booking request (no auth required - guest booking).
      */
     public function storePublic(Request $request): JsonResponse|RedirectResponse
     {
@@ -73,6 +73,8 @@ class AppointmentController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'phone' => ['required', 'string', 'max:50'],
             'email' => ['required', 'email', 'max:255'],
+            'age' => ['nullable', 'integer', 'min:1', 'max:150'],
+            'gender' => ['nullable', 'in:male,female,other'],
             'date' => ['required', 'date'],
             'time' => ['required', 'string'],
             'message' => ['nullable', 'string', 'max:2000'],
@@ -105,16 +107,8 @@ class AppointmentController extends Controller
             return back()->withErrors(['booking' => $message])->withInput();
         }
 
+        // Check if user exists (optional - user can book as guest)
         $user = User::where('email', $validated['email'])->first();
-        if (!$user) {
-            $user = User::create([
-                'name' => $validated['name'],
-                'email' => $validated['email'],
-                'password' => Hash::make(Str::random(16)),
-                'role' => 'user',
-                'phone' => $validated['phone'],
-            ]);
-        }
 
         $time = $validated['time'];
         if (preg_match('/^\d{2}:\d{2}$/', $time) === 1) {
@@ -122,13 +116,20 @@ class AppointmentController extends Controller
         }
 
         Appointment::create([
-            'user_id' => $user->id,
+            'user_id' => $user?->id,  // NULL if guest, user ID if registered
             'doctor_id' => $doctor->id,
             'appointment_date' => $dateString,
             'appointment_time' => $time,
             'status' => 'pending',
             'symptoms' => $validated['message'] ?? null,
             'notes' => null,
+            // Guest information
+            'name' => $validated['name'],
+            'phone' => $validated['phone'],
+            'email' => $validated['email'],
+            'age' => $validated['age'] ?? null,
+            'gender' => $validated['gender'] ?? null,
+            'is_guest' => !$user,  // TRUE if guest, FALSE if registered user
         ]);
 
         if ($request->expectsJson()) {
@@ -326,6 +327,32 @@ class AppointmentController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => 'Appointment status updated.',
+        ]);
+    }
+
+    /**
+     * Link guest appointments to a user account (after user registration).
+     */
+    public function linkGuestAppointments(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        if (!$user || $user->role !== 'user') {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        // Find all guest appointments with matching email
+        $linkedCount = Appointment::where('email', $user->email)
+            ->whereNull('user_id')
+            ->where('is_guest', true)
+            ->update([
+                'user_id' => $user->id,
+                'is_guest' => false,
+            ]);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => "Linked $linkedCount appointment(s) to your account.",
+            'count' => $linkedCount,
         ]);
     }
 }

@@ -114,7 +114,12 @@ Route::middleware(['auth', 'verified', 'role:user'])->prefix('user')->name('user
 
     Route::get('/appointments', function () {
         $user = Auth::user();
-        $appointments = Appointment::where('user_id', $user->id)
+        
+        // Get user's appointments + any guest appointments with same email
+        $appointments = Appointment::where(function ($q) use ($user) {
+            $q->where('user_id', $user->id)
+              ->orWhere('email', $user->email);
+        })
             ->orderByDesc('appointment_date')
             ->orderByDesc('appointment_time')
             ->paginate(10)
@@ -123,6 +128,7 @@ Route::middleware(['auth', 'verified', 'role:user'])->prefix('user')->name('user
         return Inertia::render('user/Appointments', [
             'appointments' => $appointments->through(fn ($a) => [
                 'id' => $a->id,
+                'is_guest' => $a->is_guest,
                 'appointment_date' => $a->appointment_date?->toDateString(),
                 'appointment_time' => substr((string) $a->appointment_time, 0, 5),
                 'status' => $a->status,
@@ -282,6 +288,13 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
             'appointments' => $appointments->through(fn ($a) => [
                 'id' => $a->id,
                 'user_id' => $a->user_id,
+                'is_guest' => $a->is_guest,
+                // Show user info if registered, otherwise show guest info
+                'patient_name' => $a->user?->name ?? $a->name,
+                'patient_phone' => $a->user?->phone ?? $a->phone,
+                'patient_email' => $a->user?->email ?? $a->email,
+                'patient_age' => $a->age,
+                'patient_gender' => $a->gender,
                 'user' => $a->user ? ['id' => $a->user->id, 'name' => $a->user->name] : null,
                 'appointment_date' => $a->appointment_date?->toDateString(),
                 'appointment_time' => substr((string) $a->appointment_time, 0, 5),
@@ -630,6 +643,13 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
                 'id' => $a->id,
                 'user_id' => $a->user_id,
                 'doctor_id' => $a->doctor_id,
+                'is_guest' => $a->is_guest,
+                // Show user info if registered, otherwise show guest info
+                'patient_name' => $a->user?->name ?? $a->name,
+                'patient_phone' => $a->user?->phone ?? $a->phone,
+                'patient_email' => $a->user?->email ?? $a->email,
+                'patient_age' => $a->age,
+                'patient_gender' => $a->gender,
                 'user' => $a->user ? ['id' => $a->user->id, 'name' => $a->user->name] : null,
                 'doctor' => $a->doctor ? ['id' => $a->doctor->id, 'name' => $a->doctor->name] : null,
                 'appointment_date' => $a->appointment_date?->toDateString(),
