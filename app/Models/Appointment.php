@@ -16,10 +16,13 @@ class Appointment extends Model
         'status',
         'symptoms',
         'notes',
-        // Public appointment fields
+        // Guest appointment fields
         'name',
         'phone',
         'email',
+        'age',
+        'gender',
+        'is_guest',
     ];
 
     protected $casts = [
