@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { CalendarDays, ClipboardList, LayoutDashboard, Settings, Users, TrendingUp, Clock, CheckCircle, XCircle, FileText, AlertCircle, UserCheck, Stethoscope, TestTube, ChevronRight, X, Phone, Mail, MapPin } from 'lucide-react';
 import DoctorLayout from '../../layouts/DoctorLayout';
 import GlassCard from '../../components/GlassCard';
+import { useEffect, useState } from 'react';
 
 export default function DoctorDashboard({ stats = {}, scheduledToday = [], recentAppointments = [], upcomingAppointment = null }) {
   const { auth } = usePage().props;
@@ -147,6 +148,9 @@ export default function DoctorDashboard({ stats = {}, scheduledToday = [], recen
             </div>
           </GlassCard>
         </div>
+              </div>
+            </GlassCard>
+          </div>
 
         {/* Main Content Grid */}
         <div className="grid gap-6 lg:grid-cols-3">
@@ -299,8 +303,8 @@ export default function DoctorDashboard({ stats = {}, scheduledToday = [], recen
             <GlassCard variant="solid" hover={false} className="p-6">
               <div className="mb-6 flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-bold text-[#005963]">Recent Appointments</h3>
-                  <p className="text-sm text-gray-500 mt-1">Last 7 days activity</p>
+                  <h3 className="text-lg font-bold text-[#005963]">Today's Appointments</h3>
+                  <p className="text-sm text-gray-500 mt-1">Appointments scheduled for today</p>
                 </div>
                 <Link href="/doctor/appointments" className="text-[#005963] text-sm font-semibold hover:underline flex items-center gap-1">
                   View All →
@@ -343,7 +347,7 @@ export default function DoctorDashboard({ stats = {}, scheduledToday = [], recen
                 ) : (
                   <div className="py-12 text-center">
                     <CalendarDays className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                    <p className="text-gray-500">No appointments in the last 7 days</p>
+                    <p className="text-gray-500">No appointments scheduled for today</p>
                   </div>
                 )}
               </div>
@@ -357,8 +361,15 @@ export default function DoctorDashboard({ stats = {}, scheduledToday = [], recen
               <h3 className="mb-4 text-sm font-bold uppercase tracking-wider text-[#005963]">Quick Actions</h3>
               <div className="space-y-2">
                 <Link
-                  href="/doctor/prescriptions/create"
+                  href="/doctor/appointments"
                   className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#005963] px-4 py-3 text-sm font-semibold text-white hover:bg-[#00434a] transition shadow-sm"
+                >
+                  <Plus className="h-4 w-4" />
+                  Create Appointment
+                </Link>
+                <Link
+                  href="/doctor/prescriptions/create"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#005963]/30 bg-white px-4 py-3 text-sm font-semibold text-[#005963] hover:bg-[#005963]/5 transition"
                 >
                   <FileText className="h-4 w-4" />
                   Create Prescription

@@ -28,6 +28,7 @@ class User extends Authenticatable
         'phone',
         'address',
         'date_of_birth',
+        'age',
         'gender',
         'weight',
         'specialization',

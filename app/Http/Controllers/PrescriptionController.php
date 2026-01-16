@@ -23,6 +23,7 @@ class PrescriptionController extends Controller
             'appointment_id' => ['nullable', 'integer'],
             'patient_name' => ['required', 'string', 'max:255'],
             'patient_age' => ['nullable', 'string', 'max:10'],
+            'patient_age_unit' => ['nullable', 'string', 'max:20'],
             'patient_gender' => ['nullable', 'string', 'max:20'],
             'patient_weight' => ['nullable', 'string', 'max:20'],
             'patient_contact' => ['nullable', 'string', 'max:50'],
@@ -120,8 +121,80 @@ class PrescriptionController extends Controller
             ]);
         }
 
-        return back()->with('success', $userCreated 
-            ? 'Prescription created. New patient account created (Password: Phone Number)' 
-            : 'Prescription created.');
+        return redirect()->route('doctor.prescriptions.show', $prescription->id)
+            ->with('success', $userCreated 
+                ? 'Prescription created. New patient account created (Password: Phone Number)' 
+                : 'Prescription created.');
+    }
+
+    public function update(Request $request, Prescription $prescription): JsonResponse
+    {
+        $doctor = $request->user();
+        if (!$doctor || $doctor->role !== 'doctor' || $prescription->doctor_id !== $doctor->id) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $validated = $request->validate([
+            'diagnosis' => ['nullable', 'string', 'max:5000'],
+            'medications' => ['nullable', 'string', 'max:10000'],
+            'instructions' => ['nullable', 'string', 'max:10000'],
+            'tests' => ['nullable', 'string', 'max:10000'],
+            'next_visit_date' => ['nullable', 'date'],
+            'patient_contact' => ['nullable', 'string', 'max:50'],
+            'patient_age' => ['nullable', 'string', 'max:10'],
+            'patient_age_unit' => ['nullable', 'string', 'max:20'],
+            'patient_gender' => ['nullable', 'string', 'max:20'],
+            'patient_weight' => ['nullable', 'string', 'max:20'],
+            'visit_type' => ['nullable', 'string', 'max:50'],
+        ]);
+
+        $prescription->update([
+            'diagnosis' => trim($validated['diagnosis'] ?? ''),
+            'medications' => $validated['medications'] ?? '',
+            'instructions' => $validated['instructions'] ?? null,
+            'tests' => $validated['tests'] ?? null,
+            'next_visit_date' => $validated['next_visit_date'] ?? null,
+            'visit_type' => $validated['visit_type'] ?? null,
+        ]);
+
+        if ($prescription->user) {
+            $prescription->user->update([
+                'phone' => $validated['patient_contact'] ?? $prescription->user->phone,
+                'age' => $validated['patient_age'] ?? $prescription->user->age,
+                'gender' => $validated['patient_gender'] ?? $prescription->user->gender,
+                'weight' => $validated['patient_weight'] ?? $prescription->user->weight,
+            ]);
+        }
+
+        $prescription->load(['user:id,name,phone,age,gender,weight']);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Prescription updated successfully.',
+            'prescription' => [
+                'id' => $prescription->id,
+                'appointment_id' => $prescription->appointment_id,
+                'created_at' => $prescription->created_at?->toDateTimeString(),
+                'diagnosis' => $prescription->diagnosis,
+                'medications' => $prescription->medications,
+                'instructions' => $prescription->instructions,
+                'tests' => $prescription->tests,
+                'next_visit_date' => $prescription->next_visit_date?->toDateString(),
+                'visit_type' => $prescription->visit_type,
+                'patient_contact' => $prescription->user?->phone,
+                'patient_age' => $prescription->user?->age,
+                'patient_age_unit' => $validated['patient_age_unit'] ?? 'years',
+                'patient_gender' => $prescription->user?->gender,
+                'patient_weight' => $prescription->user?->weight,
+                'user' => $prescription->user ? [
+                    'id' => $prescription->user->id,
+                    'name' => $prescription->user->name,
+                    'phone' => $prescription->user->phone,
+                    'age' => $prescription->user->age,
+                    'gender' => $prescription->user->gender,
+                    'weight' => $prescription->user->weight,
+                ] : null,
+            ],
+        ]);
     }
 }

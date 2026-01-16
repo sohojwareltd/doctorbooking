@@ -1,6 +1,11 @@
 import { Head, Link, usePage } from '@inertiajs/react';
+<<<<<<< HEAD
 import { Calendar, ClipboardList, Heart, Phone, Mail, User, Stethoscope, Pill, FlaskConical, FileText, MapPin, Printer, ArrowLeft, MessageCircle, Download, Share2 } from 'lucide-react';
 import { useMemo, useRef, useState, useEffect } from 'react';
+=======
+import { Calendar, ClipboardList, Heart, Phone, Mail, User, Stethoscope, Pill, FlaskConical, FileText, MapPin, Printer, ArrowLeft, MessageCircle, Save, X } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+>>>>>>> ab5b6a5f4a0bef2cc247f7b469c19f474e3c47a8
 import DoctorLayout from '../../layouts/DoctorLayout';
 import { formatDisplayDate, formatDisplayFromDateLike, formatTime12hFromDateTime } from '../../utils/dateFormat';
 import { toastSuccess, toastError } from '../../utils/toast';
@@ -9,6 +14,114 @@ export default function PrescriptionShow({ prescription, contactInfo }) {
   const page = usePage();
   const authUser = page?.props?.auth?.user;
   const prescriptionSettings = page?.props?.site?.prescription || {};
+
+  const toStr = (val) => (val === null || val === undefined ? '' : String(val));
+
+  const [data, setData] = useState(prescription || {});
+  const [editMode] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({
+    diagnosis: prescription?.diagnosis || '',
+    medications: prescription?.medications || '',
+    instructions: prescription?.instructions || '',
+    tests: prescription?.tests || '',
+    next_visit_date: prescription?.next_visit_date || '',
+    patient_contact: prescription?.patient_contact || prescription?.user?.phone || '',
+    patient_age: prescription?.patient_age !== undefined && prescription?.patient_age !== null
+      ? String(prescription.patient_age)
+      : prescription?.user?.age !== undefined && prescription?.user?.age !== null
+        ? String(prescription.user.age)
+        : '',
+    patient_age_unit: prescription?.patient_age_unit || 'years',
+    patient_gender: prescription?.patient_gender || prescription?.user?.gender || '',
+    patient_weight: prescription?.patient_weight || '',
+    visit_type: prescription?.visit_type || '',
+  });
+
+  useEffect(() => {
+    setData(prescription || {});
+    setForm({
+      diagnosis: prescription?.diagnosis || '',
+      medications: prescription?.medications || '',
+      instructions: prescription?.instructions || '',
+      tests: prescription?.tests || '',
+      next_visit_date: prescription?.next_visit_date || '',
+      patient_contact: prescription?.patient_contact || prescription?.user?.phone || '',
+      patient_age: prescription?.patient_age !== undefined && prescription?.patient_age !== null
+        ? String(prescription.patient_age)
+        : prescription?.user?.age !== undefined && prescription?.user?.age !== null
+          ? String(prescription.user.age)
+          : '',
+      patient_age_unit: prescription?.patient_age_unit || 'years',
+      patient_gender: prescription?.patient_gender || prescription?.user?.gender || '',
+      patient_weight: prescription?.patient_weight || '',
+      visit_type: prescription?.visit_type || '',
+    });
+  }, [prescription]);
+
+  const handleChange = (field, value) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSave = async () => {
+    if (!data?.id || saving) return;
+    setSaving(true);
+    try {
+      const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+      const res = await fetch(`/doctor/prescriptions/${data.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': token,
+          Accept: 'application/json',
+        },
+        body: JSON.stringify(form),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        const msg = body?.message || 'Failed to update prescription.';
+        alert(msg);
+      } else {
+        const body = await res.json().catch(() => ({}));
+        const updated = { ...data, ...form, ...(body?.prescription || {}) };
+        setData(updated);
+        setForm({
+          diagnosis: updated?.diagnosis || '',
+          medications: updated?.medications || '',
+          instructions: updated?.instructions || '',
+          tests: updated?.tests || '',
+          next_visit_date: updated?.next_visit_date || '',
+          patient_contact: updated?.patient_contact || updated?.user?.phone || '',
+          patient_age: toStr(updated?.patient_age ?? updated?.user?.age),
+          patient_age_unit: updated?.patient_age_unit || 'years',
+          patient_gender: updated?.patient_gender || updated?.user?.gender || '',
+          patient_weight: updated?.patient_weight || '',
+          visit_type: updated?.visit_type || '',
+        });
+      }
+    } catch (err) {
+      alert('Network error while saving.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setForm({
+      diagnosis: data?.diagnosis || '',
+      medications: data?.medications || '',
+      instructions: data?.instructions || '',
+      tests: data?.tests || '',
+      next_visit_date: data?.next_visit_date || '',
+      patient_contact: data?.patient_contact || data?.user?.phone || '',
+      patient_age: toStr(data?.patient_age ?? data?.user?.age),
+      patient_age_unit: data?.patient_age_unit || 'years',
+      patient_gender: data?.patient_gender || data?.user?.gender || '',
+      patient_weight: data?.patient_weight || '',
+      visit_type: data?.visit_type || '',
+    });
+  };
   
   // Clinic info from contactInfo or fallback to prescriptionSettings
   const clinicData = contactInfo?.clinic || {};
@@ -33,6 +146,7 @@ export default function PrescriptionShow({ prescription, contactInfo }) {
   const clinicRegistration = prescriptionSettings?.registrationNo || authUser?.registration_no || '';
   const clinicWebsite = prescriptionSettings?.website || page?.props?.site?.website || '';
 
+<<<<<<< HEAD
   const patientName = prescription?.user?.name || `User #${prescription?.user_id || ''}`;
   const doctorName = prescription?.doctor?.name || authUser?.name || 'Doctor';
   const doctorEmail = prescription?.doctor?.email || authUser?.email || '';
@@ -193,11 +307,30 @@ export default function PrescriptionShow({ prescription, contactInfo }) {
       }
     }
   };
+=======
+  const patientName = data?.patient_name || data?.user?.name || `User #${data?.user_id || ''}`;
+  const doctorName = data?.doctor?.name || prescription?.doctor?.name || authUser?.name || 'Doctor';
+  const doctorEmail = data?.doctor?.email || prescription?.doctor?.email || authUser?.email || '';
+  const doctorPhone = authUser?.phone || '';
+  const createdAtDateLabel = useMemo(() => formatDisplayFromDateLike(data?.created_at), [data?.created_at]);
+  const createdAtTimeLabel = useMemo(() => formatTime12hFromDateTime(data?.created_at), [data?.created_at]);
+  const nextVisitLabel = useMemo(() => formatDisplayDate(editMode ? form?.next_visit_date : data?.next_visit_date), [editMode, form?.next_visit_date, data?.next_visit_date]);
+  const visitDateLabel = useMemo(() => formatDisplayDate(data?.visit_date || data?.appointment?.appointment_date), [data?.visit_date, data?.appointment?.appointment_date]);
+
+  // Patient info from prescription or user table
+  const patientAge = editMode ? form?.patient_age : data?.patient_age || data?.user?.age;
+  const patientAgeUnit = editMode ? form?.patient_age_unit || 'years' : data?.patient_age_unit || 'years';
+  const patientGender = editMode ? form?.patient_gender : data?.patient_gender || data?.user?.gender;
+  const patientWeight = editMode ? form?.patient_weight : data?.patient_weight;
+  const patientContact = editMode ? form?.patient_contact : data?.patient_contact || data?.user?.phone;
+  const visitType = editMode ? form?.visit_type : data?.visit_type;
+>>>>>>> ab5b6a5f4a0bef2cc247f7b469c19f474e3c47a8
 
   return (
     <DoctorLayout title="Prescription Details">
       {/* Action Buttons - Above prescription */}
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3 print:hidden">
+<<<<<<< HEAD
         <Link href="/doctor/prescriptions" className="flex items-center gap-2 rounded-xl border-2 border-[#005963]/30 bg-white px-5 py-2.5 text-sm font-semibold text-[#005963] shadow-sm transition hover:bg-[#005963]/5">
           <ArrowLeft className="h-4 w-4" />
           Back to List
@@ -276,11 +409,45 @@ export default function PrescriptionShow({ prescription, contactInfo }) {
             type="button"
             onClick={handlePrint}
             className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#005963] to-[#00acb1] px-6 py-2.5 text-sm font-bold text-white shadow-lg transition hover:shadow-xl"
+=======
+        <div className="flex flex-wrap items-center gap-2">
+          <Link href="/doctor/prescriptions" className="flex items-center gap-2 rounded-xl border-2 border-[#005963]/30 bg-white px-5 py-2.5 text-sm font-semibold text-[#005963] shadow-sm transition hover:bg-[#005963]/5">
+            <ArrowLeft className="h-4 w-4" />
+            Back to List
+          </Link>
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#005963] to-[#00acb1] px-5 py-2.5 text-sm font-bold text-white shadow-lg transition hover:shadow-xl"
+>>>>>>> ab5b6a5f4a0bef2cc247f7b469c19f474e3c47a8
           >
             <Printer className="h-4 w-4" />
             Print
           </button>
         </div>
+<<<<<<< HEAD
+=======
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleCancel}
+            disabled={saving}
+            className="flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            <X className="h-4 w-4" />
+            Reset Changes
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving}
+            className="flex items-center gap-2 rounded-xl bg-[#005963] px-5 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-[#004852] disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            <Save className="h-4 w-4" />
+            {saving ? 'Saving...' : 'Save Changes'}
+          </button>
+        </div>
+>>>>>>> ab5b6a5f4a0bef2cc247f7b469c19f474e3c47a8
       </div>
 
       {/* Physical Prescription Paper */}
@@ -367,25 +534,92 @@ export default function PrescriptionShow({ prescription, contactInfo }) {
                 </div>
                 {patientAge && (
                   <div className="flex items-center gap-1 text-sm text-gray-700">
-                    <span className="font-semibold">{patientAge}</span>
-                    <span>{patientAgeUnit}</span>
+                    {editMode ? (
+                      <>
+                        <input
+                          type="text"
+                          className="w-20 rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-[#005963] focus:outline-none"
+                          value={form.patient_age || ''}
+                          onChange={(e) => handleChange('patient_age', e.target.value)}
+                        />
+                        <select
+                          className="rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-[#005963] focus:outline-none"
+                          value={form.patient_age_unit || 'years'}
+                          onChange={(e) => handleChange('patient_age_unit', e.target.value)}
+                        >
+                          <option value="years">years</option>
+                          <option value="months">months</option>
+                        </select>
+                      </>
+                    ) : (
+                      <>
+                        <span className="font-semibold">{patientAge}</span>
+                        <span>{patientAgeUnit}</span>
+                      </>
+                    )}
                   </div>
                 )}
                 {patientGender && (
-                  <div className="text-sm text-gray-700">{patientGender}</div>
+                  <div className="text-sm text-gray-700">
+                    {editMode ? (
+                      <select
+                        className="rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-[#005963] focus:outline-none"
+                        value={form.patient_gender || ''}
+                        onChange={(e) => handleChange('patient_gender', e.target.value)}
+                      >
+                        <option value="">Select</option>
+                        <option value="male">Male</option>
+                        <option value="female">Female</option>
+                        <option value="other">Other</option>
+                      </select>
+                    ) : (
+                      patientGender
+                    )}
+                  </div>
                 )}
                 {patientWeight && (
-                  <div className="text-sm text-gray-700">{patientWeight} kg</div>
+                  <div className="text-sm text-gray-700">
+                    {editMode ? (
+                      <input
+                        type="number"
+                        step="0.1"
+                        className="w-24 rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-[#005963] focus:outline-none"
+                        value={form.patient_weight || ''}
+                        onChange={(e) => handleChange('patient_weight', e.target.value)}
+                      />
+                    ) : (
+                      `${patientWeight} kg`
+                    )}
+                  </div>
                 )}
                 {patientContact && (
                   <div className="flex items-center gap-1 text-sm text-gray-600">
                     <Phone className="h-3 w-3" />
-                    {patientContact}
+                    {editMode ? (
+                      <input
+                        type="text"
+                        className="w-40 rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-[#005963] focus:outline-none"
+                        value={form.patient_contact || ''}
+                        onChange={(e) => handleChange('patient_contact', e.target.value)}
+                      />
+                    ) : (
+                      patientContact
+                    )}
                   </div>
                 )}
                 {visitType && (
                   <div className="rounded-full border border-[#00acb1]/40 bg-[#00acb1]/10 px-2 py-0.5 text-xs font-semibold text-[#005963]">
-                    {visitType}
+                    {editMode ? (
+                      <input
+                        type="text"
+                        className="rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-[#005963] focus:outline-none"
+                        value={form.visit_type || ''}
+                        onChange={(e) => handleChange('visit_type', e.target.value)}
+                        placeholder="Visit type"
+                      />
+                    ) : (
+                      visitType
+                    )}
                   </div>
                 )}
                 {visitDateLabel && (
@@ -395,12 +629,27 @@ export default function PrescriptionShow({ prescription, contactInfo }) {
                   </div>
                 )}
               </div>
-              {nextVisitLabel && (
-                <div className="flex items-center gap-2 rounded-lg border border-[#005963]/30 bg-[#005963]/5 px-3 py-1.5">
-                  <Calendar className="h-4 w-4 text-[#005963]" />
-                  <span className="text-xs font-bold text-[#005963]">Follow-up: {nextVisitLabel}</span>
-                </div>
-              )}
+              <div className="flex items-center gap-2">
+                {editMode ? (
+                  <div className="flex items-center gap-2 rounded-lg border border-[#005963]/30 bg-white px-3 py-1.5">
+                    <Calendar className="h-4 w-4 text-[#005963]" />
+                    <div className="text-xs font-semibold text-[#005963]">Next visit:</div>
+                    <input
+                      type="date"
+                      className="rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-[#005963] focus:outline-none"
+                      value={form.next_visit_date || ''}
+                      onChange={(e) => handleChange('next_visit_date', e.target.value)}
+                    />
+                  </div>
+                ) : (
+                  nextVisitLabel && (
+                    <div className="flex items-center gap-2 rounded-lg border border-[#005963]/30 bg-[#005963]/5 px-3 py-1.5">
+                      <Calendar className="h-4 w-4 text-[#005963]" />
+                      <span className="text-xs font-bold text-[#005963]">Follow-up: {nextVisitLabel}</span>
+                    </div>
+                  )
+                )}
+              </div>
             </div>
           </div>
 
@@ -416,21 +665,41 @@ export default function PrescriptionShow({ prescription, contactInfo }) {
                     <Stethoscope className="h-4 w-4 text-[#005963]" />
                     <span className="text-xs font-black uppercase tracking-wider text-[#005963]">Diagnosis</span>
                   </div>
-                  <div className="whitespace-pre-wrap text-sm leading-relaxed text-gray-700">
-                    {prescription?.diagnosis || <span className="italic text-gray-400">—</span>}
-                  </div>
+                  {editMode ? (
+                    <textarea
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-sm focus:border-[#005963] focus:outline-none"
+                      rows={5}
+                      value={form.diagnosis || ''}
+                      onChange={(e) => handleChange('diagnosis', e.target.value)}
+                      placeholder="Enter diagnosis"
+                    />
+                  ) : (
+                    <div className="whitespace-pre-wrap text-sm leading-relaxed text-gray-700">
+                      {data?.diagnosis || <span className="italic text-gray-400">—</span>}
+                    </div>
+                  )}
                 </div>
 
                 {/* Tests */}
-                {prescription?.tests && (
+                {(editMode || data?.tests) && (
                   <div>
                     <div className="mb-3 flex items-center gap-2 border-b border-[#005963]/20 pb-2">
                       <FlaskConical className="h-4 w-4 text-[#005963]" />
                       <span className="text-xs font-black uppercase tracking-wider text-[#005963]">Investigations</span>
                     </div>
-                    <div className="whitespace-pre-wrap text-sm leading-relaxed text-gray-700">
-                      {prescription.tests}
-                    </div>
+                    {editMode ? (
+                      <textarea
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-sm focus:border-[#005963] focus:outline-none"
+                        rows={5}
+                        value={form.tests || ''}
+                        onChange={(e) => handleChange('tests', e.target.value)}
+                        placeholder="Add tests/investigations"
+                      />
+                    ) : (
+                      <div className="whitespace-pre-wrap text-sm leading-relaxed text-gray-700">
+                        {data?.tests}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -442,23 +711,43 @@ export default function PrescriptionShow({ prescription, contactInfo }) {
                   <div className="mb-4 flex items-start gap-3">
                     <div className="text-5xl font-serif font-bold italic text-[#005963]">℞</div>
                     <div className="flex-1 pt-2">
-                      <div className="whitespace-pre-wrap text-sm leading-loose text-gray-800">
-                        {prescription?.medications || <span className="italic text-gray-400">No medications prescribed</span>}
-                      </div>
+                      {editMode ? (
+                        <textarea
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-sm focus:border-[#005963] focus:outline-none"
+                          rows={10}
+                          value={form.medications || ''}
+                          onChange={(e) => handleChange('medications', e.target.value)}
+                          placeholder="Add medications"
+                        />
+                      ) : (
+                        <div className="whitespace-pre-wrap text-sm leading-loose text-gray-800">
+                          {data?.medications || <span className="italic text-gray-400">No medications prescribed</span>}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
 
                 {/* Advice */}
-                {prescription?.instructions && (
+                {(editMode || data?.instructions) && (
                   <div className="border-t-2 border-dotted border-gray-200 pt-4">
                     <div className="mb-2 flex items-center gap-2">
                       <FileText className="h-4 w-4 text-[#005963]" />
                       <span className="text-xs font-black uppercase tracking-wider text-[#005963]">Advice</span>
                     </div>
-                    <div className="whitespace-pre-wrap rounded-lg bg-[#005963]/5 p-3 text-sm leading-relaxed text-gray-700">
-                      {prescription.instructions}
-                    </div>
+                    {editMode ? (
+                      <textarea
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-sm focus:border-[#005963] focus:outline-none"
+                        rows={6}
+                        value={form.instructions || ''}
+                        onChange={(e) => handleChange('instructions', e.target.value)}
+                        placeholder="Diet, activity, or other instructions"
+                      />
+                    ) : (
+                      <div className="whitespace-pre-wrap rounded-lg bg-[#005963]/5 p-3 text-sm leading-relaxed text-gray-700">
+                        {data?.instructions}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -469,7 +758,7 @@ export default function PrescriptionShow({ prescription, contactInfo }) {
           <div className="border-t-2 border-gray-200 bg-gray-50 px-6 py-4">
             <div className="flex items-end justify-between">
               <div className="text-xs text-gray-500">
-                <div>Prescription ID: #{prescription?.id}</div>
+                <div>Prescription ID: #{data?.id}</div>
                 <div className="mt-0.5">Generated on: {createdAtDateLabel} {createdAtTimeLabel}</div>
               </div>
               <div className="text-center">

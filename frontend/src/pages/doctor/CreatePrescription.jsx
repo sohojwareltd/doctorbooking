@@ -251,7 +251,7 @@ function reducer(state, action) {
     }
 }
 
-export default function CreatePrescription({ appointments = [], contactInfo, selectedPatient }) {
+export default function CreatePrescription({ appointmentId = null, contactInfo, selectedPatient }) {
     const page = usePage();
     const authUser = page?.props?.auth?.user;
     const prescriptionSettings = page?.props?.site?.prescription || {};
@@ -298,76 +298,44 @@ export default function CreatePrescription({ appointments = [], contactInfo, sel
 
     // Initialize appointment from URL query parameter
     useEffect(() => {
-        if (!appointmentId && appointments && appointments.length > 0) {
-            const url = page?.url;
-            
-            // Try to get from URL first
-            try {
-                if (url) {
-                    const urlObj = new URL(url, window.location.origin);
-                    const appointmentIdFromUrl = urlObj.searchParams.get('appointment_id');
-                    
-                    if (appointmentIdFromUrl) {
-                        const exists = appointments.some((a) => Number(a.id) === Number(appointmentIdFromUrl));
-                        
-                        if (exists) {
-                            setAppointmentId(appointmentIdFromUrl);
-                        }
-                    }
-                }
-            } catch (err) {
-                // URL parsing error - continue
+        if (selectedPatient) {
+            if (selectedPatient.name) {
+                dispatch({
+                    type: 'setField',
+                    path: ['patient', 'name'],
+                    value: selectedPatient.name,
+                });
             }
-        }
-    }, [appointments]);
-
-    const selectedAppointment = useMemo(() => {
-        const id = Number(appointmentId);
-        if (!id) return null;
-        return (appointments || []).find((a) => a.id === id) || null;
-    }, [appointments, appointmentId]);
-
-    // Auto-fill patient info when patient is selected from patients table
-    useEffect(() => {
-        if (selectedPatient?.name) {
-            dispatch({
-                type: 'setField',
-                path: ['patient', 'name'],
-                value: selectedPatient.name,
-            });
-            if (selectedPatient?.phone) {
+            if (selectedPatient.phone) {
                 dispatch({
                     type: 'setField',
                     path: ['patient', 'contact'],
                     value: selectedPatient.phone,
                 });
             }
-        }
-    }, [selectedPatient?.id]);
-
-    // Auto-fill patient info when appointment is selected
-    useEffect(() => {
-        if (selectedAppointment?.user?.name) {
-            dispatch({
-                type: 'setField',
-                path: ['patient', 'name'],
-                value: selectedAppointment.user.name,
-            });
-            // Set visit date to appointment date
-            if (selectedAppointment?.appointment_date) {
+            if (selectedPatient.age) {
                 dispatch({
                     type: 'setField',
-                    path: ['visit', 'date'],
-                    value: selectedAppointment.appointment_date,
+                    path: ['patient', 'age_value'],
+                    value: String(selectedPatient.age),
+                });
+            }
+            if (selectedPatient.gender) {
+                dispatch({
+                    type: 'setField',
+                    path: ['patient', 'gender'],
+                    value: selectedPatient.gender,
+                });
+            }
+            if (selectedPatient.weight) {
+                dispatch({
+                    type: 'setField',
+                    path: ['patient', 'weight'],
+                    value: selectedPatient.weight,
                 });
             }
         }
-    }, [selectedAppointment?.id, selectedAppointment?.user?.name, selectedAppointment?.appointment_date]);
-
-    const appointmentDateLabel = useMemo(
-        () => formatDisplayDate(selectedAppointment?.appointment_date),
-        [selectedAppointment?.appointment_date],
-    );
+    }, [selectedPatient]);
 
     const visitDateLabel = useMemo(
         () => formatDisplayDate(state.visit.date),
@@ -517,7 +485,7 @@ export default function CreatePrescription({ appointments = [], contactInfo, sel
                 },
                 credentials: 'include',
                 body: JSON.stringify({
-                    appointment_id: selectedAppointment?.id || null,
+                    appointment_id: appointmentId || null,
                     patient_name: state.patient.name,
                     patient_age: state.patient.age_value,
                     patient_age_unit: state.patient.age_unit,
@@ -549,7 +517,13 @@ export default function CreatePrescription({ appointments = [], contactInfo, sel
 
             setSuccess('Prescription saved successfully. Redirecting...');
             toastSuccess('Prescription saved successfully.');
-            setTimeout(() => router.visit('/doctor/prescriptions'), 400);
+            const data = await res.json().catch(() => ({}));
+            const prescriptionId = data?.prescription_id;
+            if (prescriptionId) {
+                setTimeout(() => router.visit(`/doctor/prescriptions/${prescriptionId}`), 400);
+            } else {
+                setTimeout(() => router.visit('/doctor/prescriptions'), 400);
+            }
         } catch {
             const message = 'Network error. Please try again.';
             setError(message);
@@ -756,26 +730,6 @@ export default function CreatePrescription({ appointments = [], contactInfo, sel
                             className="border border-[#00acb1]/30 bg-white p-6 shadow-md"
                         >
                             <div className="grid gap-4 md:grid-cols-2">
-                                <div className="md:col-span-2">
-                                    <label className={labelClass}>
-                                        Select Appointment
-                                    </label>
-                                    <select
-                                        className={inputClass}
-                                        value={appointmentId}
-                                        onChange={(e) =>
-                                            setAppointmentId(e.target.value)
-                                        }
-                                    >
-                                        <option value="">Choose an appointment</option>
-                                        {(appointments || []).map((apt) => (
-                                            <option key={apt.id} value={String(apt.id)}>
-                                                {apt.user?.name} - {formatDisplayDate(apt.appointment_date)} at {formatDisplayTime12h(apt.appointment_time)}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-
                                 <div>
                                     <label className={labelClass}>
                                         Patient Name *
@@ -867,9 +821,9 @@ export default function CreatePrescription({ appointments = [], contactInfo, sel
                                         }
                                     >
                                         <option value="">Select</option>
-                                        <option value="Male">Male</option>
-                                        <option value="Female">Female</option>
-                                        <option value="Other">Other</option>
+                                        <option value="male">Male</option>
+                                        <option value="female">Female</option>
+                                        <option value="other">Other</option>
                                     </select>
                                 </div>
 

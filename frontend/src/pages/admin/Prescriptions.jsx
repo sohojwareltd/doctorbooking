@@ -25,29 +25,34 @@ export default function Prescriptions({ prescriptions = [] }) {
     });
   }, [rows, searchTerm]);
 
-  const stats = useMemo(() => {
-    const totalCount = pagination?.total || rows.length;
-    
+  const displayCount = pagination?.total ?? rows.length;
+
+  const statsCards = useMemo(() => {
+    const totalCount = displayCount;
+    const thisMonth = rows.filter((p) => {
+      const date = new Date(p.created_at);
+      const now = new Date();
+      return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+    }).length;
+    const thisWeek = rows.filter((p) => {
+      const date = new Date(p.created_at);
+      const now = new Date();
+      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      return date >= weekAgo;
+    }).length;
+    const today = rows.filter((p) => {
+      const date = new Date(p.created_at);
+      const now = new Date();
+      return date.toDateString() === now.toDateString();
+    }).length;
+
     return [
       { label: 'Total Prescriptions', value: totalCount, color: 'bg-[#00acb1]/10 text-[#005963] border-[#00acb1]/30' },
-      { label: 'This Month', value: rows.filter((p) => {
-        const date = new Date(p.created_at);
-        const now = new Date();
-        return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
-      }).length, color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-      { label: 'This Week', value: rows.filter((p) => {
-        const date = new Date(p.created_at);
-        const now = new Date();
-        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        return date >= weekAgo;
-      }).length, color: 'bg-sky-50 text-sky-700 border-sky-200' },
-      { label: 'Today', value: rows.filter((p) => {
-        const date = new Date(p.created_at);
-        const now = new Date();
-        return date.toDateString() === now.toDateString();
-      }).length, color: 'bg-purple-50 text-purple-700 border-purple-200' },
+      { label: 'This Month', value: thisMonth, color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+      { label: 'This Week', value: thisWeek, color: 'bg-sky-50 text-sky-700 border-sky-200' },
+      { label: 'Today', value: today, color: 'bg-purple-50 text-purple-700 border-purple-200' },
     ];
-  }, [rows, pagination]);
+  }, [rows, displayCount]);
 
   const todayIso = new Date().toISOString().split('T')[0];
   const todayLabel = formatDisplayDateWithYearFromDateLike(todayIso) || todayIso;
@@ -58,20 +63,22 @@ export default function Prescriptions({ prescriptions = [] }) {
       <div className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div>
           <h1 className="text-3xl font-bold text-[#005963]">Prescriptions</h1>
-          <p className="mt-2 text-gray-600">View and manage all prescriptions in the system</p>
+          <p className="mt-2 text-gray-600">View and manage all prescriptions</p>
         </div>
         <div className="text-sm text-gray-600">
-          <span className="font-bold text-[#005963]">{filteredRows.length}</span> prescription{filteredRows.length !== 1 ? 's' : ''} found
+          <span className="font-bold text-[#005963]">{displayCount}</span> prescription{displayCount !== 1 ? 's' : ''} found
         </div>
       </div>
 
       <div className="space-y-6">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-          {stats.map((stat, idx) => (
+          {statsCards.map((stat, idx) => (
             <GlassCard key={idx} variant="solid" className={`border-2 p-4 ${stat.color}`}>
-              <div className="text-xs font-semibold uppercase tracking-wide opacity-70">{stat.label}</div>
-              <div className="mt-2 flex items-center justify-between">
-                <div className="text-2xl font-black">{stat.value}</div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-wide opacity-70">{stat.label}</div>
+                  <div className="mt-2 text-2xl font-black">{stat.value}</div>
+                </div>
                 <div className="rounded-lg bg-white/60 p-2 text-[#005963]">
                   <FileText className="h-4 w-4" />
                 </div>
@@ -127,9 +134,8 @@ export default function Prescriptions({ prescriptions = [] }) {
                   <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-700">#</th>
                   <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-700">Patient</th>
                   <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-700">Doctor</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-700">Diagnosis</th>
                   <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-700">Created</th>
-                  <th className="px-6 py-4 text-center text-xs font-bold uppercase tracking-wider text-gray-700">Actions</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-700">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 bg-white">
@@ -151,32 +157,19 @@ export default function Prescriptions({ prescriptions = [] }) {
                           className="rounded border-gray-300"
                         />
                       </td>
-                      <td className="px-6 py-4 text-sm font-semibold text-gray-700">{(pagination?.current_page - 1) * pagination?.per_page + idx + 1}</td>
+                      <td className="px-6 py-4 text-sm font-semibold text-gray-700">{prescription.id}</td>
                       <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <User className="h-4 w-4 text-gray-400" />
-                          <div className="font-semibold text-[#005963]">{prescription.user?.name || '—'}</div>
-                        </div>
-                        {prescription.user?.email && (
-                          <div className="text-xs text-gray-500 mt-0.5">{prescription.user.email}</div>
-                        )}
+                        <div className="font-semibold text-[#005963]">{prescription.user?.name || prescription.user_id}</div>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="font-semibold text-[#005963]">{prescription.doctor?.name || '—'}</div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm text-gray-700 max-w-xs truncate">
-                          {prescription.diagnosis || '—'}
-                        </div>
-                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-700">{prescription.doctor?.name || prescription.doctor_id}</td>
                       <td className="px-6 py-4 text-sm text-gray-700 whitespace-nowrap">
                         {formatDisplayDateWithYearFromDateLike(prescription.created_at) || prescription.created_at || '—'}
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="flex justify-center gap-2">
+                      <td className="px-6 py-4 text-sm">
+                        <div className="flex items-center gap-2">
                           <Link
                             href={`/admin/prescriptions/${prescription.id}`}
-                            className="inline-flex items-center gap-1.5 rounded-lg bg-[#005963] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#004148]"
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-[#00acb1]/40 bg-white px-3 py-1.5 text-xs font-semibold text-[#005963] hover:bg-[#00acb1]/10 transition"
                           >
                             <Eye className="h-3.5 w-3.5" />
                             View
@@ -188,7 +181,7 @@ export default function Prescriptions({ prescriptions = [] }) {
                 })}
                 {filteredRows.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="px-6 py-12 text-center">
+                    <td colSpan={6} className="px-6 py-12 text-center">
                       <div className="text-gray-400">
                         <FileText className="h-12 w-12 mx-auto mb-3 opacity-30" />
                         <p className="font-semibold">No prescriptions found</p>

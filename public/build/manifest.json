@@ -13,7 +13,11 @@
     ]
   },
   "frontend/src/css/app.css": {
+<<<<<<< HEAD
     "file": "assets/app-C1dMtJRc.css",
+=======
+    "file": "assets/app-B4O6WSMp.css",
+>>>>>>> ab5b6a5f4a0bef2cc247f7b469c19f474e3c47a8
     "src": "frontend/src/css/app.css",
     "isEntry": true,
     "name": "app",
@@ -22,7 +26,11 @@
     ]
   },
   "frontend/src/main.jsx": {
+<<<<<<< HEAD
     "file": "assets/main-CGn_bTs0.js",
+=======
+    "file": "assets/main-CC_OTgPp.js",
+>>>>>>> ab5b6a5f4a0bef2cc247f7b469c19f474e3c47a8
     "name": "main",
     "src": "frontend/src/main.jsx",
     "isEntry": true,

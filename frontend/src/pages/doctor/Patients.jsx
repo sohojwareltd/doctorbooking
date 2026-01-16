@@ -37,6 +37,11 @@ export default function Patients({ patients = [], stats = {} }) {
     });
   }, [rows, searchTerm, contactFilter]);
 
+  const filtersActive = contactFilter !== 'all' || searchTerm !== '';
+  const displayCount = filtersActive
+    ? filteredRows.length
+    : (pagination?.total ?? filteredRows.length);
+
   const statsCards = useMemo(() => {
     const totalCount = pagination?.total || rows.length;
     const hasPhone = stats?.hasPhone ?? 0;
@@ -78,7 +83,7 @@ export default function Patients({ patients = [], stats = {} }) {
           <p className="mt-2 text-gray-600">List of patients who booked appointments with you</p>
         </div>
         <div className="text-sm text-gray-600">
-          <span className="font-bold text-[#005963]">{filteredRows.length}</span> patient{filteredRows.length !== 1 ? 's' : ''} found
+          <span className="font-bold text-[#005963]">{displayCount}</span> patient{displayCount !== 1 ? 's' : ''} found
         </div>
       </div>
 
@@ -159,7 +164,7 @@ export default function Patients({ patients = [], stats = {} }) {
                       className="rounded border-gray-300"
                     />
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-700">#</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-700">ID</th>
                   <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-700">Patient</th>
                   <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-700">Email</th>
                   <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-700">Phone</th>
@@ -186,7 +191,7 @@ export default function Patients({ patients = [], stats = {} }) {
                           className="rounded border-gray-300"
                         />
                       </td>
-                      <td className="px-6 py-4 text-sm font-semibold text-gray-700">{(pagination?.current_page - 1) * pagination?.per_page + idx + 1}</td>
+                      <td className="px-6 py-4 text-sm font-semibold text-gray-700">{p.id}</td>
                       <td className="px-6 py-4">
                         <div className="font-semibold text-[#005963]">{p.name || p.id}</div>
                       </td>
@@ -212,29 +217,7 @@ export default function Patients({ patients = [], stats = {} }) {
                             </a>
                           ) : null}
                           
-                          {/* Prescription Button - Show View if exists, Create if not */}
-                          {p.has_prescription ? (
-                            <button
-                              onClick={() => handlePrescriptionClick(p)}
-                              className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 transition"
-                            >
-                              <FileText className="h-3.5 w-3.5" />
-                              View Prescription
-                              {p.prescriptions_count > 1 && (
-                                <span className="ml-0.5 rounded-full bg-emerald-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
-                                  {p.prescriptions_count}
-                                </span>
-                              )}
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => handlePrescriptionClick(p)}
-                              className="inline-flex items-center gap-1.5 rounded-lg border border-[#005963]/40 bg-[#005963]/5 px-3 py-1.5 text-xs font-semibold text-[#005963] hover:bg-[#005963]/10 transition"
-                            >
-                              <FilePlus className="h-3.5 w-3.5" />
-                              Add Prescription
-                            </button>
-                          )}
+                          {/* Prescription actions removed per request */}
                         </div>
                       </td>
                     </tr>

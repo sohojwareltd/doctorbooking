@@ -27,18 +27,18 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
 
   const filteredRows = useMemo(() => {
     return rows.filter((p) => {
-      const haystack = `${p.user?.name || ''} ${p.user_id || ''} ${p.diagnosis || ''} ${p.medications || ''}`.toLowerCase();
+      const haystack = `${p.user?.name || ''} ${p.user?.phone || ''} ${p.user?.gender || ''} ${p.user?.age || ''} ${p.user_id || ''}`.toLowerCase();
       const matchSearch = searchTerm === '' ? true : haystack.includes(searchTerm.toLowerCase());
 
       const createdDateOnly = (p.created_at || '').slice(0, 10);
       const dateOk = dateFilter === 'all' ? true : createdDateOnly === todayIso;
 
-      const hasNext = Boolean(p.next_visit_date);
-      const followUpOk = followUpFilter === 'all' ? true : followUpFilter === 'has-next' ? hasNext : !hasNext;
-
-      return matchSearch && dateOk && followUpOk;
+      return matchSearch && dateOk;
     });
-  }, [rows, searchTerm, dateFilter, followUpFilter, todayIso]);
+  }, [rows, searchTerm, dateFilter, todayIso]);
+
+  const filtersActive = dateFilter !== 'all' || searchTerm !== '';
+  const displayCount = filtersActive ? filteredRows.length : (pagination?.total ?? filteredRows.length);
 
   const statsCards = useMemo(() => {
     const totalCount = pagination?.total || rows.length;
@@ -63,7 +63,7 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
         </div>
         <div className="flex items-center gap-3">
           <div className="text-sm text-gray-600">
-            <span className="font-bold text-[#005963]">{filteredRows.length}</span> prescription{filteredRows.length !== 1 ? 's' : ''} found
+            <span className="font-bold text-[#005963]">{displayCount}</span> prescription{displayCount !== 1 ? 's' : ''} found
           </div>
           <Link
             href="/doctor/prescriptions/create"
@@ -133,13 +133,11 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
               <div>
                 <label className="mb-2 block text-xs font-semibold text-gray-700">Follow-up</label>
                 <select
-                  value={followUpFilter}
-                  onChange={(e) => setFollowUpFilter(e.target.value)}
-                  className="w-full rounded-xl border border-[#00acb1]/30 bg-white px-4 py-2.5 text-sm font-semibold text-[#005963] focus:border-[#005963] focus:outline-none focus:ring-2 focus:ring-[#005963]/10"
+                  value="all"
+                  disabled
+                  className="w-full rounded-xl border border-[#00acb1]/30 bg-gray-100 px-4 py-2.5 text-sm font-semibold text-gray-400"
                 >
-                  <option value="all">All</option>
-                  <option value="has-next">Has next visit</option>
-                  <option value="missing">Missing next visit</option>
+                  <option value="all">N/A</option>
                 </select>
               </div>
             </div>
@@ -165,10 +163,9 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-700">#</th>
                   <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-700">Patient</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-700">Created</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-700">Diagnosis</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-700">Medications</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-700">Next Visit</th>
+                  <th className="px-4 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-700">Age</th>
+                  <th className="px-4 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-700">Gender</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-700">Number</th>
                   <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-700">Action</th>
                 </tr>
               </thead>
@@ -191,14 +188,13 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
                           className="rounded border-gray-300"
                         />
                       </td>
-                      <td className="px-6 py-4 text-sm font-semibold text-gray-700">{(pagination?.current_page - 1) * pagination?.per_page + idx + 1}</td>
+                      <td className="px-6 py-4 text-sm font-semibold text-gray-700">{p.id}</td>
                       <td className="px-6 py-4">
                         <div className="font-semibold text-[#005963]">{p.user?.name || p.user_id}</div>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-700 whitespace-nowrap">{formatDisplayFromDateLike(p.created_at) || p.created_at || '—'}</td>
-                      <td className="px-6 py-4 text-sm text-gray-800">{p.diagnosis || '—'}</td>
-                      <td className="px-6 py-4 text-sm text-gray-800 whitespace-pre-wrap">{p.medications || '—'}</td>
-                      <td className="px-6 py-4 text-sm text-gray-700 whitespace-nowrap">{p.next_visit_date ? (formatDisplayDateWithYearFromDateLike(p.next_visit_date) || p.next_visit_date) : '—'}</td>
+                      <td className="px-4 py-4 text-sm text-gray-700">{p.user?.age ?? '—'}</td>
+                      <td className="px-4 py-4 text-sm text-gray-700 capitalize">{p.user?.gender || '—'}</td>
+                      <td className="px-6 py-4 text-sm text-gray-700 whitespace-nowrap">{p.user?.phone || '—'}</td>
                       <td className="px-6 py-4 text-sm">
                         <div className="flex items-center gap-2">
                           <Link
@@ -250,7 +246,7 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
                 })}
                 {filteredRows.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="px-6 py-12 text-center">
+                    <td colSpan={7} className="px-6 py-12 text-center">
                       <div className="text-gray-400">
                         <p className="font-semibold">No prescriptions found</p>
                       </div>

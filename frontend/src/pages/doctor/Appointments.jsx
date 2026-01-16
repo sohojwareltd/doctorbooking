@@ -114,6 +114,19 @@ export default function DoctorAppointments({ appointments = [], filters = {} }) 
     return searchOk;
   });
 
+  const filtersActive = statusFilter !== 'all' || dateFilter !== 'all' || searchTerm !== '';
+  const displayCount = filtersActive
+    ? filteredRows.length
+    : (pagination?.total ?? filteredRows.length);
+
+  const statusCounts = useMemo(() => {
+    const total = stats.total ?? (pagination?.total ?? rows.length);
+    const pending = stats.pending ?? rows.filter(a => a.status === 'pending').length;
+    const approved = stats.approved ?? rows.filter(a => a.status === 'approved').length;
+    const completed = stats.completed ?? rows.filter(a => a.status === 'completed').length;
+    return { total, pending, approved, completed };
+  }, [stats, pagination, rows]);
+
   const lastBookedToday = (() => {
     const todays = rows.filter((a) => a.appointment_date === today);
     if (todays.length === 0) return null;
@@ -127,6 +140,25 @@ export default function DoctorAppointments({ appointments = [], filters = {} }) 
     return sorted[0] || null;
   })();
 
+  const handleCreateAppointment = async (e) => {
+    e.preventDefault();
+    const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    const res = await fetch('/doctor/appointments/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': token, 'Accept': 'application/json' },
+      body: JSON.stringify(formData)
+    });
+    if (res.ok) {
+      toastSuccess('Appointment created successfully.');
+      setShowCreateModal(false);
+      setFormData({ name: '', phone: '', age: '', gender: '' });
+      window.location.reload();
+    } else {
+      const data = await res.json();
+      toastError(data.message || 'Failed to create appointment.');
+    }
+  };
+
   return (
     <DoctorLayout title="Appointments">
       <div className="mb-8">
@@ -135,8 +167,17 @@ export default function DoctorAppointments({ appointments = [], filters = {} }) 
             <h1 className="text-3xl font-bold text-[#005963]">Appointments</h1>
             <p className="mt-2 text-gray-600">Manage and track all your patient appointments</p>
           </div>
-          <div className="text-sm text-gray-600">
-            <span className="font-bold text-[#005963]">{filteredRows.length}</span> appointment{filteredRows.length !== 1 ? 's' : ''} found
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="flex items-center gap-2 rounded-xl bg-[#005963] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#00434a] transition shadow-sm"
+            >
+              <Plus className="h-4 w-4" />
+              Create Appointment
+            </button>
+            <div className="text-sm text-gray-600">
+              <span className="font-bold text-[#005963]">{displayCount}</span> appointment{displayCount !== 1 ? 's' : ''} found
+            </div>
           </div>
         </div>
       </div>
@@ -354,21 +395,13 @@ export default function DoctorAppointments({ appointments = [], filters = {} }) 
                         </div>
                       </td>
                       <td className="px-6 py-4 text-sm">
-                        {a.has_prescription ? (
-                          <div className="flex items-center gap-2">
-                            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">
-                              <CheckCircle2 className="h-3 w-3" />
-                              Prescription
-                            </span>
-                            {a.prescription_id ? (
-                              <Link
-                                href={`/doctor/prescriptions/${a.prescription_id}`}
-                                className="inline-flex items-center justify-center rounded-lg border border-[#00acb1]/40 bg-white px-3 py-1.5 text-xs font-semibold text-[#005963] hover:bg-[#00acb1]/10 transition"
-                              >
-                                View
-                              </Link>
-                            ) : null}
-                          </div>
+                        {a.has_prescription && a.prescription_id ? (
+                          <Link
+                            href={`/doctor/prescriptions/${a.prescription_id}`}
+                            className="inline-flex items-center justify-center rounded-lg border border-[#00acb1]/40 bg-white px-3 py-1.5 text-xs font-semibold text-[#005963] hover:bg-[#00acb1]/10 transition"
+                          >
+                            Prescription
+                          </Link>
                         ) : canCreatePrescription ? (
                           <Link
                             href={`/doctor/prescriptions/create?appointment_id=${a.id}`}
