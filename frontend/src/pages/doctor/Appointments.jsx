@@ -1,6 +1,6 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarCheck2, Search, CheckCircle2, XCircle, Clock, UserCheck, Stethoscope, TestTube, Calendar, Filter, X, Phone, Mail, MapPin } from 'lucide-react';
+import { CalendarCheck2, Search, CheckCircle2, XCircle, Clock, UserCheck, Stethoscope, TestTube, Calendar, Filter, X, Phone, Mail, MapPin, Plus } from 'lucide-react';
 import GlassCard from '../../components/GlassCard';
 import DoctorLayout from '../../layouts/DoctorLayout';
 import { formatDisplayDateWithYearFromDateLike, formatDisplayTime12h } from '../../utils/dateFormat';
@@ -118,14 +118,6 @@ export default function DoctorAppointments({ appointments = [], filters = {} }) 
   const displayCount = filtersActive
     ? filteredRows.length
     : (pagination?.total ?? filteredRows.length);
-
-  const statusCounts = useMemo(() => {
-    const total = stats.total ?? (pagination?.total ?? rows.length);
-    const pending = stats.pending ?? rows.filter(a => a.status === 'pending').length;
-    const approved = stats.approved ?? rows.filter(a => a.status === 'approved').length;
-    const completed = stats.completed ?? rows.filter(a => a.status === 'completed').length;
-    return { total, pending, approved, completed };
-  }, [stats, pagination, rows]);
 
   const lastBookedToday = (() => {
     const todays = rows.filter((a) => a.appointment_date === today);

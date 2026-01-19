@@ -319,18 +319,32 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
             $query->where('status', $statusFilter);
         }
         
-        // Apply search - support both registered users and guest appointments
+        // Apply search - support both registered users and (optionally) guest appointments
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->whereHas('user', function ($userQuery) use ($search) {
                     $userQuery->where('name', 'like', "%{$search}%");
-                })->orWhere('name', 'like', "%{$search}%"); // Guest appointments
+                });
+
+                // Only search guest name column if it exists (on databases where guest fields were migrated)
+                if (\Illuminate\Support\Facades\Schema::hasColumn('appointments', 'name')) {
+                    $q->orWhere('name', 'like', "%{$search}%");
+                }
             });
         }
         
-        // Order by name (user name or guest name) then by date and time
-        $appointments = $query->leftJoin('users', 'appointments.user_id', '=', 'users.id')
-            ->orderByRaw('COALESCE(users.name, appointments.name)')
+        // Order by patient name (when available) then by date and time
+        $appointmentsQuery = $query->leftJoin('users', 'appointments.user_id', '=', 'users.id');
+
+        if (\Illuminate\Support\Facades\Schema::hasColumn('appointments', 'name')) {
+            // Databases with guest name column: prefer user name, then guest name
+            $appointmentsQuery->orderByRaw('COALESCE(users.name, appointments.name)');
+        } else {
+            // Older databases: order by user name only
+            $appointmentsQuery->orderBy('users.name');
+        }
+
+        $appointments = $appointmentsQuery
             ->orderByDesc('appointment_date')
             ->orderBy('appointment_time')
             ->select('appointments.*')
