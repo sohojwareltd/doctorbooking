@@ -12,20 +12,28 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // First, update existing data to map old statuses to new ones
-        DB::table('appointments')->where('status', 'pending')->update(['status' => 'scheduled']);
-        DB::table('appointments')->where('status', 'approved')->update(['status' => 'arrived']);
-        DB::table('appointments')->where('status', 'completed')->update(['status' => 'prescribed']);
-
         // Check if using MySQL/MariaDB (enum support)
         $connection = DB::getDriverName();
         
         if ($connection === 'mysql' || $connection === 'mariadb') {
-            // For MySQL/MariaDB, we need to modify the enum column
+            // First, temporarily change the column to VARCHAR to allow data updates
+            DB::statement("ALTER TABLE appointments MODIFY COLUMN status VARCHAR(50)");
+            
+            // Now update existing data to map old statuses to new ones
+            DB::table('appointments')->where('status', 'pending')->update(['status' => 'scheduled']);
+            DB::table('appointments')->where('status', 'approved')->update(['status' => 'arrived']);
+            DB::table('appointments')->where('status', 'completed')->update(['status' => 'prescribed']);
+            
+            // Finally, set the new enum with the updated values
             DB::statement("ALTER TABLE appointments MODIFY COLUMN status ENUM('scheduled', 'arrived', 'in_consultation', 'awaiting_tests', 'prescribed', 'cancelled') DEFAULT 'scheduled'");
         } else {
-            // For SQLite and other databases, we just need to ensure the column accepts the new values
-            // SQLite doesn't enforce enum constraints, so we can just update the default
+            // For SQLite and other databases
+            // First update the data
+            DB::table('appointments')->where('status', 'pending')->update(['status' => 'scheduled']);
+            DB::table('appointments')->where('status', 'approved')->update(['status' => 'arrived']);
+            DB::table('appointments')->where('status', 'completed')->update(['status' => 'prescribed']);
+            
+            // Then update the column definition
             Schema::table('appointments', function (Blueprint $table) {
                 $table->string('status')->default('scheduled')->change();
             });

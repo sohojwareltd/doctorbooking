@@ -10,7 +10,6 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
-use Throwable;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(

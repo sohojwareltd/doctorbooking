@@ -203,13 +203,36 @@ export default function PrescriptionShow({ prescription, contactInfo }) {
         return;
       }
 
-      // Dynamically import html2pdf
+      // Load html2pdf library from CDN via script tag
+      const loadHtml2pdf = async () => {
+        return new Promise((resolve, reject) => {
+          if (window.html2pdf) {
+            // Already loaded
+            resolve(window.html2pdf);
+          } else {
+            // Load from CDN
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.12.0/html2pdf.bundle.min.js';
+            script.onload = () => {
+              if (window.html2pdf) {
+                resolve(window.html2pdf);
+              } else {
+                reject(new Error('html2pdf not available after loading'));
+              }
+            };
+            script.onerror = () => {
+              reject(new Error('Failed to load html2pdf from CDN'));
+            };
+            document.head.appendChild(script);
+          }
+        });
+      };
+      
       let html2pdf;
       try {
-        const html2pdfModule = await import('html2pdf.js');
-        html2pdf = html2pdfModule.default || html2pdfModule;
-      } catch (importError) {
-        console.error('Failed to import html2pdf:', importError);
+        html2pdf = await loadHtml2pdf();
+      } catch (error) {
+        console.error('Failed to load html2pdf:', error);
         toastError('PDF library not available. Using print dialog instead.');
         window.print();
         return;
