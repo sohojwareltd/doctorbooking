@@ -1,11 +1,6 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-<<<<<<< HEAD
-import { Calendar, ClipboardList, Heart, Phone, Mail, User, Stethoscope, Pill, FlaskConical, FileText, MapPin, Printer, ArrowLeft, MessageCircle, Download, Share2 } from 'lucide-react';
+import { Calendar, ClipboardList, Heart, Phone, Mail, User, Stethoscope, Pill, FlaskConical, FileText, MapPin, Printer, ArrowLeft, MessageCircle, Download, Share2, Save, X } from 'lucide-react';
 import { useMemo, useRef, useState, useEffect } from 'react';
-=======
-import { Calendar, ClipboardList, Heart, Phone, Mail, User, Stethoscope, Pill, FlaskConical, FileText, MapPin, Printer, ArrowLeft, MessageCircle, Save, X } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
->>>>>>> ab5b6a5f4a0bef2cc247f7b469c19f474e3c47a8
 import DoctorLayout from '../../layouts/DoctorLayout';
 import { formatDisplayDate, formatDisplayFromDateLike, formatTime12hFromDateTime } from '../../utils/dateFormat';
 import { toastSuccess, toastError } from '../../utils/toast';
@@ -146,35 +141,39 @@ export default function PrescriptionShow({ prescription, contactInfo }) {
   const clinicRegistration = prescriptionSettings?.registrationNo || authUser?.registration_no || '';
   const clinicWebsite = prescriptionSettings?.website || page?.props?.site?.website || '';
 
-<<<<<<< HEAD
-  const patientName = prescription?.user?.name || `User #${prescription?.user_id || ''}`;
-  const doctorName = prescription?.doctor?.name || authUser?.name || 'Doctor';
-  const doctorEmail = prescription?.doctor?.email || authUser?.email || '';
+  const patientName = data?.patient_name || data?.user?.name || prescription?.user?.name || `User #${data?.user_id || prescription?.user_id || ''}`;
+  const doctorName = data?.doctor?.name || prescription?.doctor?.name || authUser?.name || 'Doctor';
+  const doctorEmail = data?.doctor?.email || prescription?.doctor?.email || authUser?.email || '';
   const doctorPhone = authUser?.phone || '';
-  const createdAtDateLabel = useMemo(() => formatDisplayFromDateLike(prescription?.created_at), [prescription?.created_at]);
-  const createdAtTimeLabel = useMemo(() => formatTime12hFromDateTime(prescription?.created_at), [prescription?.created_at]);
-  const nextVisitLabel = useMemo(() => formatDisplayDate(prescription?.next_visit_date), [prescription?.next_visit_date]);
-  const visitDateLabel = useMemo(() => formatDisplayDate(prescription?.appointment?.appointment_date), [prescription?.appointment?.appointment_date]);
+  const createdAtDateLabel = useMemo(() => formatDisplayFromDateLike(data?.created_at || prescription?.created_at), [data?.created_at, prescription?.created_at]);
+  const createdAtTimeLabel = useMemo(() => formatTime12hFromDateTime(data?.created_at || prescription?.created_at), [data?.created_at, prescription?.created_at]);
+  const nextVisitLabel = useMemo(() => formatDisplayDate(editMode ? form?.next_visit_date : data?.next_visit_date || prescription?.next_visit_date), [editMode, form?.next_visit_date, data?.next_visit_date, prescription?.next_visit_date]);
+  const visitDateLabel = useMemo(() => formatDisplayDate(data?.visit_date || data?.appointment?.appointment_date || prescription?.appointment?.appointment_date), [data?.visit_date, data?.appointment?.appointment_date, prescription?.appointment?.appointment_date]);
 
-  // Patient info from user
-  const patientAge = useMemo(() => {
-    if (prescription?.user?.date_of_birth) {
-      const birthDate = new Date(prescription.user.date_of_birth);
-      const today = new Date();
-      let age = today.getFullYear() - birthDate.getFullYear();
-      const monthDiff = today.getMonth() - birthDate.getMonth();
-      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-        age--;
-      }
-      return age;
-    }
-    return null;
-  }, [prescription?.user?.date_of_birth]);
-  const patientAgeUnit = 'years';
-  const patientGender = prescription?.user?.gender;
-  const patientWeight = prescription?.user?.weight;
-  const patientContact = prescription?.user?.phone;
-  const visitType = prescription?.visit_type;
+  // Patient info from prescription or user table - support both edit mode and view mode
+  const patientAge = editMode 
+    ? form?.patient_age 
+    : (data?.patient_age !== undefined && data?.patient_age !== null 
+        ? data.patient_age 
+        : (data?.user?.age !== undefined && data?.user?.age !== null 
+            ? data.user.age 
+            : (prescription?.user?.date_of_birth 
+                ? (() => {
+                    const birthDate = new Date(prescription.user.date_of_birth);
+                    const today = new Date();
+                    let age = today.getFullYear() - birthDate.getFullYear();
+                    const monthDiff = today.getMonth() - birthDate.getMonth();
+                    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+                      age--;
+                    }
+                    return age;
+                  })()
+                : null)));
+  const patientAgeUnit = editMode ? form?.patient_age_unit || 'years' : data?.patient_age_unit || 'years';
+  const patientGender = editMode ? form?.patient_gender : data?.patient_gender || data?.user?.gender || prescription?.user?.gender;
+  const patientWeight = editMode ? form?.patient_weight : data?.patient_weight || data?.user?.weight || prescription?.user?.weight;
+  const patientContact = editMode ? form?.patient_contact : data?.patient_contact || data?.user?.phone || prescription?.user?.phone;
+  const visitType = editMode ? form?.visit_type : data?.visit_type || prescription?.visit_type;
   const prescriptionRef = useRef(null);
   const [sharing, setSharing] = useState(false);
   const [downloadingPDF, setDownloadingPDF] = useState(false);
@@ -218,7 +217,7 @@ export default function PrescriptionShow({ prescription, contactInfo }) {
       
       const opt = {
         margin: [0.3, 0.3, 0.3, 0.3],
-        filename: `prescription-${prescription?.id || 'prescription'}-${patientName.replace(/\s+/g, '-')}.pdf`,
+        filename: `prescription-${data?.id || prescription?.id || 'prescription'}-${patientName.replace(/\s+/g, '-')}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { 
           scale: 2, 
@@ -254,11 +253,11 @@ export default function PrescriptionShow({ prescription, contactInfo }) {
       `Please find the prescription details below:\n\n` +
       `Patient: ${patientName}\n` +
       `Date: ${visitDateLabel || createdAtDateLabel}\n` +
-      `Prescription ID: #${prescription?.id}\n\n` +
+      `Prescription ID: #${data?.id || prescription?.id}\n\n` +
       `View full prescription: ${window.location.href}\n\n` +
       `Thank you for choosing our clinic.`
     );
-    const email = prescription?.user?.email || '';
+    const email = data?.user?.email || prescription?.user?.email || '';
     if (email) {
       window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
     } else {
@@ -270,11 +269,11 @@ export default function PrescriptionShow({ prescription, contactInfo }) {
     const message = encodeURIComponent(
       `*Prescription for ${patientName}*\n\n` +
       `Date: ${visitDateLabel || createdAtDateLabel}\n` +
-      `Prescription ID: #${prescription?.id}\n\n` +
+      `Prescription ID: #${data?.id || prescription?.id}\n\n` +
       `View full prescription:\n${window.location.href}\n\n` +
       `Thank you for choosing our clinic.`
     );
-    const phone = prescription?.user?.phone || '';
+    const phone = data?.user?.phone || prescription?.user?.phone || patientContact || '';
     const whatsappUrl = phone 
       ? `https://wa.me/${phone.replace(/[^0-9]/g, '')}?text=${message}`
       : `https://wa.me/?text=${message}`;
@@ -286,7 +285,7 @@ export default function PrescriptionShow({ prescription, contactInfo }) {
       if (navigator.share) {
         await navigator.share({
           title: `Prescription for ${patientName}`,
-          text: `Prescription ID: #${prescription?.id}`,
+          text: `Prescription ID: #${data?.id || prescription?.id}`,
           url: window.location.href,
         });
         toastSuccess('Prescription shared successfully');
@@ -307,35 +306,16 @@ export default function PrescriptionShow({ prescription, contactInfo }) {
       }
     }
   };
-=======
-  const patientName = data?.patient_name || data?.user?.name || `User #${data?.user_id || ''}`;
-  const doctorName = data?.doctor?.name || prescription?.doctor?.name || authUser?.name || 'Doctor';
-  const doctorEmail = data?.doctor?.email || prescription?.doctor?.email || authUser?.email || '';
-  const doctorPhone = authUser?.phone || '';
-  const createdAtDateLabel = useMemo(() => formatDisplayFromDateLike(data?.created_at), [data?.created_at]);
-  const createdAtTimeLabel = useMemo(() => formatTime12hFromDateTime(data?.created_at), [data?.created_at]);
-  const nextVisitLabel = useMemo(() => formatDisplayDate(editMode ? form?.next_visit_date : data?.next_visit_date), [editMode, form?.next_visit_date, data?.next_visit_date]);
-  const visitDateLabel = useMemo(() => formatDisplayDate(data?.visit_date || data?.appointment?.appointment_date), [data?.visit_date, data?.appointment?.appointment_date]);
-
-  // Patient info from prescription or user table
-  const patientAge = editMode ? form?.patient_age : data?.patient_age || data?.user?.age;
-  const patientAgeUnit = editMode ? form?.patient_age_unit || 'years' : data?.patient_age_unit || 'years';
-  const patientGender = editMode ? form?.patient_gender : data?.patient_gender || data?.user?.gender;
-  const patientWeight = editMode ? form?.patient_weight : data?.patient_weight;
-  const patientContact = editMode ? form?.patient_contact : data?.patient_contact || data?.user?.phone;
-  const visitType = editMode ? form?.visit_type : data?.visit_type;
->>>>>>> ab5b6a5f4a0bef2cc247f7b469c19f474e3c47a8
 
   return (
     <DoctorLayout title="Prescription Details">
       {/* Action Buttons - Above prescription */}
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3 print:hidden">
-<<<<<<< HEAD
-        <Link href="/doctor/prescriptions" className="flex items-center gap-2 rounded-xl border-2 border-[#005963]/30 bg-white px-5 py-2.5 text-sm font-semibold text-[#005963] shadow-sm transition hover:bg-[#005963]/5">
-          <ArrowLeft className="h-4 w-4" />
-          Back to List
-        </Link>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Link href="/doctor/prescriptions" className="flex items-center gap-2 rounded-xl border-2 border-[#005963]/30 bg-white px-5 py-2.5 text-sm font-semibold text-[#005963] shadow-sm transition hover:bg-[#005963]/5">
+            <ArrowLeft className="h-4 w-4" />
+            Back to List
+          </Link>
           {/* Share Dropdown */}
           <div className="relative">
             <button
@@ -408,25 +388,12 @@ export default function PrescriptionShow({ prescription, contactInfo }) {
           <button
             type="button"
             onClick={handlePrint}
-            className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#005963] to-[#00acb1] px-6 py-2.5 text-sm font-bold text-white shadow-lg transition hover:shadow-xl"
-=======
-        <div className="flex flex-wrap items-center gap-2">
-          <Link href="/doctor/prescriptions" className="flex items-center gap-2 rounded-xl border-2 border-[#005963]/30 bg-white px-5 py-2.5 text-sm font-semibold text-[#005963] shadow-sm transition hover:bg-[#005963]/5">
-            <ArrowLeft className="h-4 w-4" />
-            Back to List
-          </Link>
-          <button
-            type="button"
-            onClick={() => window.print()}
             className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#005963] to-[#00acb1] px-5 py-2.5 text-sm font-bold text-white shadow-lg transition hover:shadow-xl"
->>>>>>> ab5b6a5f4a0bef2cc247f7b469c19f474e3c47a8
           >
             <Printer className="h-4 w-4" />
             Print
           </button>
         </div>
-<<<<<<< HEAD
-=======
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -447,7 +414,6 @@ export default function PrescriptionShow({ prescription, contactInfo }) {
             {saving ? 'Saving...' : 'Save Changes'}
           </button>
         </div>
->>>>>>> ab5b6a5f4a0bef2cc247f7b469c19f474e3c47a8
       </div>
 
       {/* Physical Prescription Paper */}

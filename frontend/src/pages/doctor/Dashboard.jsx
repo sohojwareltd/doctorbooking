@@ -1,9 +1,8 @@
 import { Link, usePage } from '@inertiajs/react';
 import { useState } from 'react';
-import { CalendarDays, ClipboardList, LayoutDashboard, Settings, Users, TrendingUp, Clock, CheckCircle, XCircle, FileText, AlertCircle, UserCheck, Stethoscope, TestTube, ChevronRight, X, Phone, Mail, MapPin } from 'lucide-react';
+import { CalendarDays, ClipboardList, LayoutDashboard, Settings, Users, TrendingUp, Clock, CheckCircle, XCircle, FileText, AlertCircle, UserCheck, Stethoscope, TestTube, ChevronRight, X, Phone, Mail, MapPin, Plus } from 'lucide-react';
 import DoctorLayout from '../../layouts/DoctorLayout';
 import GlassCard from '../../components/GlassCard';
-import { useEffect, useState } from 'react';
 
 export default function DoctorDashboard({ stats = {}, scheduledToday = [], recentAppointments = [], upcomingAppointment = null }) {
   const { auth } = usePage().props;
@@ -148,9 +147,6 @@ export default function DoctorDashboard({ stats = {}, scheduledToday = [], recen
             </div>
           </GlassCard>
         </div>
-              </div>
-            </GlassCard>
-          </div>
 
         {/* Main Content Grid */}
         <div className="grid gap-6 lg:grid-cols-3">

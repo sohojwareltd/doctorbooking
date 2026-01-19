@@ -5,6 +5,7 @@ import {
     CheckCircle2,
     ClipboardList,
     FilePlus2,
+    FileText,
     FlaskConical,
     Heart,
     Mail,
@@ -284,8 +285,6 @@ export default function CreatePrescription({ appointmentId = null, contactInfo, 
     const [success, setSuccess] = useState('');
     const [error, setError] = useState('');
     const [submitting, setSubmitting] = useState(false);
-
-    const [appointmentId, setAppointmentId] = useState('');
     
     // Medicine form state (fix for getElementById issue)
     const [newMedicine, setNewMedicine] = useState({
@@ -347,9 +346,9 @@ export default function CreatePrescription({ appointmentId = null, contactInfo, 
     );
 
     const inputClass =
-        'w-full rounded-2xl border border-[#00acb1]/30 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-4 focus:ring-[#00acb1]/20';
+        'w-full rounded-md bg-gray-50/50 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#005963]/20';
     const medicineInputClass =
-        'w-full rounded-2xl border border-[#00acb1]/30 bg-white px-3 py-2 text-xs text-gray-900 focus:outline-none focus:ring-4 focus:ring-[#00acb1]/20';
+        'w-full rounded-md bg-gray-50/50 px-2 py-1 text-xs text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#005963]/20';
     const labelClass = 'mb-2 block text-xs font-semibold text-[#005963]';
     const helperClass = 'mt-1 text-xs text-gray-600';
     const errorClass = 'mt-1 text-xs font-semibold text-rose-700';
@@ -588,11 +587,11 @@ export default function CreatePrescription({ appointmentId = null, contactInfo, 
 
             {/* Prescription Header Card - Like real prescription pad (Matching PrescriptionShow) */}
 
-            <div className="mx-auto max-w-4xl">
+            <div className="mx-auto max-w-7xl">
                 <div className="overflow-hidden rounded-lg border border-gray-300 bg-white shadow-2xl">
                     
                     {/* Prescription Header - Like real prescription pad with gradient */}
-                    <div className="border-b-4 border-[#005963] bg-gradient-to-r from-[#005963] via-[#007a7a] to-[#00acb1] p-6 text-white">
+                    <div className="border-b-4 border-[#005963] bg-gradient-to-r from-[#005963] via-[#007a7a] to-[#00acb1] p-8 text-white">
                         <div className="flex items-start justify-between">
                             {/* Doctor Info - Left */}
                             <div className="flex-1">
@@ -662,7 +661,7 @@ export default function CreatePrescription({ appointmentId = null, contactInfo, 
                     </div>
 
                     {/* Patient Info Bar - Dynamic */}
-                    <div className="border-b-2 border-dashed border-gray-300 bg-gray-50 px-6 py-4">
+                    <div className="border-b-2 border-dashed border-gray-300 bg-gray-50 px-8 py-5">
                         <div className="flex flex-wrap items-center justify-between gap-4">
                             <div className="flex flex-wrap items-center gap-4">
                                 <div className="flex items-center gap-2">
@@ -708,936 +707,491 @@ export default function CreatePrescription({ appointmentId = null, contactInfo, 
                         </div>
                     </div>
 
-                    {/* Form Main Content */}
-                    <div className="min-h-[500px] bg-white p-6">
-                        <form onSubmit={onSubmit} className="space-y-10">
-                    {/* Patient Information Section */}
-                    <div className="group">
-                        <div className="mb-6 flex items-center gap-2">
-                            <User className="h-6 w-6 text-[#005963]" />
-                            <div>
-                                <div className={sectionTitleClass}>
-                                    Patient Information
+                    {/* Form Main Content - Real Prescription Pad Layout */}
+                    <div className="min-h-[500px] bg-white p-8 pb-12">
+                        <form onSubmit={onSubmit}>
+                            {/* Patient Information Section - Editable Fields Above Prescription */}
+                            <div className="mb-6 rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 p-4">
+                                <div className="mb-4 flex items-center gap-2 border-b border-gray-300 pb-2">
+                                    <User className="h-5 w-5 text-[#005963]" />
+                                    <span className="text-sm font-bold text-[#005963]">Patient Information</span>
                                 </div>
-                                <div className={sectionSubClass}>
-                                    Enter patient details and visit information
-                                </div>
-                            </div>
-                        </div>
-
-                        <GlassCard
-                            variant="solid"
-                            className="border border-[#00acb1]/30 bg-white p-6 shadow-md"
-                        >
-                            <div className="grid gap-4 md:grid-cols-2">
-                                <div>
-                                    <label className={labelClass}>
-                                        Patient Name *
-                                    </label>
-                                    <input
-                                        className={inputClass}
-                                        value={state.patient.name}
-                                        onChange={(e) =>
-                                            dispatch({
-                                                type: 'setField',
-                                                path: ['patient', 'name'],
-                                                value: e.target.value,
-                                            })
-                                        }
-                                        placeholder="Patient full name"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className={labelClass}>
-                                        Contact Number
-                                    </label>
-                                    <input
-                                        className={inputClass}
-                                        value={state.patient.contact}
-                                        onChange={(e) =>
-                                            dispatch({
-                                                type: 'setField',
-                                                path: ['patient', 'contact'],
-                                                value: e.target.value,
-                                            })
-                                        }
-                                        placeholder="e.g. 01XXXXXXXXX"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className={labelClass}>Age</label>
-                                    <div className="flex gap-2">
+                                <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6 xl:grid-cols-6">
+                                    <div>
+                                        <label className="mb-1 block text-xs font-semibold text-gray-700">Patient Name *</label>
                                         <input
-                                            inputMode="numeric"
-                                            className={`${inputClass} flex-1`}
-                                            value={state.patient.age_value}
-                                            onChange={(e) =>
-                                                dispatch({
-                                                    type: 'setField',
-                                                    path: [
-                                                        'patient',
-                                                        'age_value',
-                                                    ],
-                                                    value: e.target.value,
-                                                })
-                                            }
-                                            placeholder="e.g. 25"
+                                            className="w-full rounded-md bg-gray-50/50 px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#005963]/20"
+                                            value={state.patient.name}
+                                            onChange={(e) => dispatch({ type: 'setField', path: ['patient', 'name'], value: e.target.value })}
+                                            placeholder="Full name"
                                         />
+                                    </div>
+                                    <div>
+                                        <label className="mb-1 block text-xs font-semibold text-gray-700">Contact</label>
+                                        <input
+                                            className="w-full rounded-md bg-gray-50/50 px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#005963]/20"
+                                            value={state.patient.contact}
+                                            onChange={(e) => dispatch({ type: 'setField', path: ['patient', 'contact'], value: e.target.value })}
+                                            placeholder="Phone"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="mb-1 block text-xs font-semibold text-gray-700">Age</label>
+                                        <div className="flex gap-1">
+                                            <input
+                                                inputMode="numeric"
+                                                className="w-full rounded-md bg-gray-50/50 px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#005963]/20"
+                                                value={state.patient.age_value}
+                                                onChange={(e) => dispatch({ type: 'setField', path: ['patient', 'age_value'], value: e.target.value })}
+                                                placeholder="25"
+                                            />
+                                            <select
+                                                className="w-20 rounded-md bg-gray-50/50 px-1 py-1.5 text-xs text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#005963]/20"
+                                                value={state.patient.age_unit}
+                                                onChange={(e) => dispatch({ type: 'setField', path: ['patient', 'age_unit'], value: e.target.value })}
+                                            >
+                                                <option value="years">Y</option>
+                                                <option value="months">M</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="mb-1 block text-xs font-semibold text-gray-700">Gender</label>
                                         <select
-                                            className="w-32 rounded-2xl border border-[#00acb1]/30 bg-white px-3 py-2 text-sm"
-                                            value={state.patient.age_unit}
-                                            onChange={(e) =>
-                                                dispatch({
-                                                    type: 'setField',
-                                                    path: [
-                                                        'patient',
-                                                        'age_unit',
-                                                    ],
-                                                    value: e.target.value,
-                                                })
-                                            }
+                                            className="w-full rounded-md bg-gray-50/50 px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#005963]/20"
+                                            value={state.patient.gender}
+                                            onChange={(e) => dispatch({ type: 'setField', path: ['patient', 'gender'], value: e.target.value })}
                                         >
-                                            <option value="years">Years</option>
-                                            <option value="months">
-                                                Months
-                                            </option>
+                                            <option value="">Select</option>
+                                            <option value="male">Male</option>
+                                            <option value="female">Female</option>
+                                            <option value="other">Other</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="mb-1 block text-xs font-semibold text-gray-700">Weight (kg)</label>
+                                        <input
+                                            inputMode="decimal"
+                                            className="w-full rounded-md bg-gray-50/50 px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#005963]/20"
+                                            value={state.patient.weight}
+                                            onChange={(e) => dispatch({ type: 'setField', path: ['patient', 'weight'], value: e.target.value })}
+                                            placeholder="70"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="mb-1 block text-xs font-semibold text-gray-700">Visit Type</label>
+                                        <select
+                                            className="w-full rounded-md bg-gray-50/50 px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#005963]/20"
+                                            value={state.visit.type}
+                                            onChange={(e) => dispatch({ type: 'setField', path: ['visit', 'type'], value: e.target.value })}
+                                        >
+                                            <option value="New">New</option>
+                                            <option value="Follow-up">Follow-up</option>
                                         </select>
                                     </div>
                                 </div>
-
-                                <div>
-                                    <label className={labelClass}>Gender</label>
-                                    <select
-                                        className={inputClass}
-                                        value={state.patient.gender}
-                                        onChange={(e) =>
-                                            dispatch({
-                                                type: 'setField',
-                                                path: ['patient', 'gender'],
-                                                value: e.target.value,
-                                            })
-                                        }
-                                    >
-                                        <option value="">Select</option>
-                                        <option value="male">Male</option>
-                                        <option value="female">Female</option>
-                                        <option value="other">Other</option>
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label className={labelClass}>
-                                        Weight (kg)
-                                    </label>
-                                    <input
-                                        inputMode="decimal"
-                                        className={inputClass}
-                                        value={state.patient.weight}
-                                        onChange={(e) =>
-                                            dispatch({
-                                                type: 'setField',
-                                                path: ['patient', 'weight'],
-                                                value: e.target.value,
-                                            })
-                                        }
-                                        placeholder="Optional"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className={labelClass}>
-                                        Visit Type
-                                    </label>
-                                    <select
-                                        className={inputClass}
-                                        value={state.visit.type}
-                                        onChange={(e) =>
-                                            dispatch({
-                                                type: 'setField',
-                                                path: ['visit', 'type'],
-                                                value: e.target.value,
-                                            })
-                                        }
-                                    >
-                                        <option value="New">New</option>
-                                        <option value="Follow-up">
-                                            Follow-up
-                                        </option>
-                                    </select>
-                                </div>
                             </div>
-                        </GlassCard>
-                    </div>
 
-                    {/* Complaints & Examination */}
-                    <div className="group">
-                        <div className="mb-6 flex items-center gap-2">
-                            <Stethoscope className="h-6 w-6 text-[#005963]" />
-                            <div>
-                                <div className={sectionTitleClass}>
-                                    Complaints & Examination
-                                </div>
-                                <div className={sectionSubClass}>
-                                    Document symptoms and vital signs
-                                </div>
-                            </div>
-                        </div>
-                        <div className="grid gap-6 lg:grid-cols-2">
-                            <GlassCard
-                                variant="solid"
-                                className="border border-[#00acb1]/30 bg-white p-6 shadow-md"
-                            >
-                                <div className="mb-4">
-                                    <div className="text-sm font-bold text-[#005963]">
-                                        Chief Complaints
-                                    </div>
-                                </div>
-                                <div className="space-y-3">
-                                    {(state.complaints || []).map((c, idx) => (
-                                        <div
-                                            key={idx}
-                                            className="space-y-2 rounded-xl border border-[#00acb1]/20 bg-white p-3"
-                                        >
-                                            <input
-                                                className={inputClass}
-                                                value={c.description}
-                                                onChange={(e) =>
-                                                    dispatch({
-                                                        type: 'setArrayItem',
-                                                        path: ['complaints'],
-                                                        index: idx,
-                                                        patch: {
-                                                            description:
-                                                                e.target.value,
-                                                        },
-                                                    })
-                                                }
-                                                placeholder="Complaint description"
-                                            />
-                                            <input
-                                                className={inputClass}
-                                                value={c.duration}
-                                                onChange={(e) =>
-                                                    dispatch({
-                                                        type: 'setArrayItem',
-                                                        path: ['complaints'],
-                                                        index: idx,
-                                                        patch: {
-                                                            duration:
-                                                                e.target.value,
-                                                        },
-                                                    })
-                                                }
-                                                placeholder="Duration (e.g., 3 days)"
-                                            />
-                                            {(state.complaints || []).length >
-                                                1 && (
-                                                <button
-                                                    type="button"
-                                                    className="w-full rounded-lg border border-rose-300 bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-800"
-                                                    onClick={() =>
-                                                        dispatch({
-                                                            type: 'removeArrayItem',
-                                                            section:
-                                                                'complaints',
-                                                            index: idx,
-                                                            min: 1,
-                                                        })
-                                                    }
-                                                >
-                                                    Remove
-                                                </button>
-                                            )}
-                                        </div>
-                                    ))}
-                                    <button
-                                        type="button"
-                                        className="group/btn flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[#005963]/50 bg-[#005963]/5 px-4 py-3 text-sm font-semibold text-[#005963] transition hover:bg-[#005963]/10"
-                                        onClick={() =>
-                                            dispatch({
-                                                type: 'addArrayItem',
-                                                section: 'complaints',
-                                                item: emptyComplaint(),
-                                            })
-                                        }
-                                    >
-                                        <Plus className="h-4 w-4 transition group-hover/btn:scale-110" />
-                                        Add Complaint
-                                    </button>
-                                </div>
-                            </GlassCard>
-
-                            <GlassCard
-                                variant="solid"
-                                className="border border-[#00acb1]/30 bg-white p-6 shadow-md"
-                            >
-                                <div className="mb-4">
-                                    <div className="text-sm font-bold text-[#005963]">
-                                        Clinical Examination
-                                    </div>
-                                </div>
-                                <div className="grid gap-3">
+                            {/* Prescription Pad Layout - Two Column Grid */}
+                            <div className="grid grid-cols-12 gap-8">
+                                
+                                {/* Left Column - Narrow (Tests Top, Diagnosis Bottom) */}
+                                <div className="col-span-3 space-y-6 border-r-2 border-dashed border-gray-200 pr-8">
+                                    
+                                    {/* Tests Section - Top Right */}
                                     <div>
-                                        <label className={labelClass}>
-                                            BP (mmHg)
-                                        </label>
-                                        <input
-                                            className={inputClass}
-                                            value={state.exam.bp}
-                                            onChange={(e) =>
-                                                dispatch({
-                                                    type: 'setField',
-                                                    path: ['exam', 'bp'],
-                                                    value: e.target.value,
-                                                })
-                                            }
-                                            placeholder="e.g. 120/80"
-                                        />
-                                    </div>
-                                    <div className="grid grid-cols-3 gap-2">
-                                        <div>
-                                            <label className="text-xs font-semibold text-gray-700">
-                                                Pulse (bpm)
-                                            </label>
-                                            <input
-                                                className={inputClass}
-                                                value={state.exam.pulse}
-                                                onChange={(e) =>
-                                                    dispatch({
-                                                        type: 'setField',
-                                                        path: ['exam', 'pulse'],
-                                                        value: e.target.value,
-                                                    })
-                                                }
-                                                placeholder="72"
-                                            />
+                                        <div className="mb-3 flex items-center gap-2 border-b border-[#005963]/20 pb-2">
+                                            <FlaskConical className="h-4 w-4 text-[#005963]" />
+                                            <span className="text-xs font-black uppercase tracking-wider text-[#005963]">Investigations</span>
                                         </div>
-                                        <div>
-                                            <label className="text-xs font-semibold text-gray-700">
-                                                Temp (┬░C)
-                                            </label>
-                                            <input
-                                                className={inputClass}
-                                                value={state.exam.temperature}
-                                                onChange={(e) =>
-                                                    dispatch({
-                                                        type: 'setField',
-                                                        path: [
-                                                            'exam',
-                                                            'temperature',
-                                                        ],
-                                                        value: e.target.value,
-                                                    })
-                                                }
-                                                placeholder="98.6"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="text-xs font-semibold text-gray-700">
-                                                SpO₂ (%)
-                                            </label>
-                                            <input
-                                                className={inputClass}
-                                                value={state.exam.spo2}
-                                                onChange={(e) =>
-                                                    dispatch({
-                                                        type: 'setField',
-                                                        path: ['exam', 'spo2'],
-                                                        value: e.target.value,
-                                                    })
-                                                }
-                                                placeholder="98"
-                                            />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className={labelClass}>
-                                            Clinical Notes
-                                        </label>
-                                        <textarea
-                                            className={inputClass}
-                                            rows={2}
-                                            value={state.exam.notes}
-                                            onChange={(e) =>
-                                                dispatch({
-                                                    type: 'setField',
-                                                    path: ['exam', 'notes'],
-                                                    value: e.target.value,
-                                                })
-                                            }
-                                            placeholder="Additional notes"
-                                        />
-                                    </div>
-                                </div>
-                            </GlassCard>
-                        </div>
-                    </div>
-
-                    {/* Diagnosis & Treatment */}
-                    <div className="group">
-                        <div className="mb-6 flex items-center gap-2">
-                            <Pill className="h-6 w-6 text-[#005963]" />
-                            <div>
-                                <div className={sectionTitleClass}>
-                                    Diagnosis & Treatment
-                                </div>
-                                <div className={sectionSubClass}>
-                                    Diagnosis and medication prescription
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Diagnosis Section */}
-                        <GlassCard
-                            variant="solid"
-                            className="mb-6 border border-[#00acb1]/30 bg-white p-6 shadow-md"
-                        >
-                            <div className="mb-5 flex items-center gap-2 border-b-2 border-[#005963]/10 pb-3">
-                                <Stethoscope className="h-5 w-5 text-[#005963]" />
-                                <div className="text-base font-bold text-[#005963]">
-                                    Diagnosis
-                                </div>
-                            </div>
-                            <div className="grid gap-4 md:grid-cols-2">
-                                <div>
-                                    <label className={labelClass}>
-                                        Provisional Diagnosis
-                                    </label>
-                                    <textarea
-                                        className={inputClass}
-                                        rows={3}
-                                        value={state.diagnosis.provisional}
-                                        onChange={(e) =>
-                                            dispatch({
-                                                type: 'setField',
-                                                path: [
-                                                    'diagnosis',
-                                                    'provisional',
-                                                ],
-                                                value: e.target.value,
-                                            })
-                                        }
-                                        placeholder="Initial diagnosis"
-                                    />
-                                </div>
-                                <div>
-                                    <label className={labelClass}>
-                                        Final Diagnosis
-                                    </label>
-                                    <textarea
-                                        className={inputClass}
-                                        rows={3}
-                                        value={state.diagnosis.final}
-                                        onChange={(e) =>
-                                            dispatch({
-                                                type: 'setField',
-                                                path: ['diagnosis', 'final'],
-                                                value: e.target.value,
-                                            })
-                                        }
-                                        placeholder="Confirmed diagnosis (optional)"
-                                    />
-                                </div>
-                            </div>
-                        </GlassCard>
-
-                        {/* Medications Section - Form + Table View */}
-                        <GlassCard
-                            variant="solid"
-                            className="border-2 border-[#005963]/30 bg-white p-6 shadow-lg"
-                        >
-                            <div className="mb-6 flex items-center gap-3 border-b-2 border-[#005963]/20 pb-4">
-                                <div className="rounded-xl bg-gradient-to-br from-[#005963] to-[#00acb1] p-2">
-                                    <Pill className="h-6 w-6 text-white" />
-                                </div>
-                                <div>
-                                    <div className="text-lg font-black text-[#005963]">
-                                        Medications Management
-                                    </div>
-                                    <div className="text-xs text-gray-600">
-                                        Add and manage prescribed medications
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Add Medicine Form */}
-                            <div className="mb-6 rounded-2xl border-2 border-[#005963]/20 bg-gray-50 p-5">
-                                <div className="mb-4 flex items-center justify-between">
-                                    <div className="text-sm font-bold text-[#005963]">
-                                        Add New Medicine
-                                    </div>
-                                    <span className="text-xs text-gray-600">
-                                        Fill the form and click Add Medicine
-                                    </span>
-                                </div>
-
-                                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-                                    <div className="lg:col-span-2">
-                                        <label className="mb-2 block text-xs font-bold text-[#005963]">
-                                            Medicine Name *
-                                        </label>
-                                        <input
-                                            list="medicine-suggestions"
-                                            className="w-full rounded-xl border-2 border-[#00acb1]/40 bg-white px-3 py-2.5 text-sm text-gray-900 transition focus:border-[#005963] focus:outline-none focus:ring-2 focus:ring-[#00acb1]/20"
-                                            value={newMedicine.name}
-                                            onChange={(e) => setNewMedicine({ ...newMedicine, name: e.target.value })}
-                                            placeholder="e.g., Paracetamol"
-                                        />
-                                        <datalist id="medicine-suggestions">
-                                            {MEDICINE_SUGGESTIONS.map((s) => (
-                                                <option key={s} value={s} />
-                                            ))}
-                                        </datalist>
-                                    </div>
-
-                                    <div>
-                                        <label className="mb-2 block text-xs font-bold text-[#005963]">
-                                            Strength
-                                        </label>
-                                        <input
-                                            className="w-full rounded-xl border-2 border-[#00acb1]/40 bg-white px-3 py-2.5 text-sm text-gray-900 transition focus:border-[#005963] focus:outline-none focus:ring-2 focus:ring-[#00acb1]/20"
-                                            value={newMedicine.strength}
-                                            onChange={(e) => setNewMedicine({ ...newMedicine, strength: e.target.value })}
-                                            placeholder="500mg"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className="mb-2 block text-xs font-bold text-[#005963]">
-                                            Dosage
-                                        </label>
-                                        <input
-                                            className="w-full rounded-xl border-2 border-[#00acb1]/40 bg-white px-3 py-2.5 text-sm text-gray-900 transition focus:border-[#005963] focus:outline-none focus:ring-2 focus:ring-[#00acb1]/20"
-                                            value={newMedicine.dosage}
-                                            onChange={(e) => setNewMedicine({ ...newMedicine, dosage: e.target.value })}
-                                            placeholder="1+0+1"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className="mb-2 block text-xs font-bold text-[#005963]">
-                                            Duration
-                                        </label>
-                                        <input
-                                            className="w-full rounded-xl border-2 border-[#00acb1]/40 bg-white px-3 py-2.5 text-sm text-gray-900 transition focus:border-[#005963] focus:outline-none focus:ring-2 focus:ring-[#00acb1]/20"
-                                            value={newMedicine.duration}
-                                            onChange={(e) => setNewMedicine({ ...newMedicine, duration: e.target.value })}
-                                            placeholder="5 days"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="mt-4">
-                                    <label className="mb-2 block text-xs font-bold text-[#005963]">
-                                        When to Take
-                                    </label>
-                                    <div className="flex gap-2">
-                                        <button
-                                            type="button"
-                                            className={`flex-1 rounded-xl border-2 px-4 py-2.5 text-sm font-semibold shadow-md transition ${
-                                                newMedicine.instruction === 'Before meal'
-                                                    ? 'border-[#005963] bg-[#005963] text-white'
-                                                    : 'border-[#00acb1]/30 bg-white text-[#005963] hover:border-[#005963]/50'
-                                            }`}
-                                            onClick={() => setNewMedicine({ ...newMedicine, instruction: 'Before meal' })}
-                                        >
-                                            🍽️ Before Meal
-                                        </button>
-                                        <button
-                                            type="button"
-                                            className={`flex-1 rounded-xl border-2 px-4 py-2.5 text-sm font-semibold shadow-md transition ${
-                                                newMedicine.instruction === 'After meal'
-                                                    ? 'border-[#005963] bg-[#005963] text-white'
-                                                    : 'border-[#00acb1]/30 bg-white text-[#005963] hover:border-[#005963]/50'
-                                            }`}
-                                            onClick={() => setNewMedicine({ ...newMedicine, instruction: 'After meal' })}
-                                        >
-                                            🍴 After Meal
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div className="mt-5 flex justify-end">
-                                    <button
-                                        type="button"
-                                        className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-[#005963] to-[#00acb1] px-6 py-2.5 text-sm font-bold text-white shadow-md transition hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                                        onClick={() => {
-                                            if (newMedicine.name.trim()) {
-                                                dispatch({
-                                                    type: 'addArrayItem',
-                                                    section: 'medicines',
-                                                    item: {
-                                                        name: newMedicine.name.trim(),
-                                                        strength: newMedicine.strength.trim(),
-                                                        dosage: newMedicine.dosage.trim(),
-                                                        duration: newMedicine.duration.trim(),
-                                                        instruction: newMedicine.instruction,
-                                                    },
-                                                });
-                                                // Clear form
-                                                setNewMedicine({
-                                                    name: '',
-                                                    strength: '',
-                                                    dosage: '',
-                                                    duration: '',
-                                                    instruction: 'After meal',
-                                                });
-                                                toastSuccess('Medicine added successfully');
-                                            } else {
-                                                toastError('Please enter medicine name');
-                                            }
-                                        }}
-                                        disabled={!newMedicine.name.trim()}
-                                    >
-                                        <Plus className="h-4 w-4" />
-                                        Add Medicine
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Medicines Table View */}
-                            {(state.medicines || []).length === 0 ? (
-                                <div className="rounded-2xl border-2 border-dashed border-[#00acb1]/30 bg-white/80 p-8 text-center">
-                                    <Pill className="mx-auto mb-3 h-12 w-12 text-gray-300" />
-                                    <p className="font-semibold text-gray-600">
-                                        No medications added yet
-                                    </p>
-                                    <p className="mt-1 text-sm text-gray-500">
-                                        Fill the form above and click "Add
-                                        Medicine"
-                                    </p>
-                                </div>
-                            ) : (
-                                <div className="overflow-hidden rounded-2xl border-2 border-[#005963]/20 bg-white shadow-md">
-                                    <div className="bg-gradient-to-r from-[#005963] to-[#00acb1] px-4 py-3">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2 text-white">
-                                                <ClipboardList className="h-5 w-5" />
-                                                <span className="font-bold">
-                                                    Prescribed Medications
-                                                </span>
-                                            </div>
-                                            <span className="rounded-full bg-white/20 px-3 py-1 text-xs font-bold text-white">
-                                                {(state.medicines || []).length}{' '}
-                                                {(state.medicines || [])
-                                                    .length === 1
-                                                    ? 'Medicine'
-                                                    : 'Medicines'}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    <div className="overflow-x-auto">
-                                        <table className="w-full">
-                                            <thead>
-                                                <tr className="border-b-2 border-[#005963]/10 bg-[#005963]/5">
-                                                    <th className="px-4 py-3 text-left text-xs font-bold text-[#005963]">
-                                                        #
-                                                    </th>
-                                                    <th className="px-4 py-3 text-left text-xs font-bold text-[#005963]">
-                                                        Medicine Name
-                                                    </th>
-                                                    <th className="px-4 py-3 text-left text-xs font-bold text-[#005963]">
-                                                        Strength
-                                                    </th>
-                                                    <th className="px-4 py-3 text-left text-xs font-bold text-[#005963]">
-                                                        Dosage
-                                                    </th>
-                                                    <th className="px-4 py-3 text-left text-xs font-bold text-[#005963]">
-                                                        Duration
-                                                    </th>
-                                                    <th className="px-4 py-3 text-left text-xs font-bold text-[#005963]">
-                                                        When
-                                                    </th>
-                                                    <th className="px-4 py-3 text-center text-xs font-bold text-[#005963]">
-                                                        Action
-                                                    </th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {(state.medicines || []).map(
-                                                    (m, idx) => (
-                                                        <tr
-                                                            key={idx}
-                                                            className="border-b border-[#00acb1]/10 transition hover:bg-[#005963]/5"
-                                                        >
-                                                            <td className="px-4 py-3">
-                                                                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#005963]/10 text-xs font-bold text-[#005963]">
-                                                                    {idx + 1}
-                                                                </div>
-                                                            </td>
-                                                            <td className="px-4 py-3">
-                                                                <div className="font-semibold text-gray-900">
-                                                                    {m.name ||
-                                                                        '-'}
-                                                                </div>
-                                                            </td>
-                                                            <td className="px-4 py-3 text-sm text-gray-700">
-                                                                {m.strength ||
-                                                                    '-'}
-                                                            </td>
-                                                            <td className="px-4 py-3 text-sm text-gray-700">
-                                                                {m.dosage ||
-                                                                    '-'}
-                                                            </td>
-                                                            <td className="px-4 py-3 text-sm text-gray-700">
-                                                                {m.duration ||
-                                                                    '-'}
-                                                            </td>
-                                                            <td className="px-4 py-3">
-                                                                <span
-                                                                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
-                                                                        m.instruction ===
-                                                                        'Before meal'
-                                                                            ? 'bg-blue-100 text-blue-700'
-                                                                            : 'bg-green-100 text-green-700'
-                                                                    }`}
-                                                                >
-                                                                    {m.instruction ===
-                                                                    'Before meal'
-                                                                        ? '🍽️'
-                                                                        : '🍴'}{' '}
-                                                                    {
-                                                                        m.instruction
-                                                                    }
-                                                                </span>
-                                                            </td>
-                                                            <td className="px-4 py-3 text-center">
-                                                                <button
-                                                                    type="button"
-                                                                    className="inline-flex items-center gap-1 rounded-lg border-2 border-rose-300 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-100"
-                                                                    onClick={() =>
-                                                                        dispatch(
-                                                                            {
-                                                                                type: 'removeArrayItem',
-                                                                                section:
-                                                                                    'medicines',
-                                                                                index: idx,
-                                                                                min: 0,
-                                                                            },
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    <Trash2 className="h-3 w-3" />
-                                                                    Remove
-                                                                </button>
-                                                            </td>
-                                                        </tr>
-                                                    ),
-                                                )}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            )}
-                        </GlassCard>
-                    </div>
-
-                    {/* Investigations & Advice */}
-                    <div className="group">
-                        <div className="mb-6 flex items-center gap-2">
-                            <FlaskConical className="h-6 w-6 text-[#005963]" />
-                            <div>
-                                <div className={sectionTitleClass}>
-                                    Tests & Follow-up
-                                </div>
-                                <div className={sectionSubClass}>
-                                    Investigations and patient guidance
-                                </div>
-                            </div>
-                        </div>
-                        <div className="grid gap-6 lg:grid-cols-2">
-                            <GlassCard
-                                variant="solid"
-                                className="border border-[#00acb1]/30 bg-white p-6 shadow-md"
-                            >
-                                <div className="mb-4">
-                                    <div className="text-sm font-bold text-[#005963]">
-                                        Investigations
-                                    </div>
-                                </div>
-                                <div className="space-y-3">
-                                    <div>
-                                        <div className="mb-2 text-xs font-semibold text-gray-700">
-                                            Common Tests
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            {COMMON_TESTS.map((test) => (
-                                                <label
-                                                    key={test}
-                                                    className="flex items-center gap-2"
-                                                >
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={
-                                                            state.investigations
-                                                                .common[test] ||
-                                                            false
-                                                        }
-                                                        onChange={(e) =>
-                                                            dispatch({
+                                        
+                                        {/* Common Tests */}
+                                        <div className="mb-3">
+                                            <div className="mb-2 text-xs font-semibold text-gray-700">Common Tests</div>
+                                            <div className="grid grid-cols-2 gap-1.5">
+                                                {COMMON_TESTS.map((test) => (
+                                                    <label key={test} className="flex items-center gap-1.5 cursor-pointer hover:bg-gray-50 p-1 rounded">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={state.investigations.common[test] || false}
+                                                            onChange={(e) => dispatch({
                                                                 type: 'setNestedField',
-                                                                path: [
-                                                                    'investigations',
-                                                                    'common',
-                                                                    test,
-                                                                ],
-                                                                value: e.target
-                                                                    .checked,
-                                                            })
-                                                        }
-                                                        className="rounded"
-                                                    />
-                                                    <span className="text-sm">
-                                                        {test}
-                                                    </span>
-                                                </label>
-                                            ))}
+                                                                path: ['investigations', 'common', test],
+                                                                value: e.target.checked,
+                                                            })}
+                                                            className="rounded"
+                                                        />
+                                                        <span className="text-xs">{test}</span>
+                                                    </label>
+                                                ))}
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div>
-                                        <div className="mb-2 text-xs font-semibold text-gray-700">
-                                            Custom Tests
-                                        </div>
-                                        <div className="space-y-2">
-                                            {(
-                                                state.investigations.custom ||
-                                                []
-                                            ).map((test, idx) => (
-                                                <div
-                                                    key={idx}
-                                                    className="flex gap-2"
-                                                >
-                                                    <input
-                                                        className={`${inputClass} flex-1`}
-                                                        value={test}
-                                                        onChange={(e) =>
-                                                            dispatch({
+                                        
+                                        {/* Custom Tests */}
+                                        <div>
+                                            <div className="mb-2 text-xs font-semibold text-gray-700">Custom Tests</div>
+                                            <div className="space-y-1.5">
+                                                {(state.investigations.custom || []).map((test, idx) => (
+                                                    <div key={idx} className="flex gap-1">
+                                                        <input
+                                                            className="w-full rounded-md bg-gray-50/50 px-2 py-1 text-xs text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#005963]/20"
+                                                            value={test}
+                                                            onChange={(e) => dispatch({
                                                                 type: 'setCustomTest',
                                                                 index: idx,
                                                                 value: e.target.value,
-                                                            })
-                                                        }
-                                                        placeholder="Add custom test"
-                                                    />
-                                                    {(
-                                                        state.investigations
-                                                            .custom || []
-                                                    ).length > 1 && (
-                                                        <button
-                                                            type="button"
-                                                            className="rounded-lg border border-rose-300 bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-800"
-                                                            onClick={() =>
-                                                                dispatch({
-                                                                    type: 'removeCustomTest',
+                                                            })}
+                                                            placeholder="Add test"
+                                                        />
+                                                        {(state.investigations.custom || []).length > 1 && (
+                                                            <button
+                                                                type="button"
+                                                                className="rounded border border-rose-300 bg-rose-50 px-2 py-1 text-xs text-rose-800 hover:bg-rose-100"
+                                                                onClick={() => dispatch({ type: 'removeCustomTest', index: idx })}
+                                                            >
+                                                                ×
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                                <button
+                                                    type="button"
+                                                    className="w-full rounded border border-[#005963]/50 bg-[#005963]/5 px-2 py-1 text-xs font-semibold text-[#005963] hover:bg-[#005963]/10"
+                                                    onClick={() => dispatch({ type: 'addCustomTest' })}
+                                                >
+                                                    + Add Test
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Diagnosis & Complaints Section - Bottom Right */}
+                                    <div>
+                                        <div className="mb-3 flex items-center gap-2 border-b border-[#005963]/20 pb-2">
+                                            <Stethoscope className="h-4 w-4 text-[#005963]" />
+                                            <span className="text-xs font-black uppercase tracking-wider text-[#005963]">Diagnosis</span>
+                                        </div>
+                                        
+                                        {/* Provisional Diagnosis */}
+                                        <div className="mb-3">
+                                            <label className="mb-1 block text-xs font-semibold text-gray-700">Provisional</label>
+                                            <textarea
+                                                className="w-full rounded-md bg-gray-50/50 px-2 py-1.5 text-xs text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#005963]/20"
+                                                rows={2}
+                                                value={state.diagnosis.provisional}
+                                                onChange={(e) => dispatch({
+                                                    type: 'setField',
+                                                    path: ['diagnosis', 'provisional'],
+                                                    value: e.target.value,
+                                                })}
+                                                placeholder="Initial diagnosis"
+                                            />
+                                        </div>
+                                        
+                                        {/* Final Diagnosis */}
+                                        <div className="mb-3">
+                                            <label className="mb-1 block text-xs font-semibold text-gray-700">Final</label>
+                                            <textarea
+                                                className="w-full rounded-md bg-gray-50/50 px-2 py-1.5 text-xs text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#005963]/20"
+                                                rows={2}
+                                                value={state.diagnosis.final}
+                                                onChange={(e) => dispatch({
+                                                    type: 'setField',
+                                                    path: ['diagnosis', 'final'],
+                                                    value: e.target.value,
+                                                })}
+                                                placeholder="Confirmed diagnosis"
+                                            />
+                                        </div>
+                                        
+                                        {/* Chief Complaints */}
+                                        <div>
+                                            <div className="mb-2 flex items-center justify-between">
+                                                <label className="text-xs font-semibold text-gray-700">Complaints</label>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => dispatch({
+                                                        type: 'addArrayItem',
+                                                        section: 'complaints',
+                                                        item: emptyComplaint(),
+                                                    })}
+                                                    className="text-[10px] text-[#005963] hover:underline"
+                                                >
+                                                    + Add
+                                                </button>
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                {(state.complaints || []).map((c, idx) => (
+                                                    <div key={idx} className="space-y-1 rounded border border-gray-200 bg-white p-1.5">
+                                                        <input
+                                                            className="w-full rounded bg-gray-50/50 px-1.5 py-1 text-xs text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#005963]/20"
+                                                            value={c.description}
+                                                            onChange={(e) => dispatch({
+                                                                type: 'setArrayItem',
+                                                                path: ['complaints'],
+                                                                index: idx,
+                                                                patch: { description: e.target.value },
+                                                            })}
+                                                            placeholder="Complaint"
+                                                        />
+                                                        <input
+                                                            className="w-full rounded bg-gray-50/50 px-1.5 py-1 text-xs text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#005963]/20"
+                                                            value={c.duration}
+                                                            onChange={(e) => dispatch({
+                                                                type: 'setArrayItem',
+                                                                path: ['complaints'],
+                                                                index: idx,
+                                                                patch: { duration: e.target.value },
+                                                            })}
+                                                            placeholder="Duration"
+                                                        />
+                                                        {(state.complaints || []).length > 1 && (
+                                                            <button
+                                                                type="button"
+                                                                className="w-full rounded border border-rose-300 bg-rose-50 px-1 py-0.5 text-[10px] text-rose-800 hover:bg-rose-100"
+                                                                onClick={() => dispatch({
+                                                                    type: 'removeArrayItem',
+                                                                    section: 'complaints',
                                                                     index: idx,
-                                                                })
-                                                            }
-                                                        >
-                                                            ×
-                                                        </button>
-                                                    )}
+                                                                    min: 1,
+                                                                })}
+                                                            >
+                                                                Remove
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        
+                                        {/* Vitals */}
+                                        <div className="mt-3 border-t border-gray-200 pt-3">
+                                            <div className="mb-2 text-xs font-semibold text-gray-700">Vitals</div>
+                                            <div className="grid grid-cols-2 gap-1.5">
+                                                <div>
+                                                    <input
+                                                        className="w-full rounded bg-gray-50/50 px-1.5 py-1 text-xs text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#005963]/20"
+                                                        value={state.exam.bp}
+                                                        onChange={(e) => dispatch({
+                                                            type: 'setField',
+                                                            path: ['exam', 'bp'],
+                                                            value: e.target.value,
+                                                        })}
+                                                        placeholder="BP"
+                                                    />
                                                 </div>
-                                            ))}
-                                            <button
-                                                type="button"
-                                                className="w-full rounded-lg border border-[#005963]/50 bg-[#005963]/5 px-2 py-1 text-xs font-semibold text-[#005963]"
-                                                onClick={() =>
-                                                    dispatch({
-                                                        type: 'addCustomTest',
-                                                    })
-                                                }
-                                            >
-                                                + Add Custom Test
-                                            </button>
+                                                <div>
+                                                    <input
+                                                        className="w-full rounded bg-gray-50/50 px-1.5 py-1 text-xs text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#005963]/20"
+                                                        value={state.exam.pulse}
+                                                        onChange={(e) => dispatch({
+                                                            type: 'setField',
+                                                            path: ['exam', 'pulse'],
+                                                            value: e.target.value,
+                                                        })}
+                                                        placeholder="Pulse"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <input
+                                                        className="w-full rounded bg-gray-50/50 px-1.5 py-1 text-xs text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#005963]/20"
+                                                        value={state.exam.temperature}
+                                                        onChange={(e) => dispatch({
+                                                            type: 'setField',
+                                                            path: ['exam', 'temperature'],
+                                                            value: e.target.value,
+                                                        })}
+                                                        placeholder="Temp"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <input
+                                                        className="w-full rounded bg-gray-50/50 px-1.5 py-1 text-xs text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#005963]/20"
+                                                        value={state.exam.spo2}
+                                                        onChange={(e) => dispatch({
+                                                            type: 'setField',
+                                                            path: ['exam', 'spo2'],
+                                                            value: e.target.value,
+                                                        })}
+                                                        placeholder="SpO₂"
+                                                    />
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </GlassCard>
 
-                            <GlassCard
-                                variant="solid"
-                                className="border border-[#00acb1]/30 bg-white p-6 shadow-md"
-                            >
-                                <div className="mb-4">
-                                    <div className="text-sm font-bold text-[#005963]">
-                                        Advice & Follow-up
-                                    </div>
-                                </div>
-                                <div className="space-y-3">
+                                {/* Right Column - Wide (Medicine Main, Advice Bottom) */}
+                                <div className="col-span-9 space-y-6">
+                                    
+                                    {/* Rx Symbol and Medications - Main Area */}
                                     <div>
-                                        <label className={labelClass}>
-                                            Lifestyle Advice
-                                        </label>
-                                        <textarea
-                                            className={inputClass}
-                                            rows={2}
-                                            value={state.advice.lifestyle}
-                                            onChange={(e) =>
-                                                dispatch({
-                                                    type: 'setField',
-                                                    path: [
-                                                        'advice',
-                                                        'lifestyle',
-                                                    ],
-                                                    value: e.target.value,
-                                                })
-                                            }
-                                            placeholder="e.g., Rest, avoid stress..."
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className={labelClass}>
-                                            Diet / Rest Instructions
-                                        </label>
-                                        <textarea
-                                            className={inputClass}
-                                            rows={2}
-                                            value={state.advice.diet_rest}
-                                            onChange={(e) =>
-                                                dispatch({
-                                                    type: 'setField',
-                                                    path: [
-                                                        'advice',
-                                                        'diet_rest',
-                                                    ],
-                                                    value: e.target.value,
-                                                })
-                                            }
-                                            placeholder="e.g., Light diet, bed rest..."
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className={labelClass}>
-                                            Follow-up Date
-                                        </label>
-                                        <input
-                                            type="date"
-                                            className={inputClass}
-                                            value={state.follow_up.date}
-                                            onChange={(e) =>
-                                                dispatch({
-                                                    type: 'setField',
-                                                    path: ['follow_up', 'date'],
-                                                    value: e.target.value,
-                                                })
-                                            }
-                                        />
-                                        {followUpDateLabel && (
-                                            <div className={helperClass}>
-                                                📅 {followUpDateLabel}
+                                        <div className="mb-4 flex items-start gap-3">
+                                            <div className="text-5xl font-serif font-bold italic text-[#005963]">℞</div>
+                                            <div className="flex-1 pt-2">
+                                                {/* Medicine Rows - Dynamic */}
+                                                <div className="space-y-2">
+                                                    {(state.medicines || []).map((m, idx) => (
+                                                        <div key={idx} className="group/med flex items-start gap-2 rounded border border-gray-200 bg-white p-2 hover:border-[#005963] hover:bg-gray-50">
+                                                            <span className="mt-1 text-xs font-bold text-gray-500">{idx + 1}.</span>
+                                                            <div className="flex-1 grid grid-cols-6 gap-2">
+                                                                <input
+                                                                    className="col-span-2 rounded bg-gray-50/50 px-3 py-1.5 text-sm text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#005963]/20"
+                                                                    value={m.name}
+                                                                    onChange={(e) => dispatch({
+                                                                        type: 'setArrayItem',
+                                                                        path: ['medicines'],
+                                                                        index: idx,
+                                                                        patch: { name: e.target.value },
+                                                                    })}
+                                                                    placeholder="Medicine name"
+                                                                    list="medicine-suggestions"
+                                                                />
+                                                                <input
+                                                                    className="rounded bg-gray-50/50 px-3 py-1.5 text-sm text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#005963]/20"
+                                                                    value={m.strength}
+                                                                    onChange={(e) => dispatch({
+                                                                        type: 'setArrayItem',
+                                                                        path: ['medicines'],
+                                                                        index: idx,
+                                                                        patch: { strength: e.target.value },
+                                                                    })}
+                                                                    placeholder="Strength"
+                                                                />
+                                                                <input
+                                                                    className="rounded bg-gray-50/50 px-3 py-1.5 text-sm text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#005963]/20"
+                                                                    value={m.dosage}
+                                                                    onChange={(e) => dispatch({
+                                                                        type: 'setArrayItem',
+                                                                        path: ['medicines'],
+                                                                        index: idx,
+                                                                        patch: { dosage: e.target.value },
+                                                                    })}
+                                                                    placeholder="Dosage"
+                                                                />
+                                                                <input
+                                                                    className="rounded bg-gray-50/50 px-3 py-1.5 text-sm text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#005963]/20"
+                                                                    value={m.duration}
+                                                                    onChange={(e) => dispatch({
+                                                                        type: 'setArrayItem',
+                                                                        path: ['medicines'],
+                                                                        index: idx,
+                                                                        patch: { duration: e.target.value },
+                                                                    })}
+                                                                    placeholder="Duration"
+                                                                />
+                                                            </div>
+                                                            <select
+                                                                className="rounded bg-gray-50/50 px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#005963]/20"
+                                                                value={m.instruction}
+                                                                onChange={(e) => dispatch({
+                                                                    type: 'setArrayItem',
+                                                                    path: ['medicines'],
+                                                                    index: idx,
+                                                                    patch: { instruction: e.target.value },
+                                                                })}
+                                                            >
+                                                                <option value="After meal">After meal</option>
+                                                                <option value="Before meal">Before meal</option>
+                                                            </select>
+                                                            <button
+                                                                type="button"
+                                                                className="opacity-0 group-hover/med:opacity-100 rounded border border-rose-300 bg-rose-50 px-1.5 py-1 text-xs text-rose-800 hover:bg-rose-100 transition"
+                                                                onClick={() => dispatch({
+                                                                    type: 'removeArrayItem',
+                                                                    section: 'medicines',
+                                                                    index: idx,
+                                                                    min: 0,
+                                                                })}
+                                                            >
+                                                                ×
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                    
+                                                    {/* Add New Medicine Row Button */}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            dispatch({
+                                                                type: 'addArrayItem',
+                                                                section: 'medicines',
+                                                                item: emptyMedicine(),
+                                                            });
+                                                        }}
+                                                        className="w-full rounded border-2 border-dashed border-[#005963]/30 bg-[#005963]/5 px-3 py-2 text-xs font-semibold text-[#005963] hover:bg-[#005963]/10 transition flex items-center justify-center gap-1"
+                                                    >
+                                                        <Plus className="h-3 w-3" />
+                                                        Add Medicine Row
+                                                    </button>
+                                                    
+                                                    {/* Medicine Suggestions Datalist */}
+                                                    <datalist id="medicine-suggestions">
+                                                        {MEDICINE_SUGGESTIONS.map((s) => (
+                                                            <option key={s} value={s} />
+                                                        ))}
+                                                    </datalist>
+                                                </div>
                                             </div>
-                                        )}
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Advice Section - Bottom Right */}
+                                    <div className="border-t-2 border-dotted border-gray-200 pt-4">
+                                        <div className="mb-2 flex items-center gap-2">
+                                            <FileText className="h-4 w-4 text-[#005963]" />
+                                            <span className="text-xs font-black uppercase tracking-wider text-[#005963]">Advice</span>
+                                        </div>
+                                        
+                                        <div className="space-y-3">
+                                            <div>
+                                                <label className="mb-1 block text-xs font-semibold text-gray-700">Lifestyle</label>
+                                                <textarea
+                                                    className="w-full rounded-md bg-gray-50/50 px-2 py-1.5 text-xs text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#005963]/20"
+                                                    rows={2}
+                                                    value={state.advice.lifestyle}
+                                                    onChange={(e) => dispatch({
+                                                        type: 'setField',
+                                                        path: ['advice', 'lifestyle'],
+                                                        value: e.target.value,
+                                                    })}
+                                                    placeholder="Lifestyle advice"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="mb-1 block text-xs font-semibold text-gray-700">Diet / Rest</label>
+                                                <textarea
+                                                    className="w-full rounded-md bg-gray-50/50 px-2 py-1.5 text-xs text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#005963]/20"
+                                                    rows={2}
+                                                    value={state.advice.diet_rest}
+                                                    onChange={(e) => dispatch({
+                                                        type: 'setField',
+                                                        path: ['advice', 'diet_rest'],
+                                                        value: e.target.value,
+                                                    })}
+                                                    placeholder="Diet and rest instructions"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="mb-1 block text-xs font-semibold text-gray-700">Follow-up Date</label>
+                                                <input
+                                                    type="date"
+                                                    className="w-full rounded-md bg-gray-50/50 px-2 py-1.5 text-xs text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#005963]/20"
+                                                    value={state.follow_up.date}
+                                                    onChange={(e) => dispatch({
+                                                        type: 'setField',
+                                                        path: ['follow_up', 'date'],
+                                                        value: e.target.value,
+                                                    })}
+                                                />
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                            </GlassCard>
-                        </div>
-                    </div>
+                            </div>
 
                     {/* Form Submit Section - Enhanced */}
-                    <div className="rounded-2xl border-2 border-[#005963]/30 bg-gradient-to-r from-[#005963]/5 to-transparent p-6 shadow-md">
+                    <div className="mt-10 rounded-2xl border-2 border-[#005963]/30 bg-gradient-to-r from-[#005963]/5 to-transparent p-6 shadow-md">
                         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                             <div className="flex items-center gap-3 text-sm">
                                 <div className="rounded-full bg-emerald-100 p-2">
@@ -1685,6 +1239,9 @@ export default function CreatePrescription({ appointmentId = null, contactInfo, 
                     </div>
                 </div>
             </div>
+            
+            {/* Bottom spacing to prevent overlap */}
+            <div className="h-8"></div>
         </DoctorLayout>
     );
 }
