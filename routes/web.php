@@ -558,6 +558,68 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
         ]);
     })->name('patients');
 
+    Route::get('/patients/{patient}', function (User $patient) {
+        $doctor = Auth::user();
+        
+        // Verify the patient has had an appointment with this doctor
+        $hasAppointment = $patient->appointments()
+            ->where('doctor_id', $doctor->id)
+            ->exists();
+        
+        if (!$hasAppointment) {
+            abort(403, 'Unauthorized access to patient');
+        }
+
+        // Get patient details with appointments and prescriptions
+        $patientData = $patient->load([
+            'appointments' => function ($query) use ($doctor) {
+                $query->where('doctor_id', $doctor->id)
+                    ->orderByDesc('created_at');
+            },
+            'prescriptions' => function ($query) use ($doctor) {
+                $query->where('doctor_id', $doctor->id)
+                    ->orderByDesc('created_at');
+            }
+        ]);
+
+        return Inertia::render('doctor/PatientShow', [
+            'patient' => [
+                'id' => $patientData->id,
+                'name' => $patientData->name,
+                'email' => $patientData->email,
+                'phone' => $patientData->phone,
+                'address' => $patientData->address,
+                'gender' => $patientData->gender,
+                'age' => $patientData->age,
+                'date_of_birth' => $patientData->date_of_birth,
+                'weight' => $patientData->weight,
+                'created_at' => $patientData->created_at,
+            ],
+            'appointments' => $patientData->appointments->map(function ($a) {
+                return [
+                    'id' => $a->id,
+                    'appointment_date' => $a->appointment_date ? $a->appointment_date->toDateString() : null,
+                    'appointment_time' => $a->appointment_time,
+                    'status' => $a->status,
+                    'symptoms' => $a->symptoms,
+                    'notes' => $a->notes,
+                    'created_at' => $a->created_at,
+                ];
+            }),
+            'prescriptions' => $patientData->prescriptions->map(function ($p) {
+                return [
+                    'id' => $p->id,
+                    'diagnosis' => $p->diagnosis,
+                    'medications' => $p->medications,
+                    'instructions' => $p->instructions,
+                    'tests' => $p->tests,
+                    'next_visit_date' => $p->next_visit_date,
+                    'created_at' => $p->created_at,
+                ];
+            }),
+        ]);
+    })->whereNumber('patient')->name('patients.show');
+
     Route::get('/prescriptions', function () {
         $doctor = Auth::user();
         

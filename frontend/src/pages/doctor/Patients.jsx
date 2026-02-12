@@ -200,6 +200,12 @@ export default function Patients({ patients = [], stats = {} }) {
                       <td className="px-6 py-4 text-sm text-gray-700 whitespace-nowrap">{p.created_at ? (formatDisplayDateWithYearFromDateLike(p.created_at) || p.created_at) : '—'}</td>
                       <td className="px-6 py-4 text-sm">
                         <div className="flex items-center gap-2 flex-wrap">
+                          <Link
+                            href={`/doctor/patients/${p.id}`}
+                            className="inline-flex items-center justify-center rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 text-xs font-semibold transition"
+                          >
+                            View
+                          </Link>
                           {p.email ? (
                             <a
                               href={`mailto:${p.email}`}
