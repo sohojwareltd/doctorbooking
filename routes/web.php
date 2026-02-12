@@ -14,6 +14,7 @@ use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use App\Models\Appointment;
 use App\Models\Prescription;
+use App\Models\Medicine;
 use App\Models\SiteContent;
 use App\Models\User;
 
@@ -761,10 +762,15 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
             }
         }
 
+        // Load medicines list for search/suggestions
+        $medicines = Medicine::orderBy('name')
+            ->get(['id', 'name', 'strength']);
+
         return Inertia::render('doctor/CreatePrescription', [
             'appointmentId' => $appointmentId ? (int) $appointmentId : null,
             'selectedPatient' => $selectedPatient,
             'contactInfo' => $contactInfo,
+            'medicines' => $medicines,
         ]);
     })->name('prescriptions.create');
 

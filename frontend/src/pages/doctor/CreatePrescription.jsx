@@ -40,20 +40,6 @@ const COMMON_TESTS = [
     'USG',
 ];
 
-const MEDICINE_SUGGESTIONS = [
-    'Paracetamol',
-    'Omeprazole',
-    'Esomeprazole',
-    'Cefixime',
-    'Azithromycin',
-    'Metformin',
-    'Amlodipine',
-    'Losartan',
-    'Cetirizine',
-    'Montelukast',
-    'Salbutamol',
-];
-
 const emptyComplaint = () => ({ description: '', duration: '' });
 const emptyMedicine = () => ({
     name: '',
@@ -252,7 +238,7 @@ function reducer(state, action) {
     }
 }
 
-export default function CreatePrescription({ appointmentId = null, contactInfo, selectedPatient }) {
+export default function CreatePrescription({ appointmentId = null, contactInfo, selectedPatient, medicines = [] }) {
     const page = usePage();
     const authUser = page?.props?.auth?.user;
     const prescriptionSettings = page?.props?.site?.prescription || {};
@@ -285,6 +271,19 @@ export default function CreatePrescription({ appointmentId = null, contactInfo, 
     const [success, setSuccess] = useState('');
     const [error, setError] = useState('');
     const [submitting, setSubmitting] = useState(false);
+
+    // Medicines from backend (App\Models\Medicine) for search/suggestions
+    const medicineSuggestions = useMemo(
+        () =>
+            Array.isArray(medicines)
+                ? medicines.map((m) => ({
+                      id: m.id,
+                      name: m.name || '',
+                      strength: m.strength || '',
+                  }))
+                : [],
+        [medicines],
+    );
     
     // Medicine form state (fix for getElementById issue)
     const [newMedicine, setNewMedicine] = useState({
@@ -1038,12 +1037,23 @@ export default function CreatePrescription({ appointmentId = null, contactInfo, 
                                                                 <input
                                                                     className="col-span-2 rounded bg-gray-50/50 px-3 py-1.5 text-sm text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#005963]/20"
                                                                     value={m.name}
-                                                                    onChange={(e) => dispatch({
-                                                                        type: 'setArrayItem',
-                                                                        path: ['medicines'],
-                                                                        index: idx,
-                                                                        patch: { name: e.target.value },
-                                                                    })}
+                                                                    onChange={(e) => {
+                                                                        const value = e.target.value;
+                                                                        const match = medicineSuggestions.find(
+                                                                            (med) =>
+                                                                                med.name.toLowerCase() === value.toLowerCase(),
+                                                                        );
+                                                                        const patch = { name: value };
+                                                                        if (match && match.strength) {
+                                                                            patch.strength = match.strength;
+                                                                        }
+                                                                        dispatch({
+                                                                            type: 'setArrayItem',
+                                                                            path: ['medicines'],
+                                                                            index: idx,
+                                                                            patch,
+                                                                        });
+                                                                    }}
                                                                     placeholder="Medicine name"
                                                                     list="medicine-suggestions"
                                                                 />
@@ -1067,7 +1077,7 @@ export default function CreatePrescription({ appointmentId = null, contactInfo, 
                                                                         index: idx,
                                                                         patch: { dosage: e.target.value },
                                                                     })}
-                                                                    placeholder="Dosage"
+                                                                    placeholder="e.g. 1+0+1"
                                                                 />
                                                                 <input
                                                                     className="rounded bg-gray-50/50 px-3 py-1.5 text-sm text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#005963]/20"
@@ -1081,19 +1091,45 @@ export default function CreatePrescription({ appointmentId = null, contactInfo, 
                                                                     placeholder="Duration"
                                                                 />
                                                             </div>
-                                                            <select
-                                                                className="rounded bg-gray-50/50 px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#005963]/20"
-                                                                value={m.instruction}
-                                                                onChange={(e) => dispatch({
-                                                                    type: 'setArrayItem',
-                                                                    path: ['medicines'],
-                                                                    index: idx,
-                                                                    patch: { instruction: e.target.value },
-                                                                })}
-                                                            >
-                                                                <option value="After meal">After meal</option>
-                                                                <option value="Before meal">Before meal</option>
-                                                            </select>
+                                                            <div className="flex flex-col gap-1 text-xs text-gray-700">
+                                                                <span className="font-semibold">Timing</span>
+                                                                <div className="flex items-center gap-3">
+                                                                    <label className="inline-flex items-center gap-1">
+                                                                        <input
+                                                                            type="radio"
+                                                                            className="h-3 w-3"
+                                                                            value="After meal"
+                                                                            checked={m.instruction === 'After meal'}
+                                                                            onChange={(e) =>
+                                                                                dispatch({
+                                                                                    type: 'setArrayItem',
+                                                                                    path: ['medicines'],
+                                                                                    index: idx,
+                                                                                    patch: { instruction: e.target.value },
+                                                                                })
+                                                                            }
+                                                                        />
+                                                                        <span>After meal</span>
+                                                                    </label>
+                                                                    <label className="inline-flex items-center gap-1">
+                                                                        <input
+                                                                            type="radio"
+                                                                            className="h-3 w-3"
+                                                                            value="Before meal"
+                                                                            checked={m.instruction === 'Before meal'}
+                                                                            onChange={(e) =>
+                                                                                dispatch({
+                                                                                    type: 'setArrayItem',
+                                                                                    path: ['medicines'],
+                                                                                    index: idx,
+                                                                                    patch: { instruction: e.target.value },
+                                                                                })
+                                                                            }
+                                                                        />
+                                                                        <span>Before meal</span>
+                                                                    </label>
+                                                                </div>
+                                                            </div>
                                                             <button
                                                                 type="button"
                                                                 className="opacity-0 group-hover/med:opacity-100 rounded border border-rose-300 bg-rose-50 px-1.5 py-1 text-xs text-rose-800 hover:bg-rose-100 transition"
@@ -1125,10 +1161,17 @@ export default function CreatePrescription({ appointmentId = null, contactInfo, 
                                                         Add Medicine Row
                                                     </button>
                                                     
-                                                    {/* Medicine Suggestions Datalist */}
+                                                    {/* Medicine Suggestions Datalist from backend medicines */}
                                                     <datalist id="medicine-suggestions">
-                                                        {MEDICINE_SUGGESTIONS.map((s) => (
-                                                            <option key={s} value={s} />
+                                                        {medicineSuggestions.map((med) => (
+                                                            <option
+                                                                key={med.id ?? med.name}
+                                                                value={med.name}
+                                                            >
+                                                                {med.strength
+                                                                    ? `${med.name} ${med.strength}`
+                                                                    : med.name}
+                                                            </option>
                                                         ))}
                                                     </datalist>
                                                 </div>
