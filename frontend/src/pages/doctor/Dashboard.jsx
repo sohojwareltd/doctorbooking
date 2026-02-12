@@ -1,6 +1,6 @@
 import { Link, usePage } from '@inertiajs/react';
 import { useState } from 'react';
-import { CalendarDays, ClipboardList, LayoutDashboard, Settings, Users, TrendingUp, Clock, CheckCircle, XCircle, FileText, AlertCircle, UserCheck, Stethoscope, TestTube, ChevronRight, X, Phone, Mail, MapPin, Plus } from 'lucide-react';
+import { CalendarDays, ClipboardList, LayoutDashboard, Settings, Users, TrendingUp, Clock, CheckCircle, XCircle, FileText, AlertCircle, UserCheck, Stethoscope, TestTube, ChevronRight, X, Phone, Mail, MapPin, Plus, Building2 } from 'lucide-react';
 import DoctorLayout from '../../layouts/DoctorLayout';
 import GlassCard from '../../components/GlassCard';
 
@@ -382,7 +382,14 @@ export default function DoctorDashboard({ stats = {}, scheduledToday = [], recen
                   className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#005963]/30 bg-white px-4 py-3 text-sm font-semibold text-[#005963] hover:bg-[#005963]/5 transition"
                 >
                   <Clock className="h-4 w-4" />
-                  Manage Availability
+                  Manage Schedule
+                </Link>
+                <Link
+                  href="/doctor/chambers"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#005963]/30 bg-white px-4 py-3 text-sm font-semibold text-[#005963] hover:bg-[#005963]/5 transition"
+                >
+                  <Building2 className="h-4 w-4" />
+                  Manage Chambers
                 </Link>
               </div>
             </GlassCard>

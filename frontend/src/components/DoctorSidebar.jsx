@@ -24,6 +24,7 @@ export default function DoctorSidebar({ currentPath }) {
     {
       label: 'Settings',
       items: [
+        { href: '/doctor/chambers', label: 'Chambers', Icon: Stethoscope },
         { href: '/doctor/schedule', label: 'Schedule', Icon: Settings },
         { href: '/doctor/profile', label: 'My Profile', Icon: UserCog },
       ]

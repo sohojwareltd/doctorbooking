@@ -4,23 +4,27 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class DoctorScheduleRange extends Model
+class Chamber extends Model
 {
     protected $fillable = [
         'doctor_id',
-        'chamber_id',
-        'day_of_week',
-        'start_time',
-        'end_time',
-    ];
-
-    protected $casts = [
-        'day_of_week' => 'integer',
+        'name',
+        'location',
+        'google_maps_url',
+        'phone',
+        'is_active',
     ];
 
     public function doctor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'doctor_id');
     }
+
+    public function appointments(): HasMany
+    {
+        return $this->hasMany(Appointment::class);
+    }
 }
+

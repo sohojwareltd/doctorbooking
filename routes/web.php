@@ -59,8 +59,62 @@ Route::post('/contact', function () {
 
 // Public booking endpoint
 Route::post('/book-appointment', 'App\\Http\\Controllers\\AppointmentController@storePublic')->name('public.book-appointment');
+
+// Public booking preview (serial number + estimated time)
+Route::get(
+    '/booking-preview',
+    'App\\Http\\Controllers\\AppointmentController@previewSerial'
+)->name('public.book-appointment.preview');
+
+// Simple math captcha for public booking form (JSON only)
+Route::get('/booking-captcha', function () {
+    $a = random_int(1, 9);
+    $b = random_int(1, 9);
+    $answer = $a + $b;
+
+    $token = Str::random(32);
+    session(['booking_captcha_' . $token => $answer]);
+
+    return response()->json([
+        'token' => $token,
+        'question' => "What is {$a} + {$b}?",
+    ]);
+})->name('public.booking.captcha');
+
+// Allow GET /book-appointment to redirect or render the appropriate booking UI
+Route::get('/book-appointment', function () {
+    $user = Auth::user();
+
+    if ($user?->role === 'admin') {
+        return redirect()->route('admin.book-appointment');
+    }
+
+    if ($user?->role === 'user') {
+        // Logged-in patient: use the multi-step user booking page
+        return redirect()->route('user.book-appointment');
+    }
+
+    // Guests or other roles: dedicated public booking page (multi-step)
+    return Inertia::render('public/BookAppointment');
+})->name('public.book-appointment.view');
+
 Route::get('/available-slots/{date}', 'App\\Http\\Controllers\\AppointmentController@getAvailableSlots')->name('available-slots');
 Route::get('/doctor-unavailable-ranges', 'App\\Http\\Controllers\\AppointmentController@getDoctorUnavailableRanges')->name('doctor-unavailable-ranges');
+
+// Public list of doctor's active chambers (for multi-step booking UI)
+Route::get('/public-chambers', function () {
+    $doctor = \App\Models\User::where('role', 'doctor')->first();
+    if (!$doctor) {
+        return response()->json(['chambers' => []]);
+    }
+
+    $chambers = \App\Models\Chamber::where('doctor_id', $doctor->id)
+        ->where('is_active', true)
+        ->orderBy('name')
+        ->get(['id', 'name', 'location', 'phone', 'google_maps_url']);
+
+    return response()->json(['chambers' => $chambers]);
+})->name('public.chambers');
 
 /*
 |--------------------------------------------------------------------------
@@ -653,6 +707,60 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
     })->name('prescriptions.create');
 
     Route::post('/prescriptions', [PrescriptionController::class, 'store'])->name('prescriptions.store');
+
+    // Doctor Chambers management (add/edit simple chambers for public booking)
+    Route::get('/chambers', function () {
+        $doctor = Auth::user();
+
+        $chambers = \App\Models\Chamber::where('doctor_id', $doctor->id)
+            ->orderBy('name')
+            ->get()
+            ->map(fn ($c) => [
+                'id' => $c->id,
+                'name' => $c->name,
+                'location' => $c->location,
+                'phone' => $c->phone,
+                'google_maps_url' => $c->google_maps_url,
+                'is_active' => (bool) $c->is_active,
+            ]);
+
+        return Inertia::render('doctor/Chambers', [
+            'chambers' => $chambers,
+        ]);
+    })->name('chambers');
+
+    Route::post('/chambers', function (Request $request) {
+        $doctor = Auth::user();
+
+        $validated = $request->validate([
+            'id' => ['nullable', 'integer'],
+            'name' => ['required', 'string', 'max:255'],
+            'location' => ['nullable', 'string', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:50'],
+            'google_maps_url' => ['nullable', 'string', 'max:2048'],
+            'is_active' => ['sometimes', 'boolean'],
+        ]);
+
+        $data = [
+            'doctor_id' => $doctor->id,
+            'name' => $validated['name'],
+            'location' => $validated['location'] ?? null,
+            'phone' => $validated['phone'] ?? null,
+            'google_maps_url' => $validated['google_maps_url'] ?? null,
+            'is_active' => $validated['is_active'] ?? true,
+        ];
+
+        if (!empty($validated['id'])) {
+            $chamber = \App\Models\Chamber::where('doctor_id', $doctor->id)
+                ->where('id', $validated['id'])
+                ->firstOrFail();
+            $chamber->update($data);
+        } else {
+            \App\Models\Chamber::create($data);
+        }
+
+        return redirect()->back()->with('success', 'Chamber saved successfully.');
+    })->name('chambers.save');
 });
 
 /*

@@ -8,7 +8,7 @@ import { toastError, toastSuccess, toastWarning } from '../../utils/toast';
 
 const DAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-export default function DoctorSchedule({ schedule = [], unavailable_ranges = [] }) {
+export default function DoctorSchedule({ schedule = [], unavailable_ranges = [], chambers = [], current_chamber_id = null }) {
   const initial = useMemo(() => {
     if (!Array.isArray(schedule) || schedule.length !== 7) {
       return DAY_LABELS.map((_, day_of_week) => ({
@@ -117,7 +117,11 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [] 
           'X-CSRF-TOKEN': token,
           Accept: 'application/json',
         },
-        body: JSON.stringify({ schedule: rows, unavailable_ranges: unavailable }),
+        body: JSON.stringify({
+          chamber_id: current_chamber_id,
+          schedule: rows,
+          unavailable_ranges: unavailable,
+        }),
       });
 
       if (res.ok) {
@@ -157,9 +161,53 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [] 
       <div className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div>
           <h1 className="text-3xl font-bold text-[#005963]">Schedule</h1>
-          <p className="mt-2 text-gray-600">Manage your availability and working hours</p>
+          <p className="mt-2 text-gray-600">
+            Manage your availability and working hours per chamber.
+          </p>
+        </div>
+        <div className="flex flex-col items-start gap-2 md:items-end">
+          {Array.isArray(chambers) && chambers.length > 0 && (
+            <>
+              <label className="text-xs font-semibold text-gray-600">
+                Select chamber
+              </label>
+              <select
+                className="w-full md:w-64 rounded-lg border border-[#00acb1]/30 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#005963] focus:outline-none focus:ring-2 focus:ring-[#005963]/10"
+                value={current_chamber_id ?? (chambers[0]?.id ?? '')}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const url = `/doctor/schedule?chamber_id=${val}`;
+                  window.location.href = url;
+                }}
+              >
+                {chambers.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </>
+          )}
         </div>
       </div>
+
+      {/* If no chambers exist, show a simple message and link */}
+      {(!Array.isArray(chambers) || chambers.length === 0) && (
+        <GlassCard variant="solid" className="p-6">
+          <p className="text-sm text-gray-700">
+            You don&apos;t have any chambers yet. Please create a chamber first from the{' '}
+            <a
+              href="/doctor/chambers"
+              className="font-semibold text-[#005963] underline underline-offset-2"
+            >
+              Chambers
+            </a>{' '}
+            page, then return here to configure its schedule.
+          </p>
+        </GlassCard>
+      )}
+
+      {Array.isArray(chambers) && chambers.length > 0 && (
 
       <div className="space-y-6">
         {/* Weekly Stats */}
@@ -383,6 +431,7 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [] 
           </PrimaryButton>
         </div>
       </div>
+      )}
     </DoctorLayout>
   );
 }
