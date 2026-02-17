@@ -93,11 +93,19 @@ export default function DoctorAppointments({ appointments = [], filters = {} }) 
   };
 
   const updateStatus = async (id, status) => {
-    const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    const token = document.cookie
+      .split('; ')
+      .find(row => row.startsWith('XSRF-TOKEN='))
+      ?.split('=')[1];
     const res = await fetch(`/doctor/appointments/${id}/status`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': token, 'Accept': 'application/json' },
-      body: JSON.stringify({ status })
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        'X-XSRF-TOKEN': token ? decodeURIComponent(token) : '',
+      },
+      credentials: 'include',
+      body: JSON.stringify({ status }),
     });
     if (res.ok) {
       setRows(prev => prev.map(r => r.id === id ? { ...r, status } : r));
@@ -134,11 +142,19 @@ export default function DoctorAppointments({ appointments = [], filters = {} }) 
 
   const handleCreateAppointment = async (e) => {
     e.preventDefault();
-    const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    const token = document.cookie
+      .split('; ')
+      .find(row => row.startsWith('XSRF-TOKEN='))
+      ?.split('=')[1];
     const res = await fetch('/doctor/appointments/create', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': token, 'Accept': 'application/json' },
-      body: JSON.stringify(formData)
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        'X-XSRF-TOKEN': token ? decodeURIComponent(token) : '',
+      },
+      credentials: 'include',
+      body: JSON.stringify(formData),
     });
     if (res.ok) {
       toastSuccess('Appointment created successfully.');
