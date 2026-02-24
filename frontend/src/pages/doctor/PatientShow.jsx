@@ -1,22 +1,12 @@
 import { Head, Link, usePage, router } from '@inertiajs/react';
-import { User, Mail, Phone, MapPin, Calendar, Weight, Stethoscope, FileText, ArrowLeft, Eye, Download, ChevronDown, ChevronUp } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Calendar, Weight, Stethoscope, FileText, ArrowLeft, Eye, Download, ChevronDown, ChevronUp, CheckCircle, XCircle, ClipboardList } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import DoctorLayout from '../../layouts/DoctorLayout';
 import GlassCard from '../../components/GlassCard';
 import { formatDisplayFromDateLike, formatDisplayDate } from '../../utils/dateFormat';
 
 export default function PatientShow({ patient, appointments = [], prescriptions = [] }) {
-  const [expandedSections, setExpandedSections] = useState({
-    appointments: true,
-    prescriptions: false,
-  });
-
-  const toggleSection = (section) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [section]: !prev[section]
-    }));
-  };
+  const [activeTab, setActiveTab] = useState('personal');
   const statusColors = {
     scheduled: 'bg-blue-100 text-blue-800',
     arrived: 'bg-green-100 text-green-800',
@@ -72,16 +62,105 @@ export default function PatientShow({ patient, appointments = [], prescriptions 
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-            {/* Personal Information */}
-            <GlassCard className="lg:col-span-2">
-              <div className="p-4">
-                <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-                  <User size={20} className="text-indigo-600" />
-                  Personal Info
-                </h2>
+          {/* Stats Cards Row - Top */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+            {/* Total Appointments Card */}
+            <GlassCard variant="solid" hover={false} className="p-5 border-l-4 border-l-blue-500">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="text-xs font-semibold uppercase tracking-wider text-gray-500">Total Appointments</div>
+                  <div className="mt-3 text-4xl font-black text-blue-600">{appointmentStats.total}</div>
+                </div>
+                <div className="rounded-xl bg-blue-500/10 p-3">
+                  <Calendar className="h-6 w-6 text-blue-600" />
+                </div>
+              </div>
+            </GlassCard>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+            {/* Arrived Card */}
+            <GlassCard variant="solid" hover={false} className="p-5 border-l-4 border-l-green-500">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="text-xs font-semibold uppercase tracking-wider text-gray-500">Arrived</div>
+                  <div className="mt-3 text-4xl font-black text-green-600">{appointmentStats.arrived}</div>
+                </div>
+                <div className="rounded-xl bg-green-500/10 p-3">
+                  <CheckCircle className="h-6 w-6 text-green-600" />
+                </div>
+              </div>
+            </GlassCard>
+
+            {/* Prescribed Card */}
+            <GlassCard variant="solid" hover={false} className="p-5 border-l-4 border-l-cyan-500">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="text-xs font-semibold uppercase tracking-wider text-gray-500">Prescribed</div>
+                  <div className="mt-3 text-4xl font-black text-cyan-600">{appointmentStats.prescribed}</div>
+                </div>
+                <div className="rounded-xl bg-cyan-500/10 p-3">
+                  <ClipboardList className="h-6 w-6 text-cyan-600" />
+                </div>
+              </div>
+            </GlassCard>
+
+            {/* Cancelled Card */}
+            <GlassCard variant="solid" hover={false} className="p-5 border-l-4 border-l-red-500">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="text-xs font-semibold uppercase tracking-wider text-gray-500">Cancelled</div>
+                  <div className="mt-3 text-4xl font-black text-red-600">{appointmentStats.cancelled}</div>
+                </div>
+                <div className="rounded-xl bg-red-500/10 p-3">
+                  <XCircle className="h-6 w-6 text-red-600" />
+                </div>
+              </div>
+            </GlassCard>
+          </div>
+
+          {/* Tabs Section - Personal Info, Appointments & Prescriptions */}
+          <GlassCard className="mt-4">
+            <div className="border-b border-slate-200">
+              <div className="flex">
+                <button
+                  onClick={() => setActiveTab('personal')}
+                  className={`flex items-center gap-2 px-6 py-4 text-sm font-semibold transition-colors border-b-2 ${
+                    activeTab === 'personal'
+                      ? 'border-indigo-600 text-indigo-600'
+                      : 'border-transparent text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <User size={18} />
+                  Personal Info
+                </button>
+                <button
+                  onClick={() => setActiveTab('appointments')}
+                  className={`flex items-center gap-2 px-6 py-4 text-sm font-semibold transition-colors border-b-2 ${
+                    activeTab === 'appointments'
+                      ? 'border-indigo-600 text-indigo-600'
+                      : 'border-transparent text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <Calendar size={18} />
+                  Appointments ({appointments.length})
+                </button>
+                <button
+                  onClick={() => setActiveTab('prescriptions')}
+                  className={`flex items-center gap-2 px-6 py-4 text-sm font-semibold transition-colors border-b-2 ${
+                    activeTab === 'prescriptions'
+                      ? 'border-indigo-600 text-indigo-600'
+                      : 'border-transparent text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <FileText size={18} />
+                  Prescriptions ({prescriptions.length})
+                </button>
+              </div>
+            </div>
+
+            <div className="p-5">
+              {/* Personal Info Tab Content */}
+              {activeTab === 'personal' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
                   {/* Email */}
                   <div className="bg-slate-50 rounded-lg p-3">
                     <div className="flex items-center gap-2 mb-1">
@@ -104,22 +183,22 @@ export default function PatientShow({ patient, appointments = [], prescriptions 
                     </p>
                   </div>
 
+                  {/* Gender */}
+                  <div className="bg-slate-50 rounded-lg p-3">
+                    <label className="text-xs font-semibold text-slate-600 block mb-1">Gender</label>
+                    <p className="text-slate-900 font-medium capitalize text-xs">
+                      {patient.gender || 'Not specified'}
+                    </p>
+                  </div>
+
                   {/* Address */}
-                  <div className="bg-slate-50 rounded-lg p-3 md:col-span-2">
+                  <div className="bg-slate-50 rounded-lg p-3 md:col-span-2 lg:col-span-3">
                     <div className="flex items-center gap-2 mb-1">
                       <MapPin size={14} className="text-indigo-600" />
                       <label className="text-xs font-semibold text-slate-600">Address</label>
                     </div>
                     <p className="text-slate-900 font-medium text-xs line-clamp-2">
                       {patient.address || 'Not provided'}
-                    </p>
-                  </div>
-
-                  {/* Gender */}
-                  <div className="bg-slate-50 rounded-lg p-3">
-                    <label className="text-xs font-semibold text-slate-600 block mb-1">Gender</label>
-                    <p className="text-slate-900 font-medium capitalize text-xs">
-                      {patient.gender || 'Not specified'}
                     </p>
                   </div>
 
@@ -154,69 +233,18 @@ export default function PatientShow({ patient, appointments = [], prescriptions 
                   </div>
 
                   {/* Member Since */}
-                  <div className="bg-slate-50 rounded-lg p-3 md:col-span-2">
+                  <div className="bg-slate-50 rounded-lg p-3 md:col-span-2 lg:col-span-3">
                     <label className="text-xs font-semibold text-slate-600 block mb-1">Member Since</label>
                     <p className="text-slate-900 font-medium text-xs">
                       {formatDisplayDate(patient.created_at)}
                     </p>
                   </div>
                 </div>
-              </div>
-            </GlassCard>
+              )}
 
-            {/* Appointment Statistics */}
-            <GlassCard className="lg:col-span-2">
-              <div className="p-4">
-                <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-                  <Stethoscope size={20} className="text-indigo-600" />
-                  Stats
-                </h2>
-
-                <div className="space-y-2">
-                  <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-3">
-                    <p className="text-xs text-blue-700 font-semibold">Total Appointments</p>
-                    <p className="text-2xl font-bold text-blue-900">{appointmentStats.total}</p>
-                  </div>
-
-                  <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-3">
-                    <p className="text-xs text-green-700 font-semibold">Arrived</p>
-                    <p className="text-2xl font-bold text-green-900">{appointmentStats.arrived}</p>
-                  </div>
-
-                  <div className="bg-gradient-to-br from-cyan-50 to-cyan-100 rounded-lg p-3">
-                    <p className="text-xs text-cyan-700 font-semibold">Prescribed</p>
-                    <p className="text-2xl font-bold text-cyan-900">{appointmentStats.prescribed}</p>
-                  </div>
-
-                  <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-lg p-3">
-                    <p className="text-xs text-red-700 font-semibold">Cancelled</p>
-                    <p className="text-2xl font-bold text-red-900">{appointmentStats.cancelled}</p>
-                  </div>
-                </div>
-              </div>
-            </GlassCard>
-          </div>
-
-          {/* Appointments History - Collapsible */}
-          <GlassCard className="mt-4">
-            <div className="p-4">
-              <button
-                onClick={() => toggleSection('appointments')}
-                className="w-full flex items-center justify-between hover:opacity-80 transition-opacity"
-              >
-                <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                  <Calendar size={20} className="text-indigo-600" />
-                  Appointments ({appointments.length})
-                </h2>
-                {expandedSections.appointments ? (
-                  <ChevronUp size={20} className="text-indigo-600" />
-                ) : (
-                  <ChevronDown size={20} className="text-indigo-600" />
-                )}
-              </button>
-
-              {expandedSections.appointments && (
-                <div className="mt-4">
+              {/* Appointments Tab Content */}
+              {activeTab === 'appointments' && (
+                <div>
                   {appointments.length > 0 ? (
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
@@ -261,31 +289,12 @@ export default function PatientShow({ patient, appointments = [], prescriptions 
                   )}
                 </div>
               )}
-            </div>
-          </GlassCard>
 
-          {/* Prescriptions History - Collapsible */}
-          <GlassCard className="mt-4">
-            <div className="p-4">
-              <button
-                onClick={() => toggleSection('prescriptions')}
-                className="w-full flex items-center justify-between hover:opacity-80 transition-opacity"
-              >
-                <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                  <FileText size={20} className="text-indigo-600" />
-                  Prescriptions ({prescriptions.length})
-                </h2>
-                {expandedSections.prescriptions ? (
-                  <ChevronUp size={20} className="text-indigo-600" />
-                ) : (
-                  <ChevronDown size={20} className="text-indigo-600" />
-                )}
-              </button>
-
-              {expandedSections.prescriptions && (
-                <div className="mt-4">
+              {/* Prescriptions Tab Content */}
+              {activeTab === 'prescriptions' && (
+                <div>
                   {prescriptions.length > 0 ? (
-                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                    <div className="space-y-2 max-h-96 overflow-y-auto">
                       {prescriptions.map((prescription) => (
                         <div key={prescription.id} className="border-l-4 border-indigo-600 bg-slate-50 rounded p-3 hover:shadow-md transition-shadow">
                           <div className="flex justify-between items-start mb-2">
