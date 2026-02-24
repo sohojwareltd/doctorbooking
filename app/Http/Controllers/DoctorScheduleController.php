@@ -6,6 +6,7 @@ use App\Models\Appointment;
 use App\Models\DoctorSchedule;
 use App\Models\DoctorScheduleRange;
 use App\Models\DoctorUnavailableRange;
+use App\Models\Chamber;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -14,15 +15,36 @@ use Inertia\Response;
 
 class DoctorScheduleController extends Controller
 {
-    public function show(): Response
+    public function show(Request $request): Response
     {
         $doctor = Auth::user();
+
+        $chambers = Chamber::where('doctor_id', $doctor->id)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        $selectedChamberId = $request->query('chamber_id');
+        if ($selectedChamberId !== null && $selectedChamberId !== '') {
+            $selectedChamberId = (int) $selectedChamberId;
+            if (!$chambers->firstWhere('id', $selectedChamberId)) {
+                $selectedChamberId = null;
+            }
+        } else {
+            $selectedChamberId = null;
+        }
+
+        $rangeQuery = DoctorScheduleRange::where('doctor_id', $doctor->id);
+        if ($selectedChamberId) {
+            $rangeQuery->where('chamber_id', $selectedChamberId);
+        } else {
+            $rangeQuery->whereNull('chamber_id');
+        }
 
         $schedules = DoctorSchedule::where('doctor_id', $doctor->id)
             ->orderBy('day_of_week')
             ->get(['day_of_week', 'start_time', 'end_time', 'slot_minutes', 'is_closed']);
 
-        $ranges = DoctorScheduleRange::where('doctor_id', $doctor->id)
+        $ranges = $rangeQuery
             ->orderBy('day_of_week')
             ->orderBy('start_time')
             ->get(['day_of_week', 'start_time', 'end_time'])
@@ -72,6 +94,8 @@ class DoctorScheduleController extends Controller
         return Inertia::render('doctor/Schedule', [
             'schedule' => $payload,
             'unavailable_ranges' => $unavailableRanges,
+            'chambers' => $chambers,
+            'current_chamber_id' => $selectedChamberId,
         ]);
     }
 
@@ -80,6 +104,7 @@ class DoctorScheduleController extends Controller
         $doctor = $request->user();
 
         $validated = $request->validate([
+            'chamber_id' => ['nullable', 'integer'],
             'schedule' => ['required', 'array', 'size:7'],
             'schedule.*.day_of_week' => ['required', 'integer', 'min:0', 'max:6'],
             'schedule.*.is_closed' => ['required', 'boolean'],
@@ -92,6 +117,16 @@ class DoctorScheduleController extends Controller
             'unavailable_ranges.*.start_date' => ['required_with:unavailable_ranges', 'date_format:Y-m-d'],
             'unavailable_ranges.*.end_date' => ['required_with:unavailable_ranges', 'date_format:Y-m-d'],
         ]);
+
+        $chamberId = $validated['chamber_id'] ?? null;
+        if ($chamberId) {
+            $ownsChamber = Chamber::where('doctor_id', $doctor->id)
+                ->where('id', $chamberId)
+                ->exists();
+            if (!$ownsChamber) {
+                return response()->json(['message' => 'Invalid chamber.'], 422);
+            }
+        }
 
         foreach ($validated['schedule'] as $row) {
             $isClosed = (bool) $row['is_closed'];
@@ -133,9 +168,16 @@ class DoctorScheduleController extends Controller
                 ]
             );
 
-            // Replace ranges for this day.
+            // Replace ranges for this day and chamber (or default).
             DoctorScheduleRange::where('doctor_id', $doctor->id)
                 ->where('day_of_week', $dow)
+                ->where(function ($q) use ($chamberId) {
+                    if ($chamberId) {
+                        $q->where('chamber_id', $chamberId);
+                    } else {
+                        $q->whereNull('chamber_id');
+                    }
+                })
                 ->delete();
 
             if (!$isClosed) {
@@ -143,6 +185,7 @@ class DoctorScheduleController extends Controller
                     DoctorScheduleRange::create([
                         'doctor_id' => $doctor->id,
                         'day_of_week' => $dow,
+                        'chamber_id' => $chamberId,
                         'start_time' => $range['start_time'] . ':00',
                         'end_time' => $range['end_time'] . ':00',
                     ]);

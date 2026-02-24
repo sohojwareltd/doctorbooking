@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Appointment;
+use App\Models\Chamber;
 use App\Models\DoctorSchedule;
 use App\Models\DoctorScheduleRange;
 use App\Models\DoctorUnavailableRange;
@@ -39,24 +40,18 @@ class AppointmentController extends Controller
             ->toArray();
 
         $schedules = DoctorSchedule::where('doctor_id', $doctor->id)
-            ->get(['day_of_week', 'start_time', 'end_time', 'is_closed'])
-            ->keyBy('day_of_week');
-
-        $rangeDays = DoctorScheduleRange::where('doctor_id', $doctor->id)
-            ->distinct()
-            ->pluck('day_of_week')
-            ->map(fn ($d) => (int) $d)
-            ->toArray();
+            ->get(['day_of_week', 'is_closed']);
 
         $closedWeekdays = [];
         for ($dow = 0; $dow <= 6; $dow++) {
-            $row = $schedules->get($dow);
-            $isClosed = (bool) ($row?->is_closed ?? false);
-            $hasRanges = in_array($dow, $rangeDays, true);
-            $hasLegacyRange = !$isClosed && $row?->start_time && $row?->end_time;
+            $rowsForDay = $schedules->where('day_of_week', $dow);
+            if ($rowsForDay->count() === 0) {
+                $closedWeekdays[] = $dow;
+                continue;
+            }
 
-            $isOpen = !$isClosed && ($hasRanges || $hasLegacyRange);
-            if (!$isOpen) {
+            $hasOpen = $rowsForDay->contains(fn ($r) => !$r->is_closed);
+            if (!$hasOpen) {
                 $closedWeekdays[] = $dow;
             }
         }
@@ -72,12 +67,20 @@ class AppointmentController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'phone' => ['required', 'string', 'max:50'],
-            'email' => ['required', 'email', 'max:255'],
+            // Email is optional for public bookings – only name & phone are required.
+            'email' => ['nullable', 'email', 'max:255'],
             'age' => ['nullable', 'integer', 'min:1', 'max:150'],
             'gender' => ['nullable', 'in:male,female,other'],
             'date' => ['required', 'date'],
-            'time' => ['required', 'string'],
+            // Time is optional – when omitted, we will calculate the next
+            // available slot from the doctor's schedule and existing count.
+            'time' => ['nullable', 'string'],
             'message' => ['nullable', 'string', 'max:2000'],
+            // Optional chamber selection (per‑chamber serials when provided)
+            'chamber_id' => ['nullable', 'integer', 'exists:chambers,id'],
+            // Optional simple captcha fields (enforced for flows that send them)
+            'captcha_token' => ['nullable', 'string'],
+            'captcha_answer' => ['nullable', 'string'],
         ]);
 
         $doctor = User::where('role', 'doctor')->first();
@@ -89,6 +92,46 @@ class AppointmentController extends Controller
             }
 
             return back()->withErrors(['booking' => $message])->withInput();
+        }
+
+        // If a chamber is provided, ensure it belongs to this doctor and is active.
+        $chamber = null;
+        if (!empty($validated['chamber_id'])) {
+            $chamber = Chamber::where('id', $validated['chamber_id'])
+                ->where('doctor_id', $doctor->id)
+                ->where('is_active', true)
+                ->first();
+
+            if (!$chamber) {
+                $message = 'The selected chamber is not available. Please choose another chamber.';
+
+                if ($request->expectsJson()) {
+                    return response()->json(['message' => $message], 422);
+                }
+
+                return back()->withErrors(['booking' => $message])->withInput();
+            }
+        }
+
+        // Optional lightweight captcha: if the frontend sends both fields, enforce validation.
+        $captchaToken = $validated['captcha_token'] ?? null;
+        $captchaAnswer = $validated['captcha_answer'] ?? null;
+        if ($captchaToken !== null || $captchaAnswer !== null) {
+            $expected = session('booking_captcha_' . $captchaToken);
+            // One‑time use token
+            session()->forget('booking_captcha_' . $captchaToken);
+
+            $isValidCaptcha = $expected !== null && trim((string) $captchaAnswer) === (string) $expected;
+
+            if (!$isValidCaptcha) {
+                $message = 'Captcha answer is incorrect. Please try again.';
+
+                if ($request->expectsJson()) {
+                    return response()->json(['message' => $message], 422);
+                }
+
+                return back()->withErrors(['captcha' => $message])->withInput();
+            }
         }
 
         $dateString = now()->parse($validated['date'])->toDateString();
@@ -107,26 +150,89 @@ class AppointmentController extends Controller
             return back()->withErrors(['booking' => $message])->withInput();
         }
 
-        // Check if user exists (optional - user can book as guest)
-        $user = User::where('email', $validated['email'])->first();
+        // Check if user exists (optional - user can book as guest).
+        // Only attempt lookup when an email was provided.
+        $userEmail = $validated['email'] ?? null;
+        $user = $userEmail ? User::where('email', $userEmail)->first() : null;
 
-        $time = $validated['time'];
-        if (preg_match('/^\d{2}:\d{2}$/', $time) === 1) {
+        $time = $validated['time'] ?? null;
+
+        // Determine serial number and estimated start time for this date.
+        // When a chamber is selected, serials are per doctor + chamber + date.
+        $existingQuery = Appointment::where('doctor_id', $doctor->id)
+            ->whereDate('appointment_date', $dateString);
+
+        if ($chamber) {
+            $existingQuery->where('chamber_id', $chamber->id);
+        }
+
+        $existingCount = $existingQuery->count();
+        $serial = $existingCount + 1;
+
+        // If a specific time was supplied (e.g. from internal admin/user
+        // booking flows), use it as the base. Otherwise, compute the next
+        // available time from the doctor's schedule and slot size.
+        if ($time && preg_match('/^\d{2}:\d{2}$/', $time) === 1) {
             $time .= ':00';
         }
 
-        Appointment::create([
+        if (!$time) {
+            $carbon = now()->parse($dateString);
+            $dow = $carbon->dayOfWeek; // 0=Sun..6=Sat
+
+            // Prefer chamber-specific schedule if available, otherwise use default (no chamber).
+            $scheduleQuery = DoctorSchedule::where('doctor_id', $doctor->id)
+                ->where('day_of_week', $dow);
+            $rangeQuery = DoctorScheduleRange::where('doctor_id', $doctor->id)
+                ->where('day_of_week', $dow);
+
+            if ($chamber) {
+                $schedule = (clone $scheduleQuery)->where('chamber_id', $chamber->id)->first()
+                    ?: (clone $scheduleQuery)->whereNull('chamber_id')->first();
+                $ranges = (clone $rangeQuery)->where('chamber_id', $chamber->id)->orderBy('start_time')->get(['start_time', 'end_time']);
+                if ($ranges->count() === 0) {
+                    $ranges = (clone $rangeQuery)->whereNull('chamber_id')->orderBy('start_time')->get(['start_time', 'end_time']);
+                }
+            } else {
+                $schedule = $scheduleQuery->whereNull('chamber_id')->first();
+                $ranges = $rangeQuery->whereNull('chamber_id')->orderBy('start_time')->get(['start_time', 'end_time']);
+            }
+
+            $slotMinutes = $schedule?->slot_minutes ?? 30;
+
+            // Use the first configured range, or sensible defaults.
+            if ($ranges->count() > 0) {
+                $firstRange = $ranges->first();
+                $startBase = substr((string) $firstRange->start_time, 0, 5);
+            } else {
+                $startBase = $schedule?->start_time
+                    ? substr((string) $schedule->start_time, 0, 5)
+                    : '09:00';
+            }
+
+            $startAt = now()->parse($dateString . ' ' . $startBase . ':00');
+            $estimatedAt = $startAt->copy()->addMinutes($slotMinutes * ($serial - 1));
+        } else {
+            $estimatedAt = now()->parse($dateString . ' ' . $time);
+        }
+
+        $appointmentTime = $estimatedAt->format('H:i:s');
+
+        $appointment = Appointment::create([
             'user_id' => $user?->id,  // NULL if guest, user ID if registered
             'doctor_id' => $doctor->id,
+            'chamber_id' => $chamber?->id,
             'appointment_date' => $dateString,
-            'appointment_time' => $time,
+            'appointment_time' => $appointmentTime,
+            'serial_no' => $serial,
+            'estimated_start_time' => $estimatedAt->format('H:i:s'),
             'status' => 'scheduled',
             'symptoms' => $validated['message'] ?? null,
             'notes' => null,
             // Guest information
             'name' => $validated['name'],
             'phone' => $validated['phone'],
-            'email' => $validated['email'],
+            'email' => $validated['email'] ?? null,
             'age' => $validated['age'] ?? null,
             'gender' => $validated['gender'] ?? null,
             'is_guest' => !$user,  // TRUE if guest, FALSE if registered user
@@ -136,10 +242,102 @@ class AppointmentController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'Your appointment request has been submitted. We will contact you shortly.',
+                'serial_no' => $appointment->serial_no,
+                'estimated_time' => substr((string) $appointment->estimated_start_time, 0, 5),
             ]);
         }
 
         return back()->with('success', 'Your appointment request has been submitted. We will contact you shortly.');
+    }
+
+    /**
+     * Preview the next serial number and estimated time for a given date/time/chamber.
+     *
+     * This is used by the multi-step public booking UI to show:
+     * "Your Serial #3 – 05:40 PM" on the chamber selection step
+     * before the patient submits their information.
+     */
+    public function previewSerial(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'date' => ['required', 'date'],
+            // Optional explicit time (used by internal flows); when omitted,
+            // we compute the next time from the schedule and existing count.
+            'time' => ['nullable', 'string'],
+            'chamber_id' => ['nullable', 'integer', 'exists:chambers,id'],
+        ]);
+
+        $doctor = User::where('role', 'doctor')->first();
+        if (!$doctor) {
+            return response()->json([
+                'serial_no' => null,
+                'estimated_time' => null,
+                'message' => 'No doctor configured.',
+            ], 422);
+        }
+
+        $dateString = now()->parse($validated['date'])->toDateString();
+
+        $time = $validated['time'] ?? null;
+
+        $chamberId = $validated['chamber_id'] ?? null;
+
+        $existingQuery = Appointment::where('doctor_id', $doctor->id)
+            ->whereDate('appointment_date', $dateString);
+
+        if ($chamberId) {
+            $existingQuery->where('chamber_id', $chamberId);
+        }
+
+        $existingCount = $existingQuery->count();
+        $serial = $existingCount + 1;
+
+        if ($time && preg_match('/^\d{2}:\d{2}$/', $time) === 1) {
+            $time .= ':00';
+        }
+
+        if (!$time) {
+            $carbon = now()->parse($dateString);
+            $dow = $carbon->dayOfWeek;
+
+            $scheduleQuery = DoctorSchedule::where('doctor_id', $doctor->id)
+                ->where('day_of_week', $dow);
+            $rangeQuery = DoctorScheduleRange::where('doctor_id', $doctor->id)
+                ->where('day_of_week', $dow);
+
+            if ($chamberId) {
+                $schedule = (clone $scheduleQuery)->where('chamber_id', $chamberId)->first()
+                    ?: (clone $scheduleQuery)->whereNull('chamber_id')->first();
+                $ranges = (clone $rangeQuery)->where('chamber_id', $chamberId)->orderBy('start_time')->get(['start_time', 'end_time']);
+                if ($ranges->count() === 0) {
+                    $ranges = (clone $rangeQuery)->whereNull('chamber_id')->orderBy('start_time')->get(['start_time', 'end_time']);
+                }
+            } else {
+                $schedule = $scheduleQuery->whereNull('chamber_id')->first();
+                $ranges = $rangeQuery->whereNull('chamber_id')->orderBy('start_time')->get(['start_time', 'end_time']);
+            }
+
+            $slotMinutes = $schedule?->slot_minutes ?? 30;
+
+            if ($ranges->count() > 0) {
+                $firstRange = $ranges->first();
+                $startBase = substr((string) $firstRange->start_time, 0, 5);
+            } else {
+                $startBase = $schedule?->start_time
+                    ? substr((string) $schedule->start_time, 0, 5)
+                    : '09:00';
+            }
+
+            $startAt = now()->parse($dateString . ' ' . $startBase . ':00');
+            $estimatedAt = $startAt->copy()->addMinutes($slotMinutes * ($serial - 1));
+        } else {
+            $estimatedAt = now()->parse($dateString . ' ' . $time);
+        }
+
+        return response()->json([
+            'serial_no' => $serial,
+            'estimated_time' => $estimatedAt->format('H:i'),
+        ]);
     }
 
     /**
@@ -199,14 +397,25 @@ class AppointmentController extends Controller
         }
 
         $dow = $carbon->dayOfWeek; // 0=Sun ... 6=Sat
-        $schedule = DoctorSchedule::where('doctor_id', $doctor->id)
-            ->where('day_of_week', $dow)
-            ->first();
 
-        $ranges = DoctorScheduleRange::where('doctor_id', $doctor->id)
-            ->where('day_of_week', $dow)
-            ->orderBy('start_time')
-            ->get(['start_time', 'end_time']);
+        $chamberId = $request->query('chamber_id');
+
+        $scheduleQuery = DoctorSchedule::where('doctor_id', $doctor->id)
+            ->where('day_of_week', $dow);
+        $rangeQuery = DoctorScheduleRange::where('doctor_id', $doctor->id)
+            ->where('day_of_week', $dow);
+
+        if ($chamberId) {
+            $schedule = (clone $scheduleQuery)->where('chamber_id', $chamberId)->first()
+                ?: (clone $scheduleQuery)->whereNull('chamber_id')->first();
+            $ranges = (clone $rangeQuery)->where('chamber_id', $chamberId)->orderBy('start_time')->get(['start_time', 'end_time']);
+            if ($ranges->count() === 0) {
+                $ranges = (clone $rangeQuery)->whereNull('chamber_id')->orderBy('start_time')->get(['start_time', 'end_time']);
+            }
+        } else {
+            $schedule = $scheduleQuery->whereNull('chamber_id')->first();
+            $ranges = $rangeQuery->whereNull('chamber_id')->orderBy('start_time')->get(['start_time', 'end_time']);
+        }
 
         if (!$schedule && $ranges->count() === 0) {
             return response()->json([

@@ -1,6 +1,6 @@
 import { Link, usePage, router } from '@inertiajs/react';
 import { useState } from 'react';
-import { CalendarDays, ClipboardList, LayoutDashboard, Settings, Users, TrendingUp, Clock, CheckCircle, XCircle, FileText, AlertCircle, UserCheck, Stethoscope, TestTube, ChevronRight, X, Phone, Mail, MapPin, Plus } from 'lucide-react';
+import { CalendarDays, ClipboardList, LayoutDashboard, Settings, Users, TrendingUp, Clock, CheckCircle, XCircle, FileText, AlertCircle, UserCheck, Stethoscope, TestTube, ChevronRight, X, Phone, Mail, MapPin, Plus, Building2 } from 'lucide-react';
 import DoctorLayout from '../../layouts/DoctorLayout';
 import GlassCard from '../../components/GlassCard';
 
@@ -501,6 +501,44 @@ export default function DoctorDashboard({ stats = {}, scheduledToday = [], recen
                     <p className="text-gray-500">No appointments scheduled for today</p>
                   </div>
                 )}
+              </div>
+            </GlassCard>
+          </div>
+
+          {/* Right Column - Quick Actions & Stats */}
+          <div className="space-y-4">
+            {/* Quick Actions */}
+            <GlassCard variant="solid" hover={false} className="p-5">
+              <h3 className="mb-4 text-sm font-bold uppercase tracking-wider text-[#005963]">Quick Actions</h3>
+              <div className="space-y-2">
+                <Link
+                  href="/doctor/appointments"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#005963] px-4 py-3 text-sm font-semibold text-white hover:bg-[#00434a] transition shadow-sm"
+                >
+                  <Plus className="h-4 w-4" />
+                  Create Appointment
+                </Link>
+                <Link
+                  href="/doctor/prescriptions/create"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#005963]/30 bg-white px-4 py-3 text-sm font-semibold text-[#005963] hover:bg-[#005963]/5 transition"
+                >
+                  <FileText className="h-4 w-4" />
+                  Create Prescription
+                </Link>
+                <Link
+                  href="/doctor/appointments"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#005963]/30 bg-white px-4 py-3 text-sm font-semibold text-[#005963] hover:bg-[#005963]/5 transition"
+                >
+                  <CalendarDays className="h-4 w-4" />
+                  View Appointments
+                </Link>
+                <Link
+                  href="/doctor/schedule"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#005963]/30 bg-white px-4 py-3 text-sm font-semibold text-[#005963] hover:bg-[#005963]/5 transition"
+                >
+                  <Clock className="h-4 w-4" />
+                  Manage Availability
+                </Link>
               </div>
             </GlassCard>
 

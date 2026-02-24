@@ -114,7 +114,7 @@ export default function PublicLayout({ children }) {
                                 Services
                             </Link>
                             <Link
-                                href="/#booking"
+                                href="/book-appointment"
                                 className="text-white hover:text-[#00acb1] transition"
                             >
                                 Book
@@ -202,7 +202,7 @@ export default function PublicLayout({ children }) {
                                 Services
                             </Link>
                             <Link
-                                href="/#booking"
+                                href="/book-appointment"
                                 className="block text-white hover:text-[#00acb1] transition py-2"
                                 onClick={() => setMobileMenuOpen(false)}
                             >

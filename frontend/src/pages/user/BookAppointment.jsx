@@ -20,23 +20,26 @@ export default function UserBookAppointment() {
     phone: authUser?.phone || '',
     email: authUser?.email || '',
     date: '',
-    time: '',
     message: '',
   }), [authUser]);
 
   const [formData, setFormData] = useState(initial);
   const [selectedDate, setSelectedDate] = useState(null);
   const selectedDateRef = useRef(null);
-  const selectedTimeRef = useRef('');
-  const slotsRequestSeq = useRef(0);
-  const [availableSlots, setAvailableSlots] = useState([]);
-  const [loadingSlots, setLoadingSlots] = useState(false);
+  const [chambers, setChambers] = useState([]);
+  const [loadingChambers, setLoadingChambers] = useState(false);
+  const [selectedChamberId, setSelectedChamberId] = useState(null);
+  const [selectedChamber, setSelectedChamber] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState('');
+  const [successDetails, setSuccessDetails] = useState(null);
   const [error, setError] = useState('');
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [unavailableRanges, setUnavailableRanges] = useState([]);
   const [closedWeekdays, setClosedWeekdays] = useState([]);
+  const [previewSerial, setPreviewSerial] = useState(null);
+  const [previewTime, setPreviewTime] = useState(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
 
   const isClosedByWeekday = (dateStr) => {
     if (!dateStr || !Array.isArray(closedWeekdays) || closedWeekdays.length === 0) return false;
@@ -51,6 +54,7 @@ export default function UserBookAppointment() {
     return unavailableRanges.some((r) => r?.start_date && r?.end_date && r.start_date <= dateStr && dateStr <= r.end_date);
   };
 
+  // Load doctor's unavailable ranges for calendar
   useEffect(() => {
     let mounted = true;
     const run = async () => {
@@ -70,40 +74,70 @@ export default function UserBookAppointment() {
     return () => { mounted = false; };
   }, []);
 
-  const fetchAvailableSlots = async (date) => {
-    const seq = ++slotsRequestSeq.current;
-    setLoadingSlots(true);
-    try {
-      const res = await fetch(`/available-slots/${date}`);
-      const data = await res.json().catch(() => ({}));
-
-      // Ignore stale responses (user clicked another date quickly).
-      if (seq !== slotsRequestSeq.current) return;
-
-      if (data?.closed) {
-        const message = 'Doctor is unavailable on the selected date. Please choose another date.';
-        setError(message);
-        toastError(message);
-        setSelectedDate(null);
-        selectedDateRef.current = null;
-        selectedTimeRef.current = '';
-        setFormData((p) => ({ ...p, date: '', time: '' }));
-        setAvailableSlots([]);
-        return;
+  // Load active chambers once (for step 2)
+  useEffect(() => {
+    let mounted = true;
+    const run = async () => {
+      try {
+        setLoadingChambers(true);
+        const res = await fetch('/public-chambers');
+        const data = await res.json().catch(() => ({}));
+        if (!mounted) return;
+        const list = Array.isArray(data?.chambers) ? data.chambers : [];
+        setChambers(list);
+        if (list.length === 1) {
+          setSelectedChamberId(list[0].id);
+        }
+      } catch {
+        if (!mounted) return;
+        setChambers([]);
+      } finally {
+        if (!mounted) return;
+        setLoadingChambers(false);
       }
+    };
+    run();
+    return () => { mounted = false; };
+  }, []);
 
-      setAvailableSlots(data.slots || []);
-    } catch {
-      if (seq !== slotsRequestSeq.current) return;
-      setAvailableSlots([]);
-      const message = 'Failed to load available slots. Please try again.';
-      setError(message);
-      toastError(message);
-    } finally {
-      if (seq !== slotsRequestSeq.current) return;
-      setLoadingSlots(false);
+  // Auto-preview serial and estimated time when date and chamber are selected
+  useEffect(() => {
+    const date = formData.date;
+    const chamberId = selectedChamberId;
+    if (!date || !chamberId) {
+      setPreviewSerial(null);
+      setPreviewTime(null);
+      return;
     }
-  };
+
+    let cancelled = false;
+    const run = async () => {
+      try {
+        setLoadingPreview(true);
+        const params = new URLSearchParams({
+          date,
+          chamber_id: String(chamberId),
+        });
+        const res = await fetch(`/booking-preview?${params.toString()}`);
+        const data = await res.json().catch(() => ({}));
+        if (cancelled) return;
+        setPreviewSerial(data?.serial_no ?? null);
+        setPreviewTime(data?.estimated_time ?? null);
+      } catch {
+        if (cancelled) return;
+        setPreviewSerial(null);
+        setPreviewTime(null);
+      } finally {
+        if (cancelled) return;
+        setLoadingPreview(false);
+      }
+    };
+
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [formData.date, selectedChamberId]);
 
   const handleDateClick = (info) => {
     const clickedDate = info.dateStr;
@@ -118,15 +152,17 @@ export default function UserBookAppointment() {
     setError('');
     setSelectedDate(clickedDate);
     selectedDateRef.current = clickedDate;
-    selectedTimeRef.current = '';
-    setFormData((p) => ({ ...p, date: clickedDate, time: '' }));
-    fetchAvailableSlots(clickedDate);
+    setSelectedChamberId((prev) => (chambers.length === 1 ? chambers[0].id : prev));
+    setFormData((p) => ({ ...p, date: clickedDate }));
+    setPreviewSerial(null);
+    setPreviewTime(null);
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e?.preventDefault) e.preventDefault();
     setSubmitting(true);
     setSuccess('');
+    setSuccessDetails(null);
     setError('');
 
     try {
@@ -147,23 +183,34 @@ export default function UserBookAppointment() {
           Accept: 'application/json',
         },
         body: JSON.stringify({
-          name: formData.name,
-          phone: formData.phone,
-          email: formData.email,
+          // Use authenticated user's info for a quick flow
+          name: formData.name || authUser?.name || '',
+          phone: formData.phone || authUser?.phone || '',
+          email: formData.email || authUser?.email || '',
           date: selectedDateRef.current || formData.date,
-          time: selectedTimeRef.current || formData.time,
           message: formData.message,
+          chamber_id: selectedChamberId,
         }),
       });
 
       if (res.ok) {
-        const message = 'Appointment requested successfully. We will contact you shortly.';
+        const data = await res.json().catch(() => ({}));
+        const message = data?.message || 'Appointment requested successfully. We will contact you shortly.';
         setSuccess(message);
+        if (data?.serial_no || data?.estimated_time) {
+          setSuccessDetails({
+            serial: data.serial_no ?? null,
+            estimated_time: data.estimated_time ?? null,
+          });
+        }
         toastSuccess(message);
         setShowSuccessPopup(true);
-        setFormData((p) => ({ ...p, date: '', time: '', message: '' }));
+        setFormData((p) => ({ ...p, date: '', message: '' }));
         setSelectedDate(null);
-        setAvailableSlots([]);
+        setSelectedChamberId(null);
+        setSelectedChamber(null);
+        setPreviewSerial(null);
+        setPreviewTime(null);
       } else {
         const data = await res.json().catch(() => ({}));
         const message = data?.message || 'Failed to submit the booking. Please try again.';
@@ -190,6 +237,24 @@ export default function UserBookAppointment() {
           <GlassCard variant="solid" className="w-full max-w-lg p-6">
             <div className="text-2xl font-extrabold text-[#005963]">Appointment Submitted</div>
             <p className="mt-2 text-sm text-gray-700">{success}</p>
+            {successDetails && (successDetails.serial || successDetails.estimated_time) && (
+              <div className="mt-3 rounded-2xl border border-[#00acb1]/30 bg-[#00acb1]/5 px-4 py-3 text-sm text-[#005963]">
+                {successDetails.serial && (
+                  <div>
+                    <span className="font-semibold">Your serial:</span>{' '}
+                    <span className="font-bold">#{successDetails.serial}</span>
+                  </div>
+                )}
+                {successDetails.estimated_time && (
+                  <div className="mt-1">
+                    <span className="font-semibold">Estimated time:</span>{' '}
+                    <span className="font-bold">
+                      {formatDisplayTime12h(successDetails.estimated_time) || successDetails.estimated_time}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
             <div className="mt-4 rounded-2xl border border-[#00acb1]/20 bg-white px-4 py-3">
               <div className="text-sm font-semibold text-[#005963]">Need help?</div>
               <div className="mt-1 text-sm text-gray-700">
@@ -212,7 +277,9 @@ export default function UserBookAppointment() {
           </div>
           <div>
             <h1 className="text-3xl font-bold text-[#005963]">Book Appointment</h1>
-            <p className="mt-1 text-sm text-gray-700">Select a date and time, then submit your request.</p>
+            <p className="mt-1 text-sm text-gray-700">
+              Step 1: select a date • Step 2: choose chamber & time • Step 3: confirmation
+            </p>
           </div>
         </div>
 
@@ -223,7 +290,9 @@ export default function UserBookAppointment() {
         )}
 
         <div className="grid gap-6 lg:grid-cols-2">
+          {/* Step 1 – Date */}
           <GlassCard variant="solid" className="p-5">
+            <h3 className="mb-1 text-xs font-semibold uppercase tracking-wider text-[#005963]/80">Step 1</h3>
             <h3 className="mb-3 text-lg font-extrabold text-[#005963]">Choose Date</h3>
             <div className="rounded-2xl border border-[#00acb1]/20 bg-white p-3">
               <FullCalendar
@@ -245,134 +314,154 @@ export default function UserBookAppointment() {
             </div>
           </GlassCard>
 
+          {/* Step 2 – Chamber & Time frame */}
           <GlassCard variant="solid" className="p-5 flex flex-col">
-            <h3 className="mb-3 text-lg font-extrabold text-[#005963]">Available Time Slots</h3>
+            <h3 className="mb-1 text-xs font-semibold uppercase tracking-wider text-[#005963]/80">Step 2</h3>
+            <h3 className="mb-3 text-lg font-extrabold text-[#005963]">Choose Chamber</h3>
 
-            <div className="flex-1 min-h-0">
-
-            {!selectedDate ? (
-              <div className="flex h-full items-center justify-center text-gray-600">
-                <div className="text-center">
-                  <Calendar className="mx-auto mb-3 h-12 w-12 text-gray-400" />
-                  <p>Please select a date first</p>
-                </div>
-              </div>
-            ) : loadingSlots ? (
-              <div className="flex h-full items-center justify-center">
-                <div className="text-center">
-                  <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-4 border-[#00acb1] border-t-transparent"></div>
-                  <p className="text-gray-600">Loading available slots...</p>
-                </div>
-              </div>
-            ) : availableSlots.length === 0 ? (
-              <div className="flex h-full items-center justify-center text-gray-600">
-                <div className="text-center">
-                  <Clock className="mx-auto mb-3 h-12 w-12 text-gray-400" />
-                  <p>No slots available for this date</p>
-                  <p className="mt-1 text-sm">Please choose another date</p>
-                </div>
-              </div>
-            ) : (
-              <div>
-                <div className="mb-3 text-sm text-gray-700">Selected date: <span className="font-semibold">{formatDisplayDateWithYear(selectedDate) || selectedDate}</span></div>
-                <div className="grid gap-2 overflow-y-auto pr-2 sm:grid-cols-3">
-                  {availableSlots.map((slot) => (
+            <div className="flex-1 min-h-0 space-y-4">
+            {/* Chambers row */}
+            <div>
+              {loadingChambers ? (
+                <div className="text-sm text-gray-600">Loading chambers…</div>
+              ) : chambers.length === 0 ? (
+                <div className="text-sm text-gray-500">No chambers configured yet.</div>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {chambers.map((ch) => (
                     <button
-                      key={slot}
+                      key={ch.id}
                       type="button"
                       onClick={() => {
-                        selectedTimeRef.current = slot;
-                        setFormData((p) => ({ ...p, time: slot }));
+                        setSelectedChamberId(ch.id);
+                        setSelectedChamber(ch);
                       }}
-                      className={`rounded-lg border-2 px-3 py-2 text-center text-sm font-semibold transition-all ${
-                        formData.time === slot
+                      className={`rounded-xl border px-3 py-2 text-xs font-semibold transition ${
+                        selectedChamberId === ch.id
                           ? 'border-[#005963] bg-[#005963] text-white'
-                          : 'border-[#00acb1]/30 bg-white text-[#005963] hover:border-[#00acb1] hover:bg-[#00acb1]/10'
+                          : 'border-[#00acb1]/30 bg-white text-[#005963] hover:border-[#005963] hover:bg-[#00acb1]/10'
                       }`}
                     >
-                      {formatDisplayTime12h(slot) || slot}
+                      {ch.name}
                     </button>
                   ))}
                 </div>
+              )}
+            </div>
+
+            {/* Estimated time preview (no manual time selection) */}
+            <div className="mt-4 border-t border-gray-100 pt-4">
+              <div className="mb-2 text-xs font-semibold text-[#005963]">
+                Estimated visit time
               </div>
-            )}
+              {!selectedDate ? (
+                <div className="text-xs text-gray-500">
+                  Please select a date first.
+                </div>
+              ) : !selectedChamberId ? (
+                <div className="text-xs text-gray-500">
+                  Please choose a chamber to see your estimated time.
+                </div>
+              ) : loadingPreview ? (
+                <div className="flex items-center gap-2 text-xs text-gray-600">
+                  <Clock className="h-4 w-4 animate-spin" />
+                  Calculating estimated time…
+                </div>
+              ) : previewTime ? (
+                <div className="text-xs text-gray-700">
+                  You will be seen around{' '}
+                  <span className="font-semibold">
+                    {formatDisplayTime12h(previewTime) || previewTime}
+                  </span>{' '}
+                  as serial{' '}
+                  <span className="font-semibold">
+                    #{previewSerial}
+                  </span>
+                  .
+                </div>
+              ) : (
+                <div className="text-xs text-gray-500">
+                  Unable to calculate estimated time. You can still continue.
+                </div>
+              )}
+            </div>
 
             </div>
 
-            {formData.date && formData.time && (
+            {formData.date && previewTime && previewSerial && (
               <div className="mt-4 rounded-2xl border border-[#00acb1]/30 bg-[#005963]/10 px-4 py-3 text-center text-sm font-semibold text-[#005963]">
-                Selected: {formatDisplayDateTimeFromYmdAndTime(formData.date, formData.time) || `${formData.date} at ${formData.time}`}
+                {formatDisplayDateWithYear(formData.date) || formData.date} • Serial #{previewSerial} • Est. time {formatDisplayTime12h(previewTime) || previewTime}
               </div>
             )}
           </GlassCard>
         </div>
 
+        {/* Step 3 – Quick confirmation (no long form) */}
         <div className="mt-6">
-          <GlassCard variant="solid" className="p-6">
-            <h3 className="mb-4 text-lg font-extrabold text-[#005963]">Your Details</h3>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-3">
-                <div>
-                  <label className="mb-2 block text-sm font-semibold text-[#005963]">Name</label>
-                  <div className="relative">
-                    <User className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#005963]" />
-                    <input
-                      className={`${inputClass} pl-11`}
-                      value={formData.name}
-                      onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
-                      required
-                      disabled={submitting}
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="mb-2 block text-sm font-semibold text-[#005963]">Phone</label>
-                  <div className="relative">
-                    <Phone className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#005963]" />
-                    <input
-                      className={`${inputClass} pl-11`}
-                      value={formData.phone}
-                      onChange={(e) => setFormData((p) => ({ ...p, phone: e.target.value }))}
-                      required
-                      disabled={submitting}
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="mb-2 block text-sm font-semibold text-[#005963]">Email</label>
-                  <div className="relative">
-                    <Mail className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#005963]" />
-                    <input
-                      type="email"
-                      className={`${inputClass} pl-11`}
-                      value={formData.email}
-                      onChange={(e) => setFormData((p) => ({ ...p, email: e.target.value }))}
-                      required
-                      disabled={submitting}
-                    />
-                  </div>
-                </div>
-              </div>
+          <GlassCard variant="solid" className="p-6 flex flex-col gap-4">
+            <div>
+              <h3 className="mb-1 text-xs font-semibold uppercase tracking-wider text-[#005963]/80">Step 3</h3>
+              <h3 className="text-lg font-extrabold text-[#005963]">Confirm & Submit</h3>
+              <p className="mt-1 text-sm text-gray-600">
+                We will use your profile information to create the booking.
+              </p>
+            </div>
 
+            <div className="grid gap-4 text-sm md:grid-cols-3">
               <div>
-                <label className="mb-2 block text-sm font-semibold text-[#005963]">Message (optional)</label>
-                <textarea
-                  className={inputClass}
-                  rows={4}
-                  value={formData.message}
-                  onChange={(e) => setFormData((p) => ({ ...p, message: e.target.value }))}
-                  disabled={submitting}
-                />
+                <div className="text-xs font-semibold text-gray-500">Patient</div>
+                <div className="mt-1 font-semibold text-gray-900">
+                  {authUser?.name || formData.name || '—'}
+                </div>
+                <div className="mt-1 text-xs text-gray-600">
+                  {authUser?.email || formData.email || 'No email'}
+                </div>
+                <div className="mt-0.5 text-xs text-gray-600">
+                  {authUser?.phone || formData.phone || 'No phone'}
+                </div>
               </div>
+              <div>
+                <div className="text-xs font-semibold text-gray-500">Appointment</div>
+                <div className="mt-1 text-sm text-gray-900">
+                  {formData.date
+                    ? (formatDisplayDateWithYear(formData.date) || formData.date)
+                    : 'Please select a date'}
+                </div>
+                <div className="mt-1 text-xs text-gray-600">
+                  {selectedChamberId
+                    ? `Chamber: ${chambers.find((c) => c.id === selectedChamberId)?.name ?? 'Selected'}`
+                    : 'Chamber not selected'}
+                </div>
+                <div className="mt-1 text-xs text-gray-600">
+                  {previewSerial
+                    ? `Serial: #${previewSerial}${
+                        previewTime
+                          ? ` • Est. time: ${
+                              formatDisplayTime12h(previewTime) || previewTime
+                            }`
+                          : ''
+                      }`
+                    : 'Serial will be assigned automatically'}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs font-semibold text-gray-500">Notes</div>
+                <div className="mt-1 text-xs text-gray-600">
+                  You can update your profile information from your account page if needed.
+                </div>
+              </div>
+            </div>
 
-              <div className="pt-1">
-                <PrimaryButton type="submit" disabled={submitting || !formData.date || !formData.time}
-                  className={(!formData.date || !formData.time) ? 'opacity-60' : ''}
-                >
-                  {submitting ? 'Submitting…' : 'Submit Appointment Request'}
-                </PrimaryButton>
-              </div>
-            </form>
+            <div className="pt-1">
+              <PrimaryButton
+                type="button"
+                onClick={handleSubmit}
+                disabled={submitting || !formData.date || !selectedChamberId}
+                className={(!formData.date || !selectedChamberId) ? 'opacity-60' : ''}
+              >
+                {submitting ? 'Submitting…' : 'Confirm Booking'}
+              </PrimaryButton>
+            </div>
           </GlassCard>
         </div>
       </div>

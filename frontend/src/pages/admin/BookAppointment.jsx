@@ -18,10 +18,8 @@ export default function AdminBookAppointment() {
     () => ({
       name: '',
       phone: '',
-      email: '',
       date: '',
       time: '',
-      message: '',
     }),
     []
   );
@@ -153,10 +151,8 @@ export default function AdminBookAppointment() {
         body: JSON.stringify({
           name: formData.name,
           phone: formData.phone,
-          email: formData.email,
           date: selectedDateRef.current || formData.date,
           time: selectedTimeRef.current || formData.time,
-          message: formData.message,
         }),
       });
 
@@ -165,7 +161,7 @@ export default function AdminBookAppointment() {
         setSuccess(message);
         toastSuccess(message);
         setShowSuccessPopup(true);
-        setFormData((p) => ({ ...p, date: '', time: '', message: '' }));
+        setFormData((p) => ({ ...p, date: '', time: '' }));
         setSelectedDate(null);
         setAvailableSlots([]);
       } else {
@@ -319,7 +315,7 @@ export default function AdminBookAppointment() {
           <GlassCard variant="solid" className="p-6">
             <h3 className="mb-4 text-lg font-extrabold text-[#005963]">Patient Details</h3>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-3">
+              <div className="grid gap-4 md:grid-cols-2">
                 <div>
                   <label className="mb-2 block text-sm font-semibold text-[#005963]">Name</label>
                   <div className="relative">
@@ -347,32 +343,6 @@ export default function AdminBookAppointment() {
                     />
                   </div>
                 </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-semibold text-[#005963]">Email</label>
-                  <div className="relative">
-                    <Mail className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#005963]" />
-                    <input
-                      type="email"
-                      className={`${inputClass} pl-11`}
-                      value={formData.email}
-                      onChange={(e) => setFormData((p) => ({ ...p, email: e.target.value }))}
-                      required
-                      disabled={submitting}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-[#005963]">Message (optional)</label>
-                <textarea
-                  className={inputClass}
-                  rows={4}
-                  value={formData.message}
-                  onChange={(e) => setFormData((p) => ({ ...p, message: e.target.value }))}
-                  disabled={submitting}
-                />
               </div>
 
               <div className="pt-1">
