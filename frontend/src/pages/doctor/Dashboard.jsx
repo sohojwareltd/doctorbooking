@@ -188,6 +188,61 @@ export default function DoctorDashboard({ stats = {}, scheduledToday = [], recen
             </div>
           </GlassCard>
         </div>
+        
+        {/* Quick Actions + Active Patients (under stats) */}
+        <div className="grid gap-4 lg:grid-cols-3">
+          <GlassCard variant="solid" hover={false} className="p-5 lg:col-span-2">
+            <h3 className="mb-4 text-sm font-bold uppercase tracking-wider text-[#005963]">Quick Actions</h3>
+            <div className="space-y-2">
+              <Link
+                href="/doctor/appointments"
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#005963] px-4 py-3 text-sm font-semibold text-white hover:bg-[#00434a] transition shadow-sm"
+              >
+                <Plus className="h-4 w-4" />
+                Create Appointment
+              </Link>
+              <Link
+                href="/doctor/prescriptions/create"
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#005963]/30 bg-white px-4 py-3 text-sm font-semibold text-[#005963] hover:bg-[#005963]/5 transition"
+              >
+                <FileText className="h-4 w-4" />
+                Create Prescription
+              </Link>
+              <Link
+                href="/doctor/appointments"
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#005963]/30 bg-white px-4 py-3 text-sm font-semibold text-[#005963] hover:bg-[#005963]/5 transition"
+              >
+                <CalendarDays className="h-4 w-4" />
+                View Appointments
+              </Link>
+              <Link
+                href="/doctor/schedule"
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#005963]/30 bg-white px-4 py-3 text-sm font-semibold text-[#005963] hover:bg-[#005963]/5 transition"
+              >
+                <Clock className="h-4 w-4" />
+                Manage Availability
+              </Link>
+            </div>
+          </GlassCard>
+
+          <GlassCard variant="solid" hover={false} className="p-5 bg-gradient-to-br from-blue-50 to-blue-100/50 border border-blue-200">
+            <div className="space-y-4">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-wider text-blue-900">Active Patients</div>
+                <div className="mt-2 text-3xl font-black text-blue-600">{defaultStats.totalPatients}</div>
+              </div>
+              <div className="h-px bg-gradient-to-r from-blue-300 to-transparent"></div>
+              <div className="text-xs text-blue-800 leading-relaxed">
+                <p className="font-semibold">Latest Updates</p>
+                <ul className="mt-2 space-y-1 text-blue-700">
+                  <li>• {defaultStats.todayAppointments} appointment{defaultStats.todayAppointments !== 1 ? 's' : ''} today</li>
+                  <li>• {defaultStats.scheduled} scheduled</li>
+                  <li>• {defaultStats.prescribedThisMonth} prescribed this month</li>
+                </ul>
+              </div>
+            </div>
+          </GlassCard>
+        </div>
 
         {/* Main Content Grid */}
         <div className="grid gap-6 lg:grid-cols-3">
@@ -447,7 +502,7 @@ export default function DoctorDashboard({ stats = {}, scheduledToday = [], recen
 
           {/* Right Column - Quick Actions & Stats */}
           <div className="space-y-4">
-            {/* Today's Appointments (moved to right column) */}
+            {/* Today's Appointments */}
             <GlassCard variant="solid" hover={false} className="p-6">
               <div className="mb-6 flex items-center justify-between">
                 <div>
@@ -464,9 +519,9 @@ export default function DoctorDashboard({ stats = {}, scheduledToday = [], recen
                     <div 
                       key={appointment.id || index} 
                       onClick={() => setSelectedPatient(appointment)}
-                      className="flex items-center justify-between rounded-xl border border-gray-200 p-4 hover:bg-gray-50 hover:border-gray-300 transition cursor-pointer"
+                      className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-200 p-4 hover:bg-gray-50 hover:border-gray-300 transition cursor-pointer"
                     >
-                      <div className="flex items-center gap-4 flex-1">
+                      <div className="flex items-center gap-4 flex-1 min-w-[220px]">
                         <div className="h-8 w-8 rounded-full bg-[#005963] text-white font-bold text-xs flex items-center justify-center flex-shrink-0">
                           {index + 1}
                         </div>
@@ -488,8 +543,8 @@ export default function DoctorDashboard({ stats = {}, scheduledToday = [], recen
                           )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-3 ml-2">
-                        <span className={`rounded-full px-3 py-1 text-xs font-semibold whitespace-nowrap ${getStatusColor(appointment.status)}`}>
+                      <div className="flex items-center justify-end gap-3 w-full sm:w-auto sm:ml-2">
+                        <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold whitespace-nowrap ${getStatusColor(appointment.status)}`}>
                           {getStatusLabel(appointment.status)}
                         </span>
                       </div>
@@ -503,63 +558,7 @@ export default function DoctorDashboard({ stats = {}, scheduledToday = [], recen
                 )}
               </div>
             </GlassCard>
-          </div>
 
-          {/* Right Column - Quick Actions & Stats */}
-          <div className="space-y-4">
-            {/* Quick Actions */}
-            <GlassCard variant="solid" hover={false} className="p-5">
-              <h3 className="mb-4 text-sm font-bold uppercase tracking-wider text-[#005963]">Quick Actions</h3>
-              <div className="space-y-2">
-                <Link
-                  href="/doctor/appointments"
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#005963] px-4 py-3 text-sm font-semibold text-white hover:bg-[#00434a] transition shadow-sm"
-                >
-                  <Plus className="h-4 w-4" />
-                  Create Appointment
-                </Link>
-                <Link
-                  href="/doctor/prescriptions/create"
-                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#005963]/30 bg-white px-4 py-3 text-sm font-semibold text-[#005963] hover:bg-[#005963]/5 transition"
-                >
-                  <FileText className="h-4 w-4" />
-                  Create Prescription
-                </Link>
-                <Link
-                  href="/doctor/appointments"
-                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#005963]/30 bg-white px-4 py-3 text-sm font-semibold text-[#005963] hover:bg-[#005963]/5 transition"
-                >
-                  <CalendarDays className="h-4 w-4" />
-                  View Appointments
-                </Link>
-                <Link
-                  href="/doctor/schedule"
-                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#005963]/30 bg-white px-4 py-3 text-sm font-semibold text-[#005963] hover:bg-[#005963]/5 transition"
-                >
-                  <Clock className="h-4 w-4" />
-                  Manage Availability
-                </Link>
-              </div>
-            </GlassCard>
-
-            {/* Quick Stats */}
-            <GlassCard variant="solid" hover={false} className="p-5 bg-gradient-to-br from-blue-50 to-blue-100/50 border border-blue-200">
-              <div className="space-y-4">
-                <div>
-                  <div className="text-xs font-semibold uppercase tracking-wider text-blue-900">Active Patients</div>
-                  <div className="mt-2 text-3xl font-black text-blue-600">{defaultStats.totalPatients}</div>
-                </div>
-                <div className="h-px bg-gradient-to-r from-blue-300 to-transparent"></div>
-                <div className="text-xs text-blue-800 leading-relaxed">
-                  <p className="font-semibold">Latest Updates</p>
-                  <ul className="mt-2 space-y-1 text-blue-700">
-                    <li>• {defaultStats.todayAppointments} appointment{defaultStats.todayAppointments !== 1 ? 's' : ''} today</li>
-                    <li>• {defaultStats.scheduled} scheduled</li>
-                    <li>• {defaultStats.prescribedThisMonth} prescribed this month</li>
-                  </ul>
-                </div>
-              </div>
-            </GlassCard>
           </div>
         </div>
       </div>
