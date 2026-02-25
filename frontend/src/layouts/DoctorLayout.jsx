@@ -1,5 +1,4 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import ParticlesBackground from '../components/ParticlesBackground';
 import DoctorLogo from '../components/DoctorLogo';
 import DoctorSidebar from '../components/DoctorSidebar';
 import { Menu, X } from 'lucide-react';
@@ -18,22 +17,17 @@ export default function DoctorLayout({ children, title = '' }) {
   return (
     <>
       <Head title={title ? `${title} - Doctor Dashboard` : 'Doctor Dashboard'} />
-      <div className="min-h-screen relative overflow-hidden bg-gray-50">
-        {/* Background */}
-        <div className="absolute inset-0 z-0">
-          <ParticlesBackground id="tsparticles-doctor" variant="pulse" />
-        </div>
-
+      <div className="min-h-screen bg-[#f3f4f6]">
         {/* Main Container */}
-        <div className="relative z-10 min-h-screen flex flex-col lg:flex-row">
+        <div className="min-h-screen flex flex-col lg:flex-row">
           {/* Mobile Header */}
-          <div className="lg:hidden sticky top-0 z-40 flex items-center justify-between bg-white/80 backdrop-blur-sm border-b border-gray-200 px-4 py-3">
+          <div className="lg:hidden sticky top-0 z-40 flex items-center justify-between bg-white border-b border-gray-200 px-4 py-3">
             <Link href="/" className="flex items-center gap-2">
-              <div className="rounded-lg bg-[#005963] p-1.5">
+              <div className="rounded-lg bg-[#111827] p-1.5">
                 <DoctorLogo className="h-6 w-6" />
               </div>
               <div>
-                <div className="text-sm font-black text-[#005963]">MediCare</div>
+                <div className="text-sm font-black text-gray-900">MediCare</div>
               </div>
             </Link>
             <button
@@ -42,9 +36,9 @@ export default function DoctorLayout({ children, title = '' }) {
               aria-label="Toggle sidebar"
             >
               {sidebarOpen ? (
-                <X className="h-5 w-5 text-[#005963]" />
+                <X className="h-5 w-5 text-gray-700" />
               ) : (
-                <Menu className="h-5 w-5 text-[#005963]" />
+                <Menu className="h-5 w-5 text-gray-700" />
               )}
             </button>
           </div>
@@ -59,7 +53,7 @@ export default function DoctorLayout({ children, title = '' }) {
 
           {/* Sidebar */}
           <aside
-            className={`fixed top-16 lg:top-0 left-0 h-[calc(100vh-4rem)] lg:h-screen w-72 lg:w-64 bg-white z-40 transform transition-transform duration-300 lg:translate-x-0 ${
+            className={`fixed top-16 lg:top-0 left-0 h-[calc(100vh-4rem)] lg:h-screen w-72 lg:w-64 bg-[#f9fafb] z-40 transform transition-transform duration-300 lg:translate-x-0 ${
               sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
             }`}
           >
@@ -70,7 +64,7 @@ export default function DoctorLayout({ children, title = '' }) {
 
           {/* Main Content */}
           <main className="flex-1 lg:ml-64 min-h-screen">
-            <div className="h-full overflow-y-auto scrollbar-thin scrollbar-thumb-[#005963]/30 scrollbar-track-transparent hover:scrollbar-thumb-[#005963]/50">
+            <div className="h-full overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400">
               <div className="p-4 md:p-6 lg:p-8">
                 {children}
               </div>

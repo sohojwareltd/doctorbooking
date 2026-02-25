@@ -36,11 +36,11 @@ export default function DoctorSidebar({ currentPath }) {
   };
 
   return (
-    <div className="flex flex-col h-full bg-white border-r border-gray-200">
+    <div className="flex flex-col h-full bg-[#f9fafb] border-r border-gray-200">
       {/* Brand Header */}
-      <div className="flex-shrink-0 px-4 py-5 border-b border-gray-200">
+      <div className="flex-shrink-0 px-4 py-5 border-b border-gray-200 bg-white">
         <Link href="/doctor/dashboard" className="flex items-center gap-3 group">
-          <div className="rounded-xl bg-gradient-to-br from-[#005963] to-[#00acb1] p-2.5 shadow-sm group-hover:shadow-md transition-shadow">
+          <div className="rounded-xl bg-[#111827] p-2.5 shadow-sm group-hover:shadow-md transition-shadow">
             <DoctorLogo className="h-6 w-6" />
           </div>
           <div>
@@ -52,10 +52,10 @@ export default function DoctorSidebar({ currentPath }) {
 
       {/* Doctor Profile Card */}
       <div className="flex-shrink-0 mx-3 my-4">
-        <div className="bg-gradient-to-br from-[#005963] to-[#00acb1] rounded-xl p-4">
+        <div className="rounded-xl border border-gray-200 bg-white p-4">
           <div className="flex items-start gap-3">
             <div className="relative flex-shrink-0">
-              <div className="h-12 w-12 overflow-hidden rounded-lg border-2 border-white/30 bg-white">
+              <div className="h-12 w-12 overflow-hidden rounded-lg border border-gray-200 bg-white">
                 {user?.profile_picture ? (
                   <img 
                     src={user.profile_picture.startsWith('http') ? user.profile_picture : `/storage/${user.profile_picture}`} 
@@ -63,24 +63,24 @@ export default function DoctorSidebar({ currentPath }) {
                     className="h-full w-full object-cover" 
                   />
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#005963] to-[#00acb1]">
-                    <User className="h-6 w-6 text-white" />
+                  <div className="flex h-full w-full items-center justify-center bg-gray-100">
+                    <User className="h-6 w-6 text-gray-500" />
                   </div>
                 )}
               </div>
-              <div className="absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full border-2 border-[#005963] bg-green-400"></div>
+              <div className="absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full border-2 border-white bg-emerald-400"></div>
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-bold text-white truncate">{user?.name || 'Doctor'}</div>
+              <div className="text-sm font-bold text-gray-900 truncate">{user?.name || 'Doctor'}</div>
               {user?.specialization && (
-                <div className="text-xs text-white/80 truncate mt-0.5">{user.specialization}</div>
+                <div className="text-xs text-gray-600 truncate mt-0.5">{user.specialization}</div>
               )}
               {user?.degree && (
-                <div className="text-xs text-white/70 truncate mt-0.5">{user.degree}</div>
+                <div className="text-xs text-gray-500 truncate mt-0.5">{user.degree}</div>
               )}
               <div className="flex items-center gap-1 mt-2">
                 <div className="h-1.5 w-1.5 rounded-full bg-green-400"></div>
-                <span className="text-xs text-white/90 font-medium">Available</span>
+                <span className="text-xs text-gray-600 font-medium">Available</span>
               </div>
             </div>
           </div>
@@ -103,16 +103,16 @@ export default function DoctorSidebar({ currentPath }) {
                   href={href}
                   className={`group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
                     isActive(href)
-                      ? 'bg-[#005963] text-white shadow-sm'
+                      ? 'bg-white text-gray-900 border border-gray-300 shadow-sm'
                       : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
                   }`}
                 >
                   <Icon className={`h-5 w-5 flex-shrink-0 transition-transform group-hover:scale-110 ${
-                    isActive(href) ? 'text-white' : 'text-gray-400 group-hover:text-gray-600'
+                    isActive(href) ? 'text-gray-700' : 'text-gray-400 group-hover:text-gray-600'
                   }`} />
                   <span className="flex-1">{label}</span>
                   {isActive(href) && (
-                    <ChevronRight className="h-4 w-4 text-white/70" />
+                    <ChevronRight className="h-4 w-4 text-gray-500" />
                   )}
                 </Link>
               ))}

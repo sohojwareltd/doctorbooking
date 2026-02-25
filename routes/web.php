@@ -496,7 +496,7 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
             'doctor_id' => $doctor->id,
             'appointment_date' => now()->toDateString(),
             'appointment_time' => now()->format('H:i:s'),
-            'status' => 'pending',
+            'status' => 'scheduled',
         ]);
         
         return response()->json([

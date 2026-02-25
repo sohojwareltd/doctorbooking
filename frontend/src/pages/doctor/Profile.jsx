@@ -1,4 +1,4 @@
-import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
+import { Head, router, useForm, usePage } from '@inertiajs/react';
 import {
     Award,
     BadgeCheck,
@@ -158,29 +158,6 @@ export default function DoctorProfile({ doctor = {} }) {
                 </div>
             )}
 
-            {/* Hero Header */}
-            <div className="mb-8 overflow-hidden rounded-3xl bg-gradient-to-br from-[#005963] via-[#00acb1] to-[#005963] p-8 text-white shadow-2xl">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <div className="rounded-2xl bg-white/20 p-4 backdrop-blur-sm">
-                            <User className="h-10 w-10" />
-                        </div>
-                        <div>
-                            <h1 className="text-3xl font-black">My Profile</h1>
-                            <p className="mt-2 text-white/90">
-                                Manage your professional information
-                            </p>
-                        </div>
-                    </div>
-                    <Link
-                        href="/doctor/dashboard"
-                        className="rounded-2xl bg-white/20 px-6 py-3 font-semibold backdrop-blur-sm transition hover:bg-white/30"
-                    >
-                        ← Back to Dashboard
-                    </Link>
-                </div>
-            </div>
-
             {/* Success Message */}
             {showSuccess && (
                 <div className="animate-in slide-in-from-top mb-6 duration-300">
@@ -199,7 +176,7 @@ export default function DoctorProfile({ doctor = {} }) {
             )}
 
             {/* Profile Photo & Preview Section */}
-            <GlassCard variant="solid" className="mb-8 overflow-hidden p-0 shadow-xl">
+            <GlassCard variant="solid" className="mb-5 overflow-hidden p-0 shadow-xl">
                 <div className="flex flex-col lg:flex-row">
                     {/* Left Side - Photo Upload with Gradient Background */}
                     <div className="relative flex-1 bg-gradient-to-br from-[#005963]/5 via-white to-[#00acb1]/5 p-8">
@@ -544,7 +521,7 @@ export default function DoctorProfile({ doctor = {} }) {
                 </div>
 
                 {/* Submit Button */}
-                <div className="mt-8 mb-8 flex justify-end">
+                <div className="mt-5 mb-5 flex justify-end">
                     <button
                         type="submit"
                         disabled={processing}

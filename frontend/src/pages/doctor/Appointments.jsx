@@ -16,6 +16,8 @@ export default function DoctorAppointments({ appointments = [], filters = {} }) 
   const [searchTerm, setSearchTerm] = useState(filters.search || '');
   const [selectedIds, setSelectedIds] = useState([]);
   const [selectedPatient, setSelectedPatient] = useState(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [formData, setFormData] = useState({ name: '', phone: '', age: '', gender: '' });
 
   useEffect(() => {
     setRows(pageRows);
@@ -142,6 +144,10 @@ export default function DoctorAppointments({ appointments = [], filters = {} }) 
 
   const handleCreateAppointment = async (e) => {
     e.preventDefault();
+    if (!formData.name || !formData.phone || !formData.age || !formData.gender) {
+      toastError('Please fill all fields.');
+      return;
+    }
     const token = document.cookie
       .split('; ')
       .find(row => row.startsWith('XSRF-TOKEN='))
@@ -605,6 +611,102 @@ export default function DoctorAppointments({ appointments = [], filters = {} }) 
                 View Appointment
               </Link>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Appointment Modal */}
+      {showCreateModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setShowCreateModal(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl bg-white shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b px-6 py-4">
+              <h3 className="text-lg font-bold text-gray-900">Create Appointment</h3>
+              <button
+                type="button"
+                onClick={() => setShowCreateModal(false)}
+                className="rounded-lg p-1 text-gray-500 hover:bg-gray-100"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateAppointment} className="space-y-4 px-6 py-5">
+              <div>
+                <label className="mb-1 block text-sm font-semibold text-gray-700">Name</label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#005963] focus:outline-none"
+                  placeholder="Patient name"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-semibold text-gray-700">Phone</label>
+                <input
+                  type="text"
+                  value={formData.phone}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#005963] focus:outline-none"
+                  placeholder="+8801..."
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block text-sm font-semibold text-gray-700">Age</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="150"
+                    value={formData.age}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, age: e.target.value }))}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#005963] focus:outline-none"
+                    placeholder="Age"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-semibold text-gray-700">Gender</label>
+                  <select
+                    value={formData.gender}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, gender: e.target.value }))}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#005963] focus:outline-none"
+                    required
+                  >
+                    <option value="">Select</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateModal(false)}
+                  className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-lg bg-[#005963] px-4 py-2 text-sm font-semibold text-white hover:bg-[#00434a]"
+                >
+                  Create
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
