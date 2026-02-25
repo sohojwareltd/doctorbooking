@@ -104,7 +104,7 @@ Route::get('/doctor-unavailable-ranges', 'App\\Http\\Controllers\\AppointmentCon
 
 // Public list of doctor's active chambers (for multi-step booking UI)
 Route::get('/public-chambers', function () {
-    $doctor = \App\Models\User::where('role', 'doctor')->first();
+    $doctor = User::where('role', 'doctor')->first();
     if (!$doctor) {
         return response()->json(['chambers' => []]);
     }
@@ -382,7 +382,7 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
                 });
 
                 // Only search guest name column if it exists (on databases where guest fields were migrated)
-                if (\Illuminate\Support\Facades\Schema::hasColumn('appointments', 'name')) {
+                if (Schema::hasColumn('appointments', 'name')) {
                     $q->orWhere('name', 'like', "%{$search}%");
                 }
             });
@@ -391,7 +391,7 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
         // Order by patient name (when available) then by date and time
         $appointmentsQuery = $query->leftJoin('users', 'appointments.user_id', '=', 'users.id');
 
-        if (\Illuminate\Support\Facades\Schema::hasColumn('appointments', 'name')) {
+        if (Schema::hasColumn('appointments', 'name')) {
             // Databases with guest name column: prefer user name, then guest name
             $appointmentsQuery->orderByRaw('COALESCE(users.name, appointments.name)');
         } else {
@@ -712,7 +712,7 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
                 'medications' => $prescription->medications,
                 'instructions' => $prescription->instructions,
                 'tests' => $prescription->tests,
-                'next_visit_date' => $prescription->next_visit_date?->toDateString(),
+                'next_visit_date' => $prescription->next_visit_date ? $prescription->next_visit_date->format('Y-m-d') : null,
                 'visit_type' => $prescription->visit_type,
                 'patient_contact' => $prescription->user?->phone,
                 'patient_age' => $prescription->user?->age,

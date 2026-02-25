@@ -210,7 +210,7 @@ class PrescriptionController extends Controller
                 'medications' => $prescription->medications,
                 'instructions' => $prescription->instructions,
                 'tests' => $prescription->tests,
-                'next_visit_date' => $prescription->next_visit_date?->toDateString(),
+                'next_visit_date' => $prescription->next_visit_date ? $prescription->next_visit_date->format('Y-m-d') : null,
                 'visit_type' => $prescription->visit_type,
                 'patient_contact' => $prescription->user?->phone ?? $prescription->appointment?->phone,
                 'patient_age' => $prescription->user?->age ?? $prescription->appointment?->age,

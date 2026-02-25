@@ -10,6 +10,26 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Sanctum\HasApiTokens;
 
+/**
+ * @property int $id
+ * @property string $name
+ * @property string|null $email
+ * @property string $password
+ * @property string $role
+ * @property string|null $phone
+ * @property string|null $address
+ * @property \Illuminate\Support\Carbon|null $date_of_birth
+ * @property int|null $age
+ * @property string|null $gender
+ * @property string|int|float|null $weight
+ * @property string|null $specialization
+ * @property string|null $degree
+ * @property string|null $registration_no
+ * @property string|null $profile_picture
+ * @property \Illuminate\Support\Carbon|null $email_verified_at
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ */
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
