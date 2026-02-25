@@ -36,11 +36,11 @@ export default function AdminSidebar({ currentPath }) {
   };
 
   return (
-    <div className="flex flex-col h-full bg-white border-r border-gray-200">
+    <div className="flex flex-col h-full bg-[#f9fafb] border-r border-gray-200">
       {/* Brand Header */}
-      <div className="flex-shrink-0 px-4 py-5 border-b border-gray-200">
+      <div className="flex-shrink-0 px-4 py-5 border-b border-gray-200 bg-white">
         <Link href="/admin/dashboard" className="flex items-center gap-3 group">
-          <div className="rounded-xl bg-gradient-to-br from-[#005963] to-[#00acb1] p-2.5 shadow-sm group-hover:shadow-md transition-shadow">
+          <div className="rounded-xl bg-[#111827] p-2.5 shadow-sm group-hover:shadow-md transition-shadow">
             <DoctorLogo className="h-6 w-6" />
           </div>
           <div>
@@ -62,8 +62,8 @@ export default function AdminSidebar({ currentPath }) {
                   className="h-full w-full object-cover" 
                 />
               ) : (
-                <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#005963] to-[#00acb1]">
-                  <User className="h-5 w-5 text-white" />
+                <div className="flex h-full w-full items-center justify-center bg-gray-100">
+                  <User className="h-5 w-5 text-gray-500" />
                 </div>
               )}
             </div>
@@ -92,16 +92,16 @@ export default function AdminSidebar({ currentPath }) {
                   href={href}
                   className={`group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
                     isActive(href)
-                      ? 'bg-[#005963] text-white shadow-sm'
+                      ? 'bg-white text-gray-900 border border-gray-300 shadow-sm'
                       : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
                   }`}
                 >
                   <Icon className={`h-5 w-5 flex-shrink-0 transition-transform group-hover:scale-110 ${
-                    isActive(href) ? 'text-white' : 'text-gray-400 group-hover:text-gray-600'
+                    isActive(href) ? 'text-gray-700' : 'text-gray-400 group-hover:text-gray-600'
                   }`} />
                   <span className="flex-1">{label}</span>
                   {isActive(href) && (
-                    <ChevronRight className="h-4 w-4 text-white/70" />
+                    <ChevronRight className="h-4 w-4 text-gray-500" />
                   )}
                 </Link>
               ))}

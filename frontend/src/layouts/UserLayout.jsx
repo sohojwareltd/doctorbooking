@@ -1,7 +1,8 @@
 ﻿import { Head, Link, usePage } from "@inertiajs/react";
 import UserSidebar from "../components/UserSidebar";
 import { Bell, Menu, Settings, User, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 
 export default function UserLayout({ children, title = "" }) {
   const page = usePage();
@@ -9,6 +10,17 @@ export default function UserLayout({ children, title = "" }) {
   const currentUrl = page.url;
   const user = auth?.user;
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [routePulse, setRoutePulse] = useState(false);
+
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [currentUrl]);
+
+  useEffect(() => {
+    setRoutePulse(true);
+    const timer = setTimeout(() => setRoutePulse(false), 420);
+    return () => clearTimeout(timer);
+  }, [currentUrl]);
 
   return (
     <>
@@ -46,7 +58,33 @@ export default function UserLayout({ children, title = "" }) {
               </Link>
             </div>
           </header>
-          <main className="flex-1 overflow-y-auto p-6">{children}</main>
+          <main className="relative flex-1 overflow-y-auto">
+            <AnimatePresence>
+              {routePulse && (
+                <motion.div
+                  key={`pulse-${currentUrl}`}
+                  initial={{ opacity: 0.18 }}
+                  animate={{ opacity: 0.08 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.4, ease: "easeOut" }}
+                  className="pointer-events-none absolute inset-0 z-10 bg-white"
+                />
+              )}
+            </AnimatePresence>
+
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={currentUrl}
+                initial={{ opacity: 0, x: 26, y: 14, scale: 0.985, filter: "blur(6px)" }}
+                animate={{ opacity: 1, x: 0, y: 0, scale: 1, filter: "blur(0px)" }}
+                exit={{ opacity: 0, x: -22, y: -8, scale: 0.99, filter: "blur(4px)" }}
+                transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+                className="doctor-route-stagger p-6"
+              >
+                {children}
+              </motion.div>
+            </AnimatePresence>
+          </main>
         </div>
       </div>
     </>
