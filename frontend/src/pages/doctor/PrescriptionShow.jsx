@@ -11,47 +11,54 @@ export default function PrescriptionShow({ prescription, contactInfo }) {
   const prescriptionSettings = page?.props?.site?.prescription || {};
 
   const toStr = (val) => (val === null || val === undefined ? '' : String(val));
+  const calculateAgeFromDob = (dob) => {
+    if (!dob) return null;
+    const birthDate = new Date(dob);
+    if (Number.isNaN(birthDate.getTime())) return null;
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age -= 1;
+    }
+    return age >= 0 ? age : null;
+  };
+
+  const resolvePatientAge = (source) => {
+    if (source?.patient_age !== undefined && source?.patient_age !== null && source?.patient_age !== '') {
+      return source.patient_age;
+    }
+    if (source?.user?.age !== undefined && source?.user?.age !== null && source?.user?.age !== '') {
+      return source.user.age;
+    }
+    if (source?.appointment?.age !== undefined && source?.appointment?.age !== null && source?.appointment?.age !== '') {
+      return source.appointment.age;
+    }
+    return calculateAgeFromDob(source?.user?.date_of_birth);
+  };
+
+  const buildFormState = (source = {}) => ({
+    diagnosis: source?.diagnosis || '',
+    medications: source?.medications || '',
+    instructions: source?.instructions || '',
+    tests: source?.tests || '',
+    next_visit_date: source?.next_visit_date || '',
+    patient_contact: source?.patient_contact || source?.user?.phone || source?.appointment?.phone || '',
+    patient_age: toStr(resolvePatientAge(source)),
+    patient_age_unit: source?.patient_age_unit || 'years',
+    patient_gender: source?.patient_gender || source?.user?.gender || source?.appointment?.gender || '',
+    patient_weight: source?.patient_weight || source?.user?.weight || '',
+    visit_type: source?.visit_type || '',
+  });
 
   const [data, setData] = useState(prescription || {});
   const [editMode] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({
-    diagnosis: prescription?.diagnosis || '',
-    medications: prescription?.medications || '',
-    instructions: prescription?.instructions || '',
-    tests: prescription?.tests || '',
-    next_visit_date: prescription?.next_visit_date || '',
-    patient_contact: prescription?.patient_contact || prescription?.user?.phone || '',
-    patient_age: prescription?.patient_age !== undefined && prescription?.patient_age !== null
-      ? String(prescription.patient_age)
-      : prescription?.user?.age !== undefined && prescription?.user?.age !== null
-        ? String(prescription.user.age)
-        : '',
-    patient_age_unit: prescription?.patient_age_unit || 'years',
-    patient_gender: prescription?.patient_gender || prescription?.user?.gender || '',
-    patient_weight: prescription?.patient_weight || '',
-    visit_type: prescription?.visit_type || '',
-  });
+  const [form, setForm] = useState(buildFormState(prescription || {}));
 
   useEffect(() => {
     setData(prescription || {});
-    setForm({
-      diagnosis: prescription?.diagnosis || '',
-      medications: prescription?.medications || '',
-      instructions: prescription?.instructions || '',
-      tests: prescription?.tests || '',
-      next_visit_date: prescription?.next_visit_date || '',
-      patient_contact: prescription?.patient_contact || prescription?.user?.phone || '',
-      patient_age: prescription?.patient_age !== undefined && prescription?.patient_age !== null
-        ? String(prescription.patient_age)
-        : prescription?.user?.age !== undefined && prescription?.user?.age !== null
-          ? String(prescription.user.age)
-          : '',
-      patient_age_unit: prescription?.patient_age_unit || 'years',
-      patient_gender: prescription?.patient_gender || prescription?.user?.gender || '',
-      patient_weight: prescription?.patient_weight || '',
-      visit_type: prescription?.visit_type || '',
-    });
+    setForm(buildFormState(prescription || {}));
   }, [prescription]);
 
   const handleChange = (field, value) => {
@@ -63,6 +70,11 @@ export default function PrescriptionShow({ prescription, contactInfo }) {
     setSaving(true);
     try {
       const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+      const payload = {
+        ...form,
+        patient_age: toStr(form.patient_age).trim(),
+        patient_contact: toStr(form.patient_contact).trim(),
+      };
       const res = await fetch(`/doctor/prescriptions/${data.id}`, {
         method: 'PUT',
         headers: {
@@ -70,7 +82,7 @@ export default function PrescriptionShow({ prescription, contactInfo }) {
           'X-CSRF-TOKEN': token,
           Accept: 'application/json',
         },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
@@ -79,21 +91,9 @@ export default function PrescriptionShow({ prescription, contactInfo }) {
         alert(msg);
       } else {
         const body = await res.json().catch(() => ({}));
-        const updated = { ...data, ...form, ...(body?.prescription || {}) };
+        const updated = { ...data, ...payload, ...(body?.prescription || {}) };
         setData(updated);
-        setForm({
-          diagnosis: updated?.diagnosis || '',
-          medications: updated?.medications || '',
-          instructions: updated?.instructions || '',
-          tests: updated?.tests || '',
-          next_visit_date: updated?.next_visit_date || '',
-          patient_contact: updated?.patient_contact || updated?.user?.phone || '',
-          patient_age: toStr(updated?.patient_age ?? updated?.user?.age),
-          patient_age_unit: updated?.patient_age_unit || 'years',
-          patient_gender: updated?.patient_gender || updated?.user?.gender || '',
-          patient_weight: updated?.patient_weight || '',
-          visit_type: updated?.visit_type || '',
-        });
+        setForm(buildFormState(updated));
       }
     } catch (err) {
       alert('Network error while saving.');
@@ -103,19 +103,7 @@ export default function PrescriptionShow({ prescription, contactInfo }) {
   };
 
   const handleCancel = () => {
-    setForm({
-      diagnosis: data?.diagnosis || '',
-      medications: data?.medications || '',
-      instructions: data?.instructions || '',
-      tests: data?.tests || '',
-      next_visit_date: data?.next_visit_date || '',
-      patient_contact: data?.patient_contact || data?.user?.phone || '',
-      patient_age: toStr(data?.patient_age ?? data?.user?.age),
-      patient_age_unit: data?.patient_age_unit || 'years',
-      patient_gender: data?.patient_gender || data?.user?.gender || '',
-      patient_weight: data?.patient_weight || '',
-      visit_type: data?.visit_type || '',
-    });
+    setForm(buildFormState(data));
   };
   
   // Clinic info from contactInfo or fallback to prescriptionSettings
@@ -151,24 +139,7 @@ export default function PrescriptionShow({ prescription, contactInfo }) {
   const visitDateLabel = useMemo(() => formatDisplayDate(data?.visit_date || data?.appointment?.appointment_date || prescription?.appointment?.appointment_date), [data?.visit_date, data?.appointment?.appointment_date, prescription?.appointment?.appointment_date]);
 
   // Patient info from prescription or user table - support both edit mode and view mode
-  const patientAge = editMode 
-    ? form?.patient_age 
-    : (data?.patient_age !== undefined && data?.patient_age !== null 
-        ? data.patient_age 
-        : (data?.user?.age !== undefined && data?.user?.age !== null 
-            ? data.user.age 
-            : (prescription?.user?.date_of_birth 
-                ? (() => {
-                    const birthDate = new Date(prescription.user.date_of_birth);
-                    const today = new Date();
-                    let age = today.getFullYear() - birthDate.getFullYear();
-                    const monthDiff = today.getMonth() - birthDate.getMonth();
-                    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-                      age--;
-                    }
-                    return age;
-                  })()
-                : null)));
+  const patientAge = editMode ? form?.patient_age : resolvePatientAge(data || prescription || {});
   const patientAgeUnit = editMode ? form?.patient_age_unit || 'years' : data?.patient_age_unit || 'years';
   const patientGender = editMode ? form?.patient_gender : data?.patient_gender || data?.user?.gender || prescription?.user?.gender;
   const patientWeight = editMode ? form?.patient_weight : data?.patient_weight || data?.user?.weight || prescription?.user?.weight;
@@ -440,7 +411,7 @@ export default function PrescriptionShow({ prescription, contactInfo }) {
       </div>
 
       {/* Physical Prescription Paper */}
-      <div className="mx-auto max-w-4xl" ref={prescriptionRef}>
+      <div className="w-full" ref={prescriptionRef}>
         <div className="overflow-hidden rounded-lg border border-gray-300 bg-white shadow-2xl print:border-0 print:shadow-none">
           
           {/* Prescription Header - Like real prescription pad */}
@@ -521,7 +492,7 @@ export default function PrescriptionShow({ prescription, contactInfo }) {
                   <span className="text-xs font-bold uppercase text-gray-500">Patient:</span>
                   <span className="text-base font-bold text-gray-900">{patientName}</span>
                 </div>
-                {patientAge && (
+                {(editMode || patientAge) && (
                   <div className="flex items-center gap-1 text-sm text-gray-700">
                     {editMode ? (
                       <>
@@ -566,16 +537,20 @@ export default function PrescriptionShow({ prescription, contactInfo }) {
                     )}
                   </div>
                 )}
-                {patientWeight && (
+                {(editMode || patientWeight) && (
                   <div className="text-sm text-gray-700">
                     {editMode ? (
-                      <input
-                        type="number"
-                        step="0.1"
-                        className="w-24 rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-[#005963] focus:outline-none"
-                        value={form.patient_weight || ''}
-                        onChange={(e) => handleChange('patient_weight', e.target.value)}
-                      />
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="number"
+                          step="0.1"
+                          placeholder="kg"
+                          className="w-24 rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-[#005963] focus:outline-none"
+                          value={form.patient_weight || ''}
+                          onChange={(e) => handleChange('patient_weight', e.target.value)}
+                        />
+                        <span className="text-xs text-gray-500">kg</span>
+                      </div>
                     ) : (
                       `${patientWeight} kg`
                     )}

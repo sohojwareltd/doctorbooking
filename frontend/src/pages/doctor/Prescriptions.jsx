@@ -16,6 +16,26 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
   const [followUpFilter, setFollowUpFilter] = useState('all');
   const [selectedIds, setSelectedIds] = useState([]);
 
+  const resolvePatientAge = (p) => {
+    if (p?.patient_age !== undefined && p?.patient_age !== null && p?.patient_age !== '') {
+      return p.patient_age;
+    }
+    if (p?.user?.age !== undefined && p?.user?.age !== null && p?.user?.age !== '') {
+      return p.user.age;
+    }
+    const dob = p?.user?.date_of_birth;
+    if (!dob) return null;
+    const birthDate = new Date(dob);
+    if (Number.isNaN(birthDate.getTime())) return null;
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age -= 1;
+    }
+    return age >= 0 ? age : null;
+  };
+
   useEffect(() => {
     setRows(pageRows);
     setSelectedIds([]);
@@ -27,7 +47,8 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
 
   const filteredRows = useMemo(() => {
     return rows.filter((p) => {
-      const haystack = `${p.user?.name || ''} ${p.user?.phone || ''} ${p.user?.gender || ''} ${p.user?.age || ''} ${p.user_id || ''}`.toLowerCase();
+      const patientAge = resolvePatientAge(p);
+      const haystack = `${p.user?.name || ''} ${p.patient_contact || p.user?.phone || ''} ${p.patient_gender || p.user?.gender || ''} ${patientAge ?? ''} ${p.user_id || ''}`.toLowerCase();
       const matchSearch = searchTerm === '' ? true : haystack.includes(searchTerm.toLowerCase());
 
       const createdDateOnly = (p.created_at || '').slice(0, 10);
@@ -192,9 +213,9 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
                       <td className="px-6 py-4">
                         <div className="font-semibold text-[#005963]">{p.user?.name || p.user_id}</div>
                       </td>
-                      <td className="px-4 py-4 text-sm text-gray-700">{p.user?.age ?? '—'}</td>
-                      <td className="px-4 py-4 text-sm text-gray-700 capitalize">{p.user?.gender || '—'}</td>
-                      <td className="px-6 py-4 text-sm text-gray-700 whitespace-nowrap">{p.user?.phone || '—'}</td>
+                      <td className="px-4 py-4 text-sm text-gray-700">{resolvePatientAge(p) ?? '—'}</td>
+                      <td className="px-4 py-4 text-sm text-gray-700 capitalize">{p.patient_gender || p.user?.gender || '—'}</td>
+                      <td className="px-6 py-4 text-sm text-gray-700 whitespace-nowrap">{p.patient_contact || p.user?.phone || '—'}</td>
                       <td className="px-6 py-4 text-sm">
                         <div className="flex items-center gap-2">
                           <Link

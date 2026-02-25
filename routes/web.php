@@ -625,11 +625,26 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
         $doctor = Auth::user();
         
         // Get paginated prescriptions with patient details
-        $prescriptions = Prescription::with('user:id,name,phone,age,gender')
+        $prescriptions = Prescription::with([
+                'user:id,name,phone,age,gender,date_of_birth',
+                'appointment:id,age,gender,phone',
+            ])
             ->where('doctor_id', $doctor->id)
             ->orderByDesc('id')
             ->paginate(10)
             ->through(function ($p) {
+                $calculatedAge = null;
+
+                if (!is_null($p->user?->age)) {
+                    $calculatedAge = $p->user->age;
+                } elseif (!empty($p->user?->date_of_birth)) {
+                    try {
+                        $calculatedAge = \Carbon\Carbon::parse($p->user->date_of_birth)->age;
+                    } catch (\Throwable $e) {
+                        $calculatedAge = null;
+                    }
+                }
+
                 return [
                     'id' => $p->id,
                     'user_id' => $p->user_id,
@@ -637,9 +652,13 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
                         'id' => $p->user->id,
                         'name' => $p->user->name,
                         'phone' => $p->user->phone,
-                        'age' => $p->user->age,
+                        'age' => $calculatedAge,
                         'gender' => $p->user->gender,
+                        'date_of_birth' => $p->user->date_of_birth?->toDateString(),
                     ] : null,
+                    'patient_age' => $calculatedAge ?? $p->appointment?->age,
+                    'patient_gender' => $p->user?->gender ?? $p->appointment?->gender,
+                    'patient_contact' => $p->user?->phone ?? $p->appointment?->phone,
                     'diagnosis' => $p->diagnosis,
                     'medications' => $p->medications,
                     'instructions' => $p->instructions,

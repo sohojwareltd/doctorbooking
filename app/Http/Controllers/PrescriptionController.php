@@ -148,6 +148,14 @@ class PrescriptionController extends Controller
             'visit_type' => ['nullable', 'string', 'max:50'],
         ]);
 
+        $rawPatientAge = array_key_exists('patient_age', $validated)
+            ? trim((string) ($validated['patient_age'] ?? ''))
+            : null;
+        $parsedPatientAge = null;
+        if (!is_null($rawPatientAge) && $rawPatientAge !== '' && is_numeric($rawPatientAge)) {
+            $parsedPatientAge = (int) $rawPatientAge;
+        }
+
         $prescription->update([
             'diagnosis' => trim($validated['diagnosis'] ?? ''),
             'medications' => $validated['medications'] ?? '',
@@ -160,13 +168,36 @@ class PrescriptionController extends Controller
         if ($prescription->user) {
             $prescription->user->update([
                 'phone' => $validated['patient_contact'] ?? $prescription->user->phone,
-                'age' => $validated['patient_age'] ?? $prescription->user->age,
+                'age' => !is_null($rawPatientAge) ? $parsedPatientAge : $prescription->user->age,
                 'gender' => $validated['patient_gender'] ?? $prescription->user->gender,
                 'weight' => $validated['patient_weight'] ?? $prescription->user->weight,
             ]);
         }
 
-        $prescription->load(['user:id,name,phone,age,gender,weight']);
+        if ($prescription->appointment) {
+            $appointmentUpdates = [];
+
+            if (!empty($validated['patient_contact'])) {
+                $appointmentUpdates['phone'] = $validated['patient_contact'];
+            }
+
+            if (!empty($validated['patient_gender'])) {
+                $appointmentUpdates['gender'] = $validated['patient_gender'];
+            }
+
+            if (!is_null($rawPatientAge)) {
+                $appointmentUpdates['age'] = $parsedPatientAge;
+            }
+
+            if (!empty($appointmentUpdates)) {
+                $prescription->appointment->update($appointmentUpdates);
+            }
+        }
+
+        $prescription->load([
+            'user:id,name,phone,age,gender,weight',
+            'appointment:id,age,gender,phone',
+        ]);
 
         return response()->json([
             'status' => 'success',
@@ -181,10 +212,10 @@ class PrescriptionController extends Controller
                 'tests' => $prescription->tests,
                 'next_visit_date' => $prescription->next_visit_date?->toDateString(),
                 'visit_type' => $prescription->visit_type,
-                'patient_contact' => $prescription->user?->phone,
-                'patient_age' => $prescription->user?->age,
+                'patient_contact' => $prescription->user?->phone ?? $prescription->appointment?->phone,
+                'patient_age' => $prescription->user?->age ?? $prescription->appointment?->age,
                 'patient_age_unit' => $validated['patient_age_unit'] ?? 'years',
-                'patient_gender' => $prescription->user?->gender,
+                'patient_gender' => $prescription->user?->gender ?? $prescription->appointment?->gender,
                 'patient_weight' => $prescription->user?->weight,
                 'user' => $prescription->user ? [
                     'id' => $prescription->user->id,
