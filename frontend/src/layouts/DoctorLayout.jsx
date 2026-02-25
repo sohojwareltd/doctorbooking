@@ -2,7 +2,8 @@ import { Head, Link, usePage } from '@inertiajs/react';
 import DoctorLogo from '../components/DoctorLogo';
 import DoctorSidebar from '../components/DoctorSidebar';
 import { Menu, X } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 
 /**
  * Unified Doctor Layout Component
@@ -13,6 +14,17 @@ import { useState } from 'react';
 export default function DoctorLayout({ children, title = '' }) {
   const { url } = usePage();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [routePulse, setRoutePulse] = useState(false);
+
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [url]);
+
+  useEffect(() => {
+    setRoutePulse(true);
+    const timer = setTimeout(() => setRoutePulse(false), 420);
+    return () => clearTimeout(timer);
+  }, [url]);
 
   return (
     <>
@@ -64,10 +76,32 @@ export default function DoctorLayout({ children, title = '' }) {
 
           {/* Main Content */}
           <main className="flex-1 lg:ml-64 min-h-screen">
-            <div className="h-full overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400">
-              <div className="p-4 md:p-6 lg:p-8">
-                {children}
-              </div>
+            <div className="relative h-full overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400">
+              <AnimatePresence>
+                {routePulse && (
+                  <motion.div
+                    key={`pulse-${url}`}
+                    initial={{ opacity: 0.18 }}
+                    animate={{ opacity: 0.08 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.4, ease: 'easeOut' }}
+                    className="pointer-events-none absolute inset-0 z-10 bg-white"
+                  />
+                )}
+              </AnimatePresence>
+
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.div
+                  key={url}
+                  initial={{ opacity: 0, x: 26, y: 14, scale: 0.985, filter: 'blur(6px)' }}
+                  animate={{ opacity: 1, x: 0, y: 0, scale: 1, filter: 'blur(0px)' }}
+                  exit={{ opacity: 0, x: -22, y: -8, scale: 0.99, filter: 'blur(4px)' }}
+                  transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+                  className="doctor-route-stagger p-4 md:p-6 lg:p-8"
+                >
+                  {children}
+                </motion.div>
+              </AnimatePresence>
             </div>
           </main>
         </div>

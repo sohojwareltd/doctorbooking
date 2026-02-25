@@ -180,3 +180,50 @@ html {
     animation: gradientShift 14s ease-in-out infinite;
     mix-blend-mode: multiply;
 }
+
+@keyframes doctorSectionIn {
+    0% {
+        opacity: 0;
+        transform: translateY(18px) scale(0.99);
+        filter: blur(3px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        filter: blur(0);
+    }
+}
+
+.doctor-route-stagger > * {
+    opacity: 0;
+    animation: doctorSectionIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.doctor-route-stagger > *:nth-child(1) { animation-delay: 0.05s; }
+.doctor-route-stagger > *:nth-child(2) { animation-delay: 0.11s; }
+.doctor-route-stagger > *:nth-child(3) { animation-delay: 0.17s; }
+.doctor-route-stagger > *:nth-child(4) { animation-delay: 0.23s; }
+.doctor-route-stagger > *:nth-child(5) { animation-delay: 0.29s; }
+.doctor-route-stagger > *:nth-child(6) { animation-delay: 0.35s; }
+
+.doctor-route-stagger > * > * {
+    opacity: 0;
+    animation: doctorSectionIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.doctor-route-stagger > * > *:nth-child(1) { animation-delay: 0.08s; }
+.doctor-route-stagger > * > *:nth-child(2) { animation-delay: 0.14s; }
+.doctor-route-stagger > * > *:nth-child(3) { animation-delay: 0.2s; }
+.doctor-route-stagger > * > *:nth-child(4) { animation-delay: 0.26s; }
+.doctor-route-stagger > * > *:nth-child(5) { animation-delay: 0.32s; }
+.doctor-route-stagger > * > *:nth-child(6) { animation-delay: 0.38s; }
+
+@media (prefers-reduced-motion: reduce) {
+    .doctor-route-stagger > *,
+    .doctor-route-stagger > * > * {
+        animation: none !important;
+        opacity: 1 !important;
+        transform: none !important;
+        filter: none !important;
+    }
+}
