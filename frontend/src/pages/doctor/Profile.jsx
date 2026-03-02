@@ -42,12 +42,9 @@ export default function DoctorProfile({ doctor = {} }) {
         specialization: doctor.specialization || '',
         degree: doctor.degree || '',
         registration_no: doctor.registration_no || '',
-        bio: doctor.bio || '',
         experience: doctor.experience || '',
         about_subtitle: doctor.about_subtitle || '',
-        about_paragraph_1: doctor.about_paragraph_1 || '',
-        about_paragraph_2: doctor.about_paragraph_2 || '',
-        about_paragraph_3: doctor.about_paragraph_3 || '',
+        about_bio_details: doctor.about_bio_details || '',
         about_credentials_title: doctor.about_credentials_title || '',
         about_credentials_text: doctor.about_credentials_text || '',
         about_highlight_value: doctor.about_highlight_value || '',
@@ -589,14 +586,14 @@ export default function DoctorProfile({ doctor = {} }) {
                             </div>
 
                             <div className="lg:col-span-2">
-                                <label className={labelClass}>Bio (Fallback)</label>
+                                <label className={labelClass}>Bio in Details</label>
                                 <textarea
-                                    className={`${inputClass} min-h-[100px] resize-none`}
-                                    value={data.bio}
-                                    onChange={(e) => setData('bio', e.target.value)}
-                                    placeholder="Short doctor bio"
+                                    className={`${inputClass} min-h-[220px] resize-none`}
+                                    value={data.about_bio_details}
+                                    onChange={(e) => setData('about_bio_details', e.target.value)}
+                                    placeholder="Write detailed bio here. Use blank lines to separate multiple paragraphs if needed."
                                 />
-                                {errors.bio && <p className={errorClass}>{errors.bio}</p>}
+                                {errors.about_bio_details && <p className={errorClass}>{errors.about_bio_details}</p>}
                             </div>
 
                             <div>
@@ -635,36 +632,6 @@ export default function DoctorProfile({ doctor = {} }) {
                                     placeholder="Years Experience"
                                 />
                                 {errors.about_highlight_label && <p className={errorClass}>{errors.about_highlight_label}</p>}
-                            </div>
-
-                            <div className="lg:col-span-2">
-                                <label className={labelClass}>Paragraph 1</label>
-                                <textarea
-                                    className={`${inputClass} min-h-[110px] resize-none`}
-                                    value={data.about_paragraph_1}
-                                    onChange={(e) => setData('about_paragraph_1', e.target.value)}
-                                />
-                                {errors.about_paragraph_1 && <p className={errorClass}>{errors.about_paragraph_1}</p>}
-                            </div>
-
-                            <div className="lg:col-span-2">
-                                <label className={labelClass}>Paragraph 2</label>
-                                <textarea
-                                    className={`${inputClass} min-h-[110px] resize-none`}
-                                    value={data.about_paragraph_2}
-                                    onChange={(e) => setData('about_paragraph_2', e.target.value)}
-                                />
-                                {errors.about_paragraph_2 && <p className={errorClass}>{errors.about_paragraph_2}</p>}
-                            </div>
-
-                            <div className="lg:col-span-2">
-                                <label className={labelClass}>Paragraph 3</label>
-                                <textarea
-                                    className={`${inputClass} min-h-[110px] resize-none`}
-                                    value={data.about_paragraph_3}
-                                    onChange={(e) => setData('about_paragraph_3', e.target.value)}
-                                />
-                                {errors.about_paragraph_3 && <p className={errorClass}>{errors.about_paragraph_3}</p>}
                             </div>
 
                             <div>

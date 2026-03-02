@@ -23,6 +23,9 @@ class DoctorProfileController extends Controller
     {
         $user = $this->currentDoctor();
         $about = $user->about_content ?? [];
+        $aboutParagraphs = isset($about['paragraphs']) && is_array($about['paragraphs'])
+            ? array_values(array_filter($about['paragraphs'], fn ($item) => filled($item)))
+            : [];
 
         return Inertia::render('doctor/Profile', [
             'doctor' => [
@@ -40,9 +43,9 @@ class DoctorProfileController extends Controller
                 'bio' => $user->bio,
                 'experience' => $user->experience,
                 'about_subtitle' => $about['subtitle'] ?? null,
-                'about_paragraph_1' => $about['paragraphs'][0] ?? null,
-                'about_paragraph_2' => $about['paragraphs'][1] ?? null,
-                'about_paragraph_3' => $about['paragraphs'][2] ?? null,
+                'about_bio_details' => !empty($aboutParagraphs)
+                    ? implode("\n\n", $aboutParagraphs)
+                    : ($user->bio ?? null),
                 'about_credentials_title' => $about['credentialsTitle'] ?? null,
                 'about_credentials_text' => isset($about['credentials']) && is_array($about['credentials'])
                     ? implode("\n", $about['credentials'])
@@ -74,12 +77,9 @@ class DoctorProfileController extends Controller
             'specialization' => ['nullable', 'string', 'max:255'],
             'degree' => ['nullable', 'string', 'max:500'],
             'registration_no' => ['nullable', 'string', 'max:100'],
-            'bio' => ['nullable', 'string', 'max:3000'],
             'experience' => ['nullable', 'integer', 'min:0', 'max:80'],
             'about_subtitle' => ['nullable', 'string', 'max:255'],
-            'about_paragraph_1' => ['nullable', 'string', 'max:2000'],
-            'about_paragraph_2' => ['nullable', 'string', 'max:2000'],
-            'about_paragraph_3' => ['nullable', 'string', 'max:2000'],
+            'about_bio_details' => ['nullable', 'string', 'max:6000'],
             'about_credentials_title' => ['nullable', 'string', 'max:255'],
             'about_credentials_text' => ['nullable', 'string', 'max:4000'],
             'about_highlight_value' => ['nullable', 'string', 'max:50'],
@@ -90,11 +90,13 @@ class DoctorProfileController extends Controller
             'about_stats_medical_cases' => ['nullable', 'string', 'max:50'],
         ]);
 
-        $paragraphs = collect([
-            $validated['about_paragraph_1'] ?? null,
-            $validated['about_paragraph_2'] ?? null,
-            $validated['about_paragraph_3'] ?? null,
-        ])->filter(fn ($item) => filled($item))->values()->all();
+        $paragraphs = collect(
+            preg_split('/\r\n\s*\r\n|\r\s*\r|\n\s*\n/', (string) ($validated['about_bio_details'] ?? ''))
+        )
+            ->map(fn ($item) => trim((string) $item))
+            ->filter(fn ($item) => $item !== '')
+            ->values()
+            ->all();
 
         $credentials = collect(preg_split('/\r\n|\r|\n/', (string) ($validated['about_credentials_text'] ?? '')))
             ->map(fn ($item) => trim((string) $item))
@@ -129,7 +131,7 @@ class DoctorProfileController extends Controller
             'specialization' => $validated['specialization'] ?? null,
             'degree' => $validated['degree'] ?? null,
             'registration_no' => $validated['registration_no'] ?? null,
-            'bio' => $validated['bio'] ?? null,
+            'bio' => $paragraphs[0] ?? null,
             'experience' => $validated['experience'] ?? null,
             'about_content' => $aboutContent,
         ]);
