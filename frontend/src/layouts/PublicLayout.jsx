@@ -7,7 +7,7 @@ import DoctorLogo from '../components/DoctorLogo';
 export default function PublicLayout({ children }) {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [showScrollTop, setShowScrollTop] = useState(false);
-    const { auth, home } = usePage().props;
+    const { auth, home, doctor, chambers } = usePage().props;
 
     const header = home?.header || {};
     const headerLogoUrl = header.logoUrl;
@@ -24,10 +24,20 @@ export default function PublicLayout({ children }) {
               { label: 'Services', href: '/#services' },
               { label: 'Book Appointment', href: '/#booking' },
           ];
-    const footerContactTitle = footer.contactTitle || 'Contact';
-    const footerContactLines = Array.isArray(footer.contactLines) && footer.contactLines.length
-        ? footer.contactLines
-        : ['Phone: (555) 123-4567', 'Email: info@medicare.com', 'Hours: 9 AM - 5 PM, Monday-Friday'];
+    const activeChambers = Array.isArray(chambers) ? chambers : [];
+    const footerContactTitle = 'Chambers';
+    const footerContactLines =
+        activeChambers.length > 0
+            ? activeChambers.slice(0, 3).map((ch) => {
+                  const phone = ch?.phone ? ` • ${ch.phone}` : '';
+                  const location = ch?.location ? ` — ${ch.location}` : '';
+                  return `${ch?.name || 'Chamber'}${phone}${location}`;
+              })
+            : [
+                  doctor?.phone ? `Phone: ${doctor.phone}` : null,
+                  doctor?.email ? `Email: ${doctor.email}` : null,
+                  'No active chamber configured yet.',
+              ].filter(Boolean);
     const footerCopyright = footer.copyright || `© ${new Date().getFullYear()} ${footerBrandName}. All rights reserved.`;
 
         const dashboardHref =
@@ -114,7 +124,7 @@ export default function PublicLayout({ children }) {
                                 Services
                             </Link>
                             <Link
-                                href="/book-appointment"
+                                href="/#booking"
                                 className="text-white hover:text-[#00acb1] transition"
                             >
                                 Book
@@ -202,7 +212,7 @@ export default function PublicLayout({ children }) {
                                 Services
                             </Link>
                             <Link
-                                href="/book-appointment"
+                                href="/#booking"
                                 className="block text-white hover:text-[#00acb1] transition py-2"
                                 onClick={() => setMobileMenuOpen(false)}
                             >

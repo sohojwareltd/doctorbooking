@@ -8,7 +8,7 @@ import ServicesSection from '../components/sections/ServicesSection';
 
 import PublicLayout from '../layouts/PublicLayout';
 
-export default function Welcome({ auth, home, doctor }) {
+export default function Welcome({ auth, home, doctor, chambers = [] }) {
     const meta = home?.meta || {};
 
     return (
@@ -40,7 +40,7 @@ export default function Welcome({ auth, home, doctor }) {
                 <BookingSection />
 
                 {/* Contact Section */}
-                <ContactSection content={home?.contact} />
+                <ContactSection doctor={doctor} chambers={chambers} />
             </div>
         </>
     );

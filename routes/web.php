@@ -26,6 +26,7 @@ use App\Models\User;
 
 Route::get('/', function () {
     $homeContent = null;
+    $chambers = [];
 
     if (Schema::hasTable('site_contents')) {
         $homeContent = SiteContent::where('key', 'home')->first()?->value;
@@ -37,11 +38,27 @@ Route::get('/', function () {
     $doctor = null;
     if (Schema::hasTable('users')) {
         $doctor = User::where('role', 'doctor')->first();
+
+        if ($doctor && Schema::hasTable('chambers')) {
+            $chambers = \App\Models\Chamber::where('doctor_id', $doctor->id)
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->get(['id', 'name', 'location', 'phone', 'google_maps_url'])
+                ->map(fn ($chamber) => [
+                    'id' => $chamber->id,
+                    'name' => $chamber->name,
+                    'location' => $chamber->location,
+                    'phone' => $chamber->phone,
+                    'google_maps_url' => $chamber->google_maps_url,
+                ])
+                ->all();
+        }
     }
 
     return Inertia::render('Welcome', [
         'home' => $homeContent,
         'doctor' => $doctor,
+        'chambers' => $chambers,
     ]);
 })->name('home');
 

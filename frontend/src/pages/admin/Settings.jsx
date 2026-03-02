@@ -82,18 +82,14 @@ export default function Settings({ auth, homeJson = '', status = null }) {
   const header = home?.header || {};
   const services = home?.services || {};
   const gallery = home?.gallery || {};
-  const contact = home?.contact || {};
   const caseStudies = home?.caseStudies || {};
   const footer = home?.footer || {};
   const prescription = home?.prescription || {};
 
   const serviceItems = asArray(services.items);
   const galleryImages = asArray(gallery.images);
-  const contactMethods = asArray(contact.methods);
-  const officeHours = asArray(contact.officeHours);
   const caseItems = asArray(caseStudies.items);
   const footerLinks = asArray(footer.links);
-  const footerContactLines = asArray(footer.contactLines);
 
   const uploadToServer = async (file) => {
     const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
@@ -151,7 +147,6 @@ export default function Settings({ auth, homeJson = '', status = null }) {
     { key: 'services', label: 'Services' },
     { key: 'caseStudies', label: 'Case Studies' },
     { key: 'gallery', label: 'Gallery' },
-    { key: 'contact', label: 'Contact' },
     { key: 'footer', label: 'Footer' },
     { key: 'prescription', label: 'Prescription' },
   ];
@@ -535,88 +530,6 @@ export default function Settings({ auth, homeJson = '', status = null }) {
           </GlassCard>
           )}
 
-          {/* Contact */}
-          {activeTab === 'contact' && (
-          <GlassCard variant="solid" hover={false} className="p-6">
-            <div className="mb-4">
-              <div className={sectionTitleClass}>Contact</div>
-              <div className={sectionSubClass}>Clinic address, methods, hours, and map.</div>
-            </div>
-            <div className="grid gap-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className={labelClass}>Title</label>
-                  <input className={inputClass} value={contact.title || ''} onChange={(e) => setHome((p) => updateAtPath(p, ['contact', 'title'], e.target.value))} />
-                </div>
-                <div>
-                  <label className={labelClass}>Subtitle</label>
-                  <input className={inputClass} value={contact.subtitle || ''} onChange={(e) => setHome((p) => updateAtPath(p, ['contact', 'subtitle'], e.target.value))} />
-                </div>
-              </div>
-
-              <div>
-                <div className="mb-2">
-                  <div className={labelClass}>Clinic Address</div>
-                </div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <input className={inputClass} placeholder="Clinic Name" value={contact?.clinic?.name || ''} onChange={(e) => setHome((p) => updateAtPath(p, ['contact', 'clinic', 'name'], e.target.value))} />
-                  <input className={inputClass} placeholder="Line 1" value={contact?.clinic?.line1 || ''} onChange={(e) => setHome((p) => updateAtPath(p, ['contact', 'clinic', 'line1'], e.target.value))} />
-                  <input className={inputClass} placeholder="Line 2" value={contact?.clinic?.line2 || ''} onChange={(e) => setHome((p) => updateAtPath(p, ['contact', 'clinic', 'line2'], e.target.value))} />
-                  <input className={inputClass} placeholder="Line 3" value={contact?.clinic?.line3 || ''} onChange={(e) => setHome((p) => updateAtPath(p, ['contact', 'clinic', 'line3'], e.target.value))} />
-                </div>
-              </div>
-
-              <div>
-                <label className={labelClass}>Map Embed URL</label>
-                <input className={inputClass} value={contact.mapEmbedUrl || ''} onChange={(e) => setHome((p) => updateAtPath(p, ['contact', 'mapEmbedUrl'], e.target.value))} />
-                <div className={helpClass}>Paste the Google Maps embed URL.</div>
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between gap-3 mb-2">
-                  <label className={labelClass}>Contact Methods</label>
-                  <button type="button" className="rounded-full bg-[#00acb1]/10 px-4 py-2 text-sm font-semibold text-[#005963] hover:bg-[#00acb1]/20 transition" onClick={() => setHome((p) => addToArray(p, ['contact', 'methods'], { icon: 'Phone', title: '', value: '', link: '', color: 'primary' }))}>Add</button>
-                </div>
-                <div className="space-y-3">
-                  {contactMethods.map((m, idx) => (
-                    <div key={idx} className="grid gap-3 sm:grid-cols-12">
-                      <select className={`${inputClass} sm:col-span-2`} value={m?.icon || 'Phone'} onChange={(e) => setHome((p) => updateAtPath(p, ['contact', 'methods', idx, 'icon'], e.target.value))}>
-                        <option value="Phone">Phone</option>
-                        <option value="MessageCircle">MessageCircle</option>
-                        <option value="Mail">Mail</option>
-                      </select>
-                      <select className={`${inputClass} sm:col-span-2`} value={m?.color || 'primary'} onChange={(e) => setHome((p) => updateAtPath(p, ['contact', 'methods', idx, 'color'], e.target.value))}>
-                        <option value="primary">primary</option>
-                        <option value="accent">accent</option>
-                      </select>
-                      <input className={`${inputClass} sm:col-span-3`} placeholder="Title" value={m?.title || ''} onChange={(e) => setHome((p) => updateAtPath(p, ['contact', 'methods', idx, 'title'], e.target.value))} />
-                      <input className={`${inputClass} sm:col-span-3`} placeholder="Value" value={m?.value || ''} onChange={(e) => setHome((p) => updateAtPath(p, ['contact', 'methods', idx, 'value'], e.target.value))} />
-                      <input className={`${inputClass} sm:col-span-2`} placeholder="Link" value={m?.link || ''} onChange={(e) => setHome((p) => updateAtPath(p, ['contact', 'methods', idx, 'link'], e.target.value))} />
-                      <button type="button" className="rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition sm:col-span-2" onClick={() => setHome((p) => removeFromArray(p, ['contact', 'methods'], idx))}>Delete</button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between gap-3 mb-2">
-                  <label className={labelClass}>Office Hours</label>
-                  <button type="button" className="rounded-full bg-[#00acb1]/10 px-4 py-2 text-sm font-semibold text-[#005963] hover:bg-[#00acb1]/20 transition" onClick={() => setHome((p) => addToArray(p, ['contact', 'officeHours'], { label: '', value: '' }))}>Add</button>
-                </div>
-                <div className="space-y-3">
-                  {officeHours.map((row, idx) => (
-                    <div key={idx} className="grid gap-3 sm:grid-cols-10">
-                      <input className={`${inputClass} sm:col-span-4`} placeholder="Label" value={row?.label || ''} onChange={(e) => setHome((p) => updateAtPath(p, ['contact', 'officeHours', idx, 'label'], e.target.value))} />
-                      <input className={`${inputClass} sm:col-span-4`} placeholder="Value" value={row?.value || ''} onChange={(e) => setHome((p) => updateAtPath(p, ['contact', 'officeHours', idx, 'value'], e.target.value))} />
-                      <button type="button" className="rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition sm:col-span-2" onClick={() => setHome((p) => removeFromArray(p, ['contact', 'officeHours'], idx))}>Delete</button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </GlassCard>
-          )}
-
           {/* Footer */}
           {activeTab === 'footer' && (
           <GlassCard variant="solid" hover={false} className="p-6">
@@ -699,25 +612,14 @@ export default function Settings({ auth, homeJson = '', status = null }) {
                 />
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className={labelClass}>Links Title</label>
-                  <input
-                    className={inputClass}
-                    value={footer.linksTitle || ''}
-                    onChange={(e) => setHome((p) => updateAtPath(p, ['footer', 'linksTitle'], e.target.value))}
-                    placeholder="Quick Links"
-                  />
-                </div>
-                <div>
-                  <label className={labelClass}>Contact Title</label>
-                  <input
-                    className={inputClass}
-                    value={footer.contactTitle || ''}
-                    onChange={(e) => setHome((p) => updateAtPath(p, ['footer', 'contactTitle'], e.target.value))}
-                    placeholder="Contact"
-                  />
-                </div>
+              <div>
+                <label className={labelClass}>Links Title</label>
+                <input
+                  className={inputClass}
+                  value={footer.linksTitle || ''}
+                  onChange={(e) => setHome((p) => updateAtPath(p, ['footer', 'linksTitle'], e.target.value))}
+                  placeholder="Quick Links"
+                />
               </div>
 
               <div>
@@ -759,38 +661,6 @@ export default function Settings({ auth, homeJson = '', status = null }) {
                 </div>
               </div>
 
-              <div>
-                <div className="flex items-center justify-between gap-3 mb-2">
-                  <label className={labelClass}>Contact Lines</label>
-                  <button
-                    type="button"
-                    className="rounded-full bg-[#00acb1]/10 px-4 py-2 text-sm font-semibold text-[#005963] hover:bg-[#00acb1]/20 transition"
-                    onClick={() => setHome((p) => addToArray(p, ['footer', 'contactLines'], ''))}
-                  >
-                    Add
-                  </button>
-                </div>
-
-                <div className="space-y-3">
-                  {footerContactLines.map((line, idx) => (
-                    <div key={idx} className="grid gap-3 sm:grid-cols-6">
-                      <input
-                        className={`${inputClass} sm:col-span-5`}
-                        placeholder="Example: Phone: (555) 123-4567"
-                        value={line || ''}
-                        onChange={(e) => setHome((p) => updateAtPath(p, ['footer', 'contactLines', idx], e.target.value))}
-                      />
-                      <button
-                        type="button"
-                        className="rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
-                        onClick={() => setHome((p) => removeFromArray(p, ['footer', 'contactLines'], idx))}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
             </div>
           </GlassCard>
           )}
