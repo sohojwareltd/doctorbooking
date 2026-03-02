@@ -31,9 +31,21 @@ export default function AboutSection({ content, doctor }) {
 
     // Use doctor data if available, fallback to content settings
     const doctorName = doctor?.name || 'Dr. Sarah Johnson';
-    const title = content?.title || `About ${doctorName}`;
+    const aboutContent = doctor?.about_content || {};
+
+    const replaceDefaultDoctorName = (value) => {
+        if (typeof value !== 'string' || !doctor?.name) {
+            return value;
+        }
+
+        return value
+            .replace(/Dr\.\s*Sarah\s*Johnson/gi, doctor.name)
+            .replace(/Sarah\s*Johnson/gi, doctor.name.replace(/^Dr\.\s*/i, ''));
+    };
+
+    const title = replaceDefaultDoctorName(content?.title) || `About ${doctorName}`;
     const subtitle =
-        content?.subtitle || 'Dedicated to Your Health and Well-being';
+        aboutContent?.subtitle || content?.subtitle || 'Dedicated to Your Health and Well-being';
     
     // Use doctor profile picture if available
     const imageUrl = doctor?.profile_picture 
@@ -41,20 +53,20 @@ export default function AboutSection({ content, doctor }) {
         : (content?.image?.url || 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=800&q=80');
     const imageAlt = content?.image?.alt || doctorName;
     
-    const highlightValue = content?.highlight?.value || (doctor?.experience ? `${doctor.experience}+` : '15+');
-    const highlightLabel = content?.highlight?.label || 'Years Experience';
+    const highlightValue = aboutContent?.highlight?.value || content?.highlight?.value || (doctor?.experience ? `${doctor.experience}+` : '15+');
+    const highlightLabel = aboutContent?.highlight?.label || content?.highlight?.label || 'Years Experience';
     
     // Build detailed about paragraphs from doctor bio or content
-    const paragraphs = content?.paragraphs || (doctor?.bio ? [doctor.bio] : [
+    const paragraphs = (aboutContent?.paragraphs?.map(replaceDefaultDoctorName)) || (content?.paragraphs?.map(replaceDefaultDoctorName)) || (doctor?.bio ? [doctor.bio] : [
         `${doctorName} is a dedicated medical professional committed to providing comprehensive healthcare to all patients. With extensive training and experience in general medicine, she brings a compassionate and thorough approach to every consultation.`,
         'Her practice philosophy centers on preventive care, early diagnosis, and personalized treatment plans. She believes in taking the time to listen to each patient\'s concerns and working collaboratively to achieve optimal health outcomes.',
         'Beyond clinical excellence, she is passionate about patient education and empowering individuals to take charge of their health through informed decisions and healthy lifestyle choices.',
     ]);
     
-    const credentialsTitle = content?.credentialsTitle || 'Professional Qualifications';
+    const credentialsTitle = aboutContent?.credentialsTitle || content?.credentialsTitle || 'Professional Qualifications';
     
     // Build credentials from doctor data or content
-    const credentials = content?.credentials || [
+    const credentials = aboutContent?.credentials || content?.credentials || [
         doctor?.degree || 'MBBS - Dhaka Medical College',
         doctor?.specialization || 'FCPS (Medicine) - Bangladesh College of Physicians & Surgeons',
         doctor?.registration_no ? `Registration: ${doctor.registration_no}` : 'Licensed Medical Practitioner',
@@ -62,6 +74,7 @@ export default function AboutSection({ content, doctor }) {
     ].filter(Boolean);
     
     const stats =
+        aboutContent?.stats ||
         content?.stats ||
         [
             { icon: 'Users', value: '10,000+', label: 'Patients Treated' },

@@ -5,6 +5,7 @@ import {
     Calendar,
     Camera,
     GraduationCap,
+    FileText,
     Mail,
     MapPin,
     Phone,
@@ -28,6 +29,7 @@ export default function DoctorProfile({ doctor = {} }) {
     const [uploadingPhoto, setUploadingPhoto] = useState(false);
     const [deletingPhoto, setDeletingPhoto] = useState(false);
     const [showPhotoModal, setShowPhotoModal] = useState(false);
+    const [activeTab, setActiveTab] = useState('profile');
     const fileInputRef = useRef(null);
 
     const { data, setData, put, processing, errors } = useForm({
@@ -40,6 +42,20 @@ export default function DoctorProfile({ doctor = {} }) {
         specialization: doctor.specialization || '',
         degree: doctor.degree || '',
         registration_no: doctor.registration_no || '',
+        bio: doctor.bio || '',
+        experience: doctor.experience || '',
+        about_subtitle: doctor.about_subtitle || '',
+        about_paragraph_1: doctor.about_paragraph_1 || '',
+        about_paragraph_2: doctor.about_paragraph_2 || '',
+        about_paragraph_3: doctor.about_paragraph_3 || '',
+        about_credentials_title: doctor.about_credentials_title || '',
+        about_credentials_text: doctor.about_credentials_text || '',
+        about_highlight_value: doctor.about_highlight_value || '',
+        about_highlight_label: doctor.about_highlight_label || '',
+        about_stats_patients_treated: doctor.about_stats_patients_treated || '',
+        about_stats_years_experience: doctor.about_stats_years_experience || '',
+        about_stats_patient_satisfaction: doctor.about_stats_patient_satisfaction || '',
+        about_stats_medical_cases: doctor.about_stats_medical_cases || '',
     });
 
     useEffect(() => {
@@ -331,6 +347,32 @@ export default function DoctorProfile({ doctor = {} }) {
             </GlassCard>
 
             <form onSubmit={handleSubmit}>
+                <div className="mb-5 inline-flex rounded-2xl border border-[#00acb1]/20 bg-white p-1">
+                    <button
+                        type="button"
+                        onClick={() => setActiveTab('profile')}
+                        className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                            activeTab === 'profile'
+                                ? 'bg-[#005963] text-white'
+                                : 'text-[#005963] hover:bg-[#005963]/10'
+                        }`}
+                    >
+                        Profile
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setActiveTab('about')}
+                        className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                            activeTab === 'about'
+                                ? 'bg-[#005963] text-white'
+                                : 'text-[#005963] hover:bg-[#005963]/10'
+                        }`}
+                    >
+                        About
+                    </button>
+                </div>
+
+                {activeTab === 'profile' && (
                 <div className="grid gap-8 lg:grid-cols-2">
                     {/* Personal Information */}
                     <GlassCard variant="solid" className="p-6 shadow-xl">
@@ -519,6 +561,185 @@ export default function DoctorProfile({ doctor = {} }) {
                         </div>
                     </GlassCard>
                 </div>
+                )}
+
+                {activeTab === 'about' && (
+                    <GlassCard variant="solid" className="p-6 shadow-xl">
+                        <div className="mb-6 flex items-center gap-3">
+                            <div className="rounded-xl bg-[#005963]/10 p-3">
+                                <FileText className="h-6 w-6 text-[#005963]" />
+                            </div>
+                            <div>
+                                <h2 className="text-lg font-bold text-[#005963]">About Section Content</h2>
+                                <p className="text-sm text-gray-600">Homepage About section data manage করুন</p>
+                            </div>
+                        </div>
+
+                        <div className="grid gap-5 lg:grid-cols-2">
+                            <div className="lg:col-span-2">
+                                <label className={labelClass}>About Subtitle</label>
+                                <input
+                                    type="text"
+                                    className={inputClass}
+                                    value={data.about_subtitle}
+                                    onChange={(e) => setData('about_subtitle', e.target.value)}
+                                    placeholder="Excellence in dermatological care..."
+                                />
+                                {errors.about_subtitle && <p className={errorClass}>{errors.about_subtitle}</p>}
+                            </div>
+
+                            <div className="lg:col-span-2">
+                                <label className={labelClass}>Bio (Fallback)</label>
+                                <textarea
+                                    className={`${inputClass} min-h-[100px] resize-none`}
+                                    value={data.bio}
+                                    onChange={(e) => setData('bio', e.target.value)}
+                                    placeholder="Short doctor bio"
+                                />
+                                {errors.bio && <p className={errorClass}>{errors.bio}</p>}
+                            </div>
+
+                            <div>
+                                <label className={labelClass}>Experience (Years)</label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    max="80"
+                                    className={inputClass}
+                                    value={data.experience}
+                                    onChange={(e) => setData('experience', e.target.value)}
+                                    placeholder="20"
+                                />
+                                {errors.experience && <p className={errorClass}>{errors.experience}</p>}
+                            </div>
+
+                            <div>
+                                <label className={labelClass}>Highlight Value</label>
+                                <input
+                                    type="text"
+                                    className={inputClass}
+                                    value={data.about_highlight_value}
+                                    onChange={(e) => setData('about_highlight_value', e.target.value)}
+                                    placeholder="20+"
+                                />
+                                {errors.about_highlight_value && <p className={errorClass}>{errors.about_highlight_value}</p>}
+                            </div>
+
+                            <div className="lg:col-span-2">
+                                <label className={labelClass}>Highlight Label</label>
+                                <input
+                                    type="text"
+                                    className={inputClass}
+                                    value={data.about_highlight_label}
+                                    onChange={(e) => setData('about_highlight_label', e.target.value)}
+                                    placeholder="Years Experience"
+                                />
+                                {errors.about_highlight_label && <p className={errorClass}>{errors.about_highlight_label}</p>}
+                            </div>
+
+                            <div className="lg:col-span-2">
+                                <label className={labelClass}>Paragraph 1</label>
+                                <textarea
+                                    className={`${inputClass} min-h-[110px] resize-none`}
+                                    value={data.about_paragraph_1}
+                                    onChange={(e) => setData('about_paragraph_1', e.target.value)}
+                                />
+                                {errors.about_paragraph_1 && <p className={errorClass}>{errors.about_paragraph_1}</p>}
+                            </div>
+
+                            <div className="lg:col-span-2">
+                                <label className={labelClass}>Paragraph 2</label>
+                                <textarea
+                                    className={`${inputClass} min-h-[110px] resize-none`}
+                                    value={data.about_paragraph_2}
+                                    onChange={(e) => setData('about_paragraph_2', e.target.value)}
+                                />
+                                {errors.about_paragraph_2 && <p className={errorClass}>{errors.about_paragraph_2}</p>}
+                            </div>
+
+                            <div className="lg:col-span-2">
+                                <label className={labelClass}>Paragraph 3</label>
+                                <textarea
+                                    className={`${inputClass} min-h-[110px] resize-none`}
+                                    value={data.about_paragraph_3}
+                                    onChange={(e) => setData('about_paragraph_3', e.target.value)}
+                                />
+                                {errors.about_paragraph_3 && <p className={errorClass}>{errors.about_paragraph_3}</p>}
+                            </div>
+
+                            <div>
+                                <label className={labelClass}>Credentials Title</label>
+                                <input
+                                    type="text"
+                                    className={inputClass}
+                                    value={data.about_credentials_title}
+                                    onChange={(e) => setData('about_credentials_title', e.target.value)}
+                                    placeholder="Credentials & Certifications"
+                                />
+                                {errors.about_credentials_title && <p className={errorClass}>{errors.about_credentials_title}</p>}
+                            </div>
+
+                            <div className="lg:col-span-2">
+                                <label className={labelClass}>Credentials (one per line)</label>
+                                <textarea
+                                    className={`${inputClass} min-h-[120px] resize-none`}
+                                    value={data.about_credentials_text}
+                                    onChange={(e) => setData('about_credentials_text', e.target.value)}
+                                    placeholder={"MD, Harvard Medical School\nBoard Certified, American Academy..."}
+                                />
+                                {errors.about_credentials_text && <p className={errorClass}>{errors.about_credentials_text}</p>}
+                            </div>
+
+                            <div>
+                                <label className={labelClass}>Stat: Patients Treated</label>
+                                <input
+                                    type="text"
+                                    className={inputClass}
+                                    value={data.about_stats_patients_treated}
+                                    onChange={(e) => setData('about_stats_patients_treated', e.target.value)}
+                                    placeholder="15,000+"
+                                />
+                                {errors.about_stats_patients_treated && <p className={errorClass}>{errors.about_stats_patients_treated}</p>}
+                            </div>
+
+                            <div>
+                                <label className={labelClass}>Stat: Years Experience</label>
+                                <input
+                                    type="text"
+                                    className={inputClass}
+                                    value={data.about_stats_years_experience}
+                                    onChange={(e) => setData('about_stats_years_experience', e.target.value)}
+                                    placeholder="20+"
+                                />
+                                {errors.about_stats_years_experience && <p className={errorClass}>{errors.about_stats_years_experience}</p>}
+                            </div>
+
+                            <div>
+                                <label className={labelClass}>Stat: Patient Satisfaction</label>
+                                <input
+                                    type="text"
+                                    className={inputClass}
+                                    value={data.about_stats_patient_satisfaction}
+                                    onChange={(e) => setData('about_stats_patient_satisfaction', e.target.value)}
+                                    placeholder="98%"
+                                />
+                                {errors.about_stats_patient_satisfaction && <p className={errorClass}>{errors.about_stats_patient_satisfaction}</p>}
+                            </div>
+
+                            <div>
+                                <label className={labelClass}>Stat: Medical Cases</label>
+                                <input
+                                    type="text"
+                                    className={inputClass}
+                                    value={data.about_stats_medical_cases}
+                                    onChange={(e) => setData('about_stats_medical_cases', e.target.value)}
+                                    placeholder="100+"
+                                />
+                                {errors.about_stats_medical_cases && <p className={errorClass}>{errors.about_stats_medical_cases}</p>}
+                            </div>
+                        </div>
+                    </GlassCard>
+                )}
 
                 {/* Submit Button */}
                 <div className="mt-5 mb-5 flex justify-end">

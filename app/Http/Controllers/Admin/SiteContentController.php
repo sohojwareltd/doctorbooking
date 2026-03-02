@@ -25,6 +25,10 @@ class SiteContentController extends Controller
 
         $home = SiteContent::normalizeValue($home);
 
+        if (is_array($home)) {
+            unset($home['about']);
+        }
+
         return Inertia::render('admin/Settings', [
             'homeJson' => $home ? json_encode($home, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) : "{}",
             'status' => $request->session()->get('status'),
@@ -46,6 +50,10 @@ class SiteContentController extends Controller
         }
 
         $decoded = SiteContent::normalizeValue($decoded);
+
+        if (is_array($decoded)) {
+            unset($decoded['about']);
+        }
 
         SiteContent::updateOrCreate(
             ['key' => 'home'],

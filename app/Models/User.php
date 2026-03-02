@@ -26,6 +26,9 @@ use Laravel\Sanctum\HasApiTokens;
  * @property string|null $degree
  * @property string|null $registration_no
  * @property string|null $profile_picture
+ * @property string|null $bio
+ * @property int|null $experience
+ * @property array<string, mixed>|null $about_content
  * @property \Illuminate\Support\Carbon|null $email_verified_at
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
@@ -55,6 +58,9 @@ class User extends Authenticatable
         'degree',
         'registration_no',
         'profile_picture',
+        'bio',
+        'experience',
+        'about_content',
     ];
 
     /**
@@ -81,6 +87,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
             'date_of_birth' => 'date',
+            'about_content' => 'array',
         ];
     }
 

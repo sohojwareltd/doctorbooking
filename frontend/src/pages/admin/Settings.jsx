@@ -81,7 +81,6 @@ export default function Settings({ auth, homeJson = '', status = null }) {
   const hero = home?.hero || {};
   const meta = home?.meta || {};
   const header = home?.header || {};
-  const about = home?.about || {};
   const services = home?.services || {};
   const gallery = home?.gallery || {};
   const contact = home?.contact || {};
@@ -91,9 +90,6 @@ export default function Settings({ auth, homeJson = '', status = null }) {
 
   const trust = asArray(hero.trust);
   const features = asArray(hero.features);
-  const aboutStats = asArray(about.stats);
-  const aboutParagraphs = asArray(about.paragraphs);
-  const aboutCredentials = asArray(about.credentials);
   const serviceItems = asArray(services.items);
   const galleryImages = asArray(gallery.images);
   const contactMethods = asArray(contact.methods);
@@ -156,7 +152,6 @@ export default function Settings({ auth, homeJson = '', status = null }) {
     { key: 'meta', label: 'Meta' },
     { key: 'header', label: 'Header' },
     { key: 'hero', label: 'Hero' },
-    { key: 'about', label: 'About' },
     { key: 'services', label: 'Services' },
     { key: 'caseStudies', label: 'Case Studies' },
     { key: 'gallery', label: 'Gallery' },
@@ -486,137 +481,6 @@ export default function Settings({ auth, homeJson = '', status = null }) {
                       >
                         Delete
                       </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </GlassCard>
-          )}
-
-          {/* About */}
-          {activeTab === 'about' && (
-          <GlassCard variant="solid" hover={false} className="p-6">
-            <div className="mb-4">
-              <div className={sectionTitleClass}>About</div>
-              <div className={sectionSubClass}>About section content and stats.</div>
-            </div>
-            <div className="grid gap-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className={labelClass}>Title</label>
-                  <input className={inputClass} value={about.title || ''} onChange={(e) => setHome((p) => updateAtPath(p, ['about', 'title'], e.target.value))} />
-                </div>
-                <div>
-                  <label className={labelClass}>Subtitle</label>
-                  <input className={inputClass} value={about.subtitle || ''} onChange={(e) => setHome((p) => updateAtPath(p, ['about', 'subtitle'], e.target.value))} />
-                </div>
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className={labelClass}>Image URL</label>
-                  <input className={inputClass} value={about?.image?.url || ''} onChange={(e) => setHome((p) => updateAtPath(p, ['about', 'image', 'url'], e.target.value))} />
-                  <div className="mt-3 flex items-center gap-3">
-                    <label className="rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition cursor-pointer">
-                      {uploading.aboutImage ? 'Uploading…' : 'Upload'}
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        disabled={!!uploading.aboutImage}
-                        onChange={async (e) => {
-                          const file = e.target.files?.[0];
-                          if (!file) return;
-                          setUploading((p) => ({ ...p, aboutImage: true }));
-                          try {
-                            const url = await uploadToServer(file);
-                            setHome((p) => updateAtPath(p, ['about', 'image', 'url'], url));
-                            toastSuccess('Image uploaded.');
-                          } catch (err) {
-                            toastError(err?.message || 'Upload failed.');
-                          } finally {
-                            setUploading((p) => ({ ...p, aboutImage: false }));
-                            e.target.value = '';
-                          }
-                        }}
-                      />
-                    </label>
-                    <div className={helpClass}>Upload will generate a local URL.</div>
-                  </div>
-                  <ImagePreview
-                    url={about?.image?.url || ''}
-                    onClear={() => setHome((p) => updateAtPath(p, ['about', 'image', 'url'], ''))}
-                  />
-                </div>
-                <div>
-                  <label className={labelClass}>Image Alt</label>
-                  <input className={inputClass} value={about?.image?.alt || ''} onChange={(e) => setHome((p) => updateAtPath(p, ['about', 'image', 'alt'], e.target.value))} />
-                </div>
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className={labelClass}>Highlight Label</label>
-                  <input className={inputClass} value={about?.highlight?.label || ''} onChange={(e) => setHome((p) => updateAtPath(p, ['about', 'highlight', 'label'], e.target.value))} />
-                </div>
-                <div>
-                  <label className={labelClass}>Highlight Value</label>
-                  <input className={inputClass} value={about?.highlight?.value || ''} onChange={(e) => setHome((p) => updateAtPath(p, ['about', 'highlight', 'value'], e.target.value))} />
-                </div>
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between gap-3 mb-2">
-                  <label className={labelClass}>Paragraphs</label>
-                  <button type="button" className="rounded-full bg-[#00acb1]/10 px-4 py-2 text-sm font-semibold text-[#005963] hover:bg-[#00acb1]/20 transition" onClick={() => setHome((p) => addToArray(p, ['about', 'paragraphs'], ''))}>Add</button>
-                </div>
-                <div className="space-y-3">
-                  {aboutParagraphs.map((text, idx) => (
-                    <div key={idx} className="grid gap-3 sm:grid-cols-6">
-                      <textarea className={`${inputClass} sm:col-span-5`} rows={2} value={text || ''} onChange={(e) => setHome((p) => updateAtPath(p, ['about', 'paragraphs', idx], e.target.value))} />
-                      <button type="button" className="rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition" onClick={() => setHome((p) => removeFromArray(p, ['about', 'paragraphs'], idx))}>Delete</button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className={labelClass}>Credentials Title</label>
-                <input className={inputClass} value={about.credentialsTitle || ''} onChange={(e) => setHome((p) => updateAtPath(p, ['about', 'credentialsTitle'], e.target.value))} />
-              </div>
-              <div>
-                <div className="flex items-center justify-between gap-3 mb-2">
-                  <label className={labelClass}>Credentials</label>
-                  <button type="button" className="rounded-full bg-[#00acb1]/10 px-4 py-2 text-sm font-semibold text-[#005963] hover:bg-[#00acb1]/20 transition" onClick={() => setHome((p) => addToArray(p, ['about', 'credentials'], ''))}>Add</button>
-                </div>
-                <div className="space-y-3">
-                  {aboutCredentials.map((text, idx) => (
-                    <div key={idx} className="grid gap-3 sm:grid-cols-6">
-                      <input className={`${inputClass} sm:col-span-5`} value={text || ''} onChange={(e) => setHome((p) => updateAtPath(p, ['about', 'credentials', idx], e.target.value))} />
-                      <button type="button" className="rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition" onClick={() => setHome((p) => removeFromArray(p, ['about', 'credentials'], idx))}>Delete</button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between gap-3 mb-2">
-                  <label className={labelClass}>Stats</label>
-                  <button type="button" className="rounded-full bg-[#00acb1]/10 px-4 py-2 text-sm font-semibold text-[#005963] hover:bg-[#00acb1]/20 transition" onClick={() => setHome((p) => addToArray(p, ['about', 'stats'], { icon: 'Users', label: '', value: '' }))}>Add</button>
-                </div>
-                <div className="space-y-3">
-                  {aboutStats.map((stat, idx) => (
-                    <div key={idx} className="grid gap-3 sm:grid-cols-12">
-                      <select className={`${inputClass} sm:col-span-3`} value={stat?.icon || 'Users'} onChange={(e) => setHome((p) => updateAtPath(p, ['about', 'stats', idx, 'icon'], e.target.value))}>
-                        <option value="Users">Users</option>
-                        <option value="Award">Award</option>
-                        <option value="Heart">Heart</option>
-                        <option value="BookOpen">BookOpen</option>
-                      </select>
-                      <input className={`${inputClass} sm:col-span-4`} placeholder="Label" value={stat?.label || ''} onChange={(e) => setHome((p) => updateAtPath(p, ['about', 'stats', idx, 'label'], e.target.value))} />
-                      <input className={`${inputClass} sm:col-span-3`} placeholder="Value" value={stat?.value || ''} onChange={(e) => setHome((p) => updateAtPath(p, ['about', 'stats', idx, 'value'], e.target.value))} />
-                      <button type="button" className="rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition sm:col-span-2" onClick={() => setHome((p) => removeFromArray(p, ['about', 'stats'], idx))}>Delete</button>
                     </div>
                   ))}
                 </div>
