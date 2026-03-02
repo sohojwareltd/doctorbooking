@@ -27,6 +27,7 @@ class SiteContentController extends Controller
 
         if (is_array($home)) {
             unset($home['about']);
+            unset($home['hero']);
         }
 
         return Inertia::render('admin/Settings', [
@@ -53,6 +54,7 @@ class SiteContentController extends Controller
 
         if (is_array($decoded)) {
             unset($decoded['about']);
+            unset($decoded['hero']);
         }
 
         SiteContent::updateOrCreate(

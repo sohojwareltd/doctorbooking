@@ -1,5 +1,4 @@
 import { Head } from '@inertiajs/react';
-import AboutSection from '../components/sections/AboutSection';
 import BookingSection from '../components/sections/BookingSection';
 import CaseStudiesSection from '../components/sections/CaseStudiesSection';
 import ContactSection from '../components/sections/ContactSection';
@@ -25,11 +24,8 @@ export default function Welcome({ auth, home, doctor }) {
             </Head>
 
             <div className="relative min-h-screen bg-white font-sans text-gray-900">
-                {/* Hero Section */}
-                <HeroSection content={home?.hero} doctor={doctor} />
-
-                {/* About Section */}
-                <AboutSection content={home?.about} doctor={doctor} />
+                {/* Doctor Profile Section (Hero + About Combined) */}
+                <HeroSection doctor={doctor} />
 
                 {/* Services Section */}
                 <ServicesSection content={home?.services} />

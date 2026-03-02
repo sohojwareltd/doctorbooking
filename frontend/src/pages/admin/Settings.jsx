@@ -78,7 +78,6 @@ export default function Settings({ auth, homeJson = '', status = null }) {
   const sectionTitleClass = 'text-lg font-bold text-[#005963]';
   const sectionSubClass = 'text-sm text-gray-600';
 
-  const hero = home?.hero || {};
   const meta = home?.meta || {};
   const header = home?.header || {};
   const services = home?.services || {};
@@ -88,8 +87,6 @@ export default function Settings({ auth, homeJson = '', status = null }) {
   const footer = home?.footer || {};
   const prescription = home?.prescription || {};
 
-  const trust = asArray(hero.trust);
-  const features = asArray(hero.features);
   const serviceItems = asArray(services.items);
   const galleryImages = asArray(gallery.images);
   const contactMethods = asArray(contact.methods);
@@ -151,7 +148,6 @@ export default function Settings({ auth, homeJson = '', status = null }) {
   const tabs = [
     { key: 'meta', label: 'Meta' },
     { key: 'header', label: 'Header' },
-    { key: 'hero', label: 'Hero' },
     { key: 'services', label: 'Services' },
     { key: 'caseStudies', label: 'Case Studies' },
     { key: 'gallery', label: 'Gallery' },
@@ -310,180 +306,6 @@ export default function Settings({ auth, homeJson = '', status = null }) {
                   url={header.logoUrl}
                   onClear={() => setHome((p) => updateAtPath(p, ['header', 'logoUrl'], ''))}
                 />
-              </div>
-            </div>
-          </GlassCard>
-          )}
-
-          {/* Hero */}
-          {activeTab === 'hero' && (
-          <GlassCard variant="solid" hover={false} className="p-6">
-            <div className="mb-4">
-              <div className={sectionTitleClass}>Hero</div>
-              <div className={sectionSubClass}>Top section content.</div>
-            </div>
-            <div className="grid gap-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className={labelClass}>Name</label>
-                  <input
-                    className={inputClass}
-                    value={hero.name || ''}
-                    onChange={(e) => setHome((p) => updateAtPath(p, ['hero', 'name'], e.target.value))}
-                  />
-                </div>
-                <div>
-                  <label className={labelClass}>Badge</label>
-                  <input
-                    className={inputClass}
-                    value={hero.badge || ''}
-                    onChange={(e) => setHome((p) => updateAtPath(p, ['hero', 'badge'], e.target.value))}
-                  />
-                </div>
-              </div>
-              <div>
-                <label className={labelClass}>Subtitle</label>
-                <input
-                  className={inputClass}
-                  value={hero.subtitle || ''}
-                  onChange={(e) => setHome((p) => updateAtPath(p, ['hero', 'subtitle'], e.target.value))}
-                />
-              </div>
-              <div>
-                <label className={labelClass}>Description</label>
-                <textarea
-                  className={inputClass}
-                  rows={3}
-                  value={hero.description || ''}
-                  onChange={(e) => setHome((p) => updateAtPath(p, ['hero', 'description'], e.target.value))}
-                />
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className={labelClass}>Image URL</label>
-                  <div className="flex gap-3">
-                    <input
-                      className={inputClass}
-                      value={hero?.image?.url || ''}
-                      onChange={(e) => setHome((p) => updateAtPath(p, ['hero', 'image', 'url'], e.target.value))}
-                    />
-                  </div>
-                  <div className="mt-3 flex items-center gap-3">
-                    <label className="rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition cursor-pointer">
-                      {uploading.heroImage ? 'Uploading…' : 'Upload'}
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        disabled={!!uploading.heroImage}
-                        onChange={async (e) => {
-                          const file = e.target.files?.[0];
-                          if (!file) return;
-                          setUploading((p) => ({ ...p, heroImage: true }));
-                          try {
-                            const url = await uploadToServer(file);
-                            setHome((p) => updateAtPath(p, ['hero', 'image', 'url'], url));
-                            toastSuccess('Image uploaded.');
-                          } catch (err) {
-                            toastError(err?.message || 'Upload failed.');
-                          } finally {
-                            setUploading((p) => ({ ...p, heroImage: false }));
-                            e.target.value = '';
-                          }
-                        }}
-                      />
-                    </label>
-                    <div className={helpClass}>Upload will generate a local URL.</div>
-                  </div>
-                  <ImagePreview
-                    url={hero?.image?.url || ''}
-                    onClear={() => setHome((p) => updateAtPath(p, ['hero', 'image', 'url'], ''))}
-                  />
-                </div>
-                <div>
-                  <label className={labelClass}>Image Alt</label>
-                  <input
-                    className={inputClass}
-                    value={hero?.image?.alt || ''}
-                    onChange={(e) => setHome((p) => updateAtPath(p, ['hero', 'image', 'alt'], e.target.value))}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between gap-3 mb-2">
-                  <label className={labelClass}>Trust Items</label>
-                  <button
-                    type="button"
-                    className="rounded-full bg-[#00acb1]/10 px-4 py-2 text-sm font-semibold text-[#005963] hover:bg-[#00acb1]/20 transition"
-                    onClick={() =>
-                      setHome((p) => addToArray(p, ['hero', 'trust'], { label: '', value: '' }))
-                    }
-                  >
-                    Add
-                  </button>
-                </div>
-                <div className="space-y-3">
-                  {trust.map((item, idx) => (
-                    <div key={idx} className="grid gap-3 sm:grid-cols-5">
-                      <input
-                        className={`${inputClass} sm:col-span-2`}
-                        placeholder="Label"
-                        value={item?.label || ''}
-                        onChange={(e) =>
-                          setHome((p) => updateAtPath(p, ['hero', 'trust', idx, 'label'], e.target.value))
-                        }
-                      />
-                      <input
-                        className={`${inputClass} sm:col-span-2`}
-                        placeholder="Value"
-                        value={item?.value || ''}
-                        onChange={(e) =>
-                          setHome((p) => updateAtPath(p, ['hero', 'trust', idx, 'value'], e.target.value))
-                        }
-                      />
-                      <button
-                        type="button"
-                        className="rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
-                        onClick={() => setHome((p) => removeFromArray(p, ['hero', 'trust'], idx))}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between gap-3 mb-2">
-                  <label className={labelClass}>Features</label>
-                  <button
-                    type="button"
-                    className="rounded-full bg-[#00acb1]/10 px-4 py-2 text-sm font-semibold text-[#005963] hover:bg-[#00acb1]/20 transition"
-                    onClick={() => setHome((p) => addToArray(p, ['hero', 'features'], ''))}
-                  >
-                    Add
-                  </button>
-                </div>
-                <div className="space-y-3">
-                  {features.map((feature, idx) => (
-                    <div key={idx} className="grid gap-3 sm:grid-cols-6">
-                      <input
-                        className={`${inputClass} sm:col-span-5`}
-                        value={feature || ''}
-                        onChange={(e) => setHome((p) => updateAtPath(p, ['hero', 'features', idx], e.target.value))}
-                        placeholder="Feature text"
-                      />
-                      <button
-                        type="button"
-                        className="rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
-                        onClick={() => setHome((p) => removeFromArray(p, ['hero', 'features'], idx))}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  ))}
-                </div>
               </div>
             </div>
           </GlassCard>

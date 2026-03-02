@@ -4,49 +4,62 @@ import { useRef } from 'react';
 import PrimaryButton from '../PrimaryButton';
 import ParticlesBackground from '../ParticlesBackground';
 
-export default function HeroSection({ content, doctor }) {
+export default function HeroSection({ doctor }) {
     const ref = useRef(null);
     const { scrollYProgress } = useScroll({
         target: ref,
         offset: ['start start', 'end start'],
     });
 
-    const y = useTransform(scrollYProgress, [0, 1], ['0%', '50%']);
     const opacity = useTransform(scrollYProgress, [0, 0.6], [1, 0]);
 
-    // Use doctor data if available, fallback to content settings
-    const doctorName = doctor?.name || content?.name || 'Dr. Sarah Johnson';
-    const doctorSubtitle = doctor?.specialization || content?.subtitle || 'Board-Certified Physician';
-    const doctorDescription = doctor?.bio || content?.description || 'Providing compassionate and comprehensive healthcare with expertise and dedication to your well-being.';
-    const doctorBadge = content?.badge || 'Your Healthcare Partner';
-    
-    // Build features array from doctor or content
-    const features =
-        content?.features ||
-        [
-            doctor?.specialization || 'General Medicine',
-            doctor?.degree || 'MBBS',
-            doctor?.registration_no || 'Licensed Practitioner'
-        ];
+    const aboutContent = doctor?.about_content || {};
+    const doctorName = doctor?.name || 'Doctor';
+    const doctorSubtitle =
+        [doctor?.degree, doctor?.specialization].filter(Boolean).join(', ') ||
+        doctor?.specialization ||
+        'Consultant Physician';
+    const doctorBadge = aboutContent?.subtitle || 'Doctor Profile';
 
-    const trust =
-        content?.trust ||
-        [
-            { value: '15K+', label: 'Satisfied Patients' },
-            { value: '98%', label: 'Success Rate' },
-            { value: '20+', label: 'Years of Care' },
-        ];
+    const paragraphs = Array.isArray(aboutContent?.paragraphs) && aboutContent.paragraphs.length
+        ? aboutContent.paragraphs.filter(Boolean)
+        : (doctor?.bio ? [doctor.bio] : ['Compassionate and comprehensive healthcare with a patient-first approach.']);
 
-    // Use doctor profile picture if available
-    const imageUrl = doctor?.profile_picture 
-        ? `/storage/${doctor.profile_picture}` 
-        : (content?.image?.url || 'https://mediicc.netlify.app/images/thunb.png');
+    const credentialsTitle = aboutContent?.credentialsTitle || 'Credentials & Certifications';
+    const credentials =
+        Array.isArray(aboutContent?.credentials) && aboutContent.credentials.length
+            ? aboutContent.credentials.filter(Boolean)
+            : [
+                  doctor?.degree,
+                  doctor?.specialization,
+                  doctor?.registration_no ? `Registration: ${doctor.registration_no}` : null,
+              ].filter(Boolean);
+
+    const stats =
+        Array.isArray(aboutContent?.stats) && aboutContent.stats.length
+            ? aboutContent.stats.filter((item) => item?.value || item?.label)
+            : [
+                  { value: '15K+', label: 'Patients Treated' },
+                  { value: '98%', label: 'Success Rate' },
+                  { value: '20+', label: 'Years of Care' },
+              ];
+
+    const highlightValue = aboutContent?.highlight?.value || stats?.[0]?.value || null;
+    const highlightLabel = aboutContent?.highlight?.label || stats?.[0]?.label || null;
+
+    const profilePicture = doctor?.profile_picture || '';
+    const imageUrl = profilePicture
+        ? (profilePicture.startsWith('http') || profilePicture.startsWith('/')
+            ? profilePicture
+            : `/storage/${profilePicture}`)
+        : 'https://mediicc.netlify.app/images/thunb.png';
     const imageAlt = doctorName;
 
     return (
         <section
             ref={ref}
-            className="relative w-full overflow-hidden bg-white py-20"
+            id="about"
+            className="relative w-full overflow-hidden bg-white pt-10 pb-20"
         >
             {/* Particles (pulse) */}
             <div className="absolute inset-0 z-0">
@@ -85,50 +98,55 @@ export default function HeroSection({ content, doctor }) {
                         initial={{ opacity: 0, y: 30 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.8, delay: 0.2 }}
-                        className="mb-3 text-2xl font-bold text-[#005963] sm:text-3xl"
+                        className="mb-6 text-2xl font-bold text-[#005963] sm:text-3xl"
                     >
                         {doctorSubtitle}
                     </motion.p>
 
-                    {/* Description */}
-                    <motion.p
-                        initial={{ opacity: 0, y: 30 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.8, delay: 0.3 }}
-                        className="mb-10 text-lg text-[#686a6f] leading-relaxed sm:text-xl"
-                    >
-                        {doctorDescription}
-                    </motion.p>
-
-                    {/* Features List */}
                     <motion.div
-                        className="mb-10 space-y-3"
+                        className="mb-8 space-y-4"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
-                        transition={{ duration: 0.8, delay: 0.4, staggerChildren: 0.1 }}
+                        transition={{ duration: 0.8, delay: 0.3, staggerChildren: 0.1 }}
                     >
-                        {features.map((feature, idx) => (
-                            <motion.div
+                        {paragraphs.map((paragraph, idx) => (
+                            <motion.p
                                 key={idx}
-                                initial={{ opacity: 0, x: -20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: 0.4 + idx * 0.1 }}
-                                className="flex items-center gap-3"
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.35 + idx * 0.08 }}
+                                className="text-lg text-[#686a6f] leading-relaxed"
                             >
-                                <CheckCircle2 className="h-6 w-6 shrink-0 text-[#005963]" />
-                                <span className="text-lg text-[#686a6f] font-medium">
-                                    {feature}
-                                </span>
-                            </motion.div>
+                                {paragraph}
+                            </motion.p>
                         ))}
                     </motion.div>
+
+                    {credentials.length > 0 && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.8, delay: 0.45 }}
+                            className="mb-10"
+                        >
+                            <h3 className="mb-4 text-xl font-bold text-[#005963]">{credentialsTitle}</h3>
+                            <div className="space-y-2">
+                                {credentials.map((item, idx) => (
+                                    <div key={idx} className="flex items-start gap-2 text-base text-[#686a6f]">
+                                        <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-[#005963]" />
+                                        <span>{item}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </motion.div>
+                    )}
 
                     {/* CTA Buttons */}
                     <motion.div
                         className="flex flex-col gap-3 sm:flex-row pt-4"
                         initial={{ opacity: 0, y: 30 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.8, delay: 0.7 }}
+                        transition={{ duration: 0.8, delay: 0.55 }}
                     >
                         <PrimaryButton
                             onClick={() =>
@@ -142,34 +160,18 @@ export default function HeroSection({ content, doctor }) {
                             <ArrowRight className="h-4 w-4" />
                         </PrimaryButton>
                         <motion.button
+                            type="button"
+                            onClick={() =>
+                                document
+                                    .getElementById('contact')
+                                    ?.scrollIntoView({ behavior: 'smooth' })
+                            }
                             className="rounded-xl border-2 border-[#005963]/30 px-6 py-3 text-sm text-[#005963] font-semibold backdrop-blur-sm transition-all hover:border-[#005963] hover:bg-[#005963]/10"
                             whileHover={{ scale: 1.05, borderColor: '#005963' }}
                             whileTap={{ scale: 0.95 }}
                         >
-                            Learn More
+                            Contact
                         </motion.button>
-                    </motion.div>
-
-                    {/* Trust Indicators */}
-                    <motion.div
-                        className="mt-8 flex flex-wrap items-center gap-6 border-t border-white/10 pt-8 pb-4"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 0.9 }}
-                    >
-                        {trust.slice(0, 3).map((item, idx) => (
-                            <div key={idx} className="flex items-center">
-                                <div>
-                                    <div className="text-3xl font-black text-[#005963]">
-                                        {item.value}
-                                    </div>
-                                    <div className="text-sm text-[#686a6f]">{item.label}</div>
-                                </div>
-                                {idx < Math.min(trust.length, 3) - 1 && (
-                                    <div className="mx-6 h-12 w-px bg-[#005963]/10" />
-                                )}
-                            </div>
-                        ))}
                     </motion.div>
                 </motion.div>
 
@@ -186,36 +188,32 @@ export default function HeroSection({ content, doctor }) {
                             <img
                                 src={imageUrl}
                                 alt={imageAlt}
-                                className="h-full w-full object-contain"
+                                className="h-full w-full object-cover object-[center_30%]"
                             />
                         </div>
+
+                        {highlightValue && highlightLabel && (
+                            <div className="absolute -bottom-6 -left-6 z-30 rounded-2xl border border-[#00acb1]/20 bg-white px-5 py-4 shadow-xl">
+                                <div className="text-3xl font-black text-[#005963]">{highlightValue}</div>
+                                <div className="text-sm font-semibold text-[#686a6f]">{highlightLabel}</div>
+                            </div>
+                        )}
                     </div>
                 </motion.div>
             </div>
 
-            {/* Scroll Indicator */}
             <motion.div
-                className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 lg:bottom-8"
-                animate={{ y: [0, 10, 0] }}
-                transition={{
-                    duration: 2,
-                    repeat: Infinity,
-                    ease: 'easeInOut',
-                }}
+                className="relative z-10 mx-auto mt-8 grid w-full max-w-7xl grid-cols-1 gap-4 px-4 sm:grid-cols-2 lg:grid-cols-4 lg:px-12 xl:px-24"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.65 }}
             >
-                <div className="flex flex-col items-center gap-2">
-                    <span className="text-xs text-white/50">Scroll to explore</span>
-                    <motion.div
-                        className="h-8 w-5 rounded-full border-2 border-white/30 p-1"
-                        animate={{ y: [0, 5, 0] }}
-                        transition={{
-                            duration: 1.5,
-                            repeat: Infinity,
-                        }}
-                    >
-                        <div className="h-1.5 w-1 mx-auto rounded-full bg-[#00acb1]" />
-                    </motion.div>
-                </div>
+                {stats.slice(0, 4).map((item, idx) => (
+                    <div key={idx} className="rounded-2xl border border-[#00acb1]/20 bg-white p-5 shadow-lg">
+                        <div className="text-3xl font-black text-[#005963]">{item?.value || '-'}</div>
+                        <div className="text-sm font-semibold text-[#686a6f]">{item?.label || 'Stat'}</div>
+                    </div>
+                ))}
             </motion.div>
         </section>
     );
