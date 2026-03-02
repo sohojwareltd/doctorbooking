@@ -42,7 +42,6 @@ export default function DoctorProfile({ doctor = {} }) {
         specialization: doctor.specialization || '',
         degree: doctor.degree || '',
         registration_no: doctor.registration_no || '',
-        experience: doctor.experience || '',
         about_subtitle: doctor.about_subtitle || '',
         about_bio_details: doctor.about_bio_details || '',
         about_credentials_title: doctor.about_credentials_title || '',
@@ -597,20 +596,6 @@ export default function DoctorProfile({ doctor = {} }) {
                             </div>
 
                             <div>
-                                <label className={labelClass}>Experience (Years)</label>
-                                <input
-                                    type="number"
-                                    min="0"
-                                    max="80"
-                                    className={inputClass}
-                                    value={data.experience}
-                                    onChange={(e) => setData('experience', e.target.value)}
-                                    placeholder="20"
-                                />
-                                {errors.experience && <p className={errorClass}>{errors.experience}</p>}
-                            </div>
-
-                            <div>
                                 <label className={labelClass}>Highlight Value</label>
                                 <input
                                     type="text"
@@ -622,7 +607,7 @@ export default function DoctorProfile({ doctor = {} }) {
                                 {errors.about_highlight_value && <p className={errorClass}>{errors.about_highlight_value}</p>}
                             </div>
 
-                            <div className="lg:col-span-2">
+                            <div>
                                 <label className={labelClass}>Highlight Label</label>
                                 <input
                                     type="text"

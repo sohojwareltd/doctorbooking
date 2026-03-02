@@ -41,7 +41,6 @@ class DoctorProfileController extends Controller
                 'registration_no' => $user->registration_no,
                 'profile_picture' => $user->profile_picture ? asset('storage/' . $user->profile_picture) : null,
                 'bio' => $user->bio,
-                'experience' => $user->experience,
                 'about_subtitle' => $about['subtitle'] ?? null,
                 'about_bio_details' => !empty($aboutParagraphs)
                     ? implode("\n\n", $aboutParagraphs)
@@ -77,7 +76,6 @@ class DoctorProfileController extends Controller
             'specialization' => ['nullable', 'string', 'max:255'],
             'degree' => ['nullable', 'string', 'max:500'],
             'registration_no' => ['nullable', 'string', 'max:100'],
-            'experience' => ['nullable', 'integer', 'min:0', 'max:80'],
             'about_subtitle' => ['nullable', 'string', 'max:255'],
             'about_bio_details' => ['nullable', 'string', 'max:6000'],
             'about_credentials_title' => ['nullable', 'string', 'max:255'],
@@ -132,7 +130,6 @@ class DoctorProfileController extends Controller
             'degree' => $validated['degree'] ?? null,
             'registration_no' => $validated['registration_no'] ?? null,
             'bio' => $paragraphs[0] ?? null,
-            'experience' => $validated['experience'] ?? null,
             'about_content' => $aboutContent,
         ]);
 
