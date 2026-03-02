@@ -16,6 +16,60 @@ export default function AdminAppointments({ appointments = [] }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedIds, setSelectedIds] = useState([]);
 
+  const todayLabel = useMemo(() => formatDisplayDateWithYearFromDateLike(new Date()), []);
+
+  const filteredRows = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+
+    return rows.filter((row) => {
+      const normalizedStatus = (row?.status || '').toLowerCase();
+      const patientName = (row?.patient_name || row?.user?.name || '').toLowerCase();
+
+      if (statusFilter !== 'all' && normalizedStatus !== statusFilter) {
+        return false;
+      }
+
+      if (dateFilter === 'today') {
+        const rowDate = row?.appointment_date ? new Date(row.appointment_date) : null;
+        const now = new Date();
+
+        if (!rowDate) {
+          return false;
+        }
+
+        if (
+          rowDate.getFullYear() !== now.getFullYear() ||
+          rowDate.getMonth() !== now.getMonth() ||
+          rowDate.getDate() !== now.getDate()
+        ) {
+          return false;
+        }
+      }
+
+      if (q && !patientName.includes(q)) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [rows, statusFilter, dateFilter, searchTerm]);
+
+  const displayCount = filteredRows.length;
+
+  const statusCounts = useMemo(() => {
+    return filteredRows.reduce(
+      (acc, row) => {
+        const status = (row?.status || '').toLowerCase();
+        acc.total += 1;
+        if (status === 'pending') acc.pending += 1;
+        if (status === 'approved') acc.approved += 1;
+        if (status === 'completed') acc.completed += 1;
+        return acc;
+      },
+      { total: 0, pending: 0, approved: 0, completed: 0 }
+    );
+  }, [filteredRows]);
+
   useEffect(() => {
     setRows(pageRows);
   }, [pageRows]);
@@ -173,7 +227,7 @@ export default function AdminAppointments({ appointments = [] }) {
                 </tr>
               </thead>
               <tbody className="divide-y bg-white">
-                {rows.map((a) => (
+                {filteredRows.map((a) => (
                   <tr key={a.id} className="hover:bg-[#00acb1]/5">
                     <td className="px-4 py-3 text-sm font-semibold text-[#005963]">{a.user?.name || a.user_id}</td>
                     <td className="px-4 py-3 text-sm text-gray-700">{a.doctor?.name || a.doctor_id}</td>
