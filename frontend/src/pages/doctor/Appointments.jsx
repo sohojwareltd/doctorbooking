@@ -94,6 +94,18 @@ export default function DoctorAppointments({ appointments = [], filters = {} }) 
     return timeStr;
   };
 
+  const getPatientName = (appointment) => {
+    return appointment?.patient_name || appointment?.user?.name || String(appointment?.user_id || 'Patient');
+  };
+
+  const getPatientPhone = (appointment) => {
+    return appointment?.patient_phone || appointment?.user?.phone || null;
+  };
+
+  const getPatientEmail = (appointment) => {
+    return appointment?.patient_email || appointment?.user?.email || null;
+  };
+
   const updateStatus = async (id, status) => {
     const token = document.cookie
       .split('; ')
@@ -120,7 +132,7 @@ export default function DoctorAppointments({ appointments = [], filters = {} }) 
 
   // Filtering is now done on the backend, but we keep this for client-side search
   const filteredRows = rows.filter((a) => {
-    const searchOk = searchTerm === '' || (a.user?.name || a.user_id).toLowerCase().includes(searchTerm.toLowerCase());
+    const searchOk = searchTerm === '' || getPatientName(a).toLowerCase().includes(searchTerm.toLowerCase());
     return searchOk;
   });
 
@@ -233,7 +245,7 @@ export default function DoctorAppointments({ appointments = [], filters = {} }) 
                 </div>
                 {lastBookedToday && (
                   <div className="text-xs text-gray-600">
-                    <span className="font-semibold text-[#005963]">Last:</span> {lastBookedToday.user?.name || lastBookedToday.user_id} at {formatDisplayTime12h(lastBookedToday.appointment_time) || lastBookedToday.appointment_time}
+                    <span className="font-semibold text-[#005963]">Last:</span> {getPatientName(lastBookedToday)} at {formatDisplayTime12h(lastBookedToday.appointment_time) || lastBookedToday.appointment_time}
                   </div>
                 )}
               </div>
@@ -357,17 +369,17 @@ export default function DoctorAppointments({ appointments = [], filters = {} }) 
                           className="rounded border-gray-300"
                         />
                       </td>
-                      <td className="px-6 py-4 text-sm font-semibold text-gray-700">{(pagination?.current_page - 1) * (pagination?.per_page || 15) + idx + 1}</td>
+                      <td className="px-6 py-4 text-sm font-semibold text-gray-700">{a.serial_no || ((pagination?.current_page - 1) * (pagination?.per_page || 15) + idx + 1)}</td>
                       <td className="px-6 py-4">
                         <button
                           onClick={() => setSelectedPatient(a)}
                           className="text-left hover:underline"
                         >
-                          <div className="font-semibold text-[#005963] hover:text-[#00acb1] transition">{a.user?.name || a.user_id}</div>
-                          {a.user?.phone && (
+                          <div className="font-semibold text-[#005963] hover:text-[#00acb1] transition">{getPatientName(a)}</div>
+                          {getPatientPhone(a) && (
                             <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
                               <Phone className="h-3 w-3" />
-                              {a.user.phone}
+                              {getPatientPhone(a)}
                             </div>
                           )}
                           {a.symptoms && (
@@ -500,11 +512,11 @@ export default function DoctorAppointments({ appointments = [], filters = {} }) 
                 <div className="flex items-center gap-4">
                   <div className="h-16 w-16 overflow-hidden rounded-xl bg-white/20 backdrop-blur-sm flex-shrink-0 border-2 border-white/30">
                     <div className="flex h-full w-full items-center justify-center text-2xl font-bold text-white">
-                      {(selectedPatient.user?.name || 'P')[0].toUpperCase()}
+                      {getPatientName(selectedPatient)[0].toUpperCase()}
                     </div>
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-white">{selectedPatient.user?.name || 'Patient'}</h3>
+                    <h3 className="text-xl font-bold text-white">{getPatientName(selectedPatient)}</h3>
                     <p className="text-sm text-white/90 mt-1">
                       Appointment: {formatDate(selectedPatient.appointment_date)} at {formatTime(selectedPatient.appointment_time)}
                     </p>
@@ -526,17 +538,17 @@ export default function DoctorAppointments({ appointments = [], filters = {} }) 
                 <div>
                   <h4 className="text-sm font-bold uppercase tracking-wider text-gray-500 mb-3">Contact Information</h4>
                   <div className="space-y-3">
-                    {selectedPatient.user?.phone && (
+                    {getPatientPhone(selectedPatient) && (
                       <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 border border-gray-200">
                         <div className="rounded-lg bg-blue-100 p-2">
                           <Phone className="h-5 w-5 text-blue-600" />
                         </div>
                         <div className="flex-1">
                           <div className="text-xs font-semibold text-gray-500 uppercase">Phone</div>
-                          <div className="text-sm font-semibold text-gray-900">{selectedPatient.user.phone}</div>
+                          <div className="text-sm font-semibold text-gray-900">{getPatientPhone(selectedPatient)}</div>
                         </div>
                         <button
-                          onClick={() => handleCall(selectedPatient.user.phone)}
+                          onClick={() => handleCall(getPatientPhone(selectedPatient))}
                           className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition flex items-center gap-2"
                         >
                           <Phone className="h-4 w-4" />
@@ -544,17 +556,17 @@ export default function DoctorAppointments({ appointments = [], filters = {} }) 
                         </button>
                       </div>
                     )}
-                    {selectedPatient.user?.email && (
+                    {getPatientEmail(selectedPatient) && (
                       <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 border border-gray-200">
                         <div className="rounded-lg bg-green-100 p-2">
                           <Mail className="h-5 w-5 text-green-600" />
                         </div>
                         <div className="flex-1">
                           <div className="text-xs font-semibold text-gray-500 uppercase">Email</div>
-                          <div className="text-sm font-semibold text-gray-900">{selectedPatient.user.email}</div>
+                          <div className="text-sm font-semibold text-gray-900">{getPatientEmail(selectedPatient)}</div>
                         </div>
                         <button
-                          onClick={() => handleEmail(selectedPatient.user.email)}
+                          onClick={() => handleEmail(getPatientEmail(selectedPatient))}
                           className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 transition flex items-center gap-2"
                         >
                           <Mail className="h-4 w-4" />

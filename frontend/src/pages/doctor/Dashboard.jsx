@@ -86,6 +86,22 @@ export default function DoctorDashboard({ stats = {}, scheduledToday = [], recen
     }
   };
 
+  const getPatientName = (appointment) => {
+    return appointment?.patient_name || appointment?.user?.name || 'Patient';
+  };
+
+  const getPatientPhone = (appointment) => {
+    return appointment?.patient_phone || appointment?.user?.phone || null;
+  };
+
+  const getPatientEmail = (appointment) => {
+    return appointment?.patient_email || appointment?.user?.email || null;
+  };
+
+  const getDisplaySerial = (appointment, fallback = 1) => {
+    return appointment?.serial_no || fallback;
+  };
+
   const handleCall = (phone) => {
     if (phone) {
       window.location.href = `tel:${phone}`;
@@ -108,14 +124,8 @@ export default function DoctorDashboard({ stats = {}, scheduledToday = [], recen
   // Filter out the patient currently in visit to get the next appointment
   const availableAppointments = todayAppointments.filter(a => a.id !== visitPatient?.id);
   const nextAppointment = availableAppointments[0] || null;
-  
-  const getSerial = (appointment) => {
-    if (!appointment || !todayAppointments.length) return null;
-    const idx = todayAppointments.findIndex((a) => a.id === appointment.id);
-    return idx >= 0 ? idx + 1 : null;
-  };
-  const nextAppointmentSerial = nextAppointment ? (getSerial(nextAppointment) ?? 1) : null;
-  const visitSerial = visitPatient ? (getSerial(visitPatient) ?? 1) : null;
+  const nextAppointmentSerial = nextAppointment ? getDisplaySerial(nextAppointment, 1) : null;
+  const visitSerial = visitPatient ? getDisplaySerial(visitPatient, 1) : null;
 
   return (
     <DoctorLayout title="Dashboard">
@@ -207,14 +217,14 @@ export default function DoctorDashboard({ stats = {}, scheduledToday = [], recen
                       <div className="h-6 w-6 rounded-full bg-gray-900 text-white font-bold text-xs flex items-center justify-center">{nextAppointmentSerial || 1}</div>
                       <div className="text-xs font-semibold uppercase tracking-widest text-gray-500">Next Appointment</div>
                     </div>
-                    <div className="mt-3 text-2xl font-black">{nextAppointment.user?.name || 'Patient'}</div>
+                    <div className="mt-3 text-2xl font-black">{getPatientName(nextAppointment)}</div>
                     <div className="mt-2 text-sm text-gray-600">
                       <span className="font-semibold">{nextAppointment.type || 'General Visit'}</span> • {formatDate(nextAppointment.appointment_date)}, {formatTime(nextAppointment.appointment_time)}
                     </div>
-                    {nextAppointment.user?.phone && (
+                    {getPatientPhone(nextAppointment) && (
                       <div className="mt-2 text-xs text-gray-500 flex items-center gap-1">
                         <Phone className="h-3 w-3" />
-                        {nextAppointment.user.phone}
+                        {getPatientPhone(nextAppointment)}
                       </div>
                     )}
                     {nextAppointment.is_video && (
@@ -254,8 +264,8 @@ export default function DoctorDashboard({ stats = {}, scheduledToday = [], recen
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (nextAppointment.user?.phone) {
-                        handleCall(nextAppointment.user.phone);
+                      if (getPatientPhone(nextAppointment)) {
+                        handleCall(getPatientPhone(nextAppointment));
                       }
                     }}
                     className="flex-1 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-center text-sm font-semibold text-gray-700 hover:bg-gray-50 transition shadow-sm flex items-center justify-center gap-2"
@@ -291,14 +301,14 @@ export default function DoctorDashboard({ stats = {}, scheduledToday = [], recen
                       <div className="h-6 w-6 rounded-full bg-gray-900 text-white font-bold text-xs flex items-center justify-center">{visitSerial || 1}</div>
                       <div className="text-xs font-semibold uppercase tracking-widest text-gray-500">In Visit</div>
                     </div>
-                    <div className="mt-3 text-2xl font-black">{visitPatient.user?.name || 'Patient'}</div>
+                    <div className="mt-3 text-2xl font-black">{getPatientName(visitPatient)}</div>
                     <div className="mt-2 text-sm text-gray-600">
                       <span className="font-semibold">{visitPatient.type || 'General Visit'}</span> • {formatDate(visitPatient.appointment_date)}, {formatTime(visitPatient.appointment_time)}
                     </div>
-                    {visitPatient.user?.phone && (
+                    {getPatientPhone(visitPatient) && (
                       <div className="mt-2 text-xs text-gray-500 flex items-center gap-1">
                         <Phone className="h-3 w-3" />
-                        {visitPatient.user.phone}
+                        {getPatientPhone(visitPatient)}
                       </div>
                     )}
                     {visitPatient.symptoms && (
@@ -340,8 +350,8 @@ export default function DoctorDashboard({ stats = {}, scheduledToday = [], recen
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (visitPatient.user?.phone) {
-                        handleCall(visitPatient.user.phone);
+                      if (getPatientPhone(visitPatient)) {
+                        handleCall(getPatientPhone(visitPatient));
                       }
                     }}
                     className="rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-center text-sm font-semibold text-gray-700 hover:bg-gray-50 transition shadow-sm flex items-center justify-center gap-2"
@@ -352,8 +362,8 @@ export default function DoctorDashboard({ stats = {}, scheduledToday = [], recen
                   <Link
                     onClick={(e) => e.stopPropagation()}
                     href={`/doctor/prescriptions/create?appointmentId=${visitPatient.id}&selectedPatient=${encodeURIComponent(JSON.stringify({
-                      name: visitPatient.user?.name,
-                      phone: visitPatient.user?.phone,
+                      name: getPatientName(visitPatient),
+                      phone: getPatientPhone(visitPatient),
                       age: visitPatient.user?.age,
                       gender: visitPatient.user?.gender,
                       weight: visitPatient.user?.weight,
@@ -398,15 +408,15 @@ export default function DoctorDashboard({ stats = {}, scheduledToday = [], recen
                     >
                       <div className="flex items-center gap-4 flex-1">
                         <div className="h-8 w-8 rounded-full bg-gray-900 text-white font-bold text-xs flex items-center justify-center flex-shrink-0">
-                          {index + 1}
+                          {getDisplaySerial(appointment, index + 1)}
                         </div>
                         <div className="h-12 w-12 overflow-hidden rounded-xl bg-gray-200 flex-shrink-0">
                           <div className="flex h-full w-full items-center justify-center text-sm font-bold text-gray-700">
-                            {(appointment.user?.name || 'P')[0].toUpperCase()}
+                            {getPatientName(appointment)[0].toUpperCase()}
                           </div>
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-gray-900 truncate">{appointment.user?.name || 'Patient'}</div>
+                          <div className="font-semibold text-gray-900 truncate">{getPatientName(appointment)}</div>
                           <div className="text-xs text-gray-500 mt-1">
                             {formatTime(appointment.appointment_time)}
                           </div>
@@ -458,17 +468,17 @@ export default function DoctorDashboard({ stats = {}, scheduledToday = [], recen
                     >
                       <div className="flex items-center gap-3 flex-1 min-w-0">
                         <div className="h-8 w-8 rounded-full bg-gray-900 text-white font-bold text-xs flex items-center justify-center flex-shrink-0">
-                          {index + 1}
+                          {getDisplaySerial(appointment, index + 1)}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-gray-900 truncate">{appointment.user?.name || 'Patient'}</div>
+                          <div className="font-semibold text-gray-900 truncate">{getPatientName(appointment)}</div>
                           <div className="text-xs text-gray-500 mt-1">
                             {formatDate(appointment.appointment_date)} at {formatTime(appointment.appointment_time)}
                           </div>
-                          {appointment.user?.phone && (
+                          {getPatientPhone(appointment) && (
                             <div className="text-xs text-gray-400 mt-1 flex items-center gap-1">
                               <Phone className="h-3 w-3" />
-                              {appointment.user.phone}
+                              {getPatientPhone(appointment)}
                             </div>
                           )}
                         </div>
@@ -509,11 +519,11 @@ export default function DoctorDashboard({ stats = {}, scheduledToday = [], recen
                 <div className="flex items-center gap-4">
                   <div className="h-16 w-16 overflow-hidden rounded-xl bg-white/20 backdrop-blur-sm flex-shrink-0 border-2 border-white/30">
                     <div className="flex h-full w-full items-center justify-center text-2xl font-bold text-white">
-                      {(selectedPatient.user?.name || 'P')[0].toUpperCase()}
+                      {getPatientName(selectedPatient)[0].toUpperCase()}
                     </div>
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-white">{selectedPatient.user?.name || 'Patient'}</h3>
+                    <h3 className="text-xl font-bold text-white">{getPatientName(selectedPatient)}</h3>
                     <p className="text-sm text-white/90 mt-1">
                       Appointment: {formatDate(selectedPatient.appointment_date)} at {formatTime(selectedPatient.appointment_time)}
                     </p>
@@ -535,17 +545,17 @@ export default function DoctorDashboard({ stats = {}, scheduledToday = [], recen
                 <div>
                   <h4 className="text-sm font-bold uppercase tracking-wider text-gray-500 mb-3">Contact Information</h4>
                   <div className="space-y-3">
-                    {selectedPatient.user?.phone && (
+                    {getPatientPhone(selectedPatient) && (
                       <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 border border-gray-200">
                         <div className="rounded-lg bg-blue-100 p-2">
                           <Phone className="h-5 w-5 text-blue-600" />
                         </div>
                         <div className="flex-1">
                           <div className="text-xs font-semibold text-gray-500 uppercase">Phone</div>
-                          <div className="text-sm font-semibold text-gray-900">{selectedPatient.user.phone}</div>
+                          <div className="text-sm font-semibold text-gray-900">{getPatientPhone(selectedPatient)}</div>
                         </div>
                         <button
-                          onClick={() => handleCall(selectedPatient.user.phone)}
+                          onClick={() => handleCall(getPatientPhone(selectedPatient))}
                           className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition flex items-center gap-2"
                         >
                           <Phone className="h-4 w-4" />
@@ -553,17 +563,17 @@ export default function DoctorDashboard({ stats = {}, scheduledToday = [], recen
                         </button>
                       </div>
                     )}
-                    {selectedPatient.user?.email && (
+                    {getPatientEmail(selectedPatient) && (
                       <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 border border-gray-200">
                         <div className="rounded-lg bg-green-100 p-2">
                           <Mail className="h-5 w-5 text-green-600" />
                         </div>
                         <div className="flex-1">
                           <div className="text-xs font-semibold text-gray-500 uppercase">Email</div>
-                          <div className="text-sm font-semibold text-gray-900">{selectedPatient.user.email}</div>
+                          <div className="text-sm font-semibold text-gray-900">{getPatientEmail(selectedPatient)}</div>
                         </div>
                         <button
-                          onClick={() => handleEmail(selectedPatient.user.email)}
+                          onClick={() => handleEmail(getPatientEmail(selectedPatient))}
                           className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 transition flex items-center gap-2"
                         >
                           <Mail className="h-4 w-4" />

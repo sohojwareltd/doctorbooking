@@ -61,12 +61,12 @@ export default function AdminAppointments({ appointments = [] }) {
       (acc, row) => {
         const status = (row?.status || '').toLowerCase();
         acc.total += 1;
-        if (status === 'pending') acc.pending += 1;
-        if (status === 'approved') acc.approved += 1;
-        if (status === 'completed') acc.completed += 1;
+        if (status === 'scheduled') acc.scheduled += 1;
+        if (status === 'arrived') acc.arrived += 1;
+        if (status === 'prescribed') acc.prescribed += 1;
         return acc;
       },
-      { total: 0, pending: 0, approved: 0, completed: 0 }
+      { total: 0, scheduled: 0, arrived: 0, prescribed: 0 }
     );
   }, [filteredRows]);
 
@@ -82,9 +82,6 @@ export default function AdminAppointments({ appointments = [] }) {
     if (s === 'awaiting_tests') return 'border-orange-200 bg-orange-50 text-orange-800';
     if (s === 'prescribed') return 'border-emerald-200 bg-emerald-50 text-emerald-800';
     if (s === 'cancelled') return 'border-rose-200 bg-rose-50 text-rose-800';
-    // Legacy statuses for backward compatibility
-    if (s === 'approved') return 'border-emerald-200 bg-emerald-50 text-emerald-800';
-    if (s === 'completed') return 'border-sky-200 bg-sky-50 text-sky-800';
     return 'border-amber-200 bg-amber-50 text-amber-800';
   };
 
@@ -132,9 +129,9 @@ export default function AdminAppointments({ appointments = [] }) {
         <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
           {[
             { label: 'Total', value: statusCounts.total, color: 'bg-blue-50 text-blue-700 border-blue-200' },
-            { label: 'Pending', value: statusCounts.pending, color: 'bg-amber-50 text-amber-700 border-amber-200' },
-            { label: 'Approved', value: statusCounts.approved, color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-            { label: 'Completed', value: statusCounts.completed, color: 'bg-sky-50 text-sky-700 border-sky-200' },
+            { label: 'Scheduled', value: statusCounts.scheduled, color: 'bg-blue-50 text-blue-700 border-blue-200' },
+            { label: 'Arrived', value: statusCounts.arrived, color: 'bg-amber-50 text-amber-700 border-amber-200' },
+            { label: 'Prescribed', value: statusCounts.prescribed, color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
           ].map((stat, idx) => (
             <GlassCard key={idx} variant="solid" className={`border-2 p-4 ${stat.color}`}>
               <div className="text-sm font-semibold opacity-75">{stat.label}</div>
@@ -191,9 +188,11 @@ export default function AdminAppointments({ appointments = [] }) {
                   className="w-full rounded-xl border border-[#00acb1]/30 bg-white px-4 py-2.5 text-sm font-semibold text-[#005963] focus:border-[#005963] focus:outline-none focus:ring-2 focus:ring-[#005963]/10"
                 >
                   <option value="all">All Status</option>
-                  <option value="pending">Pending</option>
-                  <option value="approved">Approved</option>
-                  <option value="completed">Completed</option>
+                  <option value="scheduled">Scheduled</option>
+                  <option value="arrived">Arrived</option>
+                  <option value="in_consultation">In Consultation</option>
+                  <option value="awaiting_tests">Awaiting Tests</option>
+                  <option value="prescribed">Prescribed</option>
                   <option value="cancelled">Cancelled</option>
                 </select>
               </div>
@@ -229,11 +228,26 @@ export default function AdminAppointments({ appointments = [] }) {
               <tbody className="divide-y bg-white">
                 {filteredRows.map((a) => (
                   <tr key={a.id} className="hover:bg-[#00acb1]/5">
-                    <td className="px-4 py-3 text-sm font-semibold text-[#005963]">{a.user?.name || a.user_id}</td>
-                    <td className="px-4 py-3 text-sm text-gray-700">{a.doctor?.name || a.doctor_id}</td>
-                    <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">{formatDisplayDateWithYearFromDateLike(a.appointment_date) || a.appointment_date}</td>
-                    <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">{formatDisplayTime12h(a.appointment_time) || a.appointment_time}</td>
-                    <td className="px-4 py-3 text-sm capitalize">
+                    <td className="px-4 py-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(a.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedIds([...selectedIds, a.id]);
+                          } else {
+                            setSelectedIds(selectedIds.filter(id => id !== a.id));
+                          }
+                        }}
+                        className="rounded border-gray-300"
+                      />
+                    </td>
+                    <td className="px-6 py-3 text-sm font-semibold text-gray-700">{a.serial_no || a.id}</td>
+                    <td className="px-6 py-3 text-sm font-semibold text-[#005963]">{a.patient_name || a.user?.name || a.user_id}</td>
+                    <td className="px-6 py-3 text-sm text-gray-700">{a.doctor?.name || a.doctor_id}</td>
+                    <td className="px-6 py-3 text-sm text-gray-700 whitespace-nowrap">{formatDisplayDateWithYearFromDateLike(a.appointment_date) || a.appointment_date}</td>
+                    <td className="px-6 py-3 text-sm text-gray-700 whitespace-nowrap">{formatDisplayTime12h(a.appointment_time) || a.appointment_time}</td>
+                    <td className="px-6 py-3 text-sm capitalize">
                       <div className="relative inline-block min-w-[140px] w-full">
                         <select
                           className={`appearance-none w-full rounded-lg border-2 px-4 py-2.5 pr-10 text-sm font-semibold transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 shadow-sm hover:shadow-md active:shadow-sm ${getStatusColor(a.status)}`}
@@ -256,10 +270,6 @@ export default function AdminAppointments({ appointments = [] }) {
                           <option value="awaiting_tests">Awaiting Tests</option>
                           <option value="prescribed">Prescribed</option>
                           <option value="cancelled">Cancelled</option>
-                          {/* Legacy options for backward compatibility */}
-                          <option value="pending">Pending</option>
-                          <option value="approved">Approved</option>
-                          <option value="completed">Completed</option>
                         </select>
                       </div>
                     </td>

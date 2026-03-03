@@ -10,7 +10,7 @@ export default function AdminDashboard({ stats = {} }) {
     { label: 'Doctors', value: stats.doctors ?? 0, icon: Users, accent: 'bg-sky-50 text-sky-700 border-sky-200' },
     { label: 'Total Appointments', value: stats.totalAppointments ?? 0, icon: CalendarDays, accent: 'bg-blue-50 text-blue-700 border-blue-200' },
     { label: "Today's Appointments", value: stats.appointmentsToday ?? 0, icon: CalendarDays, accent: 'bg-[#00acb1]/10 text-[#005963] border-[#00acb1]/30' },
-    { label: 'Pending Appointments', value: stats.pendingAppointments ?? 0, icon: Clock, accent: 'bg-amber-50 text-amber-700 border-amber-200' },
+    { label: 'Scheduled Appointments', value: stats.scheduledAppointments ?? stats.pendingAppointments ?? 0, icon: Clock, accent: 'bg-amber-50 text-amber-700 border-amber-200' },
     { label: 'Total Prescriptions', value: stats.totalPrescriptions ?? 0, icon: FileText, accent: 'bg-rose-50 text-rose-700 border-rose-200' },
   ];
 

@@ -1,5 +1,5 @@
 import { Head } from '@inertiajs/react';
-import { BarChart3, Users, Calendar, FileText, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { BarChart3, Users, Calendar, FileText, Clock, CheckCircle, XCircle, AlertCircle, UserCheck, Stethoscope, TestTube } from 'lucide-react';
 import AdminLayout from '../../layouts/AdminLayout';
 import GlassCard from '../../components/GlassCard';
 import { formatDisplayDateWithYearFromDateLike } from '../../utils/dateFormat';
@@ -34,20 +34,32 @@ export default function Reports({ stats = {}, recent_appointments = [] }) {
 
   const appointmentStatusCards = [
     { 
-      label: 'Pending', 
-      value: stats.pending_appointments || 0, 
+      label: 'Scheduled', 
+      value: stats.scheduled_appointments || 0, 
       icon: Clock, 
-      color: 'bg-amber-50 text-amber-700 border-amber-200' 
-    },
-    { 
-      label: 'Approved', 
-      value: stats.approved_appointments || 0, 
-      icon: CheckCircle, 
       color: 'bg-blue-50 text-blue-700 border-blue-200' 
     },
     { 
-      label: 'Completed', 
-      value: stats.completed_appointments || 0, 
+      label: 'Arrived', 
+      value: stats.arrived_appointments || 0, 
+      icon: UserCheck, 
+      color: 'bg-amber-50 text-amber-700 border-amber-200' 
+    },
+    { 
+      label: 'In Consultation', 
+      value: stats.in_consultation_appointments || 0, 
+      icon: Stethoscope, 
+      color: 'bg-purple-50 text-purple-700 border-purple-200' 
+    },
+    { 
+      label: 'Awaiting Tests', 
+      value: stats.awaiting_tests_appointments || 0, 
+      icon: TestTube, 
+      color: 'bg-orange-50 text-orange-700 border-orange-200' 
+    },
+    { 
+      label: 'Prescribed', 
+      value: stats.prescribed_appointments || 0, 
       icon: CheckCircle, 
       color: 'bg-emerald-50 text-emerald-700 border-emerald-200' 
     },
@@ -136,12 +148,12 @@ export default function Reports({ stats = {}, recent_appointments = [] }) {
                   {recent_appointments.length > 0 ? (
                     recent_appointments.map((appointment, idx) => (
                       <tr key={appointment.id} className="hover:bg-gray-50 transition">
-                        <td className="px-6 py-4 text-sm font-semibold text-gray-700">{idx + 1}</td>
+                        <td className="px-6 py-4 text-sm font-semibold text-gray-700">{appointment.serial_no || (idx + 1)}</td>
                         <td className="px-6 py-4">
-                          <div className="font-semibold text-[#005963]">{appointment.user?.name || '—'}</div>
+                          <div className="font-semibold text-[#005963]">{appointment.patient_name || '—'}</div>
                         </td>
                         <td className="px-6 py-4">
-                          <div className="font-semibold text-[#005963]">{appointment.doctor?.name || '—'}</div>
+                          <div className="font-semibold text-[#005963]">{appointment.doctor_name || '—'}</div>
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-700 whitespace-nowrap">
                           {formatDisplayDateWithYearFromDateLike(appointment.appointment_date) || appointment.appointment_date || '—'}
@@ -151,12 +163,17 @@ export default function Reports({ stats = {}, recent_appointments = [] }) {
                         </td>
                         <td className="px-6 py-4">
                           <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
+                            appointment.status === 'scheduled' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
+                            appointment.status === 'arrived' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+                            appointment.status === 'in_consultation' ? 'bg-purple-50 text-purple-700 border border-purple-200' :
+                            appointment.status === 'awaiting_tests' ? 'bg-orange-50 text-orange-700 border border-orange-200' :
+                            appointment.status === 'prescribed' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
                             appointment.status === 'pending' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
                             appointment.status === 'approved' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
                             appointment.status === 'completed' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
                             'bg-rose-50 text-rose-700 border border-rose-200'
                           }`}>
-                            {appointment.status || '—'}
+                            {(appointment.status || '—').replace(/_/g, ' ')}
                           </span>
                         </td>
                       </tr>

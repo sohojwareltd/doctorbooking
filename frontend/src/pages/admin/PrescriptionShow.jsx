@@ -46,7 +46,7 @@ export default function PrescriptionShow({ prescription, contactInfo }) {
   const patientAgeUnit = prescription?.patient_age_unit || 'years';
   const patientGender = prescription?.patient_gender;
   const patientWeight = prescription?.patient_weight;
-  const patientContact = prescription?.patient_contact;
+  const patientContact = prescription?.patient_contact || prescription?.user?.phone || '';
   const visitType = prescription?.visit_type;
 
   return (

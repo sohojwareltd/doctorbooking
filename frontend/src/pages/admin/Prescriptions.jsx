@@ -13,6 +13,10 @@ export default function Prescriptions({ prescriptions = [] }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedIds, setSelectedIds] = useState([]);
 
+  const getPatientName = (prescription) => {
+    return prescription?.patient_name || prescription?.user?.name || String(prescription?.user_id || 'Patient');
+  };
+
   useEffect(() => {
     setRows(pageRows);
     setSelectedIds([]);
@@ -20,7 +24,7 @@ export default function Prescriptions({ prescriptions = [] }) {
 
   const filteredRows = useMemo(() => {
     return rows.filter((p) => {
-      const haystack = `${p.user?.name || ''} ${p.user?.email || ''} ${p.doctor?.name || ''} ${p.diagnosis || ''}`.toLowerCase();
+      const haystack = `${getPatientName(p)} ${p.user?.email || ''} ${p.doctor?.name || ''} ${p.diagnosis || ''}`.toLowerCase();
       return searchTerm === '' ? true : haystack.includes(searchTerm.toLowerCase());
     });
   }, [rows, searchTerm]);
@@ -159,7 +163,7 @@ export default function Prescriptions({ prescriptions = [] }) {
                       </td>
                       <td className="px-6 py-4 text-sm font-semibold text-gray-700">{prescription.id}</td>
                       <td className="px-6 py-4">
-                        <div className="font-semibold text-[#005963]">{prescription.user?.name || prescription.user_id}</div>
+                        <div className="font-semibold text-[#005963]">{getPatientName(prescription)}</div>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-700">{prescription.doctor?.name || prescription.doctor_id}</td>
                       <td className="px-6 py-4 text-sm text-gray-700 whitespace-nowrap">

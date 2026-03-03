@@ -36,6 +36,10 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
     return age >= 0 ? age : null;
   };
 
+  const getPatientName = (prescription) => {
+    return prescription?.patient_name || prescription?.user?.name || String(prescription?.user_id || 'Patient');
+  };
+
   useEffect(() => {
     setRows(pageRows);
     setSelectedIds([]);
@@ -48,7 +52,7 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
   const filteredRows = useMemo(() => {
     return rows.filter((p) => {
       const patientAge = resolvePatientAge(p);
-      const haystack = `${p.user?.name || ''} ${p.patient_contact || p.user?.phone || ''} ${p.patient_gender || p.user?.gender || ''} ${patientAge ?? ''} ${p.user_id || ''}`.toLowerCase();
+      const haystack = `${getPatientName(p)} ${p.patient_contact || p.user?.phone || ''} ${p.patient_gender || p.user?.gender || ''} ${patientAge ?? ''} ${p.user_id || ''}`.toLowerCase();
       const matchSearch = searchTerm === '' ? true : haystack.includes(searchTerm.toLowerCase());
 
       const createdDateOnly = (p.created_at || '').slice(0, 10);
@@ -211,7 +215,7 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
                       </td>
                       <td className="px-6 py-4 text-sm font-semibold text-gray-700">{p.id}</td>
                       <td className="px-6 py-4">
-                        <div className="font-semibold text-[#005963]">{p.user?.name || p.user_id}</div>
+                        <div className="font-semibold text-[#005963]">{getPatientName(p)}</div>
                       </td>
                       <td className="px-4 py-4 text-sm text-gray-700">{resolvePatientAge(p) ?? '—'}</td>
                       <td className="px-4 py-4 text-sm text-gray-700 capitalize">{p.patient_gender || p.user?.gender || '—'}</td>
@@ -243,7 +247,7 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
                               e.preventDefault();
                               if (navigator.share) {
                                 navigator.share({
-                                  title: `Prescription for ${p.user?.name || 'Patient'}`,
+                                  title: `Prescription for ${getPatientName(p)}`,
                                   text: `Prescription ID: #${p.id}`,
                                   url: `${window.location.origin}/doctor/prescriptions/${p.id}`,
                                 }).catch(() => {

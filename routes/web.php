@@ -278,14 +278,18 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
             ->where('doctor_id', $doctor->id)
             ->whereDate('appointment_date', $today)
             ->where('status', 'scheduled')
-            ->join('users', 'appointments.user_id', '=', 'users.id')
-            ->orderBy('users.name')
+            ->leftJoin('users', 'appointments.user_id', '=', 'users.id')
+            ->orderByRaw('COALESCE(users.name, appointments.name)')
             ->orderBy('appointment_time')
             ->select('appointments.*')
             ->get()
             ->map(fn ($a) => [
                 'id' => $a->id,
+                'serial_no' => $a->serial_no,
                 'user_id' => $a->user_id,
+                'patient_name' => $a->user?->name ?? $a->name,
+                'patient_phone' => $a->user?->phone ?? $a->phone,
+                'patient_email' => $a->user?->email ?? $a->email,
                 'user' => $a->user ? [
                     'id' => $a->user->id,
                     'name' => $a->user->name,
@@ -309,7 +313,11 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
             ->get()
             ->map(fn ($a) => [
                 'id' => $a->id,
+                'serial_no' => $a->serial_no,
                 'user_id' => $a->user_id,
+                'patient_name' => $a->user?->name ?? $a->name,
+                'patient_phone' => $a->user?->phone ?? $a->phone,
+                'patient_email' => $a->user?->email ?? $a->email,
                 'user' => $a->user ? [
                     'id' => $a->user->id,
                     'name' => $a->user->name,
@@ -335,7 +343,11 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
         
         $upcoming = $upcomingAppointment ? [
             'id' => $upcomingAppointment->id,
+            'serial_no' => $upcomingAppointment->serial_no,
             'user_id' => $upcomingAppointment->user_id,
+            'patient_name' => $upcomingAppointment->user?->name ?? $upcomingAppointment->name,
+            'patient_phone' => $upcomingAppointment->user?->phone ?? $upcomingAppointment->phone,
+            'patient_email' => $upcomingAppointment->user?->email ?? $upcomingAppointment->email,
             'user' => $upcomingAppointment->user ? [
                 'id' => $upcomingAppointment->user->id,
                 'name' => $upcomingAppointment->user->name,
@@ -405,19 +417,12 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
             });
         }
         
-        // Order by patient name (when available) then by date and time
+        // Order by booking sequence so table matches patient serial numbers
         $appointmentsQuery = $query->leftJoin('users', 'appointments.user_id', '=', 'users.id');
-
-        if (Schema::hasColumn('appointments', 'name')) {
-            // Databases with guest name column: prefer user name, then guest name
-            $appointmentsQuery->orderByRaw('COALESCE(users.name, appointments.name)');
-        } else {
-            // Older databases: order by user name only
-            $appointmentsQuery->orderBy('users.name');
-        }
 
         $appointments = $appointmentsQuery
             ->orderByDesc('appointment_date')
+            ->orderBy('serial_no')
             ->orderBy('appointment_time')
             ->select('appointments.*')
             ->paginate(15)
@@ -432,6 +437,7 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
         return Inertia::render('doctor/Appointments', [
             'appointments' => $appointments->through(fn ($a) => [
                 'id' => $a->id,
+                'serial_no' => $a->serial_no,
                 'user_id' => $a->user_id,
                 'is_guest' => $a->is_guest,
                 // Show user info if registered, otherwise show guest info
@@ -644,7 +650,7 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
         // Get paginated prescriptions with patient details
         $prescriptions = Prescription::with([
                 'user:id,name,phone,age,gender,date_of_birth',
-                'appointment:id,age,gender,phone',
+            'appointment:id,name,age,gender,phone',
             ])
             ->where('doctor_id', $doctor->id)
             ->orderByDesc('id')
@@ -673,6 +679,7 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
                         'gender' => $p->user->gender,
                         'date_of_birth' => $p->user->date_of_birth?->toDateString(),
                     ] : null,
+                    'patient_name' => $p->patient_name ?? $p->user?->name ?? $p->appointment?->name,
                     'patient_age' => $calculatedAge ?? $p->appointment?->age,
                     'patient_gender' => $p->user?->gender ?? $p->appointment?->gender,
                     'patient_contact' => $p->user?->phone ?? $p->appointment?->phone,
@@ -879,7 +886,7 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
         $patients = User::where('role', 'user')->count();
         $doctors = User::where('role', 'doctor')->count();
         $appointmentsToday = Appointment::whereDate('appointment_date', now()->toDateString())->count();
-        $pending = Appointment::where('status','pending')->count();
+        $scheduled = Appointment::where('status','scheduled')->count();
         $totalAppointments = Appointment::count();
         $totalPrescriptions = Prescription::count();
 
@@ -889,7 +896,7 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
                 'patients' => $patients,
                 'doctors' => $doctors,
                 'appointmentsToday' => $appointmentsToday,
-                'pendingAppointments' => $pending,
+                'scheduledAppointments' => $scheduled,
                 'totalAppointments' => $totalAppointments,
                 'totalPrescriptions' => $totalPrescriptions,
             ],
@@ -925,21 +932,26 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
 
     Route::get('/appointments', function () {
         $appointments = Appointment::with(['user:id,name','doctor:id,name'])
-            ->orderByDesc('id')
+            ->orderByDesc('appointment_date')
+            ->orderBy('serial_no')
+            ->orderBy('appointment_time')
             ->paginate(10)
             ->withQueryString();
 
         $stats = [
             'total' => Appointment::count(),
-            'pending' => Appointment::where('status','pending')->count(),
-            'approved' => Appointment::where('status','approved')->count(),
-            'completed' => Appointment::where('status','completed')->count(),
+            'scheduled' => Appointment::where('status','scheduled')->count(),
+            'arrived' => Appointment::where('status','arrived')->count(),
+            'in_consultation' => Appointment::where('status','in_consultation')->count(),
+            'awaiting_tests' => Appointment::where('status','awaiting_tests')->count(),
+            'prescribed' => Appointment::where('status','prescribed')->count(),
             'cancelled' => Appointment::where('status','cancelled')->count(),
         ];
 
         return Inertia::render('admin/Appointments', [
             'appointments' => $appointments->through(fn ($a) => [
                 'id' => $a->id,
+                'serial_no' => $a->serial_no,
                 'user_id' => $a->user_id,
                 'doctor_id' => $a->doctor_id,
                 'is_guest' => $a->is_guest,
@@ -970,18 +982,31 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
             'total_users' => User::count(),
             'total_appointments' => Appointment::count(),
             'total_prescriptions' => Prescription::count(),
-            'pending_appointments' => Appointment::where('status', 'pending')->count(),
-            'approved_appointments' => Appointment::where('status', 'approved')->count(),
-            'completed_appointments' => Appointment::where('status', 'completed')->count(),
+            'scheduled_appointments' => Appointment::where('status', 'scheduled')->count(),
+            'arrived_appointments' => Appointment::where('status', 'arrived')->count(),
+            'in_consultation_appointments' => Appointment::where('status', 'in_consultation')->count(),
+            'awaiting_tests_appointments' => Appointment::where('status', 'awaiting_tests')->count(),
+            'prescribed_appointments' => Appointment::where('status', 'prescribed')->count(),
             'cancelled_appointments' => Appointment::where('status', 'cancelled')->count(),
             'total_patients' => User::where('role', 'user')->count(),
             'total_doctors' => User::where('role', 'doctor')->count(),
         ];
         
         $recent_appointments = Appointment::with(['user:id,name', 'doctor:id,name'])
-            ->latest()
+            ->orderByDesc('appointment_date')
+            ->orderBy('serial_no')
+            ->orderBy('appointment_time')
             ->take(10)
-            ->get();
+            ->get()
+            ->map(fn ($a) => [
+                'id' => $a->id,
+                'serial_no' => $a->serial_no,
+                'patient_name' => $a->user?->name ?? $a->name,
+                'doctor_name' => $a->doctor?->name,
+                'appointment_date' => $a->appointment_date?->toDateString(),
+                'appointment_time' => $a->appointment_time,
+                'status' => $a->status,
+            ]);
             
         return Inertia::render('admin/Reports', [
             'stats' => $stats,
