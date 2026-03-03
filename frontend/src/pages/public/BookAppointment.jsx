@@ -65,6 +65,16 @@ export default function PublicBookAppointment() {
     );
   };
 
+  const normalizeCalendarDate = (arg) => {
+    if (arg?.dateStr) return arg.dateStr;
+    const d = arg?.date;
+    if (!(d instanceof Date)) return '';
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   // Load doctor's unavailable ranges for calendar
   useEffect(() => {
     let mounted = true;
@@ -194,6 +204,43 @@ export default function PublicBookAppointment() {
     setPreviewTime(null);
   };
 
+  const handleDayCellDidMount = (arg) => {
+    const cell = arg?.el;
+    if (!cell) return;
+
+    const existing = cell.querySelector('.fc-unavailable-icon');
+    const dayStr = normalizeCalendarDate(arg);
+    const unavailable = isUnavailableDate(dayStr);
+
+    if (!unavailable) {
+      if (existing) existing.remove();
+      return;
+    }
+
+    if (existing) return;
+
+    const frame = cell.querySelector('.fc-daygrid-day-frame') || cell;
+    frame.style.position = 'relative';
+
+    const icon = document.createElement('span');
+    icon.className = 'fc-unavailable-icon';
+    icon.textContent = '🚫';
+    icon.setAttribute('aria-label', 'Unavailable date');
+    icon.title = 'Unavailable date';
+    icon.style.position = 'absolute';
+    icon.style.top = '3px';
+    icon.style.right = '4px';
+    icon.style.fontSize = '15px';
+    icon.style.lineHeight = '1';
+    icon.style.pointerEvents = 'none';
+    icon.style.zIndex = '2';
+    icon.style.background = 'rgba(255,255,255,0.95)';
+    icon.style.borderRadius = '999px';
+    icon.style.padding = '1px';
+
+    frame.appendChild(icon);
+  };
+
   const handleSubmit = async (e) => {
     if (e?.preventDefault) e.preventDefault();
     setSubmitting(true);
@@ -272,6 +319,11 @@ export default function PublicBookAppointment() {
     Boolean(formData.date && selectedChamberId) &&
     Boolean(captchaToken && formData.captcha_answer);
 
+  const calendarRenderKey = useMemo(
+    () => `${closedWeekdays.join(',')}|${unavailableRanges.map((r) => `${r?.start_date || ''}-${r?.end_date || ''}`).join(',')}`,
+    [closedWeekdays, unavailableRanges]
+  );
+
   return (
     <>
       <Head title="Book Appointment" />
@@ -329,9 +381,11 @@ export default function PublicBookAppointment() {
             </p>
             <div className="rounded-2xl border border-[#00acb1]/20 bg-white p-3">
               <FullCalendar
+                key={calendarRenderKey}
                 plugins={[dayGridPlugin, interactionPlugin]}
                 initialView="dayGridMonth"
                 dateClick={handleDateClick}
+                dayCellDidMount={handleDayCellDidMount}
                 selectable
                 showNonCurrentDates={false}
                 fixedWeekCount={false}
@@ -339,8 +393,9 @@ export default function PublicBookAppointment() {
                 height="auto"
                 validRange={{ start: new Date().toISOString().split('T')[0] }}
                 dayCellClassNames={(arg) => {
-                  if (isUnavailableDate(arg.dateStr)) return 'fc-unavailable';
-                  if (arg.dateStr === selectedDate) return 'fc-day-selected';
+                  const dayStr = normalizeCalendarDate(arg);
+                  if (isUnavailableDate(dayStr)) return 'fc-unavailable';
+                  if (dayStr === selectedDate) return 'fc-day-selected';
                   return '';
                 }}
               />
