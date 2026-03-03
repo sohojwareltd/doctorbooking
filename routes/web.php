@@ -272,6 +272,72 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
             ->where('status', 'prescribed')
             ->whereMonth('appointment_date', now()->month)
             ->count();
+
+        // Current in-visit appointments
+        $inVisitCollection = Appointment::with([
+                'user:id,name,email,phone,address',
+                'prescription:id,appointment_id',
+            ])
+            ->where('doctor_id', $doctor->id)
+            ->where('status', 'in_consultation')
+            ->whereDate('appointment_date', $today)
+            ->orderBy('appointment_time')
+            ->get();
+
+        // Auto-heal: if an in_consultation appointment already has a prescription,
+        // it was saved without an action — move it to awaiting_tests automatically.
+        $inVisitCollection->each(function ($a) {
+            if ($a->prescription) {
+                $a->update(['status' => 'awaiting_tests']);
+            }
+        });
+        // Remove auto-healed ones from the in-visit list
+        $inVisitCollection = $inVisitCollection->filter(fn ($a) => $a->status === 'in_consultation')->values();
+
+        $inVisitAppointments = $inVisitCollection->map(fn ($a) => [
+            'id' => $a->id,
+            'serial_no' => $a->serial_no,
+            'user_id' => $a->user_id,
+            'patient_name' => $a->user?->name ?? $a->name,
+            'patient_phone' => $a->user?->phone ?? $a->phone,
+            'patient_email' => $a->user?->email ?? $a->email,
+            'user' => $a->user ? [
+                'id' => $a->user->id,
+                'name' => $a->user->name,
+                'email' => $a->user->email,
+                'phone' => $a->user->phone,
+                'address' => $a->user->address,
+            ] : null,
+            'appointment_date' => $a->appointment_date?->toDateString(),
+            'appointment_time' => substr((string) $a->appointment_time, 0, 5),
+            'status' => $a->status,
+            'symptoms' => $a->symptoms,
+            'type' => $a->type,
+            'is_video' => $a->is_video ?? false,
+            'prescription_id' => $a->prescription?->id,
+        ])->values();
+
+        $inVisitAppointment = $inVisitAppointments->first();
+
+        // Awaiting test results appointments
+        $awaitingTestsAppointments = Appointment::with([
+                'user:id,name,email,phone,address',
+                'prescription:id,appointment_id',
+            ])
+            ->where('doctor_id', $doctor->id)
+            ->where('status', 'awaiting_tests')
+            ->whereDate('appointment_date', $today)
+            ->orderBy('appointment_time')
+            ->get()
+            ->map(fn ($a) => [
+                'id' => $a->id,
+                'serial_no' => $a->serial_no,
+                'patient_name' => $a->user?->name ?? $a->name,
+                'patient_phone' => $a->user?->phone ?? $a->phone,
+                'appointment_time' => substr((string) $a->appointment_time, 0, 5),
+                'symptoms' => $a->symptoms,
+                'prescription_id' => $a->prescription?->id,
+            ])->values();
         
         // Get scheduled patients for today (ordered by name)
         $scheduledToday = Appointment::with(['user:id,name,email,phone,address'])
@@ -332,11 +398,11 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
                 'is_video' => $a->is_video ?? false,
             ]);
         
-        // Get next upcoming appointment
+        // Get next upcoming appointment (only scheduled/arrived — not already in-visit or done)
         $upcomingAppointment = Appointment::with(['user:id,name,email,phone,address'])
             ->where('doctor_id', $doctor->id)
             ->where('appointment_date', '>=', $today)
-            ->where('status', '!=', 'cancelled')
+            ->whereIn('status', ['scheduled', 'arrived'])
             ->orderBy('appointment_date')
             ->orderBy('appointment_time')
             ->first();
@@ -369,10 +435,14 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
                 'totalPatients' => $totalPatients,
                 'totalPrescriptions' => $totalPrescriptions,
                 'prescribedThisMonth' => $prescribedThisMonth,
+                'inConsultation' => $inVisitAppointments->count(),
             ],
             'scheduledToday' => $scheduledToday,
             'recentAppointments' => $recentAppointments,
             'upcomingAppointment' => $upcoming,
+            'inVisitAppointment' => $inVisitAppointment,
+            'inVisitAppointments' => $inVisitAppointments,
+            'awaitingTestsAppointments' => $awaitingTestsAppointments,
         ]);
     })->name('dashboard');
 
@@ -723,44 +793,56 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
             ->where('id', $prescription->id)
             ->firstOrFail();
 
-        // Get site content for contact info
-        $homeContent = SiteContent::where('key', 'home')->first()?->value;
-        $contactInfo = $homeContent['contact'] ?? null;
+        // Get chamber info (doctor's active chamber)
+        $chamber = \App\Models\Chamber::where('doctor_id', $doctor->id)
+            ->where('is_active', true)
+            ->first();
+        $chamberInfo = $chamber ? [
+            'name'     => $chamber->name,
+            'location' => $chamber->location,
+            'phone'    => $chamber->phone,
+        ] : null;
+
+        // Load medicines list for search/suggestions
+        $medicines = Medicine::orderBy('name')
+            ->get(['id', 'name', 'strength']);
 
         return Inertia::render('doctor/PrescriptionShow', [
             'prescription' => [
-                'id' => $prescription->id,
-                'appointment_id' => $prescription->appointment_id,
-                'created_at' => $prescription->created_at?->toDateTimeString(),
-                'diagnosis' => $prescription->diagnosis,
-                'medications' => $prescription->medications,
-                'instructions' => $prescription->instructions,
-                'tests' => $prescription->tests,
-                'next_visit_date' => $prescription->next_visit_date ? $prescription->next_visit_date->format('Y-m-d') : null,
-                'visit_type' => $prescription->visit_type,
-                'patient_contact' => $prescription->user?->phone,
-                'patient_age' => $prescription->user?->age,
-                'patient_age_unit' => 'years',
-                'patient_gender' => $prescription->user?->gender,
-                'patient_weight' => $prescription->user?->weight,
+                'id'               => $prescription->id,
+                'appointment_id'   => $prescription->appointment_id,
+                'created_at'       => $prescription->created_at?->toDateTimeString(),
+                'diagnosis'        => $prescription->diagnosis,
+                'medications'      => $prescription->medications,
+                'instructions'     => $prescription->instructions,
+                'tests'            => $prescription->tests,
+                'next_visit_date'  => $prescription->next_visit_date ? $prescription->next_visit_date->format('Y-m-d') : null,
+                'visit_type'       => $prescription->visit_type,
+                'patient_name'     => $prescription->patient_name ?? $prescription->user?->name,
+                'patient_contact'  => $prescription->patient_contact ?? $prescription->user?->phone,
+                'patient_age'      => $prescription->patient_age ?? $prescription->user?->age,
+                'patient_age_unit' => $prescription->patient_age_unit ?? 'years',
+                'patient_gender'   => $prescription->patient_gender ?? $prescription->user?->gender,
+                'patient_weight'   => $prescription->patient_weight ?? $prescription->user?->weight,
                 'user' => $prescription->user ? [
-                    'id' => $prescription->user->id,
-                    'name' => $prescription->user->name,
-                    'email' => $prescription->user->email,
-                    'phone' => $prescription->user->phone,
-                    'address' => $prescription->user->address,
-                    'age' => $prescription->user->age,
-                    'gender' => $prescription->user->gender,
-                    'weight' => $prescription->user->weight,
-                    'date_of_birth' => $prescription->user->date_of_birth?->toDateString(),
+                    'id'           => $prescription->user->id,
+                    'name'         => $prescription->user->name,
+                    'email'        => $prescription->user->email,
+                    'phone'        => $prescription->user->phone,
+                    'address'      => $prescription->user->address,
+                    'age'          => $prescription->user->age,
+                    'gender'       => $prescription->user->gender,
+                    'weight'       => $prescription->user->weight,
+                    'date_of_birth'=> $prescription->user->date_of_birth?->toDateString(),
                 ] : null,
                 'appointment' => $prescription->appointment ? [
                     'appointment_date' => (string) $prescription->appointment->appointment_date,
                     'appointment_time' => substr((string) $prescription->appointment->appointment_time, 0, 5),
-                    'status' => $prescription->appointment->status,
+                    'status'           => $prescription->appointment->status,
                 ] : null,
             ],
-            'contactInfo' => $contactInfo,
+            'chamberInfo' => $chamberInfo,
+            'medicines'   => $medicines,
         ]);
     })->whereNumber('prescription')->name('prescriptions.show');
 
@@ -777,13 +859,10 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
     Route::get('/prescriptions/create', function () {
         $doctor = Auth::user();
 
-        // Get site content for contact info
-        $homeContent = SiteContent::where('key', 'home')->first()?->value;
-        $contactInfo = $homeContent['contact'] ?? null;
-
         // Get appointment ID from query if provided
         $appointmentId = request()->query('appointment_id');
         $selectedPatient = null;
+        $appointment = null;
 
         if ($appointmentId) {
             $appointment = Appointment::with('user:id,name,phone,email,gender,age,date_of_birth,weight')
@@ -805,6 +884,31 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
             }
         }
 
+        $chamber = null;
+        if ($appointment?->chamber_id) {
+            $chamber = \App\Models\Chamber::where('doctor_id', $doctor->id)
+                ->where('id', $appointment->chamber_id)
+                ->first();
+        }
+
+        if (! $chamber) {
+            $chamber = \App\Models\Chamber::where('doctor_id', $doctor->id)
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->first()
+                ?? \App\Models\Chamber::where('doctor_id', $doctor->id)
+                    ->orderBy('name')
+                    ->first();
+        }
+
+        $chamberInfo = $chamber ? [
+            'id' => $chamber->id,
+            'name' => $chamber->name,
+            'location' => $chamber->location,
+            'phone' => $chamber->phone,
+            'google_maps_url' => $chamber->google_maps_url,
+        ] : null;
+
         // Load medicines list for search/suggestions
         $medicines = Medicine::orderBy('name')
             ->get(['id', 'name', 'strength']);
@@ -812,7 +916,7 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
         return Inertia::render('doctor/CreatePrescription', [
             'appointmentId' => $appointmentId ? (int) $appointmentId : null,
             'selectedPatient' => $selectedPatient,
-            'contactInfo' => $contactInfo,
+            'chamberInfo' => $chamberInfo,
             'medicines' => $medicines,
         ]);
     })->name('prescriptions.create');

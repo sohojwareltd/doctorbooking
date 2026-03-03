@@ -4,7 +4,7 @@ import { CalendarDays, ClipboardList, LayoutDashboard, Settings, Users, Trending
 import DoctorLayout from '../../layouts/DoctorLayout';
 import GlassCard from '../../components/GlassCard';
 
-export default function DoctorDashboard({ stats = {}, scheduledToday = [], recentAppointments = [], upcomingAppointment = null, inVisitAppointment = null, inVisitAppointments = [] }) {
+export default function DoctorDashboard({ stats = {}, scheduledToday = [], recentAppointments = [], upcomingAppointment = null, inVisitAppointment = null, inVisitAppointments = [], awaitingTestsAppointments = [] }) {
   const { auth } = usePage().props;
   const user = auth?.user;
   const [selectedPatient, setSelectedPatient] = useState(null);
@@ -114,6 +114,40 @@ export default function DoctorDashboard({ stats = {}, scheduledToday = [], recen
     }
   };
 
+  const updateAppointmentStatus = async (appointmentId, status) => {
+    if (!appointmentId) return false;
+
+    try {
+      const csrfToken = getCsrfToken();
+      const res = await fetch(`/doctor/appointments/${appointmentId}/status`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          ...(csrfToken && { 'X-CSRF-TOKEN': csrfToken }),
+        },
+        credentials: 'include',
+        body: JSON.stringify({ status }),
+      });
+
+      if (!res.ok) {
+        console.error(`Status update failed (${status}) - HTTP:`, res.status);
+        return false;
+      }
+
+      router.reload({
+        only: ['stats', 'recentAppointments', 'upcomingAppointment', 'inVisitAppointment', 'inVisitAppointments', 'awaitingTestsAppointments', 'scheduledToday'],
+        preserveScroll: true,
+      });
+
+      return true;
+    } catch (err) {
+      console.error(`Status update error (${status}):`, err);
+      return false;
+    }
+  };
+
   const visitPatient = activeVisitPatient || inVisitAppointment;
   const todayAppointments = [...(recentAppointments || [])].sort((a, b) => {
     const aTime = `${a.appointment_date || ''} ${a.appointment_time || ''}`.trim();
@@ -121,8 +155,11 @@ export default function DoctorDashboard({ stats = {}, scheduledToday = [], recen
     return new Date(aTime) - new Date(bTime);
   });
   
-  // Filter out the patient currently in visit to get the next appointment
-  const availableAppointments = todayAppointments.filter(a => a.id !== visitPatient?.id);
+  // Filter out the patient currently in visit AND any non-schedulable statuses
+  const availableAppointments = todayAppointments.filter(a =>
+    a.id !== visitPatient?.id &&
+    ['scheduled', 'arrived'].includes(a.status)
+  );
   const nextAppointment = availableAppointments[0] || null;
   const nextAppointmentSerial = nextAppointment ? getDisplaySerial(nextAppointment, 1) : null;
   const visitSerial = visitPatient ? getDisplaySerial(visitPatient, 1) : null;
@@ -237,24 +274,13 @@ export default function DoctorDashboard({ stats = {}, scheduledToday = [], recen
                 </div>
                 <div className="mt-5 flex gap-2">
                   <button
-                    onClick={(e) => {
+                    onClick={async (e) => {
                       e.stopPropagation();
                       setActiveVisitPatient({ ...nextAppointment, status: 'in_consultation' });
-                      const csrfToken = getCsrfToken();
-                      fetch(`/doctor/appointments/${nextAppointment.id}/status`, {
-                        method: 'POST',
-                        headers: { 
-                          'Content-Type': 'application/json',
-                          'Accept': 'application/json',
-                          'X-Requested-With': 'XMLHttpRequest',
-                          ...(csrfToken && { 'X-CSRF-TOKEN': csrfToken })
-                        },
-                        credentials: 'include',
-                        body: JSON.stringify({ status: 'in_consultation' })
-                      }).then(res => {
-                        if (!res.ok) console.error('Start visit error - Status:', res.status);
-                        return res.json();
-                      }).catch(err => console.error('Start visit fetch error:', err));
+                      const ok = await updateAppointmentStatus(nextAppointment.id, 'in_consultation');
+                      if (!ok) {
+                        setActiveVisitPatient(null);
+                      }
                     }}
                     className="flex-1 rounded-xl bg-gray-900 px-4 py-2.5 text-center text-sm font-semibold text-white hover:bg-black transition shadow flex items-center justify-center gap-2"
                   >
@@ -320,106 +346,84 @@ export default function DoctorDashboard({ stats = {}, scheduledToday = [], recen
                 </div>
                 <div className="mt-5 grid grid-cols-2 gap-2">
                   <button
-                    onClick={(e) => {
+                    onClick={async (e) => {
                       e.stopPropagation();
-                      const csrfToken = getCsrfToken();
-                      fetch(`/doctor/appointments/${visitPatient.id}/status`, {
-                        method: 'POST',
-                        headers: { 
-                          'Content-Type': 'application/json',
-                          'Accept': 'application/json',
-                          'X-Requested-With': 'XMLHttpRequest',
-                          ...(csrfToken && { 'X-CSRF-TOKEN': csrfToken })
-                        },
-                        credentials: 'include',
-                        body: JSON.stringify({ status: 'prescribed' })
-                      }).then(res => {
-                        if (res.ok) {
-                          setActiveVisitPatient(null);
-                        } else {
-                          console.error('Complete error - Status:', res.status);
-                        }
-                        return res.json();
-                      }).catch(err => console.error('Complete fetch error:', err));
+                      const ok = await updateAppointmentStatus(visitPatient.id, 'prescribed');
+                      if (ok) {
+                        setActiveVisitPatient(null);
+                      }
                     }}
                     className="rounded-xl bg-gray-900 px-4 py-2.5 text-center text-sm font-semibold text-white hover:bg-black transition shadow flex items-center justify-center gap-2"
                   >
                     <CheckCircle className="h-4 w-4" />
                     Complete
                   </button>
+                  {visitPatient.prescription_id ? (
+                    <Link
+                      onClick={(e) => e.stopPropagation()}
+                      href={`/doctor/prescriptions/${visitPatient.prescription_id}`}
+                      className="rounded-xl border border-[#005963] bg-[#005963]/5 px-4 py-2.5 text-center text-sm font-semibold text-[#005963] hover:bg-[#005963]/10 transition shadow-sm flex items-center justify-center gap-2"
+                    >
+                      <FileText className="h-4 w-4" />
+                      Edit Prescription
+                    </Link>
+                  ) : (
+                    <Link
+                      onClick={(e) => e.stopPropagation()}
+                      href={`/doctor/prescriptions/create?appointment_id=${visitPatient.id}&selectedPatient=${encodeURIComponent(JSON.stringify({
+                        name: getPatientName(visitPatient),
+                        phone: getPatientPhone(visitPatient),
+                        age: visitPatient.user?.age,
+                        gender: visitPatient.user?.gender,
+                        weight: visitPatient.user?.weight,
+                      }))}`}
+                      className="rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-center text-sm font-semibold text-gray-700 hover:bg-gray-50 transition shadow-sm flex items-center justify-center gap-2"
+                    >
+                      <FileText className="h-4 w-4" />
+                      Create Prescription
+                    </Link>
+                  )}
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (getPatientPhone(visitPatient)) {
-                        handleCall(getPatientPhone(visitPatient));
-                      }
+                      setSelectedPatient(visitPatient);
                     }}
-                    className="rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-center text-sm font-semibold text-gray-700 hover:bg-gray-50 transition shadow-sm flex items-center justify-center gap-2"
-                  >
-                    <Phone className="h-4 w-4" />
-                    Call
-                  </button>
-                  <Link
-                    onClick={(e) => e.stopPropagation()}
-                    href={`/doctor/prescriptions/create?appointmentId=${visitPatient.id}&selectedPatient=${encodeURIComponent(JSON.stringify({
-                      name: getPatientName(visitPatient),
-                      phone: getPatientPhone(visitPatient),
-                      age: visitPatient.user?.age,
-                      gender: visitPatient.user?.gender,
-                      weight: visitPatient.user?.weight,
-                    }))}`}
-                    className="rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-center text-sm font-semibold text-gray-700 hover:bg-gray-50 transition shadow-sm flex items-center justify-center gap-2"
-                  >
-                    <FileText className="h-4 w-4" />
-                    Create Prescription
-                  </Link>
-                  <Link
-                    onClick={(e) => e.stopPropagation()}
-                    href={`/doctor/appointments/${visitPatient.id}`}
                     className="rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-center text-sm font-semibold text-gray-700 hover:bg-gray-50 transition shadow-sm flex items-center justify-center gap-2"
                   >
                     <LayoutDashboard className="h-4 w-4" />
                     View Details
-                  </Link>
+                  </button>
                 </div>
               </GlassCard>
             ) : null}
 
-            {/* Patients In Visit */}
+            {/* Awaiting Test Results */}
             <GlassCard variant="solid" hover={false} className="p-6 border border-gray-200 bg-white shadow-sm">
               <div className="mb-6 flex items-center justify-between">
                 <div>
                   <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                    <Stethoscope className="h-5 w-5 text-gray-600" />
-                    In Visit / Consultation
+                    <TestTube className="h-5 w-5 text-amber-600" />
+                    Awaiting Test Results
                   </h3>
                   <p className="text-sm text-gray-500 mt-1">
-                    {inVisitAppointments?.length || 0} patient{(inVisitAppointments?.length || 0) !== 1 ? 's' : ''} in consultation
+                    {awaitingTestsAppointments?.length || 0} patient{(awaitingTestsAppointments?.length || 0) !== 1 ? 's' : ''} waiting for reports
                   </p>
                 </div>
               </div>
               <div className="space-y-3">
-                {inVisitAppointments && inVisitAppointments.length > 0 ? (
-                  inVisitAppointments.map((appointment, index) => (
-                    <div 
-                      key={appointment.id || index} 
-                      onClick={() => setSelectedPatient(appointment)}
-                      className="flex items-center justify-between rounded-xl border border-gray-200 bg-white p-4 hover:bg-gray-50 hover:border-gray-300 transition cursor-pointer shadow-sm"
+                {awaitingTestsAppointments && awaitingTestsAppointments.length > 0 ? (
+                  awaitingTestsAppointments.map((appointment, index) => (
+                    <div
+                      key={appointment.id || index}
+                      className="flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-sm"
                     >
-                      <div className="flex items-center gap-4 flex-1">
-                        <div className="h-8 w-8 rounded-full bg-gray-900 text-white font-bold text-xs flex items-center justify-center flex-shrink-0">
-                          {getDisplaySerial(appointment, index + 1)}
-                        </div>
-                        <div className="h-12 w-12 overflow-hidden rounded-xl bg-gray-200 flex-shrink-0">
-                          <div className="flex h-full w-full items-center justify-center text-sm font-bold text-gray-700">
-                            {getPatientName(appointment)[0].toUpperCase()}
-                          </div>
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className="h-8 w-8 rounded-full bg-amber-600 text-white font-bold text-xs flex items-center justify-center flex-shrink-0">
+                          {appointment.serial_no || index + 1}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-gray-900 truncate">{getPatientName(appointment)}</div>
-                          <div className="text-xs text-gray-500 mt-1">
-                            {formatTime(appointment.appointment_time)}
-                          </div>
+                          <div className="font-semibold text-gray-900 truncate">{appointment.patient_name || 'Patient'}</div>
+                          <div className="text-xs text-amber-700 mt-0.5">{appointment.appointment_time}</div>
                           {appointment.symptoms && (
                             <div className="text-xs text-gray-600 mt-1 truncate">
                               <span className="font-semibold">Symptoms:</span> {appointment.symptoms}
@@ -427,17 +431,25 @@ export default function DoctorDashboard({ stats = {}, scheduledToday = [], recen
                           )}
                         </div>
                       </div>
-                      <div className="ml-2 flex shrink-0 items-center justify-end gap-3">
-                        <span className="rounded-full px-3 py-1 text-xs font-bold bg-gray-100 text-gray-700 border border-gray-200 whitespace-nowrap">
-                          In Visit
-                        </span>
+                      <div className="ml-3 flex-shrink-0">
+                        {appointment.prescription_id ? (
+                          <Link
+                            href={`/doctor/prescriptions/${appointment.prescription_id}?from=dashboard`}
+                            className="inline-flex items-center gap-1.5 rounded-xl bg-[#005963] px-4 py-2 text-xs font-bold text-white shadow transition hover:bg-[#00434a] whitespace-nowrap"
+                          >
+                            <FileText className="h-3.5 w-3.5" />
+                            Add Medicine &amp; Complete
+                          </Link>
+                        ) : (
+                          <span className="text-xs text-gray-400 italic">No prescription yet</span>
+                        )}
                       </div>
                     </div>
                   ))
                 ) : (
                   <div className="py-8 text-center">
-                    <Stethoscope className="h-10 w-10 text-gray-300 mx-auto mb-2" />
-                    <p className="text-gray-500 font-semibold text-sm">No patients in consultation</p>
+                    <TestTube className="h-10 w-10 text-gray-300 mx-auto mb-2" />
+                    <p className="text-gray-500 font-semibold text-sm">No patients awaiting tests</p>
                     <p className="text-xs text-gray-400 mt-1">All clear at the moment</p>
                   </div>
                 )}

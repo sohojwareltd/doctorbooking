@@ -1,11 +1,11 @@
-import { Head, Link, usePage } from '@inertiajs/react';
-import { Calendar, ClipboardList, Heart, Phone, Mail, User, Stethoscope, Pill, FlaskConical, FileText, MapPin, Printer, ArrowLeft, MessageCircle, Download, Share2, Save, X } from 'lucide-react';
+﻿import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Calendar, ClipboardList, Heart, Phone, Mail, User, Stethoscope, Pill, FlaskConical, FileText, MapPin, Printer, ArrowLeft, MessageCircle, Download, Share2, Save, X, Plus, Trash2 } from 'lucide-react';
 import { useMemo, useRef, useState, useEffect } from 'react';
 import DoctorLayout from '../../layouts/DoctorLayout';
 import { formatDisplayDate, formatDisplayFromDateLike, formatTime12hFromDateTime } from '../../utils/dateFormat';
 import { toastSuccess, toastError } from '../../utils/toast';
 
-export default function PrescriptionShow({ prescription, contactInfo }) {
+export default function PrescriptionShow({ prescription, chamberInfo, medicines: medicineSuggestions = [] }) {
   const page = usePage();
   const authUser = page?.props?.auth?.user;
   const prescriptionSettings = page?.props?.site?.prescription || {};
@@ -37,7 +37,57 @@ export default function PrescriptionShow({ prescription, contactInfo }) {
     return calculateAgeFromDob(source?.user?.date_of_birth);
   };
 
+  const emptyMedicine = () => ({ name: '', strength: '', dosage: '', duration: '', instruction: 'After meal' });
+
+  // Parse saved medications text back into structured rows
+  const parseMedicationsText = (text) => {
+    if (!text?.trim()) return [emptyMedicine()];
+    const rows = text.trim().split('\n').filter(Boolean).map(line => {
+      const parts = line.split(' - ');
+      const nameStrength = parts[0] || '';
+      const dosage = parts[1] || '';
+      const duration = parts[2] || '';
+      const instruction = parts[3] || 'After meal';
+      // Try to extract strength (last word matching mg/ml/mcg/g/IU/% patterns)
+      const strengthRx = /^(.*?)\s+(\d+(?:\.\d+)?(?:mg|mcg|ml|g|IU|%|mg\/ml|mg\/5ml|iu)(?:\/\w+)?)\s*$/i;
+      const match = nameStrength.match(strengthRx);
+      return match
+        ? { name: match[1].trim(), strength: match[2], dosage, duration, instruction }
+        : { name: nameStrength.trim(), strength: '', dosage, duration, instruction };
+    });
+    return rows.length ? rows : [emptyMedicine()];
+  };
+
+  // Build medications text from structured rows (same format as CreatePrescription)
+  const buildMedicationsText = (meds) => {
+    return (meds || []).map(m => {
+      const name = String(m.name || '').trim();
+      if (!name) return null;
+      const strength = String(m.strength || '').trim();
+      const dosage = String(m.dosage || '').trim();
+      const duration = String(m.duration || '').trim();
+      const instruction = String(m.instruction || '').trim();
+      const parts = [name];
+      if (strength) parts.push(strength);
+      const details = [];
+      if (dosage) details.push(dosage);
+      if (duration) details.push(duration);
+      if (instruction) details.push(instruction);
+      if (details.length) parts.push(`- ${details.join(' - ')}`);
+      return parts.join(' ');
+    }).filter(Boolean).join('\n');
+  };
+
+  const [medicines, setMedicines] = useState(() => parseMedicationsText(prescription?.medications));
+
+  const handleMedicineChange = (idx, field, value) => {
+    setMedicines(prev => prev.map((m, i) => i === idx ? { ...m, [field]: value } : m));
+  };
+  const addMedicine = () => setMedicines(prev => [...prev, emptyMedicine()]);
+  const removeMedicine = (idx) => setMedicines(prev => prev.length > 1 ? prev.filter((_, i) => i !== idx) : prev);
+
   const buildFormState = (source = {}) => ({
+    patient_name: source?.patient_name || source?.user?.name || '',
     diagnosis: source?.diagnosis || '',
     medications: source?.medications || '',
     instructions: source?.instructions || '',
@@ -59,6 +109,7 @@ export default function PrescriptionShow({ prescription, contactInfo }) {
   useEffect(() => {
     setData(prescription || {});
     setForm(buildFormState(prescription || {}));
+    setMedicines(parseMedicationsText(prescription?.medications));
   }, [prescription]);
 
   const handleChange = (field, value) => {
@@ -72,8 +123,10 @@ export default function PrescriptionShow({ prescription, contactInfo }) {
       const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
       const payload = {
         ...form,
+        patient_name: toStr(form.patient_name).trim(),
         patient_age: toStr(form.patient_age).trim(),
         patient_contact: toStr(form.patient_contact).trim(),
+        medications: buildMedicationsText(medicines),
       };
       const res = await fetch(`/doctor/prescriptions/${data.id}`, {
         method: 'PUT',
@@ -105,29 +158,47 @@ export default function PrescriptionShow({ prescription, contactInfo }) {
   const handleCancel = () => {
     setForm(buildFormState(data));
   };
+
+  const handleSaveAndComplete = async () => {
+    if (!data?.id || saving) return;
+    setSaving(true);
+    try {
+      const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+      const payload = {
+        ...form,
+        patient_name: toStr(form.patient_name).trim(),
+        patient_age: toStr(form.patient_age).trim(),
+        patient_contact: toStr(form.patient_contact).trim(),
+        medications: buildMedicationsText(medicines),
+        appointment_action: 'prescribed',
+      };
+      const res = await fetch(`/doctor/prescriptions/${data.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': token,
+          Accept: 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        toastError(body?.message || 'Failed to complete prescription.');
+      } else {
+        toastSuccess('Prescription completed successfully.');
+        setTimeout(() => router.visit('/doctor/dashboard'), 500);
+      }
+    } catch (err) {
+      toastError('Network error while saving.');
+    } finally {
+      setSaving(false);
+    }
+  };
   
-  // Clinic info from contactInfo or fallback to prescriptionSettings
-  const clinicData = contactInfo?.clinic || {};
-  const clinicName = clinicData?.name || prescriptionSettings?.clinicName || page?.props?.name || 'MediCare';
-  const clinicAddress = [
-    clinicData?.line1,
-    clinicData?.line2,
-    clinicData?.line3
-  ].filter(Boolean).join(', ') || prescriptionSettings?.address || '';
-  
-  // Contact methods from contactInfo
-  const contactMethods = contactInfo?.methods || [];
-  const phoneMethod = contactMethods.find(m => m.icon === 'Phone' || m.title?.toLowerCase().includes('call'));
-  const whatsappMethod = contactMethods.find(m => m.icon === 'MessageCircle' || m.title?.toLowerCase().includes('whatsapp'));
-  const emailMethod = contactMethods.find(m => m.icon === 'Mail' || m.title?.toLowerCase().includes('email'));
-  
-  const clinicPhone = phoneMethod?.value || prescriptionSettings?.phone || page?.props?.site?.contactPhone || '';
-  const clinicWhatsApp = whatsappMethod?.value || '';
-  const clinicEmail = emailMethod?.value || prescriptionSettings?.email || page?.props?.site?.contactEmail || '';
-  
-  const clinicLogoUrl = prescriptionSettings?.logoUrl || '';
-  const clinicRegistration = prescriptionSettings?.registrationNo || authUser?.registration_no || '';
-  const clinicWebsite = prescriptionSettings?.website || page?.props?.site?.website || '';
+  // Chamber info from prop (doctor's active chamber)
+  const chamberName = chamberInfo?.name || '';
+  const chamberAddress = chamberInfo?.location || '';
+  const chamberPhone = chamberInfo?.phone || '';
 
   const patientName = data?.patient_name || data?.user?.name || prescription?.user?.name || `User #${data?.user_id || prescription?.user_id || ''}`;
   const doctorName = data?.doctor?.name || prescription?.doctor?.name || authUser?.name || 'Doctor';
@@ -303,59 +374,55 @@ export default function PrescriptionShow({ prescription, contactInfo }) {
 
   return (
     <DoctorLayout title="Prescription Details">
-      {/* Action Buttons - Above prescription */}
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 print:hidden">
-        <div className="flex flex-wrap items-center gap-2">
-          <Link href="/doctor/prescriptions" className="flex items-center gap-2 rounded-xl border-2 border-[#005963]/30 bg-white px-5 py-2.5 text-sm font-semibold text-[#005963] shadow-sm transition hover:bg-[#005963]/5">
+
+      {/* Page Header */}
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 print:hidden">
+        <div className="flex items-center gap-3">
+          <Link
+            href="/doctor/prescriptions"
+            className="flex items-center gap-2 rounded-xl border-2 border-[#005963]/30 bg-white px-4 py-2 text-sm font-semibold text-[#005963] shadow-sm transition hover:bg-[#005963]/5"
+          >
             <ArrowLeft className="h-4 w-4" />
             Back to List
           </Link>
-          {/* Share Dropdown */}
+          <h1 className="text-lg font-bold text-gray-800">
+            Prescription <span className="text-[#005963]">#{data?.id}</span>
+          </h1>
+          {data?.appointment?.status && (
+            <span className={`rounded-full px-3 py-1 text-xs font-bold ${
+              data.appointment.status === 'prescribed' ? 'bg-emerald-100 text-emerald-700' :
+              data.appointment.status === 'awaiting_tests' ? 'bg-amber-100 text-amber-700' :
+              data.appointment.status === 'in_consultation' ? 'bg-blue-100 text-blue-700' :
+              'bg-gray-100 text-gray-700'
+            }`}>
+              {data.appointment.status.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}
+            </span>
+          )}
+        </div>
+
+        {/* Print / Share / Download */}
+        <div className="flex flex-wrap items-center gap-2">
           <div className="relative">
             <button
               type="button"
               onClick={() => setSharing(!sharing)}
-              className="flex items-center gap-2 rounded-xl border-2 border-[#00acb1]/30 bg-white px-5 py-2.5 text-sm font-semibold text-[#005963] shadow-sm transition hover:bg-[#00acb1]/5"
+              className="flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50"
             >
               <Share2 className="h-4 w-4" />
               Share
             </button>
             {sharing && (
               <>
-                <div 
-                  className="fixed inset-0 z-40" 
-                  onClick={() => setSharing(false)}
-                />
+                <div className="fixed inset-0 z-40" onClick={() => setSharing(false)} />
                 <div className="absolute right-0 top-full z-50 mt-2 w-48 rounded-xl border border-gray-200 bg-white shadow-lg">
-                  <button
-                    onClick={() => {
-                      handleShareEmail();
-                      setSharing(false);
-                    }}
-                    className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-semibold text-gray-700 hover:bg-gray-50 transition first:rounded-t-xl"
-                  >
-                    <Mail className="h-4 w-4 text-blue-600" />
-                    Share via Email
+                  <button onClick={() => { handleShareEmail(); setSharing(false); }} className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-semibold text-gray-700 hover:bg-gray-50 transition first:rounded-t-xl">
+                    <Mail className="h-4 w-4 text-blue-600" /> Share via Email
                   </button>
-                  <button
-                    onClick={() => {
-                      handleShareWhatsApp();
-                      setSharing(false);
-                    }}
-                    className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
-                  >
-                    <MessageCircle className="h-4 w-4 text-green-600" />
-                    Share via WhatsApp
+                  <button onClick={() => { handleShareWhatsApp(); setSharing(false); }} className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-semibold text-gray-700 hover:bg-gray-50 transition">
+                    <MessageCircle className="h-4 w-4 text-green-600" /> Share via WhatsApp
                   </button>
-                  <button
-                    onClick={() => {
-                      handleShareLink();
-                      setSharing(false);
-                    }}
-                    className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-semibold text-gray-700 hover:bg-gray-50 transition last:rounded-b-xl"
-                  >
-                    <Share2 className="h-4 w-4 text-gray-600" />
-                    Copy Link
+                  <button onClick={() => { handleShareLink(); setSharing(false); }} className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-semibold text-gray-700 hover:bg-gray-50 transition last:rounded-b-xl">
+                    <Share2 className="h-4 w-4 text-gray-600" /> Copy Link
                   </button>
                 </div>
               </>
@@ -365,398 +432,394 @@ export default function PrescriptionShow({ prescription, contactInfo }) {
             type="button"
             onClick={handleDownloadPDF}
             disabled={downloadingPDF}
-            className="flex items-center gap-2 rounded-xl border-2 border-[#005963]/30 bg-white px-5 py-2.5 text-sm font-semibold text-[#005963] shadow-sm transition hover:bg-[#005963]/5 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 disabled:opacity-50"
           >
-            {downloadingPDF ? (
-              <>
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#005963] border-t-transparent" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <Download className="h-4 w-4" />
-                Download PDF
-              </>
-            )}
+            {downloadingPDF ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-500 border-t-transparent" /> : <Download className="h-4 w-4" />}
+            {downloadingPDF ? 'Generating...' : 'Download PDF'}
           </button>
           <button
             type="button"
             onClick={handlePrint}
-            className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#005963] to-[#00acb1] px-5 py-2.5 text-sm font-bold text-white shadow-lg transition hover:shadow-xl"
+            className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#005963] to-[#00acb1] px-4 py-2 text-sm font-bold text-white shadow-lg transition hover:shadow-xl"
           >
             <Printer className="h-4 w-4" />
             Print
           </button>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleCancel}
-            disabled={saving}
-            className="flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-70"
-          >
-            <X className="h-4 w-4" />
-            Reset Changes
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={saving}
-            className="flex items-center gap-2 rounded-xl bg-[#005963] px-5 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-[#004852] disabled:cursor-not-allowed disabled:opacity-70"
-          >
-            <Save className="h-4 w-4" />
-            {saving ? 'Saving...' : 'Save Changes'}
-          </button>
-        </div>
       </div>
 
-      {/* Physical Prescription Paper */}
-      <div className="w-full" ref={prescriptionRef}>
+      {/* Prescription Layout - Matches CreatePrescription */}
+      <div className="mx-auto max-w-7xl" ref={prescriptionRef}>
         <div className="overflow-hidden rounded-lg border border-gray-300 bg-white shadow-2xl print:border-0 print:shadow-none">
-          
-          {/* Prescription Header - Like real prescription pad */}
-          <div className="border-b-4 border-[#005963] bg-gradient-to-r from-[#005963] via-[#007a7a] to-[#00acb1] p-6 text-white">
-            <div className="flex items-start justify-between">
+
+          {/* Header - Two Glass Cards */}
+          <div className="border-b-4 border-[#005963] bg-gradient-to-r from-[#005963] via-[#007f89] to-[#00acb1] p-6 text-white md:p-8">
+            <div className="grid gap-4 md:grid-cols-2 md:gap-6">
               {/* Doctor Info - Left */}
-              <div className="flex-1">
-                <div className="text-2xl font-black tracking-wide">{doctorName}</div>
-                <div className="mt-1 text-sm font-medium opacity-90">MBBS, FCPS (Medicine)</div>
-                {doctorPhone && (
+              <div className="rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur-sm md:p-5">
+                <div className="mb-2 text-xs font-bold uppercase tracking-wider text-white/80">Doctor Information</div>
+                <div className="text-2xl font-black tracking-wide">{authUser?.name || 'Doctor'}</div>
+                <div className="mt-1 text-sm font-medium text-white/90">{authUser?.specialization || authUser?.degree || 'MBBS, FCPS'}</div>
+                {authUser?.phone && (
                   <div className="mt-3 flex items-center gap-2 text-sm">
                     <Phone className="h-4 w-4" />
-                    <span>{doctorPhone}</span>
+                    <span>{authUser.phone}</span>
                   </div>
                 )}
-                {doctorEmail && (
+                {authUser?.email && (
                   <div className="mt-1 flex items-center gap-2 text-sm">
                     <Mail className="h-4 w-4" />
-                    <span>{doctorEmail}</span>
+                    <span>{authUser.email}</span>
                   </div>
                 )}
               </div>
 
-              {/* Clinic Info - Right */}
-              <div className="text-right">
-                <div className="text-lg font-bold">{clinicName}</div>
-                {clinicRegistration && (
-                  <div className="text-[10px] font-medium opacity-70">Reg. No: {clinicRegistration}</div>
-                )}
-                
-                {/* Our Clinic Info */}
-                {clinicAddress && (
-                  <div className="mt-2 pt-1.5 border-t border-white/20">
-                    <div className="text-[10px] font-semibold opacity-80 mb-0.5">Our Clinic</div>
+              {/* Chamber Info - Right */}
+              <div className="rounded-2xl border border-white/20 bg-white/10 p-4 text-right backdrop-blur-sm md:p-5">
+                <div className="mb-2 text-xs font-bold uppercase tracking-wider text-white/80">Chamber Information</div>
+                <div className="text-lg font-bold">{chamberName || 'Not set'}</div>
+                {chamberAddress && (
+                  <div className="mt-2 border-t border-white/20 pt-1.5">
+                    <div className="mb-0.5 text-[10px] font-semibold opacity-80">Chamber</div>
                     <div className="flex items-start justify-end gap-1 text-[10px] opacity-75">
                       <MapPin className="h-2.5 w-2.5 mt-0.5 flex-shrink-0" />
-                      <span className="max-w-xs leading-tight">{clinicAddress}</span>
+                      <span className="max-w-xs leading-tight">{chamberAddress}</span>
                     </div>
                   </div>
                 )}
-                
-                {/* Contact Information */}
-                <div className="mt-2 pt-1.5 border-t border-white/20 space-y-0.5">
-                  {clinicPhone && (
+                {chamberPhone && (
+                  <div className="mt-2 space-y-0.5 border-t border-white/20 pt-1.5">
                     <div className="flex items-center justify-end gap-1 text-[10px]">
                       <Phone className="h-2.5 w-2.5" />
                       <span className="font-medium">Call:</span>
-                      <span className="opacity-90">{clinicPhone}</span>
+                      <span className="opacity-90">{chamberPhone}</span>
                     </div>
-                  )}
-                  {clinicWhatsApp && (
-                    <div className="flex items-center justify-end gap-1 text-[10px]">
-                      <MessageCircle className="h-2.5 w-2.5" />
-                      <span className="font-medium">WhatsApp:</span>
-                      <span className="opacity-90">{clinicWhatsApp}</span>
-                    </div>
-                  )}
-                  {clinicEmail && (
-                    <div className="flex items-center justify-end gap-1 text-[10px]">
-                      <Mail className="h-2.5 w-2.5" />
-                      <span className="font-medium">Email:</span>
-                      <span className="opacity-90">{clinicEmail}</span>
-                    </div>
-                  )}
-                  {clinicWebsite && (
-                    <div className="text-[9px] opacity-60 mt-0.5">{clinicWebsite}</div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Patient Info Bar */}
-          <div className="border-b-2 border-dashed border-gray-300 bg-gray-50 px-6 py-4">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div className="flex flex-wrap items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold uppercase text-gray-500">Patient:</span>
-                  <span className="text-base font-bold text-gray-900">{patientName}</span>
-                </div>
-                {(editMode || patientAge) && (
-                  <div className="flex items-center gap-1 text-sm text-gray-700">
-                    {editMode ? (
-                      <>
-                        <input
-                          type="text"
-                          className="w-20 rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-[#005963] focus:outline-none"
-                          value={form.patient_age || ''}
-                          onChange={(e) => handleChange('patient_age', e.target.value)}
-                        />
-                        <select
-                          className="rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-[#005963] focus:outline-none"
-                          value={form.patient_age_unit || 'years'}
-                          onChange={(e) => handleChange('patient_age_unit', e.target.value)}
-                        >
-                          <option value="years">years</option>
-                          <option value="months">months</option>
-                        </select>
-                      </>
-                    ) : (
-                      <>
-                        <span className="font-semibold">{patientAge}</span>
-                        <span>{patientAgeUnit}</span>
-                      </>
-                    )}
                   </div>
-                )}
-                {patientGender && (
-                  <div className="text-sm text-gray-700">
-                    {editMode ? (
-                      <select
-                        className="rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-[#005963] focus:outline-none"
-                        value={form.patient_gender || ''}
-                        onChange={(e) => handleChange('patient_gender', e.target.value)}
-                      >
-                        <option value="">Select</option>
-                        <option value="male">Male</option>
-                        <option value="female">Female</option>
-                        <option value="other">Other</option>
-                      </select>
-                    ) : (
-                      patientGender
-                    )}
-                  </div>
-                )}
-                {(editMode || patientWeight) && (
-                  <div className="text-sm text-gray-700">
-                    {editMode ? (
-                      <div className="flex items-center gap-1">
-                        <input
-                          type="number"
-                          step="0.1"
-                          placeholder="kg"
-                          className="w-24 rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-[#005963] focus:outline-none"
-                          value={form.patient_weight || ''}
-                          onChange={(e) => handleChange('patient_weight', e.target.value)}
-                        />
-                        <span className="text-xs text-gray-500">kg</span>
-                      </div>
-                    ) : (
-                      `${patientWeight} kg`
-                    )}
-                  </div>
-                )}
-                {patientContact && (
-                  <div className="flex items-center gap-1 text-sm text-gray-600">
-                    <Phone className="h-3 w-3" />
-                    {editMode ? (
-                      <input
-                        type="text"
-                        className="w-40 rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-[#005963] focus:outline-none"
-                        value={form.patient_contact || ''}
-                        onChange={(e) => handleChange('patient_contact', e.target.value)}
-                      />
-                    ) : (
-                      patientContact
-                    )}
-                  </div>
-                )}
-                {visitType && (
-                  <div className="rounded-full border border-[#00acb1]/40 bg-[#00acb1]/10 px-2 py-0.5 text-xs font-semibold text-[#005963]">
-                    {editMode ? (
-                      <input
-                        type="text"
-                        className="rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-[#005963] focus:outline-none"
-                        value={form.visit_type || ''}
-                        onChange={(e) => handleChange('visit_type', e.target.value)}
-                        placeholder="Visit type"
-                      />
-                    ) : (
-                      visitType
-                    )}
-                  </div>
-                )}
-                {visitDateLabel && (
-                  <div className="flex items-center gap-1 text-sm text-gray-600">
-                    <Calendar className="h-3 w-3" />
-                    {visitDateLabel}
-                  </div>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                {editMode ? (
-                  <div className="flex items-center gap-2 rounded-lg border border-[#005963]/30 bg-white px-3 py-1.5">
-                    <Calendar className="h-4 w-4 text-[#005963]" />
-                    <div className="text-xs font-semibold text-[#005963]">Next visit:</div>
-                    <input
-                      type="date"
-                      className="rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-[#005963] focus:outline-none"
-                      value={form.next_visit_date || ''}
-                      onChange={(e) => handleChange('next_visit_date', e.target.value)}
-                    />
-                  </div>
-                ) : (
-                  nextVisitLabel && (
-                    <div className="flex items-center gap-2 rounded-lg border border-[#005963]/30 bg-[#005963]/5 px-3 py-1.5">
-                      <Calendar className="h-4 w-4 text-[#005963]" />
-                      <span className="text-xs font-bold text-[#005963]">Follow-up: {nextVisitLabel}</span>
-                    </div>
-                  )
                 )}
               </div>
             </div>
           </div>
 
-          {/* Main Prescription Content */}
-          <div className="min-h-[500px] bg-white p-6">
-            <div className="grid grid-cols-12 gap-6">
-              
-              {/* Left Side - Diagnosis & Tests (Narrower) */}
-              <div className="col-span-4 space-y-6 border-r-2 border-dashed border-gray-200 pr-6">
+          {/* Patient Info Section - Editable Grid (same as CreatePrescription) */}
+          <div className="border-b-2 border-dashed border-gray-300 bg-gray-50 px-8 py-5">
+            <div className="mb-4 flex items-center gap-2 border-b border-gray-300 pb-2">
+              <User className="h-5 w-5 text-[#005963]" />
+              <span className="text-sm font-bold text-[#005963]">Patient Information</span>
+              <span className="ml-auto text-xs text-gray-500">Prescription #{data?.id} Â· {visitDateLabel || createdAtDateLabel}</span>
+            </div>
+            <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-gray-700">Patient Name *</label>
+                <input
+                  className="w-full rounded-md bg-white border border-gray-300 px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#005963]/20"
+                  value={form.patient_name || ''}
+                  onChange={(e) => handleChange('patient_name', e.target.value)}
+                  placeholder="Full name"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-gray-700">Contact</label>
+                <input
+                  className="w-full rounded-md bg-white border border-gray-300 px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#005963]/20"
+                  value={form.patient_contact || ''}
+                  onChange={(e) => handleChange('patient_contact', e.target.value)}
+                  placeholder="Phone"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-gray-700">Age</label>
+                <div className="flex gap-1">
+                  <input
+                    className="w-full rounded-md bg-white border border-gray-300 px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#005963]/20"
+                    value={form.patient_age || ''}
+                    onChange={(e) => handleChange('patient_age', e.target.value)}
+                    placeholder="25"
+                  />
+                  <select
+                    className="w-20 rounded-md bg-white border border-gray-300 px-1 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#005963]/20"
+                    value={form.patient_age_unit || 'years'}
+                    onChange={(e) => handleChange('patient_age_unit', e.target.value)}
+                  >
+                    <option value="years">Y</option>
+                    <option value="months">M</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-gray-700">Gender</label>
+                <select
+                  className="w-full rounded-md bg-white border border-gray-300 px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#005963]/20"
+                  value={form.patient_gender || ''}
+                  onChange={(e) => handleChange('patient_gender', e.target.value)}
+                >
+                  <option value="">Select</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-gray-700">Weight (kg)</label>
+                <input
+                  className="w-full rounded-md bg-white border border-gray-300 px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#005963]/20"
+                  value={form.patient_weight || ''}
+                  onChange={(e) => handleChange('patient_weight', e.target.value)}
+                  placeholder="70"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-gray-700">Visit Type</label>
+                <select
+                  className="w-full rounded-md bg-white border border-gray-300 px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#005963]/20"
+                  value={form.visit_type || ''}
+                  onChange={(e) => handleChange('visit_type', e.target.value)}
+                >
+                  <option value="">Select</option>
+                  <option value="New">New</option>
+                  <option value="Follow-up">Follow-up</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Prescription Content - Matches CreatePrescription column layout */}
+          <div className="min-h-[500px] bg-white p-8 pb-12">
+            <div className="grid grid-cols-12 gap-8">
+
+              {/* Left Column - Tests + Diagnosis */}
+              <div className="col-span-3 space-y-6 border-r-2 border-dashed border-gray-200 pr-8">
+                {/* Investigations */}
+                <div>
+                  <div className="mb-3 flex items-center gap-2 border-b border-[#005963]/20 pb-2">
+                    <FlaskConical className="h-4 w-4 text-[#005963]" />
+                    <span className="text-xs font-black uppercase tracking-wider text-[#005963]">Investigations</span>
+                  </div>
+                  <textarea
+                    className="w-full rounded-lg border border-gray-300 bg-gray-50/50 px-3 py-2 text-sm text-gray-800 shadow-sm focus:border-[#005963] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#005963]/20"
+                    rows={6}
+                    value={form.tests || ''}
+                    onChange={(e) => handleChange('tests', e.target.value)}
+                    placeholder="CBC, ESR, Urine R/E..."
+                  />
+                </div>
+
                 {/* Diagnosis */}
                 <div>
                   <div className="mb-3 flex items-center gap-2 border-b border-[#005963]/20 pb-2">
                     <Stethoscope className="h-4 w-4 text-[#005963]" />
                     <span className="text-xs font-black uppercase tracking-wider text-[#005963]">Diagnosis</span>
                   </div>
-                  {editMode ? (
-                    <textarea
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-sm focus:border-[#005963] focus:outline-none"
-                      rows={5}
-                      value={form.diagnosis || ''}
-                      onChange={(e) => handleChange('diagnosis', e.target.value)}
-                      placeholder="Enter diagnosis"
-                    />
-                  ) : (
-                    <div className="whitespace-pre-wrap text-sm leading-relaxed text-gray-700">
-                      {data?.diagnosis || <span className="italic text-gray-400">—</span>}
-                    </div>
-                  )}
+                  <textarea
+                    className="w-full rounded-lg border border-gray-300 bg-gray-50/50 px-3 py-2 text-sm text-gray-800 shadow-sm focus:border-[#005963] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#005963]/20"
+                    rows={8}
+                    value={form.diagnosis || ''}
+                    onChange={(e) => handleChange('diagnosis', e.target.value)}
+                    placeholder="Provisional / Final diagnosis"
+                  />
                 </div>
-
-                {/* Tests */}
-                {(editMode || data?.tests) && (
-                  <div>
-                    <div className="mb-3 flex items-center gap-2 border-b border-[#005963]/20 pb-2">
-                      <FlaskConical className="h-4 w-4 text-[#005963]" />
-                      <span className="text-xs font-black uppercase tracking-wider text-[#005963]">Investigations</span>
-                    </div>
-                    {editMode ? (
-                      <textarea
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-sm focus:border-[#005963] focus:outline-none"
-                        rows={5}
-                        value={form.tests || ''}
-                        onChange={(e) => handleChange('tests', e.target.value)}
-                        placeholder="Add tests/investigations"
-                      />
-                    ) : (
-                      <div className="whitespace-pre-wrap text-sm leading-relaxed text-gray-700">
-                        {data?.tests}
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
 
-              {/* Right Side - Rx Medications & Advice (Wider) */}
-              <div className="col-span-8 space-y-6">
-                {/* Rx Symbol and Medications */}
+              {/* Right Column - Rx Medications + Advice + Follow-up */}
+              <div className="col-span-9 space-y-6">
+                {/* Rx Medications */}
                 <div>
                   <div className="mb-4 flex items-start gap-3">
                     <div className="text-5xl font-serif font-bold italic text-[#005963]">℞</div>
                     <div className="flex-1 pt-2">
-                      {editMode ? (
-                        <textarea
-                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-sm focus:border-[#005963] focus:outline-none"
-                          rows={10}
-                          value={form.medications || ''}
-                          onChange={(e) => handleChange('medications', e.target.value)}
-                          placeholder="Add medications"
-                        />
-                      ) : (
-                        <div className="whitespace-pre-wrap text-sm leading-loose text-gray-800">
-                          {data?.medications || <span className="italic text-gray-400">No medications prescribed</span>}
-                        </div>
-                      )}
+                      <div className="space-y-2">
+                        {medicines.map((m, idx) => (
+                          <div key={idx} className="group/med flex items-start gap-2 rounded border border-gray-200 bg-white p-2 hover:border-[#005963] hover:bg-gray-50">
+                            <span className="mt-2 text-xs font-bold text-gray-500 flex-shrink-0">{idx + 1}.</span>
+                            <div className="flex-1 grid grid-cols-6 gap-2">
+                              <input
+                                className="col-span-2 rounded border border-gray-200 bg-gray-50/50 px-3 py-1.5 text-sm text-gray-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#005963]/20"
+                                value={m.name}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  const match = medicineSuggestions.find(med => med.name.toLowerCase() === val.toLowerCase());
+                                  handleMedicineChange(idx, 'name', val);
+                                  if (match?.strength) handleMedicineChange(idx, 'strength', match.strength);
+                                }}
+                                placeholder="Medicine name"
+                                list="med-suggestions-show"
+                              />
+                              <input
+                                className="rounded border border-gray-200 bg-gray-50/50 px-3 py-1.5 text-sm text-gray-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#005963]/20"
+                                value={m.strength}
+                                onChange={(e) => handleMedicineChange(idx, 'strength', e.target.value)}
+                                placeholder="Strength"
+                              />
+                              <input
+                                className="rounded border border-gray-200 bg-gray-50/50 px-3 py-1.5 text-sm text-gray-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#005963]/20"
+                                value={m.dosage}
+                                onChange={(e) => handleMedicineChange(idx, 'dosage', e.target.value)}
+                                placeholder="e.g. 1+0+1"
+                              />
+                              <input
+                                className="rounded border border-gray-200 bg-gray-50/50 px-3 py-1.5 text-sm text-gray-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#005963]/20"
+                                value={m.duration}
+                                onChange={(e) => handleMedicineChange(idx, 'duration', e.target.value)}
+                                placeholder="Duration"
+                              />
+                            </div>
+                            <div className="flex flex-col gap-1 text-xs text-gray-700 flex-shrink-0">
+                              <span className="font-semibold text-[10px]">Timing</span>
+                              <div className="flex items-center gap-3">
+                                <label className="inline-flex items-center gap-1 cursor-pointer">
+                                  <input type="radio" className="h-3 w-3" value="After meal"
+                                    checked={m.instruction === 'After meal'}
+                                    onChange={() => handleMedicineChange(idx, 'instruction', 'After meal')}
+                                  />
+                                  <span>After meal</span>
+                                </label>
+                                <label className="inline-flex items-center gap-1 cursor-pointer">
+                                  <input type="radio" className="h-3 w-3" value="Before meal"
+                                    checked={m.instruction === 'Before meal'}
+                                    onChange={() => handleMedicineChange(idx, 'instruction', 'Before meal')}
+                                  />
+                                  <span>Before meal</span>
+                                </label>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              className="mt-1 opacity-0 group-hover/med:opacity-100 flex-shrink-0 rounded border border-rose-300 bg-rose-50 px-1.5 py-1 text-xs text-rose-800 hover:bg-rose-100 transition"
+                              onClick={() => removeMedicine(idx)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        ))}
+
+                        {/* Add Medicine */}
+                        <button
+                          type="button"
+                          onClick={addMedicine}
+                          className="w-full rounded border-2 border-dashed border-[#005963]/30 bg-[#005963]/5 px-3 py-2 text-xs font-semibold text-[#005963] hover:bg-[#005963]/10 transition flex items-center justify-center gap-1"
+                        >
+                          <Plus className="h-3 w-3" />
+                          Add Medicine Row
+                        </button>
+
+                        <datalist id="med-suggestions-show">
+                          {medicineSuggestions.map((med) => (
+                            <option key={med.id ?? med.name} value={med.name}>
+                              {med.strength ? `${med.name} ${med.strength}` : med.name}
+                            </option>
+                          ))}
+                        </datalist>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Advice */}
-                {(editMode || data?.instructions) && (
-                  <div className="border-t-2 border-dotted border-gray-200 pt-4">
-                    <div className="mb-2 flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-[#005963]" />
-                      <span className="text-xs font-black uppercase tracking-wider text-[#005963]">Advice</span>
+                {/* Advice / Instructions */}
+                <div className="border-t-2 border-dotted border-gray-200 pt-4">
+                  <div className="mb-2 flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-[#005963]" />
+                    <span className="text-xs font-black uppercase tracking-wider text-[#005963]">Advice</span>
+                  </div>
+                  <textarea
+                    className="w-full rounded-lg border border-gray-300 bg-gray-50/50 px-3 py-2 text-sm text-gray-800 shadow-sm focus:border-[#005963] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#005963]/20"
+                    rows={4}
+                    value={form.instructions || ''}
+                    onChange={(e) => handleChange('instructions', e.target.value)}
+                    placeholder="Diet, lifestyle, rest instructions..."
+                  />
+                </div>
+
+                {/* Follow-up Date */}
+                <div className="border-t border-gray-200 pt-4">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-[#005963]" />
+                      <span className="text-xs font-black uppercase tracking-wider text-[#005963]">Follow-up Date</span>
                     </div>
-                    {editMode ? (
-                      <textarea
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-sm focus:border-[#005963] focus:outline-none"
-                        rows={6}
-                        value={form.instructions || ''}
-                        onChange={(e) => handleChange('instructions', e.target.value)}
-                        placeholder="Diet, activity, or other instructions"
-                      />
-                    ) : (
-                      <div className="whitespace-pre-wrap rounded-lg bg-[#005963]/5 p-3 text-sm leading-relaxed text-gray-700">
-                        {data?.instructions}
-                      </div>
+                    <input
+                      type="date"
+                      className="rounded-md border border-gray-300 bg-gray-50/50 px-3 py-1.5 text-sm text-gray-900 focus:border-[#005963] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#005963]/20"
+                      value={form.next_visit_date || ''}
+                      onChange={(e) => handleChange('next_visit_date', e.target.value)}
+                    />
+                    {form.next_visit_date && (
+                      <span className="rounded-full bg-[#005963]/10 px-3 py-1 text-xs font-bold text-[#005963]">
+                        {nextVisitLabel}
+                      </span>
                     )}
                   </div>
-                )}
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom Action Bar - same style as CreatePrescription */}
+            <div className="mt-10 rounded-2xl border-2 border-[#005963]/30 bg-gradient-to-r from-[#005963]/5 to-transparent p-6 shadow-md">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="text-xs text-gray-500">
+                  Created: {createdAtDateLabel} {createdAtTimeLabel} Â· ID #{data?.id}
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    onClick={handleCancel}
+                    disabled={saving}
+                    className="flex items-center gap-2 rounded-2xl border-2 border-[#005963]/30 bg-white px-6 py-3 text-sm font-semibold text-[#005963] shadow-sm transition hover:bg-[#005963]/5 disabled:opacity-50"
+                  >
+                    <X className="h-4 w-4" />
+                    Reset Changes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-[#005963] to-[#00acb1] px-8 py-3 text-sm font-bold text-white shadow-lg transition hover:shadow-xl disabled:opacity-50"
+                  >
+                    {saving ? (
+                      <>
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="h-4 w-4" />
+                        Save Changes
+                      </>
+                    )}
+                  </button>
+                  {data?.appointment?.status === 'awaiting_tests' && (
+                    <button
+                      type="button"
+                      onClick={handleSaveAndComplete}
+                      disabled={saving}
+                      className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 px-8 py-3 text-sm font-bold text-white shadow-lg transition hover:shadow-xl disabled:opacity-50"
+                    >
+                      {saving ? (
+                        <>
+                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <FlaskConical className="h-4 w-4" />
+                          Complete &amp; Mark Prescribed
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
-
-          {/* Footer - Signature Area */}
-          <div className="border-t-2 border-gray-200 bg-gray-50 px-6 py-4">
-            <div className="flex items-end justify-between">
-              <div className="text-xs text-gray-500">
-                <div>Prescription ID: #{data?.id}</div>
-                <div className="mt-0.5">Generated on: {createdAtDateLabel} {createdAtTimeLabel}</div>
-              </div>
-              <div className="text-center">
-                <div className="mb-1 h-px w-48 border-b-2 border-gray-400"></div>
-                <div className="text-xs font-bold text-gray-600">Doctor's Signature</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Bottom Border Design */}
-          <div className="h-2 bg-gradient-to-r from-[#005963] via-[#00acb1] to-[#005963]"></div>
         </div>
       </div>
 
       {/* Print Styles */}
       <style>{`
         @media print {
-          @page {
-            size: A4;
-            margin: 10mm;
-          }
-          body {
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-          .print\\:hidden {
-            display: none !important;
-          }
-          .print\\:border-0 {
-            border: 0 !important;
-          }
-          .print\\:shadow-none {
-            box-shadow: none !important;
-          }
+          @page { size: A4; margin: 10mm; }
+          body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          .print\\:hidden { display: none !important; }
+          .print\\:border-0 { border: 0 !important; }
+          .print\\:shadow-none { box-shadow: none !important; }
         }
       `}</style>
     </DoctorLayout>

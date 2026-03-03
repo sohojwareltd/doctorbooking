@@ -33,6 +33,7 @@ class PrescriptionController extends Controller
             'instructions' => ['nullable', 'string', 'max:10000'],
             'tests' => ['nullable', 'string', 'max:10000'],
             'next_visit_date' => ['nullable', 'date'],
+            'appointment_action' => ['nullable', 'string', 'in:awaiting_tests,prescribed'],
         ]);
 
         $userId = null;
@@ -73,13 +74,16 @@ class PrescriptionController extends Controller
                     $existingUser->update(['weight' => $validated['patient_weight']]);
                 }
             } else {
+                $safePhone = preg_replace('/\D+/', '', (string) $phone);
+                $generatedEmail = 'patient_' . ($safePhone ?: time()) . '_' . time() . '@temp.local';
+
                 // Create new user account
                 $newUser = User::create([
                     'name' => $validated['patient_name'],
                     'phone' => $phone,
-                    'email' => null,
+                    'email' => $generatedEmail,
                     'password' => Hash::make($phone), // Default password is phone number
-                    'role' => 'patient',
+                    'role' => 'user',
                     'gender' => $validated['patient_gender'] ?? null,
                     'weight' => $validated['patient_weight'] ?? null,
                     'email_verified_at' => now(),
@@ -110,6 +114,12 @@ class PrescriptionController extends Controller
             ]);
         }
 
+        // Update appointment status based on doctor's action
+        $appointmentAction = $validated['appointment_action'] ?? null;
+        if ($appointmentAction && $appointmentId && isset($appointment)) {
+            $appointment->update(['status' => $appointmentAction]);
+        }
+
         if ($request->is('api/*') || $request->expectsJson()) {
             return response()->json([
                 'status' => 'success',
@@ -118,6 +128,7 @@ class PrescriptionController extends Controller
                     : 'Prescription created.',
                 'user_created' => $userCreated,
                 'prescription_id' => $prescription->id,
+                'appointment_action' => $appointmentAction,
             ]);
         }
 
@@ -146,6 +157,7 @@ class PrescriptionController extends Controller
             'patient_gender' => ['nullable', 'string', 'max:20'],
             'patient_weight' => ['nullable', 'string', 'max:20'],
             'visit_type' => ['nullable', 'string', 'max:50'],
+            'appointment_action' => ['nullable', 'string', 'in:prescribed'],
         ]);
 
         $rawPatientAge = array_key_exists('patient_age', $validated)
@@ -187,6 +199,13 @@ class PrescriptionController extends Controller
 
             if (!is_null($rawPatientAge)) {
                 $appointmentUpdates['age'] = $parsedPatientAge;
+            }
+
+            // Mark appointment as prescribed if doctor explicitly completes it
+            $appointmentAction = $validated['appointment_action'] ?? null;
+            if ($appointmentAction === 'prescribed'
+                && in_array($prescription->appointment->status, ['awaiting_tests', 'in_consultation'], true)) {
+                $appointmentUpdates['status'] = 'prescribed';
             }
 
             if (!empty($appointmentUpdates)) {

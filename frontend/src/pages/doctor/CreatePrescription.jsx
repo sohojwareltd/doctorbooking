@@ -4,13 +4,11 @@ import {
     Calendar,
     CheckCircle2,
     ClipboardList,
-    FilePlus2,
     FileText,
     FlaskConical,
     Heart,
     Mail,
     MapPin,
-    MessageCircle,
     Phone,
     Pill,
     Plus,
@@ -238,39 +236,19 @@ function reducer(state, action) {
     }
 }
 
-export default function CreatePrescription({ appointmentId = null, contactInfo, selectedPatient, medicines = [] }) {
+export default function CreatePrescription({ appointmentId = null, chamberInfo, selectedPatient, medicines = [] }) {
     const page = usePage();
     const authUser = page?.props?.auth?.user;
-    const prescriptionSettings = page?.props?.site?.prescription || {};
-    
-    // Clinic info from contactInfo or fallback to prescriptionSettings
-    const clinicData = contactInfo?.clinic || {};
-    const clinicName = clinicData?.name || prescriptionSettings?.clinicName || page?.props?.name || 'MediCare';
-    const clinicAddress = [
-        clinicData?.line1,
-        clinicData?.line2,
-        clinicData?.line3
-    ].filter(Boolean).join(', ') || prescriptionSettings?.address || authUser?.address || '';
-    
-    // Contact methods from contactInfo
-    const contactMethods = contactInfo?.methods || [];
-    const phoneMethod = contactMethods.find(m => m.icon === 'Phone' || m.title?.toLowerCase().includes('call'));
-    const whatsappMethod = contactMethods.find(m => m.icon === 'MessageCircle' || m.title?.toLowerCase().includes('whatsapp'));
-    const emailMethod = contactMethods.find(m => m.icon === 'Mail' || m.title?.toLowerCase().includes('email'));
-    
-    const contactPhone = phoneMethod?.value || prescriptionSettings?.phone || authUser?.phone || page?.props?.site?.contactPhone || '';
-    const contactWhatsApp = whatsappMethod?.value || '';
-    const contactEmail = emailMethod?.value || prescriptionSettings?.email || authUser?.email || page?.props?.site?.contactEmail || '';
-    
-    const clinicLogoUrl = prescriptionSettings?.logoUrl || '';
-    const clinicRegistration = prescriptionSettings?.registrationNo || authUser?.registration_no || '';
-    const clinicWebsite = prescriptionSettings?.website || page?.props?.site?.website || '';
-    const footerNote = prescriptionSettings?.footerNote || '';
+
+    const chamberName = chamberInfo?.name || '';
+    const chamberAddress = chamberInfo?.location || '';
+    const chamberPhone = chamberInfo?.phone || '';
 
     const [state, dispatch] = useReducer(reducer, initialState);
     const [success, setSuccess] = useState('');
     const [error, setError] = useState('');
     const [submitting, setSubmitting] = useState(false);
+    const [appointmentAction, setAppointmentAction] = useState(null);
 
     // Medicines from backend (App\Models\Medicine) for search/suggestions
     const medicineSuggestions = useMemo(
@@ -448,10 +426,10 @@ export default function CreatePrescription({ appointmentId = null, contactInfo, 
         return lines.join('\n').trim();
     };
 
-    const onSubmit = async (e) => {
-        e.preventDefault();
+    const handleSubmit = async (action) => {
         setSuccess('');
         setError('');
+        setAppointmentAction(action);
 
         // Validate patient name
         if (!state.patient.name?.trim()) {
@@ -497,6 +475,7 @@ export default function CreatePrescription({ appointmentId = null, contactInfo, 
                     instructions: instructionsText || null,
                     tests: testsText || null,
                     next_visit_date: state.follow_up.date || null,
+                    appointment_action: action || null,
                 }),
             });
 
@@ -517,7 +496,10 @@ export default function CreatePrescription({ appointmentId = null, contactInfo, 
             toastSuccess('Prescription saved successfully.');
             const data = await res.json().catch(() => ({}));
             const prescriptionId = data?.prescription_id;
-            if (prescriptionId) {
+            // If came from dashboard (has appointmentId), go back to dashboard
+            if (appointmentId) {
+                setTimeout(() => router.visit('/doctor/dashboard'), 400);
+            } else if (prescriptionId) {
                 setTimeout(() => router.visit(`/doctor/prescriptions/${prescriptionId}`), 400);
             } else {
                 setTimeout(() => router.visit('/doctor/prescriptions'), 400);
@@ -533,30 +515,14 @@ export default function CreatePrescription({ appointmentId = null, contactInfo, 
 
     return (
         <DoctorLayout title="Create Prescription">
-            {/* Hero Header Section with Gradient */}
-            <div className="mb-8 overflow-hidden rounded-3xl bg-gradient-to-br from-[#005963] via-[#00acb1] to-[#005963] p-8 text-white shadow-2xl">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <div className="rounded-2xl bg-white/20 p-4 backdrop-blur-sm">
-                            <FilePlus2 className="h-10 w-10" />
-                        </div>
-                        <div>
-                            <h1 className="text-3xl font-black">
-                                Create Prescription
-                            </h1>
-                            <p className="mt-2 text-white/90">
-                                Fast, touch-friendly prescription form for
-                                patient visits
-                            </p>
-                        </div>
-                    </div>
-                    <Link
-                        href="/doctor/prescriptions"
-                        className="rounded-2xl bg-white/20 px-6 py-3 font-semibold backdrop-blur-sm transition hover:bg-white/30"
-                    >
-                        ← Back to List
-                    </Link>
-                </div>
+            <div className="mb-8 flex items-center justify-between">
+                <h1 className="text-3xl font-black text-[#005963]">Create Prescription</h1>
+                <Link
+                    href="/doctor/prescriptions"
+                    className="rounded-2xl bg-[#00acb1]/10 px-6 py-3 font-semibold text-[#005963] transition hover:bg-[#00acb1]/20"
+                >
+                    ← Back to List
+                </Link>
             </div>
 
             {/* Alert Messages with Icons */}
@@ -589,13 +555,14 @@ export default function CreatePrescription({ appointmentId = null, contactInfo, 
             <div className="mx-auto max-w-7xl">
                 <div className="overflow-hidden rounded-lg border border-gray-300 bg-white shadow-2xl">
                     
-                    {/* Prescription Header - Like real prescription pad with gradient */}
-                    <div className="border-b-4 border-[#005963] bg-gradient-to-r from-[#005963] via-[#007a7a] to-[#00acb1] p-8 text-white">
-                        <div className="flex items-start justify-between">
+                    {/* Prescription Header - Doctor left, Chamber right */}
+                    <div className="border-b-4 border-[#005963] bg-gradient-to-r from-[#005963] via-[#007f89] to-[#00acb1] p-6 text-white md:p-8">
+                        <div className="grid gap-4 md:grid-cols-2 md:gap-6">
                             {/* Doctor Info - Left */}
-                            <div className="flex-1">
+                            <div className="rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur-sm md:p-5">
+                                <div className="mb-2 text-xs font-bold uppercase tracking-wider text-white/80">Doctor Information</div>
                                 <div className="text-2xl font-black tracking-wide">{authUser?.name || 'Doctor'}</div>
-                                <div className="mt-1 text-sm font-medium opacity-90">{authUser?.specialization || authUser?.degree || 'MBBS, FCPS'}</div>
+                                <div className="mt-1 text-sm font-medium text-white/90">{authUser?.specialization || authUser?.degree || 'MBBS, FCPS'}</div>
                                 {authUser?.phone && (
                                     <div className="mt-3 flex items-center gap-2 text-sm">
                                         <Phone className="h-4 w-4" />
@@ -610,49 +577,30 @@ export default function CreatePrescription({ appointmentId = null, contactInfo, 
                                 )}
                             </div>
 
-                            {/* Clinic Info - Right */}
-                            <div className="text-right">
-                                <div className="text-lg font-bold">{clinicName}</div>
-                                {clinicRegistration && (
-                                    <div className="text-[10px] font-medium opacity-70">Reg. No: {clinicRegistration}</div>
-                                )}
+                            {/* Chamber Info - Right */}
+                            <div className="rounded-2xl border border-white/20 bg-white/10 p-4 text-right backdrop-blur-sm md:p-5">
+                                <div className="mb-2 text-xs font-bold uppercase tracking-wider text-white/80">Chamber Information</div>
+                                <div className="text-lg font-bold">{chamberName || 'Not set'}</div>
                                 
-                                {/* Our Clinic Info */}
-                                {clinicAddress && (
-                                    <div className="mt-2 pt-1.5 border-t border-white/20">
-                                        <div className="text-[10px] font-semibold opacity-80 mb-0.5">Our Clinic</div>
+                                {/* Chamber Address */}
+                                {chamberAddress && (
+                                    <div className="mt-2 border-t border-white/20 pt-1.5">
+                                        <div className="mb-0.5 text-[10px] font-semibold opacity-80">Chamber</div>
                                         <div className="flex items-start justify-end gap-1 text-[10px] opacity-75">
                                             <MapPin className="h-2.5 w-2.5 mt-0.5 flex-shrink-0" />
-                                            <span className="max-w-xs leading-tight">{clinicAddress}</span>
+                                            <span className="max-w-xs leading-tight">{chamberAddress}</span>
                                         </div>
                                     </div>
                                 )}
                                 
                                 {/* Contact Information */}
-                                <div className="mt-2 pt-1.5 border-t border-white/20 space-y-0.5">
-                                    {contactPhone && (
+                                <div className="mt-2 space-y-0.5 border-t border-white/20 pt-1.5">
+                                    {chamberPhone && (
                                         <div className="flex items-center justify-end gap-1 text-[10px]">
                                             <Phone className="h-2.5 w-2.5" />
                                             <span className="font-medium">Call:</span>
-                                            <span className="opacity-90">{contactPhone}</span>
+                                            <span className="opacity-90">{chamberPhone}</span>
                                         </div>
-                                    )}
-                                    {contactWhatsApp && (
-                                        <div className="flex items-center justify-end gap-1 text-[10px]">
-                                            <MessageCircle className="h-2.5 w-2.5" />
-                                            <span className="font-medium">WhatsApp:</span>
-                                            <span className="opacity-90">{contactWhatsApp}</span>
-                                        </div>
-                                    )}
-                                    {contactEmail && (
-                                        <div className="flex items-center justify-end gap-1 text-[10px]">
-                                            <Mail className="h-2.5 w-2.5" />
-                                            <span className="font-medium">Email:</span>
-                                            <span className="opacity-90">{contactEmail}</span>
-                                        </div>
-                                    )}
-                                    {clinicWebsite && (
-                                        <div className="text-[9px] opacity-60 mt-0.5">{clinicWebsite}</div>
                                     )}
                                 </div>
                             </div>
@@ -708,7 +656,7 @@ export default function CreatePrescription({ appointmentId = null, contactInfo, 
 
                     {/* Form Main Content - Real Prescription Pad Layout */}
                     <div className="min-h-[500px] bg-white p-8 pb-12">
-                        <form onSubmit={onSubmit}>
+                        <form onSubmit={(e) => e.preventDefault()}>
                             {/* Patient Information Section - Editable Fields Above Prescription */}
                             <div className="mb-6 rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 p-4">
                                 <div className="mb-4 flex items-center gap-2 border-b border-gray-300 pb-2">
@@ -1259,11 +1207,30 @@ export default function CreatePrescription({ appointmentId = null, contactInfo, 
                                     Reset Form
                                 </button>
                                 <button
-                                    type="submit"
+                                    type="button"
+                                    className="flex items-center gap-2 rounded-2xl border-2 border-amber-500 bg-amber-50 px-6 py-3 text-sm font-bold text-amber-700 shadow-sm transition hover:bg-amber-100 disabled:opacity-50"
+                                    disabled={submitting}
+                                    onClick={() => handleSubmit('awaiting_tests')}
+                                >
+                                    {submitting && appointmentAction === 'awaiting_tests' ? (
+                                        <>
+                                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-amber-600 border-t-transparent" />
+                                            Saving...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <FlaskConical className="h-4 w-4" />
+                                            Save &amp; Send for Tests
+                                        </>
+                                    )}
+                                </button>
+                                <button
+                                    type="button"
                                     className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-[#005963] to-[#00acb1] px-8 py-3 text-sm font-bold text-white shadow-lg transition hover:shadow-xl disabled:opacity-50"
                                     disabled={submitting}
+                                    onClick={() => handleSubmit('prescribed')}
                                 >
-                                    {submitting ? (
+                                    {submitting && appointmentAction === 'prescribed' ? (
                                         <>
                                             <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
                                             Saving...
@@ -1271,7 +1238,7 @@ export default function CreatePrescription({ appointmentId = null, contactInfo, 
                                     ) : (
                                         <>
                                             <Save className="h-4 w-4" />
-                                            Save Prescription
+                                            Save &amp; Complete
                                         </>
                                     )}
                                 </button>

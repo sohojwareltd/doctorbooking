@@ -537,17 +537,16 @@ class AppointmentController extends Controller
         // If setting status to "in_consultation", ensure only one patient can be in consultation at a time
         if ($newStatus === 'in_consultation') {
             // Find all other appointments for this doctor that are currently "in_consultation"
-            $otherInConsultation = Appointment::where('doctor_id', $doctorId)
+            $otherInConsultation = Appointment::with('prescription')
+                ->where('doctor_id', $doctorId)
                 ->where('status', 'in_consultation')
                 ->where('id', '!=', $appointment->id)
                 ->get();
 
-            // Change them back to "arrived" status (they were in consultation but now another patient is being seen)
-            if ($otherInConsultation->count() > 0) {
-                Appointment::where('doctor_id', $doctorId)
-                    ->where('status', 'in_consultation')
-                    ->where('id', '!=', $appointment->id)
-                    ->update(['status' => 'arrived']);
+            // Smart transition: if they already have a prescription → awaiting_tests, otherwise → arrived
+            foreach ($otherInConsultation as $other) {
+                $transitionStatus = $other->prescription ? 'awaiting_tests' : 'arrived';
+                $other->update(['status' => $transitionStatus]);
             }
         }
 
