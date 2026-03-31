@@ -12,8 +12,21 @@
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
 
         <!-- Scripts -->
-        @viteReactRefresh
-        @vite('frontend/src/main.jsx')
+        @if(app()->environment('local'))
+            @viteReactRefresh
+            @vite('frontend/src/main.jsx')
+        @else
+            @php
+                $manifest = json_decode(file_get_contents(public_path('build/manifest.json')), true);
+                $entry = $manifest['frontend/src/main.jsx'] ?? null;
+            @endphp
+            @if($entry)
+                @foreach($entry['css'] ?? [] as $css)
+                    <link rel="stylesheet" href="{{ asset('build/' . $css) }}">
+                @endforeach
+                <script type="module" src="{{ asset('build/' . $entry['file']) }}"></script>
+            @endif
+        @endif
         @inertiaHead
     </head>
     <body class="font-sans antialiased">
