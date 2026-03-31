@@ -2,7 +2,6 @@ import { Head } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
 import { CalendarClock } from 'lucide-react';
 import DoctorLayout from '../../layouts/DoctorLayout';
-import GlassCard from '../../components/GlassCard';
 import PrimaryButton from '../../components/PrimaryButton';
 import { toastError, toastSuccess, toastWarning } from '../../utils/toast';
 
@@ -158,42 +157,38 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
 
   return (
     <DoctorLayout title="Schedule">
-      <div className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-end">
-        <div>
-          <h1 className="text-3xl font-bold text-[#005963]">Schedule</h1>
-          <p className="mt-2 text-gray-600">
-            Manage your availability and working hours per chamber.
-          </p>
-        </div>
-        <div className="flex flex-col items-start gap-2 md:items-end">
-          {Array.isArray(chambers) && chambers.length > 0 && (
-            <>
-              <label className="text-xs font-semibold text-gray-600">
-                Select chamber
-              </label>
+      {/* Hero Banner */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#1e2a4a] via-[#1e3a5f] to-[#c2692a] p-6 shadow-lg mb-6">
+        <div className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full bg-white/5" />
+        <div className="pointer-events-none absolute -bottom-10 right-32 h-36 w-36 rounded-full bg-white/5" />
+        <div className="relative flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex-1">
+            <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-white/80">
+              <CalendarClock className="h-3.5 w-3.5" />
+              Schedule
+            </div>
+            <h1 className="text-2xl font-black text-white">Manage Schedule</h1>
+            <p className="mt-1 text-sm text-white/70">Manage your availability and working hours per chamber.</p>
+          </div>
+          <div className="flex flex-col items-start gap-2 md:items-end">
+            {Array.isArray(chambers) && chambers.length > 0 && (
               <select
-                className="w-full md:w-64 rounded-lg border border-[#00acb1]/30 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#005963] focus:outline-none focus:ring-2 focus:ring-[#005963]/10"
+                className="w-full md:w-64 rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold text-white backdrop-blur-sm focus:outline-none"
                 value={current_chamber_id ?? (chambers[0]?.id ?? '')}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  const url = `/doctor/schedule?chamber_id=${val}`;
-                  window.location.href = url;
-                }}
+                onChange={(e) => { window.location.href = `/doctor/schedule?chamber_id=${e.target.value}`; }}
               >
                 {chambers.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
+                  <option key={c.id} value={c.id} className="text-gray-900">{c.name}</option>
                 ))}
               </select>
-            </>
-          )}
+            )}
+          </div>
         </div>
       </div>
 
       {/* If no chambers exist, show a simple message and link */}
       {(!Array.isArray(chambers) || chambers.length === 0) && (
-        <GlassCard variant="solid" className="p-6">
+        <div className="rounded-2xl bg-white border border-gray-100 p-6 shadow-sm">
           <p className="text-sm text-gray-700">
             You don&apos;t have any chambers yet. Please create a chamber first from the{' '}
             <a
@@ -204,7 +199,7 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
             </a>{' '}
             page, then return here to configure its schedule.
           </p>
-        </GlassCard>
+        </div>
       )}
 
       {Array.isArray(chambers) && chambers.length > 0 && (
@@ -212,48 +207,39 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
       <div className="space-y-6">
         {/* Weekly Stats */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-          <GlassCard variant="solid" className="border-2 border-[#005963]/20 bg-[#00acb1]/10 p-4">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#005963]">Days Open</div>
-            <div className="mt-2 flex items-center justify-between">
-              <div className="text-2xl font-black text-[#005963]">{weekStats.daysOpen}/7</div>
-            </div>
-          </GlassCard>
+          <div className="rounded-2xl bg-white border border-gray-100 p-5 shadow-sm">
+            <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">Days Open</div>
+            <div className="mt-2 text-3xl font-black text-gray-900">{weekStats.daysOpen}/7</div>
+          </div>
 
-          <GlassCard variant="solid" className="border-2 border-emerald-200 bg-emerald-50 p-4">
-            <div className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Time Ranges</div>
-            <div className="mt-2 flex items-center justify-between">
-              <div className="text-2xl font-black text-emerald-700">{weekStats.totalRanges}</div>
-            </div>
-          </GlassCard>
+          <div className="rounded-2xl bg-white border border-gray-100 p-5 shadow-sm">
+            <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">Time Ranges</div>
+            <div className="mt-2 text-3xl font-black text-gray-900">{weekStats.totalRanges}</div>
+          </div>
 
-          <GlassCard variant="solid" className="border-2 border-amber-200 bg-amber-50 p-4">
-            <div className="text-xs font-semibold uppercase tracking-wide text-amber-700">Avg Slot</div>
-            <div className="mt-2 flex items-center justify-between">
-              <div className="text-2xl font-black text-amber-700">{weekStats.avgSlot.toFixed(0)}m</div>
-            </div>
-          </GlassCard>
+          <div className="rounded-2xl bg-white border border-gray-100 p-5 shadow-sm">
+            <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">Avg Slot</div>
+            <div className="mt-2 text-3xl font-black text-gray-900">{weekStats.avgSlot.toFixed(0)}m</div>
+          </div>
 
-          <GlassCard variant="solid" className="border-2 border-sky-200 bg-sky-50 p-4">
-            <div className="text-xs font-semibold uppercase tracking-wide text-sky-700">Unavailable</div>
-            <div className="mt-2 flex items-center justify-between">
-              <div className="text-2xl font-black text-sky-700">{weekStats.unavailableDays}</div>
-            </div>
-          </GlassCard>
+          <div className="rounded-2xl bg-white border border-gray-100 p-5 shadow-sm">
+            <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">Unavailable</div>
+            <div className="mt-2 text-3xl font-black text-gray-900">{weekStats.unavailableDays}</div>
+          </div>
         </div>
         {(success || warning || error) && (
-          <GlassCard
-            variant="solid"
-            className={`p-4 ${
-              success ? 'border-emerald-200 bg-emerald-50/60' : warning ? 'border-amber-200 bg-amber-50/60' : 'border-rose-200 bg-rose-50/60'
-            }`}
-          >
-            <div className={`text-sm font-semibold ${success ? 'text-emerald-800' : warning ? 'text-amber-800' : 'text-rose-800'}`}>
+          <div className={`rounded-2xl border p-4 shadow-sm ${
+            success ? 'border-emerald-200 bg-emerald-50' : warning ? 'border-amber-200 bg-amber-50' : 'border-rose-200 bg-rose-50'
+          }`}>
+            <div className={`text-sm font-semibold ${
+              success ? 'text-emerald-800' : warning ? 'text-amber-800' : 'text-rose-800'
+            }`}>
               {success || warning || error}
             </div>
-          </GlassCard>
+          </div>
         )}
 
-        <GlassCard variant="solid" className="border border-[#00acb1]/20 p-5">
+        <div className="rounded-2xl bg-white border border-gray-100 p-6 shadow-sm">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
               <div className="text-lg font-bold text-[#005963]">Unavailable Date Ranges</div>
@@ -310,31 +296,31 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
               </div>
             ))}
           </div>
-        </GlassCard>
+        </div>
 
         {(success || warning || error) && (
           <>
             {success && (
-              <GlassCard variant="solid" className="mb-3 border-emerald-200 bg-emerald-50/60 p-4">
+              <div className="mb-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
                 <div className="text-sm font-semibold text-emerald-800">{success}</div>
-              </GlassCard>
+              </div>
             )}
             {warning && (
-              <GlassCard variant="solid" className="mb-3 border-amber-200 bg-amber-50/60 p-4">
+              <div className="mb-3 rounded-2xl border border-amber-200 bg-amber-50 p-4">
                 <div className="text-sm font-semibold text-amber-800">{warning}</div>
-              </GlassCard>
+              </div>
             )}
             {error && (
-              <GlassCard variant="solid" className="mb-6 border-rose-200 bg-rose-50/60 p-4">
+              <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 p-4">
                 <div className="text-sm font-semibold text-rose-800">{error}</div>
-              </GlassCard>
+              </div>
             )}
           </>
         )}
 
         <div className="space-y-4">
           {rows.map((r, idx) => (
-            <GlassCard key={r.day_of_week} variant="solid" className="border border-[#00acb1]/20 p-5">
+            <div key={r.day_of_week} className="rounded-2xl bg-white border border-gray-100 p-6 shadow-sm">
               <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
                   <div className="text-lg font-bold text-[#005963]">{DAY_LABELS[r.day_of_week]}</div>
@@ -421,7 +407,7 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
                   </div>
                 ))}
               </div>
-            </GlassCard>
+            </div>
           ))}
         </div>
 

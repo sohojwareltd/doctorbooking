@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from '@inertiajs/react';
 import { FileText, PlusCircle, Search, Eye, Download, Share2, Printer } from 'lucide-react';
 import DoctorLayout from '../../layouts/DoctorLayout';
-import GlassCard from '../../components/GlassCard';
 import Pagination from '../../components/Pagination';
 import { formatDisplayFromDateLike, formatDisplayDateWithYearFromDateLike } from '../../utils/dateFormat';
 import { toastSuccess, toastError } from '../../utils/toast';
@@ -72,52 +71,59 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
     const upcomingFollowUps = stats?.upcomingFollowUps ?? 0;
 
     return [
-      { label: 'Total Prescriptions', value: totalCount, color: 'bg-[#00acb1]/10 text-[#005963] border-[#00acb1]/30' },
-      { label: 'With Follow-up', value: withFollowUp, color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-      { label: 'No Follow-up', value: withoutFollowUp, color: 'bg-amber-50 text-amber-700 border-amber-200' },
-      { label: 'Upcoming Visits', value: upcomingFollowUps, color: 'bg-sky-50 text-sky-700 border-sky-200' }
+      { label: 'Total Prescriptions', value: totalCount, iconBg: 'bg-blue-100', iconColor: 'text-blue-600' },
+      { label: 'With Follow-up', value: withFollowUp, iconBg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+      { label: 'No Follow-up', value: withoutFollowUp, iconBg: 'bg-amber-100', iconColor: 'text-amber-600' },
+      { label: 'Upcoming Visits', value: upcomingFollowUps, iconBg: 'bg-sky-100', iconColor: 'text-sky-600' }
     ];
   }, [pagination, stats]);
 
   return (
     <DoctorLayout title="Prescriptions">
-      <div className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-end">
-        <div>
-          <h1 className="text-3xl font-bold text-[#005963]">Prescriptions</h1>
-          <p className="mt-2 text-gray-600">View and create prescriptions for your patients</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="text-sm text-gray-600">
-            <span className="font-bold text-[#005963]">{displayCount}</span> prescription{displayCount !== 1 ? 's' : ''} found
+      {/* Hero Banner */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#1e2a4a] via-[#1e3a5f] to-[#c2692a] p-6 shadow-lg mb-6">
+        <div className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full bg-white/5" />
+        <div className="pointer-events-none absolute -bottom-10 right-32 h-36 w-36 rounded-full bg-white/5" />
+        <div className="relative flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex-1">
+            <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-white/80">
+              <FileText className="h-3.5 w-3.5" />
+              Prescriptions
+            </div>
+            <h1 className="text-2xl font-black text-white">Prescriptions</h1>
+            <p className="mt-1 text-sm text-white/70">View and create prescriptions for your patients</p>
           </div>
-          <Link
-            href="/doctor/prescriptions/create"
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#005963] px-6 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-[#00434a] whitespace-nowrap"
-          >
-            <PlusCircle className="h-4 w-4" />
-            Create Prescription
-          </Link>
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <span className="text-sm text-white/70"><span className="font-black text-white">{displayCount}</span> found</span>
+            <Link
+              href="/doctor/prescriptions/create"
+              className="inline-flex items-center gap-2 rounded-xl bg-white/15 border border-white/20 px-4 py-2.5 text-sm font-semibold text-white hover:bg-white/25 transition"
+            >
+              <PlusCircle className="h-4 w-4" />
+              Create Prescription
+            </Link>
+          </div>
         </div>
       </div>
 
       <div className="space-y-6">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
           {statsCards.map((stat, idx) => (
-            <GlassCard key={idx} variant="solid" className={`border-2 p-4 ${stat.color}`}>
-              <div className="flex items-center justify-between">
+            <div key={idx} className="rounded-2xl bg-white border border-gray-100 p-6 shadow-sm">
+              <div className="flex items-start justify-between">
                 <div>
-                  <div className="text-xs font-semibold uppercase tracking-wide opacity-70">{stat.label}</div>
-                  <div className="mt-2 text-2xl font-black">{stat.value}</div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{stat.label}</p>
+                  <p className="mt-2 text-4xl font-black text-gray-900">{stat.value}</p>
                 </div>
-                <div className="rounded-lg bg-white/60 p-2 text-[#005963]">
-                  <FileText className="h-4 w-4" />
+                <div className={`rounded-xl p-3 ${stat.iconBg}`}>
+                  <FileText className={`h-6 w-6 ${stat.iconColor}`} />
                 </div>
               </div>
-            </GlassCard>
+            </div>
           ))}
         </div>
 
-        <GlassCard variant="solid" hover={false} className="overflow-hidden border border-[#00acb1]/20">
+        <div className="rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden">
           <div className="space-y-4 border-b border-gray-200 bg-gradient-to-r from-white to-[#00acb1]/5 px-6 py-5">
             <div className="flex flex-col justify-between gap-3 md:flex-row md:items-center">
               <div className="text-sm font-semibold text-gray-700">
@@ -169,10 +175,10 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="w-full divide-y divide-gray-100">
+              <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
-                  <th className="w-12 px-4 py-4 text-left">
+                  <th className="w-12 px-4 py-3 text-left">
                     <input
                       type="checkbox"
                       onChange={(e) => {
@@ -186,15 +192,15 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
                       className="rounded border-gray-300"
                     />
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-700">#</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-700">Patient</th>
-                  <th className="px-4 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-700">Age</th>
-                  <th className="px-4 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-700">Gender</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-700">Number</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-700">Action</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">#</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Patient</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Age</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Gender</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Number</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200 bg-white">
+              <tbody className="divide-y divide-gray-100 bg-white">
                 {filteredRows.map((p, idx) => {
                   const isSelected = selectedIds.includes(p.id);
                   return (
@@ -213,18 +219,18 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
                           className="rounded border-gray-300"
                         />
                       </td>
-                      <td className="px-6 py-4 text-sm font-semibold text-gray-700">{p.id}</td>
-                      <td className="px-6 py-4">
-                        <div className="font-semibold text-[#005963]">{getPatientName(p)}</div>
+                      <td className="px-5 py-3.5 text-sm font-semibold text-gray-600">{p.id}</td>
+                      <td className="px-5 py-3.5">
+                        <div className="font-semibold text-gray-900">{getPatientName(p)}</div>
                       </td>
-                      <td className="px-4 py-4 text-sm text-gray-700">{resolvePatientAge(p) ?? '—'}</td>
-                      <td className="px-4 py-4 text-sm text-gray-700 capitalize">{p.patient_gender || p.user?.gender || '—'}</td>
-                      <td className="px-6 py-4 text-sm text-gray-700 whitespace-nowrap">{p.patient_contact || p.user?.phone || '—'}</td>
-                      <td className="px-6 py-4 text-sm">
-                        <div className="flex items-center gap-2">
+                      <td className="px-4 py-3.5 text-sm text-gray-600">{resolvePatientAge(p) ?? '—'}</td>
+                      <td className="px-4 py-3.5 text-sm text-gray-600 capitalize">{p.patient_gender || p.user?.gender || '—'}</td>
+                      <td className="px-5 py-3.5 text-sm text-gray-600 whitespace-nowrap">{p.patient_contact || p.user?.phone || '—'}</td>
+                      <td className="px-5 py-3.5 text-sm">
+                        <div className="flex items-center gap-3">
                           <Link
                             href={`/doctor/prescriptions/${p.id}`}
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-[#00acb1]/40 bg-white px-3 py-1.5 text-xs font-semibold text-[#005963] hover:bg-[#00acb1]/10 transition"
+                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#005963] hover:text-[#005963]/75 transition"
                           >
                             <Eye className="h-3.5 w-3.5" />
                             View
@@ -236,10 +242,11 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
                                 toastSuccess('Opening prescription for printing...');
                               }
                             }}
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-blue-300 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100 transition"
+                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-800 transition"
                             title="Print"
                           >
                             <Printer className="h-3.5 w-3.5" />
+                            Print
                           </button>
                           <Link
                             href={`/doctor/prescriptions/${p.id}?action=share`}
@@ -259,10 +266,11 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
                                 toastSuccess('Prescription link copied to clipboard');
                               }
                             }}
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-green-300 bg-green-50 px-3 py-1.5 text-xs font-semibold text-green-700 hover:bg-green-100 transition"
+                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-green-600 hover:text-green-800 transition"
                             title="Share"
                           >
                             <Share2 className="h-3.5 w-3.5" />
+                            Share
                           </Link>
                         </div>
                       </td>
@@ -282,8 +290,15 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
             </table>
           </div>
 
+          {pagination && typeof pagination.total === 'number' ? (
+            <div className="border-t border-gray-100 bg-white px-5 py-3.5">
+              <p className="text-xs text-gray-500">
+                Showing <span className="font-semibold text-gray-700">{((pagination.current_page - 1) * pagination.per_page) + 1}</span> to <span className="font-semibold text-gray-700">{Math.min(pagination.per_page * pagination.current_page, pagination.total)}</span> of <span className="font-semibold text-gray-700">{pagination.total}</span> results
+              </p>
+            </div>
+          ) : null}
           <Pagination data={pagination} />
-        </GlassCard>
+        </div>
       </div>
     </DoctorLayout>
   );

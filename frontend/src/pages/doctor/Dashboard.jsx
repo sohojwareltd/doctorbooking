@@ -1,14 +1,47 @@
 import { Link, usePage, router } from '@inertiajs/react';
 import { useState } from 'react';
-import { CalendarDays, ClipboardList, LayoutDashboard, Settings, Users, TrendingUp, Clock, CheckCircle, XCircle, FileText, AlertCircle, UserCheck, Stethoscope, TestTube, ChevronRight, X, Phone, Mail, MapPin, Building2 } from 'lucide-react';
+import { CalendarDays, CalendarCheck2, ClipboardList, ScrollText, LayoutDashboard, Users, TrendingUp, Clock, CheckCircle, XCircle, FileText, AlertCircle, UserCheck, Stethoscope, TestTube, ChevronRight, X, Phone, Mail, MapPin, Building2 } from 'lucide-react';
 import DoctorLayout from '../../layouts/DoctorLayout';
-import GlassCard from '../../components/GlassCard';
 
 export default function DoctorDashboard({ stats = {}, scheduledToday = [], recentAppointments = [], upcomingAppointment = null, inVisitAppointment = null, inVisitAppointments = [], awaitingTestsAppointments = [] }) {
   const { auth } = usePage().props;
   const user = auth?.user;
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [activeVisitPatient, setActiveVisitPatient] = useState(inVisitAppointment || null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createForm, setCreateForm] = useState({ name: '', phone: '', age: '', gender: '' });
+
+  const handleCreateAppointment = async (e) => {
+    e.preventDefault();
+    const { toastError, toastSuccess } = await import('../../utils/toast');
+    if (!createForm.name || !createForm.phone || !createForm.age || !createForm.gender) {
+      toastError('Please fill all fields.');
+      return;
+    }
+    const token = document.cookie
+      .split('; ')
+      .find(row => row.startsWith('XSRF-TOKEN='))
+      ?.split('=')[1];
+    const res = await fetch('/doctor/appointments/create', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        'X-XSRF-TOKEN': token ? decodeURIComponent(token) : '',
+      },
+      credentials: 'include',
+      body: JSON.stringify(createForm),
+    });
+    if (res.ok) {
+      toastSuccess('Appointment created successfully.');
+      setShowCreateModal(false);
+      setCreateForm({ name: '', phone: '', age: '', gender: '' });
+      window.location.reload();
+    } else {
+      const data = await res.json().catch(() => ({}));
+      toastError(data.message || 'Failed to create appointment.');
+    }
+  };
 
   // Get auth token from meta tag or localStorage
   const getAuthToken = () => {
@@ -166,86 +199,152 @@ export default function DoctorDashboard({ stats = {}, scheduledToday = [], recen
 
   return (
     <DoctorLayout title="Dashboard">
-      {/* Page Header */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <p className="mt-2 text-gray-600">Welcome back, {user?.name || 'Doctor'}</p>
-      </div>
-
       <div className="space-y-6">
-        {/* Stats Cards Row */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-          <GlassCard variant="solid" hover={false} className="p-5 border border-gray-200 shadow-sm">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <div className="text-xs font-semibold uppercase tracking-wider text-gray-500">Total Patients</div>
-                <div className="mt-3 text-4xl font-black text-gray-900">{defaultStats.totalPatients}</div>
-              </div>
-              <div className="rounded-xl bg-gray-100 p-3">
-                <Users className="h-6 w-6 text-gray-700" />
-              </div>
-            </div>
-          </GlassCard>
+        {/* Hero Banner */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#1e2a4a] via-[#1e3a5f] to-[#c2692a] p-8 shadow-lg">
+          {/* Decorative circles */}
+          <div className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full bg-white/5" />
+          <div className="pointer-events-none absolute -bottom-10 right-32 h-36 w-36 rounded-full bg-white/5" />
 
-          <GlassCard variant="solid" hover={false} className="p-5 border border-gray-200 shadow-sm">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <div className="text-xs font-semibold uppercase tracking-wider text-gray-500">Today's Appointments</div>
-                <div className="mt-3 text-4xl font-black text-gray-900">{defaultStats.todayAppointments}</div>
+          <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            {/* Left text */}
+            <div className="flex-1">
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-white/80 backdrop-blur-sm">
+                <Stethoscope className="h-3.5 w-3.5" />
+                Doctor Control Center
               </div>
-              <div className="rounded-xl bg-gray-100 p-3">
-                <CalendarDays className="h-6 w-6 text-gray-700" />
-              </div>
+              <h1 className="text-3xl font-black leading-tight text-white lg:text-4xl">
+                Manage patients, appointments,<br className="hidden lg:block" /> and prescriptions in one place.
+              </h1>
+              <p className="mt-3 max-w-lg text-sm text-white/70">
+                This dashboard surfaces today's appointment pipeline, patient queue, and prescription activity so you can focus on care.
+              </p>
             </div>
-          </GlassCard>
 
-          <GlassCard variant="solid" hover={false} className="p-5 border border-gray-200 shadow-sm">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <div className="text-xs font-semibold uppercase tracking-wider text-gray-500">Scheduled</div>
-                <div className="mt-3 text-4xl font-black text-gray-900">{defaultStats.scheduled}</div>
+            {/* Right stat panels */}
+            <div className="flex gap-4 lg:flex-shrink-0">
+              <div className="rounded-xl bg-white/10 px-6 py-4 text-center backdrop-blur-sm border border-white/15">
+                <div className="text-xs font-semibold uppercase tracking-wider text-white/60">Today Appointments</div>
+                <div className="mt-2 text-5xl font-black text-white">{defaultStats.todayAppointments}</div>
               </div>
-              <div className="rounded-xl bg-gray-100 p-3">
-                <CalendarDays className="h-6 w-6 text-gray-700" />
-              </div>
-            </div>
-          </GlassCard>
-
-          <GlassCard variant="solid" hover={false} className="p-5 border border-gray-200 shadow-sm">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <div className="text-xs font-semibold uppercase tracking-wider text-gray-500">In Visit</div>
-                <div className="mt-3 text-4xl font-black text-gray-900">{defaultStats.inConsultation}</div>
-              </div>
-              <div className="rounded-xl bg-gray-100 p-3">
-                <Stethoscope className="h-6 w-6 text-gray-700" />
+              <div className="rounded-xl bg-white/10 px-6 py-4 text-center backdrop-blur-sm border border-white/15">
+                <div className="text-xs font-semibold uppercase tracking-wider text-white/60">Prescribed (Month)</div>
+                <div className="mt-2 text-5xl font-black text-white">{defaultStats.prescribedThisMonth}</div>
               </div>
             </div>
-          </GlassCard>
-
-          <GlassCard variant="solid" hover={false} className="p-5 border border-gray-200 shadow-sm">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <div className="text-xs font-semibold uppercase tracking-wider text-gray-500">Prescribed (Month)</div>
-                <div className="mt-3 text-4xl font-black text-gray-900">{defaultStats.prescribedThisMonth}</div>
-              </div>
-              <div className="rounded-xl bg-gray-100 p-3">
-                <FileText className="h-6 w-6 text-gray-700" />
-              </div>
-            </div>
-          </GlassCard>
+          </div>
         </div>
-        
+
+        {/* Stats Cards Row */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-2xl bg-white border border-gray-100 p-6 shadow-sm">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-500">Total Patients</p>
+                <p className="mt-2 text-4xl font-black text-gray-900">{defaultStats.totalPatients}</p>
+                <p className="mt-1 text-xs text-gray-400">All registered patients</p>
+              </div>
+              <div className="rounded-xl bg-purple-100 p-3">
+                <Users className="h-6 w-6 text-purple-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl bg-white border border-gray-100 p-6 shadow-sm">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-500">Scheduled</p>
+                <p className="mt-2 text-4xl font-black text-gray-900">{defaultStats.scheduled}</p>
+                <p className="mt-1 text-xs text-gray-400">Confirmed for today</p>
+              </div>
+              <div className="rounded-xl bg-blue-100 p-3">
+                <CalendarDays className="h-6 w-6 text-blue-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl bg-white border border-gray-100 p-6 shadow-sm">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-500">In Consultation</p>
+                <p className="mt-2 text-4xl font-black text-gray-900">{defaultStats.inConsultation}</p>
+                <p className="mt-1 text-xs text-gray-400">Currently in visit</p>
+              </div>
+              <div className="rounded-xl bg-green-100 p-3">
+                <CheckCircle className="h-6 w-6 text-green-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl bg-white border border-gray-100 p-6 shadow-sm">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-500">Awaiting Tests</p>
+                <p className="mt-2 text-4xl font-black text-gray-900">{awaitingTestsAppointments?.length || 0}</p>
+                <p className="mt-1 text-xs text-gray-400">Pending test reports</p>
+              </div>
+              <div className="rounded-xl bg-orange-100 p-3">
+                <TestTube className="h-6 w-6 text-orange-500" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="rounded-2xl bg-white border border-gray-100 p-6 shadow-sm">
+          <div className="mb-5">
+            <h3 className="text-lg font-bold text-gray-900">Quick Actions</h3>
+            <p className="text-sm text-gray-500 mt-0.5">Most common actions, one click away.</p>
+          </div>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <button
+              type="button"
+              onClick={() => setShowCreateModal(true)}
+              className="flex flex-col items-center gap-3 rounded-2xl border border-orange-100 bg-orange-50 px-4 py-6 text-center hover:bg-orange-100 hover:shadow-md transition-all w-full"
+            >
+              <div className="rounded-2xl bg-orange-100 p-4 shadow-sm">
+                <CalendarDays className="h-8 w-8 text-orange-500" />
+              </div>
+              <span className="text-sm font-semibold text-gray-700">New Appointment</span>
+            </button>
+            <Link
+              href="/doctor/appointments"
+              className="flex flex-col items-center gap-3 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-6 text-center hover:bg-blue-100 hover:shadow-md transition-all"
+            >
+              <div className="rounded-2xl bg-blue-100 p-4 shadow-sm">
+                <CalendarCheck2 className="h-8 w-8 text-blue-500" />
+              </div>
+              <span className="text-sm font-semibold text-gray-700">All Appointments</span>
+            </Link>
+            <Link
+              href="/doctor/prescriptions/create"
+              className="flex flex-col items-center gap-3 rounded-2xl border border-green-100 bg-green-50 px-4 py-6 text-center hover:bg-green-100 hover:shadow-md transition-all"
+            >
+              <div className="rounded-2xl bg-green-100 p-4 shadow-sm">
+                <FileText className="h-8 w-8 text-green-500" />
+              </div>
+              <span className="text-sm font-semibold text-gray-700">New Prescription</span>
+            </Link>
+            <Link
+              href="/doctor/prescriptions"
+              className="flex flex-col items-center gap-3 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-6 text-center hover:bg-gray-100 hover:shadow-md transition-all"
+            >
+              <div className="rounded-2xl bg-gray-200 p-4 shadow-sm">
+                <ScrollText className="h-8 w-8 text-gray-500" />
+              </div>
+              <span className="text-sm font-semibold text-gray-700">All Prescriptions</span>
+            </Link>
+          </div>
+        </div>
+
         {/* Main Content Grid */}
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Appointments List - Left Column */}
           <div className="lg:col-span-2 space-y-4">
             {/* Upcoming Appointment Featured Card */}
             {nextAppointment ? (
-              <GlassCard 
-                variant="solid" 
-                hover={false} 
-                className="overflow-hidden border border-gray-200 bg-white p-6 text-gray-900 shadow-sm cursor-pointer"
+              <div
+                className="overflow-hidden rounded-2xl border border-gray-100 bg-white p-6 shadow-sm cursor-pointer hover:shadow-md transition"
                 onClick={() => setSelectedPatient(nextAppointment)}
               >
                 <div className="flex items-start justify-between">
@@ -300,9 +399,9 @@ export default function DoctorDashboard({ stats = {}, scheduledToday = [], recen
                     Call
                   </button>
                 </div>
-              </GlassCard>
+              </div>
             ) : (
-              <GlassCard variant="solid" hover={false} className="p-6 border border-gray-200 bg-white shadow-sm">
+              <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
                 <div className="flex items-start gap-4">
                   <AlertCircle className="h-6 w-6 text-gray-500 mt-1 flex-shrink-0" />
                   <div>
@@ -310,15 +409,13 @@ export default function DoctorDashboard({ stats = {}, scheduledToday = [], recen
                     <p className="text-sm text-gray-600 mt-1">You don't have any scheduled appointments yet.</p>
                   </div>
                 </div>
-              </GlassCard>
+              </div>
             )}
 
             {/* In Visit Patient Featured Card */}
             {visitPatient ? (
-              <GlassCard 
-                variant="solid" 
-                hover={false} 
-                className="overflow-hidden border border-gray-200 bg-white p-6 text-gray-900 shadow-sm cursor-pointer"
+              <div
+                className="overflow-hidden rounded-2xl border border-gray-100 bg-white p-6 shadow-sm cursor-pointer hover:shadow-md transition"
                 onClick={() => setSelectedPatient(visitPatient)}
               >
                 <div className="flex items-start justify-between">
@@ -394,123 +491,158 @@ export default function DoctorDashboard({ stats = {}, scheduledToday = [], recen
                     View Details
                   </button>
                 </div>
-              </GlassCard>
+              </div>
             ) : null}
 
             {/* Awaiting Test Results */}
-            <GlassCard variant="solid" hover={false} className="p-6 border border-gray-200 bg-white shadow-sm">
-              <div className="mb-6 flex items-center justify-between">
+            <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                    <TestTube className="h-5 w-5 text-amber-600" />
+                  <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                    <TestTube className="h-4 w-4 text-amber-600" />
                     Awaiting Test Results
                   </h3>
-                  <p className="text-sm text-gray-500 mt-1">
+                  <p className="text-xs text-gray-500 mt-0.5">
                     {awaitingTestsAppointments?.length || 0} patient{(awaitingTestsAppointments?.length || 0) !== 1 ? 's' : ''} waiting for reports
                   </p>
                 </div>
               </div>
-              <div className="space-y-3">
-                {awaitingTestsAppointments && awaitingTestsAppointments.length > 0 ? (
-                  awaitingTestsAppointments.map((appointment, index) => (
-                    <div
-                      key={appointment.id || index}
-                      className="flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-sm"
-                    >
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <div className="h-8 w-8 rounded-full bg-amber-600 text-white font-bold text-xs flex items-center justify-center flex-shrink-0">
-                          {appointment.serial_no || index + 1}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-gray-900 truncate">{appointment.patient_name || 'Patient'}</div>
-                          <div className="text-xs text-amber-700 mt-0.5">{appointment.appointment_time}</div>
-                          {appointment.symptoms && (
-                            <div className="text-xs text-gray-600 mt-1 truncate">
-                              <span className="font-semibold">Symptoms:</span> {appointment.symptoms}
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-gray-50 border-b border-gray-100">
+                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">#</th>
+                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Patient</th>
+                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Time</th>
+                      <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {awaitingTestsAppointments && awaitingTestsAppointments.length > 0 ? (
+                      awaitingTestsAppointments.map((appointment, index) => (
+                        <tr key={appointment.id || index} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-5 py-3.5">
+                            <div className="h-7 w-7 rounded-full bg-amber-100 text-amber-700 font-bold text-xs flex items-center justify-center">
+                              {appointment.serial_no || index + 1}
                             </div>
-                          )}
-                        </div>
-                      </div>
-                      <div className="ml-3 flex-shrink-0">
-                        {appointment.prescription_id ? (
-                          <Link
-                            href={`/doctor/prescriptions/${appointment.prescription_id}?from=dashboard`}
-                            className="inline-flex items-center gap-1.5 rounded-xl bg-[#005963] px-4 py-2 text-xs font-bold text-white shadow transition hover:bg-[#00434a] whitespace-nowrap"
-                          >
-                            <FileText className="h-3.5 w-3.5" />
-                            Add Medicine &amp; Complete
-                          </Link>
-                        ) : (
-                          <span className="text-xs text-gray-400 italic">No prescription yet</span>
-                        )}
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="py-8 text-center">
-                    <TestTube className="h-10 w-10 text-gray-300 mx-auto mb-2" />
-                    <p className="text-gray-500 font-semibold text-sm">No patients awaiting tests</p>
-                    <p className="text-xs text-gray-400 mt-1">All clear at the moment</p>
-                  </div>
-                )}
+                          </td>
+                          <td className="px-5 py-3.5">
+                            <div className="font-semibold text-gray-900">{appointment.patient_name || 'Patient'}</div>
+                            {appointment.symptoms && (
+                              <div className="text-xs text-gray-400 mt-0.5 truncate max-w-[180px]">{appointment.symptoms}</div>
+                            )}
+                          </td>
+                          <td className="px-5 py-3.5">
+                            <span className="text-xs text-gray-600">{appointment.appointment_time || '—'}</span>
+                          </td>
+                          <td className="px-5 py-3.5 text-right">
+                            {appointment.prescription_id ? (
+                              <Link
+                                href={`/doctor/prescriptions/${appointment.prescription_id}?from=dashboard`}
+                                className="inline-flex items-center gap-1 rounded-lg bg-[#005963] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#00434a] transition whitespace-nowrap"
+                              >
+                                <FileText className="h-3.5 w-3.5" />
+                                Complete
+                              </Link>
+                            ) : (
+                              <span className="text-xs text-gray-400 italic">No prescription</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={4} className="px-5 py-10 text-center">
+                          <TestTube className="h-8 w-8 text-gray-200 mx-auto mb-2" />
+                          <p className="text-sm font-semibold text-gray-400">No patients awaiting tests</p>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
-            </GlassCard>
+              {awaitingTestsAppointments?.length > 0 && (
+                <div className="px-5 py-3 border-t border-gray-100 text-xs text-gray-500">
+                  Showing <span className="font-semibold text-gray-700">1</span> to <span className="font-semibold text-gray-700">{awaitingTestsAppointments.length}</span> of <span className="font-semibold text-gray-700">{awaitingTestsAppointments.length}</span> results
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Right Column - Quick Actions & Stats */}
+          {/* Right Column - Pipeline Status */}
           <div className="space-y-4">
-            {/* Today's Appointments */}
-            <GlassCard variant="solid" hover={false} className="p-6">
-              <div className="mb-6 flex items-center justify-between">
+            {/* Today's Appointments Table */}
+            <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-bold text-gray-900">Today's Appointments</h3>
-                  <p className="text-sm text-gray-500 mt-1">Appointments scheduled for today</p>
+                  <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4 text-[#1e2a4a]" />
+                    Pipeline Status
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-0.5">Live appointment distribution.</p>
                 </div>
-                <Link href="/doctor/appointments" className="text-gray-700 text-sm font-semibold hover:underline flex items-center gap-1">
-                  View All →
+                <Link href="/doctor/appointments" className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-100 transition">
+                  View All
                 </Link>
               </div>
-              <div className="space-y-3">
-                {todayAppointments && todayAppointments.length > 0 ? (
-                  todayAppointments.map((appointment, index) => (
-                    <div 
-                      key={appointment.id || index} 
-                      onClick={() => setSelectedPatient(appointment)}
-                      className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 p-4 hover:bg-gray-50 hover:border-gray-300 transition cursor-pointer"
-                    >
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <div className="h-8 w-8 rounded-full bg-gray-900 text-white font-bold text-xs flex items-center justify-center flex-shrink-0">
-                          {getDisplaySerial(appointment, index + 1)}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-gray-900 truncate">{getPatientName(appointment)}</div>
-                          <div className="text-xs text-gray-500 mt-1">
-                            {formatDate(appointment.appointment_date)} at {formatTime(appointment.appointment_time)}
-                          </div>
-                          {getPatientPhone(appointment) && (
-                            <div className="text-xs text-gray-400 mt-1 flex items-center gap-1">
-                              <Phone className="h-3 w-3" />
-                              {getPatientPhone(appointment)}
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-gray-50 border-b border-gray-100">
+                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">#</th>
+                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Patient</th>
+                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Time</th>
+                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {todayAppointments && todayAppointments.length > 0 ? (
+                      todayAppointments.map((appointment, index) => (
+                        <tr
+                          key={appointment.id || index}
+                          onClick={() => setSelectedPatient(appointment)}
+                          className="hover:bg-gray-50 transition-colors cursor-pointer"
+                        >
+                          <td className="px-5 py-3.5">
+                            <div className="h-7 w-7 rounded-full bg-gray-900 text-white font-bold text-xs flex items-center justify-center">
+                              {getDisplaySerial(appointment, index + 1)}
                             </div>
-                          )}
-                        </div>
-                      </div>
-                      <div className="ml-2 flex shrink-0 items-center justify-end gap-3">
-                        <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-semibold leading-4 whitespace-nowrap ${getStatusColor(appointment.status)}`}>
-                          {getStatusLabel(appointment.status)}
-                        </span>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="py-12 text-center">
-                    <CalendarDays className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                    <p className="text-gray-500">No appointments scheduled for today</p>
-                  </div>
-                )}
+                          </td>
+                          <td className="px-5 py-3.5">
+                            <div className="font-semibold text-gray-900">{getPatientName(appointment)}</div>
+                            {getPatientPhone(appointment) && (
+                              <div className="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
+                                <Phone className="h-3 w-3" />{getPatientPhone(appointment)}
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-5 py-3.5">
+                            <span className="text-xs text-gray-600">{formatTime(appointment.appointment_time) || '—'}</span>
+                          </td>
+                          <td className="px-5 py-3.5">
+                            <span className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-semibold whitespace-nowrap ${getStatusColor(appointment.status)}`}>
+                              {getStatusLabel(appointment.status)}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={4} className="px-5 py-10 text-center">
+                          <CalendarDays className="h-8 w-8 text-gray-200 mx-auto mb-2" />
+                          <p className="text-sm font-semibold text-gray-400">No appointments today</p>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
-            </GlassCard>
-
+              {todayAppointments?.length > 0 && (
+                <div className="px-5 py-3 border-t border-gray-100 text-xs text-gray-500">
+                  Showing <span className="font-semibold text-gray-700">1</span> to <span className="font-semibold text-gray-700">{todayAppointments.length}</span> of <span className="font-semibold text-gray-700">{todayAppointments.length}</span> results
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -526,7 +658,7 @@ export default function DoctorDashboard({ stats = {}, scheduledToday = [], recen
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div className="bg-gray-900 px-6 py-5">
+            <div className="bg-gradient-to-r from-[#1e2a4a] to-[#1e3a5f] px-6 py-5">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-4">
                   <div className="h-16 w-16 overflow-hidden rounded-xl bg-white/20 backdrop-blur-sm flex-shrink-0 border-2 border-white/30">
@@ -642,6 +774,102 @@ export default function DoctorDashboard({ stats = {}, scheduledToday = [], recen
                 View Appointment
               </Link>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Appointment Modal */}
+      {showCreateModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setShowCreateModal(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl bg-white shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b px-6 py-4">
+              <h3 className="text-lg font-bold text-gray-900">Create Appointment</h3>
+              <button
+                type="button"
+                onClick={() => setShowCreateModal(false)}
+                className="rounded-lg p-1 text-gray-500 hover:bg-gray-100"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateAppointment} className="space-y-4 px-6 py-5">
+              <div>
+                <label className="mb-1 block text-sm font-semibold text-gray-700">Name</label>
+                <input
+                  type="text"
+                  value={createForm.name}
+                  onChange={(e) => setCreateForm((prev) => ({ ...prev, name: e.target.value }))}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#005963] focus:outline-none"
+                  placeholder="Patient name"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-semibold text-gray-700">Phone</label>
+                <input
+                  type="text"
+                  value={createForm.phone}
+                  onChange={(e) => setCreateForm((prev) => ({ ...prev, phone: e.target.value }))}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#005963] focus:outline-none"
+                  placeholder="+8801..."
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block text-sm font-semibold text-gray-700">Age</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="150"
+                    value={createForm.age}
+                    onChange={(e) => setCreateForm((prev) => ({ ...prev, age: e.target.value }))}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#005963] focus:outline-none"
+                    placeholder="Age"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-semibold text-gray-700">Gender</label>
+                  <select
+                    value={createForm.gender}
+                    onChange={(e) => setCreateForm((prev) => ({ ...prev, gender: e.target.value }))}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#005963] focus:outline-none"
+                    required
+                  >
+                    <option value="">Select</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateModal(false)}
+                  className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-lg bg-[#005963] px-4 py-2 text-sm font-semibold text-white hover:bg-[#00434a]"
+                >
+                  Create
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

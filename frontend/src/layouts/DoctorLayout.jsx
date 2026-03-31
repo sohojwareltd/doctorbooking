@@ -1,7 +1,7 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import DoctorLogo from '../components/DoctorLogo';
 import DoctorSidebar from '../components/DoctorSidebar';
-import { Menu, X } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 
@@ -33,25 +33,19 @@ export default function DoctorLayout({ children, title = '' }) {
         {/* Main Container */}
         <div className="min-h-screen flex flex-col lg:flex-row">
           {/* Mobile Header */}
-          <div className="lg:hidden sticky top-0 z-40 flex items-center justify-between bg-white border-b border-gray-200 px-4 py-3">
+          <div className="lg:hidden sticky top-0 z-40 flex items-center justify-between bg-[#1e2a4a] px-4 py-3">
             <Link href="/" className="flex items-center gap-2">
-              <div className="rounded-lg bg-[#111827] p-1.5">
-                <DoctorLogo className="h-6 w-6" />
+              <div className="rounded-lg bg-white/20 p-1.5">
+                <DoctorLogo className="h-6 w-6 text-white" />
               </div>
-              <div>
-                <div className="text-sm font-black text-gray-900">MediCare</div>
-              </div>
+              <div className="text-sm font-black text-white">MediCare</div>
             </Link>
             <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 rounded-lg hover:bg-gray-100 transition"
-              aria-label="Toggle sidebar"
+              onClick={() => setSidebarOpen(true)}
+              className="p-2 rounded-lg hover:bg-white/10 transition"
+              aria-label="Open sidebar"
             >
-              {sidebarOpen ? (
-                <X className="h-5 w-5 text-gray-700" />
-              ) : (
-                <Menu className="h-5 w-5 text-gray-700" />
-              )}
+              <Menu className="h-5 w-5 text-white" />
             </button>
           </div>
 
@@ -65,12 +59,12 @@ export default function DoctorLayout({ children, title = '' }) {
 
           {/* Sidebar */}
           <aside
-            className={`fixed top-16 lg:top-0 left-0 h-[calc(100vh-4rem)] lg:h-screen w-72 lg:w-64 bg-[#f9fafb] z-40 transform transition-transform duration-300 lg:translate-x-0 ${
+            className={`fixed top-16 lg:top-0 left-0 h-[calc(100vh-4rem)] lg:h-screen w-72 lg:w-64 bg-[#1e2a4a] z-40 transform transition-transform duration-300 lg:translate-x-0 ${
               sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
             }`}
           >
             <div className="h-full overflow-y-auto">
-              <DoctorSidebar currentPath={url} />
+              <DoctorSidebar currentPath={url} onClose={() => setSidebarOpen(false)} />
             </div>
           </aside>
 

@@ -1,7 +1,6 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarCheck2, Search, CheckCircle2, XCircle, Clock, UserCheck, Stethoscope, TestTube, Calendar, Filter, X, Phone, Mail, MapPin, Plus } from 'lucide-react';
-import GlassCard from '../../components/GlassCard';
+import { CalendarCheck2, Search, CheckCircle2, XCircle, Clock, Stethoscope, Calendar, Filter, X, Phone, Mail, MapPin, Plus } from 'lucide-react';
 import DoctorLayout from '../../layouts/DoctorLayout';
 import { formatDisplayDateWithYearFromDateLike, formatDisplayTime12h } from '../../utils/dateFormat';
 import { toastError, toastSuccess } from '../../utils/toast';
@@ -187,55 +186,57 @@ export default function DoctorAppointments({ appointments = [], filters = {} }) 
 
   return (
     <DoctorLayout title="Appointments">
-      <div className="mb-8">
-        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-          <div>
-            <h1 className="text-3xl font-bold text-[#005963]">Appointments</h1>
-            <p className="mt-2 text-gray-600">Manage and track all your patient appointments</p>
+      {/* Hero Banner */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#1e2a4a] via-[#1e3a5f] to-[#c2692a] p-6 shadow-lg mb-6">
+        <div className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full bg-white/5" />
+        <div className="pointer-events-none absolute -bottom-10 right-32 h-36 w-36 rounded-full bg-white/5" />
+        <div className="relative flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex-1">
+            <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-white/80">
+              <CalendarCheck2 className="h-3.5 w-3.5" />
+              Appointments
+            </div>
+            <h1 className="text-2xl font-black text-white">Manage Appointments</h1>
+            <p className="mt-1 text-sm text-white/70">Manage and track all your patient appointments</p>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <span className="text-sm text-white/70"><span className="font-black text-white">{displayCount}</span> found</span>
             <button
               onClick={() => setShowCreateModal(true)}
-              className="flex items-center gap-2 rounded-xl bg-[#005963] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#00434a] transition shadow-sm"
+              className="flex items-center gap-2 rounded-xl bg-white/15 border border-white/20 px-4 py-2.5 text-sm font-semibold text-white hover:bg-white/25 transition"
             >
               <Plus className="h-4 w-4" />
               Create Appointment
             </button>
-            <div className="text-sm text-gray-600">
-              <span className="font-bold text-[#005963]">{displayCount}</span> appointment{displayCount !== 1 ? 's' : ''} found
-            </div>
           </div>
         </div>
       </div>
 
       <div className="space-y-6">
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-6">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
           {[
-            { label: 'Total', value: rows.length, color: 'bg-gray-50 text-gray-700 border-gray-200', icon: CalendarCheck2 },
-            { label: 'Scheduled', value: rows.filter(a => a.status === 'scheduled').length, color: 'bg-blue-50 text-blue-700 border-blue-200', icon: Calendar },
-            { label: 'Arrived', value: rows.filter(a => a.status === 'arrived').length, color: 'bg-amber-50 text-amber-700 border-amber-200', icon: UserCheck },
-            { label: 'In Visit', value: rows.filter(a => a.status === 'in_consultation').length, color: 'bg-purple-50 text-purple-700 border-purple-200', icon: Stethoscope },
-            { label: 'Awaiting Tests', value: rows.filter(a => a.status === 'awaiting_tests').length, color: 'bg-orange-50 text-orange-700 border-orange-200', icon: TestTube },
-            { label: 'Prescribed', value: rows.filter(a => a.status === 'prescribed').length, color: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: CheckCircle2 },
-          ].map((stat, idx) => {
-            const Icon = stat.icon;
-            return (
-              <GlassCard key={idx} variant="solid" className={`border-2 p-4 ${stat.color}`}>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-xs font-semibold opacity-75">{stat.label}</div>
-                    <div className="mt-2 text-2xl font-black">{stat.value}</div>
-                  </div>
-                  <Icon className="h-6 w-6 opacity-50" />
+            { label: 'Total', value: rows.length, iconBg: 'bg-gray-100', iconColor: 'text-gray-600', Icon: CalendarCheck2 },
+            { label: 'Scheduled', value: rows.filter(a => a.status === 'scheduled').length, iconBg: 'bg-blue-100', iconColor: 'text-blue-600', Icon: Calendar },
+            { label: 'In Visit', value: rows.filter(a => a.status === 'in_consultation').length, iconBg: 'bg-purple-100', iconColor: 'text-purple-600', Icon: Stethoscope },
+            { label: 'Prescribed', value: rows.filter(a => a.status === 'prescribed').length, iconBg: 'bg-emerald-100', iconColor: 'text-emerald-600', Icon: CheckCircle2 },
+          ].map((stat, idx) => (
+            <div key={idx} className="rounded-2xl bg-white border border-gray-100 p-5 shadow-sm">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{stat.label}</p>
+                  <p className="mt-2 text-3xl font-black text-gray-900">{stat.value}</p>
                 </div>
-              </GlassCard>
-            );
-          })}
+                <div className={`rounded-xl p-2.5 ${stat.iconBg}`}>
+                  <stat.Icon className={`h-5 w-5 ${stat.iconColor}`} />
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
 
         {/* Main Table Card */}
-        <GlassCard variant="solid" hover={false} className="overflow-hidden border border-[#00acb1]/20">
+        <div className="rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden">
           {/* Header with Filters and Search */}
           <div className="space-y-4 border-b border-gray-200 bg-gradient-to-r from-white to-[#00acb1]/5 px-6 py-5">
             <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
@@ -325,9 +326,9 @@ export default function DoctorAppointments({ appointments = [], filters = {} }) 
           {/* Table */}
           <div className="overflow-x-auto">
             <table className="w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+              <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
-                  <th className="w-12 px-4 py-4 text-left">
+                  <th className="w-12 px-4 py-3 text-left">
                     <input
                       type="checkbox"
                       onChange={(e) => {
@@ -341,15 +342,15 @@ export default function DoctorAppointments({ appointments = [], filters = {} }) 
                       className="rounded border-gray-300"
                     />
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-700">#</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-700">Patient</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-700">Date</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-700">Time</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-700">Status</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-700">Action</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">#</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Patient</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Date</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Time</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Status</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200 bg-white">
+              <tbody className="divide-y divide-gray-100 bg-white">
                 {filteredRows.map((a, idx) => {
                   const canCreatePrescription = !a.has_prescription && ['in_consultation', 'awaiting_tests', 'prescribed'].includes(a.status);
                   const isSelected = selectedIds.includes(a.id);
@@ -369,26 +370,26 @@ export default function DoctorAppointments({ appointments = [], filters = {} }) 
                           className="rounded border-gray-300"
                         />
                       </td>
-                      <td className="px-6 py-4 text-sm font-semibold text-gray-700">{a.serial_no || ((pagination?.current_page - 1) * (pagination?.per_page || 15) + idx + 1)}</td>
-                      <td className="px-6 py-4">
+                      <td className="px-5 py-3.5 text-sm font-semibold text-gray-700">{a.serial_no || ((pagination?.current_page - 1) * (pagination?.per_page || 15) + idx + 1)}</td>
+                      <td className="px-5 py-3.5">
                         <button
                           onClick={() => setSelectedPatient(a)}
                           className="text-left hover:underline"
                         >
-                          <div className="font-semibold text-[#005963] hover:text-[#00acb1] transition">{getPatientName(a)}</div>
+                          <div className="font-semibold text-gray-900 hover:text-[#005963] transition">{getPatientName(a)}</div>
                           {getPatientPhone(a) && (
-                            <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                            <div className="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
                               <Phone className="h-3 w-3" />
                               {getPatientPhone(a)}
                             </div>
                           )}
                           {a.symptoms && (
-                            <div className="text-xs text-gray-500 mt-1 truncate max-w-xs">{a.symptoms}</div>
+                            <div className="text-xs text-gray-400 mt-0.5 truncate max-w-xs">{a.symptoms}</div>
                           )}
                         </button>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-700 whitespace-nowrap">{formatDisplayDateWithYearFromDateLike(a.appointment_date) || a.appointment_date}</td>
-                      <td className="px-6 py-4 text-sm text-gray-700 whitespace-nowrap">
+                      <td className="px-5 py-3.5 text-sm text-gray-600 whitespace-nowrap">{formatDisplayDateWithYearFromDateLike(a.appointment_date) || a.appointment_date}</td>
+                      <td className="px-5 py-3.5 text-sm text-gray-600 whitespace-nowrap">
                         <div className="flex items-center gap-1">
                           <Clock className="h-3 w-3 text-gray-400" />
                           {formatDisplayTime12h(a.appointment_time) || a.appointment_time}
@@ -420,23 +421,25 @@ export default function DoctorAppointments({ appointments = [], filters = {} }) 
                           </select>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-sm">
+                      <td className="px-5 py-3.5 text-sm">
                         {a.has_prescription && a.prescription_id ? (
                           <Link
                             href={`/doctor/prescriptions/${a.prescription_id}`}
-                            className="inline-flex items-center justify-center rounded-lg border border-[#00acb1]/40 bg-white px-3 py-1.5 text-xs font-semibold text-[#005963] hover:bg-[#00acb1]/10 transition"
+                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-[#005963] transition"
                           >
-                            Prescription
+                            <FileText className="h-3.5 w-3.5" />
+                            View Rx
                           </Link>
                         ) : canCreatePrescription ? (
                           <Link
                             href={`/doctor/prescriptions/create?appointment_id=${a.id}`}
-                            className="inline-flex items-center justify-center rounded-lg border border-[#00acb1] bg-[#00acb1]/10 px-3 py-1.5 text-xs font-semibold text-[#005963] hover:bg-[#00acb1]/20 transition"
+                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#005963] hover:text-[#00434a] transition"
                           >
-                            Create Prescription
+                            <FileText className="h-3.5 w-3.5" />
+                            Create Rx
                           </Link>
                         ) : (
-                          <span className="text-xs text-gray-400">—</span>
+                          <span className="text-xs text-gray-300">—</span>
                         )}
                       </td>
                     </tr>
@@ -446,8 +449,8 @@ export default function DoctorAppointments({ appointments = [], filters = {} }) 
                   <tr>
                     <td colSpan={7} className="px-6 py-12 text-center">
                       <div className="text-gray-400">
-                        <CalendarCheck2 className="mx-auto mb-3 h-8 w-8 opacity-50" />
-                        <p className="font-semibold">No appointments found</p>
+                        <CalendarCheck2 className="mx-auto mb-3 h-8 w-8 opacity-40" />
+                        <p className="font-semibold text-sm">No appointments found</p>
                       </div>
                     </td>
                   </tr>
@@ -458,11 +461,10 @@ export default function DoctorAppointments({ appointments = [], filters = {} }) 
 
           {/* Pagination */}
           {pagination?.data && typeof pagination.current_page === 'number' ? (
-            <div className="border-t border-gray-200 bg-gray-50 px-6 py-4">
-              <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-                <div className="text-sm text-gray-600">
-                  Page <span className="font-bold text-[#005963]">{pagination.current_page}</span> of <span className="font-bold text-[#005963]">{pagination.last_page}</span> • Total: <span className="font-bold text-[#005963]">{pagination.total}</span>
-                </div>
+            <div className="border-t border-gray-100 bg-white px-5 py-3.5 flex flex-col justify-between gap-3 md:flex-row md:items-center">
+              <p className="text-xs text-gray-500">
+                Showing <span className="font-semibold text-gray-700">1</span> to <span className="font-semibold text-gray-700">{Math.min(pagination.per_page * pagination.current_page, pagination.total)}</span> of <span className="font-semibold text-gray-700">{pagination.total}</span> results
+              </p>
                 <div className="flex items-center gap-2">
                   {(() => {
                     const prev = (pagination.links || []).find((l) => String(l.label).toLowerCase().includes('previous'));
@@ -489,11 +491,10 @@ export default function DoctorAppointments({ appointments = [], filters = {} }) 
                       </>
                     );
                   })()}
-                </div>
               </div>
             </div>
           ) : null}
-        </GlassCard>
+        </div>
       </div>
 
       {/* Patient Info Modal */}

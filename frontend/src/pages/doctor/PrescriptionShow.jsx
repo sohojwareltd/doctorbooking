@@ -375,76 +375,92 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
   return (
     <DoctorLayout title="Prescription Details">
 
-      {/* Page Header */}
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 print:hidden">
-        <div className="flex items-center gap-3">
-          <Link
-            href="/doctor/prescriptions"
-            className="flex items-center gap-2 rounded-xl border-2 border-[#005963]/30 bg-white px-4 py-2 text-sm font-semibold text-[#005963] shadow-sm transition hover:bg-[#005963]/5"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to List
-          </Link>
-          <h1 className="text-lg font-bold text-gray-800">
-            Prescription <span className="text-[#005963]">#{data?.id}</span>
-          </h1>
-          {data?.appointment?.status && (
-            <span className={`rounded-full px-3 py-1 text-xs font-bold ${
-              data.appointment.status === 'prescribed' ? 'bg-emerald-100 text-emerald-700' :
-              data.appointment.status === 'awaiting_tests' ? 'bg-amber-100 text-amber-700' :
-              data.appointment.status === 'in_consultation' ? 'bg-blue-100 text-blue-700' :
-              'bg-gray-100 text-gray-700'
-            }`}>
-              {data.appointment.status.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}
-            </span>
-          )}
-        </div>
+      {/* Hero Banner */}
+      <div className="relative mb-6 overflow-hidden rounded-2xl bg-gradient-to-r from-[#1e2a4a] via-[#1e3a5f] to-[#c2692a] p-8 shadow-lg print:hidden">
+        {/* Decorative circles */}
+        <div className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full bg-white/5" />
+        <div className="pointer-events-none absolute -bottom-10 right-32 h-36 w-36 rounded-full bg-white/5" />
 
-        {/* Print / Share / Download */}
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative">
+        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          {/* Left */}
+          <div className="flex-1">
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-white/80 backdrop-blur-sm">
+              <FileText className="h-3.5 w-3.5" />
+              Prescription Details
+            </div>
+            <h1 className="text-3xl font-black leading-tight text-white lg:text-4xl">
+              Prescription <span className="text-white/70">#{data?.id}</span>
+            </h1>
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              {data?.appointment?.status && (
+                <span className={`rounded-full px-3 py-1 text-xs font-bold ${
+                  data.appointment.status === 'prescribed' ? 'bg-emerald-400/20 text-emerald-200 border border-emerald-400/30' :
+                  data.appointment.status === 'awaiting_tests' ? 'bg-amber-400/20 text-amber-200 border border-amber-400/30' :
+                  data.appointment.status === 'in_consultation' ? 'bg-blue-400/20 text-blue-200 border border-blue-400/30' :
+                  'bg-white/10 text-white/70 border border-white/20'
+                }`}>
+                  {data.appointment.status.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                </span>
+              )}
+              {patientName && (
+                <span className="text-sm text-white/60">Patient: <span className="font-semibold text-white/90">{patientName}</span></span>
+              )}
+            </div>
+          </div>
+
+          {/* Right – Actions */}
+          <div className="flex flex-wrap items-center gap-2 lg:flex-shrink-0">
+            <Link
+              href="/doctor/prescriptions"
+              className="flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/20"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back
+            </Link>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setSharing(!sharing)}
+                className="flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/20"
+              >
+                <Share2 className="h-4 w-4" />
+                Share
+              </button>
+              {sharing && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setSharing(false)} />
+                  <div className="absolute right-0 top-full z-50 mt-2 w-48 rounded-xl border border-gray-200 bg-white shadow-lg">
+                    <button onClick={() => { handleShareEmail(); setSharing(false); }} className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-semibold text-gray-700 hover:bg-gray-50 transition first:rounded-t-xl">
+                      <Mail className="h-4 w-4 text-blue-600" /> Share via Email
+                    </button>
+                    <button onClick={() => { handleShareWhatsApp(); setSharing(false); }} className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-semibold text-gray-700 hover:bg-gray-50 transition">
+                      <MessageCircle className="h-4 w-4 text-green-600" /> Share via WhatsApp
+                    </button>
+                    <button onClick={() => { handleShareLink(); setSharing(false); }} className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-semibold text-gray-700 hover:bg-gray-50 transition last:rounded-b-xl">
+                      <Share2 className="h-4 w-4 text-gray-600" /> Copy Link
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
             <button
               type="button"
-              onClick={() => setSharing(!sharing)}
-              className="flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50"
+              onClick={handleDownloadPDF}
+              disabled={downloadingPDF}
+              className="flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/20 disabled:opacity-50"
             >
-              <Share2 className="h-4 w-4" />
-              Share
+              {downloadingPDF ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" /> : <Download className="h-4 w-4" />}
+              {downloadingPDF ? 'Generating...' : 'PDF'}
             </button>
-            {sharing && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setSharing(false)} />
-                <div className="absolute right-0 top-full z-50 mt-2 w-48 rounded-xl border border-gray-200 bg-white shadow-lg">
-                  <button onClick={() => { handleShareEmail(); setSharing(false); }} className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-semibold text-gray-700 hover:bg-gray-50 transition first:rounded-t-xl">
-                    <Mail className="h-4 w-4 text-blue-600" /> Share via Email
-                  </button>
-                  <button onClick={() => { handleShareWhatsApp(); setSharing(false); }} className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-semibold text-gray-700 hover:bg-gray-50 transition">
-                    <MessageCircle className="h-4 w-4 text-green-600" /> Share via WhatsApp
-                  </button>
-                  <button onClick={() => { handleShareLink(); setSharing(false); }} className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-semibold text-gray-700 hover:bg-gray-50 transition last:rounded-b-xl">
-                    <Share2 className="h-4 w-4 text-gray-600" /> Copy Link
-                  </button>
-                </div>
-              </>
-            )}
+            <button
+              type="button"
+              onClick={handlePrint}
+              className="flex items-center gap-2 rounded-xl bg-white/20 px-4 py-2 text-sm font-bold text-white backdrop-blur-sm transition hover:bg-white/30"
+            >
+              <Printer className="h-4 w-4" />
+              Print
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={handleDownloadPDF}
-            disabled={downloadingPDF}
-            className="flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 disabled:opacity-50"
-          >
-            {downloadingPDF ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-500 border-t-transparent" /> : <Download className="h-4 w-4" />}
-            {downloadingPDF ? 'Generating...' : 'Download PDF'}
-          </button>
-          <button
-            type="button"
-            onClick={handlePrint}
-            className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#005963] to-[#00acb1] px-4 py-2 text-sm font-bold text-white shadow-lg transition hover:shadow-xl"
-          >
-            <Printer className="h-4 w-4" />
-            Print
-          </button>
         </div>
       </div>
 

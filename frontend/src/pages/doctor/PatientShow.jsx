@@ -2,7 +2,6 @@ import { Head, Link, usePage, router } from '@inertiajs/react';
 import { User, Mail, Phone, MapPin, Calendar, Weight, Stethoscope, FileText, ArrowLeft, Eye, Download, ChevronDown, ChevronUp, CheckCircle, XCircle, ClipboardList } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import DoctorLayout from '../../layouts/DoctorLayout';
-import GlassCard from '../../components/GlassCard';
 import { formatDisplayFromDateLike, formatDisplayDate } from '../../utils/dateFormat';
 
 export default function PatientShow({ patient, appointments = [], prescriptions = [] }) {
@@ -43,82 +42,78 @@ export default function PatientShow({ patient, appointments = [], prescriptions 
       <Head title={`${patient.name} - Patient Details`} />
       
       <DoctorLayout>
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-4">
-          {/* Header */}
-          <div className="mb-4">
-            <Link
-              href="/doctor/patients"
-              className="inline-flex items-center gap-2 text-indigo-600 hover:text-indigo-800 mb-2 font-medium transition-colors text-sm"
-            >
-              <ArrowLeft size={18} />
-              Back to Patients
-            </Link>
-            
-            <div className="flex items-start justify-between">
-              <div>
-                <h1 className="text-3xl font-bold text-slate-900 mb-1">{patient.name}</h1>
-                <p className="text-slate-600 text-sm">Patient Details & History</p>
-              </div>
+        {/* Hero Banner */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#1e2a4a] via-[#1e3a5f] to-[#c2692a] p-6 shadow-lg mb-6">
+          <div className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full bg-white/5" />
+          <div className="pointer-events-none absolute -bottom-10 right-32 h-36 w-36 rounded-full bg-white/5" />
+          <div className="relative flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <Link
+                href="/doctor/patients"
+                className="mb-2 inline-flex items-center gap-1 text-white/70 hover:text-white text-sm font-medium transition-colors"
+              >
+                <ArrowLeft size={16} />
+                Back to Patients
+              </Link>
+              <h1 className="text-2xl font-black text-white">{patient.name}</h1>
+              <p className="mt-1 text-sm text-white/70">Patient Details &amp; History</p>
             </div>
           </div>
+        </div>
 
           {/* Stats Cards Row - Top */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-            {/* Total Appointments Card */}
-            <GlassCard variant="solid" hover={false} className="p-5 border-l-4 border-l-blue-500">
+            <div className="rounded-2xl bg-white border border-gray-100 p-5 shadow-sm">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="text-xs font-semibold uppercase tracking-wider text-gray-500">Total Appointments</div>
                   <div className="mt-3 text-4xl font-black text-blue-600">{appointmentStats.total}</div>
                 </div>
-                <div className="rounded-xl bg-blue-500/10 p-3">
+                <div className="rounded-xl bg-blue-100 p-3">
                   <Calendar className="h-6 w-6 text-blue-600" />
                 </div>
               </div>
-            </GlassCard>
+            </div>
 
-            {/* Arrived Card */}
-            <GlassCard variant="solid" hover={false} className="p-5 border-l-4 border-l-green-500">
+            <div className="rounded-2xl bg-white border border-gray-100 p-5 shadow-sm">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="text-xs font-semibold uppercase tracking-wider text-gray-500">Arrived</div>
                   <div className="mt-3 text-4xl font-black text-green-600">{appointmentStats.arrived}</div>
                 </div>
-                <div className="rounded-xl bg-green-500/10 p-3">
+                <div className="rounded-xl bg-green-100 p-3">
                   <CheckCircle className="h-6 w-6 text-green-600" />
                 </div>
               </div>
-            </GlassCard>
+            </div>
 
-            {/* Prescribed Card */}
-            <GlassCard variant="solid" hover={false} className="p-5 border-l-4 border-l-cyan-500">
+            <div className="rounded-2xl bg-white border border-gray-100 p-5 shadow-sm">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="text-xs font-semibold uppercase tracking-wider text-gray-500">Prescribed</div>
                   <div className="mt-3 text-4xl font-black text-cyan-600">{appointmentStats.prescribed}</div>
                 </div>
-                <div className="rounded-xl bg-cyan-500/10 p-3">
+                <div className="rounded-xl bg-cyan-100 p-3">
                   <ClipboardList className="h-6 w-6 text-cyan-600" />
                 </div>
               </div>
-            </GlassCard>
+            </div>
 
-            {/* Cancelled Card */}
-            <GlassCard variant="solid" hover={false} className="p-5 border-l-4 border-l-red-500">
+            <div className="rounded-2xl bg-white border border-gray-100 p-5 shadow-sm">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="text-xs font-semibold uppercase tracking-wider text-gray-500">Cancelled</div>
                   <div className="mt-3 text-4xl font-black text-red-600">{appointmentStats.cancelled}</div>
                 </div>
-                <div className="rounded-xl bg-red-500/10 p-3">
+                <div className="rounded-xl bg-red-100 p-3">
                   <XCircle className="h-6 w-6 text-red-600" />
                 </div>
               </div>
-            </GlassCard>
+            </div>
           </div>
 
           {/* Tabs Section - Personal Info, Appointments & Prescriptions */}
-          <GlassCard className="mt-4">
+          <div className="rounded-2xl bg-white border border-gray-100 shadow-sm mt-4">
             <div className="border-b border-slate-200">
               <div className="flex">
                 <button
@@ -340,8 +335,7 @@ export default function PatientShow({ patient, appointments = [], prescriptions 
                 </div>
               )}
             </div>
-          </GlassCard>
-        </div>
+          </div>
       </DoctorLayout>
     </>
   );

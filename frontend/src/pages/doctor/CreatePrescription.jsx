@@ -20,7 +20,6 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useReducer, useState } from 'react';
 import DoctorLayout from '../../layouts/DoctorLayout';
-import GlassCard from '../../components/GlassCard';
 import { toastError, toastSuccess } from '../../utils/toast';
 
 const COMMON_TESTS = [
@@ -515,14 +514,32 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
 
     return (
         <DoctorLayout title="Create Prescription">
-            <div className="mb-8 flex items-center justify-between">
-                <h1 className="text-3xl font-black text-[#005963]">Create Prescription</h1>
-                <Link
-                    href="/doctor/prescriptions"
-                    className="rounded-2xl bg-[#00acb1]/10 px-6 py-3 font-semibold text-[#005963] transition hover:bg-[#00acb1]/20"
-                >
-                    ← Back to List
-                </Link>
+            {/* Hero Banner */}
+            <div className="relative mb-8 overflow-hidden rounded-2xl bg-gradient-to-r from-[#1e2a4a] via-[#1e3a5f] to-[#c2692a] p-8 shadow-lg">
+                {/* Decorative circles */}
+                <div className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full bg-white/5" />
+                <div className="pointer-events-none absolute -bottom-10 right-32 h-36 w-36 rounded-full bg-white/5" />
+
+                <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex-1">
+                        <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-white/80 backdrop-blur-sm">
+                            <FileText className="h-3.5 w-3.5" />
+                            New Prescription
+                        </div>
+                        <h1 className="text-3xl font-black leading-tight text-white lg:text-4xl">
+                            Create Prescription
+                        </h1>
+                        <p className="mt-2 max-w-lg text-sm text-white/70">
+                            Fill in patient details, diagnosis, and medications to generate a complete prescription.
+                        </p>
+                    </div>
+                    <Link
+                        href="/doctor/prescriptions"
+                        className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-5 py-2.5 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/20"
+                    >
+                        ← Back to List
+                    </Link>
+                </div>
             </div>
 
             {/* Alert Messages with Icons */}
@@ -530,9 +547,8 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                 <div
                     className={`animate-in slide-in-from-top mb-6 duration-300`}
                 >
-                    <GlassCard
-                        variant="solid"
-                        className={`p-5 ${success ? 'border-emerald-300 bg-gradient-to-r from-emerald-50 to-emerald-100/60' : 'border-rose-300 bg-gradient-to-r from-rose-50 to-rose-100/60'}`}
+                    <div
+                        className={`rounded-2xl border p-5 ${success ? 'border-emerald-300 bg-gradient-to-r from-emerald-50 to-emerald-100/60' : 'border-rose-300 bg-gradient-to-r from-rose-50 to-rose-100/60'}`}
                     >
                         <div className="flex items-center gap-3">
                             {success ? (
@@ -546,7 +562,7 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                 {success || error}
                             </div>
                         </div>
-                    </GlassCard>
+                    </div>
                 </div>
             )}
 
