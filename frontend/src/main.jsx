@@ -1,6 +1,7 @@
 import { createInertiaApp } from '@inertiajs/react';
 import { createRoot } from 'react-dom/client';
 import ToastHost from './components/ToastHost';
+import './css/app.css';
 
 const pages = import.meta.glob('./pages/**/*.jsx', { eager: true });
 

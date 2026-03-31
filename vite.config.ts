@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url';
 export default defineConfig({
     plugins: [
         laravel({
-            input: ['frontend/src/css/app.css', 'frontend/src/main.jsx'],
+            input: ['frontend/src/main.jsx'],
             refresh: true,
         }),
         react(),

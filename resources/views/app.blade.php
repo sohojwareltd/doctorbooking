@@ -13,7 +13,7 @@
 
         <!-- Scripts -->
         @viteReactRefresh
-        @vite(['frontend/src/css/app.css', 'frontend/src/main.jsx'])
+        @vite('frontend/src/main.jsx')
         @inertiaHead
     </head>
     <body class="font-sans antialiased">

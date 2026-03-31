@@ -1,17 +1,11 @@
 {
-  "frontend/src/css/app.css": {
-    "file": "assets/app-DB9d3E28.css",
-    "src": "frontend/src/css/app.css",
-    "isEntry": true,
-    "name": "app",
-    "names": [
-      "app.css"
-    ]
-  },
   "frontend/src/main.jsx": {
-    "file": "assets/main-BYYdCPPf.js",
+    "file": "assets/main-D3geWD0w.js",
     "name": "main",
     "src": "frontend/src/main.jsx",
-    "isEntry": true
+    "isEntry": true,
+    "css": [
+      "assets/main-DB9d3E28.css"
+    ]
   }
 }
