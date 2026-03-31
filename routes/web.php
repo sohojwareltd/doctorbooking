@@ -286,13 +286,15 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
 
         // Auto-heal: if an in_consultation appointment already has a prescription,
         // it was saved without an action — move it to awaiting_tests automatically.
-        $inVisitCollection->each(function ($a) {
+        $inVisitCollection->each(function (Appointment $a) {
             if ($a->prescription) {
                 $a->update(['status' => 'awaiting_tests']);
             }
         });
         // Remove auto-healed ones from the in-visit list
-        $inVisitCollection = $inVisitCollection->filter(fn ($a) => $a->status === 'in_consultation')->values();
+        $inVisitCollection = $inVisitCollection
+            ->filter(fn (Appointment $a) => $a->getAttribute('status') === 'in_consultation')
+            ->values();
 
         $inVisitAppointments = $inVisitCollection->map(fn ($a) => [
             'id' => $a->id,
