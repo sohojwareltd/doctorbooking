@@ -1,6 +1,6 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarCheck2, Search, CheckCircle2, XCircle, Clock, Stethoscope, Calendar, Filter, X, Phone, Mail, MapPin, Plus } from 'lucide-react';
+import { CalendarCheck2, Search, CheckCircle2, XCircle, Clock, Stethoscope, Calendar, Filter, X, Phone, Mail, MapPin, Plus, FileText } from 'lucide-react';
 import DoctorLayout from '../../layouts/DoctorLayout';
 import { formatDisplayDateWithYearFromDateLike, formatDisplayTime12h } from '../../utils/dateFormat';
 import { toastError, toastSuccess } from '../../utils/toast';
