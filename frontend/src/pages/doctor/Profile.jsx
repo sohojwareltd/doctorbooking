@@ -169,24 +169,7 @@ export default function DoctorProfile({ doctor = {} }) {
                 </div>
             )}
 
-            {/* Hero Banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#1e2a4a] via-[#1e3a5f] to-[#c2692a] p-6 shadow-lg mb-6">
-        <div className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full bg-white/5" />
-        <div className="pointer-events-none absolute -bottom-10 right-32 h-36 w-36 rounded-full bg-white/5" />
-        <div className="relative flex items-center gap-4">
-          <div className="rounded-xl bg-white/15 p-3">
-            <User className="h-7 w-7 text-white" />
-          </div>
-          <div>
-            <div className="mb-1 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-white/80">
-              My Profile
-            </div>
-            <h1 className="text-2xl font-black text-white">Doctor Profile</h1>
-          </div>
-        </div>
-      </div>
-
-            {/* Success Message */}
+                        {/* Success Message */}
             {showSuccess && (
                 <div className="animate-in slide-in-from-top mb-6 duration-300">
                     <div className="rounded-2xl border border-emerald-300 bg-gradient-to-r from-emerald-50 to-emerald-100/60 p-5">
@@ -201,7 +184,7 @@ export default function DoctorProfile({ doctor = {} }) {
             )}
 
             {/* Profile Photo & Preview Section */}
-            <div className="mb-5 overflow-hidden rounded-2xl bg-white border border-gray-100 shadow-sm">
+            <div className="mb-5 overflow-hidden rounded-xl bg-white border border-gray-100 shadow-sm">
                 <div className="flex flex-col lg:flex-row">
                     {/* Left Side - Photo Upload with Gradient Background */}
                     <div className="relative flex-1 bg-gradient-to-br from-[#005963]/5 via-white to-[#00acb1]/5 p-8">
@@ -384,7 +367,7 @@ export default function DoctorProfile({ doctor = {} }) {
                 {activeTab === 'profile' && (
                 <div className="grid gap-8 lg:grid-cols-2">
                     {/* Personal Information */}
-                    <div className="rounded-2xl bg-white border border-gray-100 p-6 shadow-sm">
+                    <div className="rounded-xl bg-white border border-gray-100 p-7 shadow-sm">
                         <div className="mb-6 flex items-center gap-3">
                             <div className="rounded-xl bg-[#005963]/10 p-3">
                                 <User className="h-6 w-6 text-[#005963]" />
@@ -495,7 +478,7 @@ export default function DoctorProfile({ doctor = {} }) {
                     </div>
 
                     {/* Professional Information */}
-                    <div className="rounded-2xl bg-white border border-gray-100 p-6 shadow-sm">
+                    <div className="rounded-xl bg-white border border-gray-100 p-7 shadow-sm">
                         <div className="mb-6 flex items-center gap-3">
                             <div className="rounded-xl bg-[#005963]/10 p-3">
                                 <Stethoscope className="h-6 w-6 text-[#005963]" />
@@ -573,7 +556,7 @@ export default function DoctorProfile({ doctor = {} }) {
                 )}
 
                 {activeTab === 'about' && (
-                    <div className="rounded-2xl bg-white border border-gray-100 p-6 shadow-sm">
+                    <div className="rounded-xl bg-white border border-gray-100 p-7 shadow-sm">
                         <div className="mb-6 flex items-center gap-3">
                             <div className="rounded-xl bg-[#005963]/10 p-3">
                                 <FileText className="h-6 w-6 text-[#005963]" />

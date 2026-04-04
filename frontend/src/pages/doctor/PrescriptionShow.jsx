@@ -376,10 +376,10 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
     <DoctorLayout title="Prescription Details">
 
       {/* Hero Banner */}
-      <div className="relative mb-6 overflow-hidden rounded-2xl bg-gradient-to-r from-[#1e2a4a] via-[#1e3a5f] to-[#c2692a] p-8 shadow-lg print:hidden">
+      <div className="relative mb-6 overflow-hidden rounded-3xl bg-gradient-to-br from-[#2d4a7a] via-[#3b6998] to-[#e08a4a] p-8 shadow-md print:hidden">
         {/* Decorative circles */}
-        <div className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full bg-white/5" />
-        <div className="pointer-events-none absolute -bottom-10 right-32 h-36 w-36 rounded-full bg-white/5" />
+        <div className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full bg-white/10" />
+        <div className="pointer-events-none absolute -bottom-10 right-32 h-36 w-36 rounded-full bg-white/10" />
 
         <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           {/* Left */}

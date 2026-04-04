@@ -1,6 +1,8 @@
 import { Link, usePage } from '@inertiajs/react';
-import { CalendarDays, ClipboardList, LayoutDashboard, Settings, Users, User, UserCog, LogOut, X, Stethoscope, Globe } from 'lucide-react';
-import DoctorLogo from './DoctorLogo';
+import {
+  CalendarDays, ClipboardList, LayoutDashboard, Users, User, UserCog, X,
+  Stethoscope, Globe, CalendarClock, BarChart3, CreditCard, Settings, CircleHelp, LogOut
+} from 'lucide-react';
 
 export default function DoctorSidebar({ currentPath, onClose }) {
   const { auth } = usePage().props;
@@ -8,93 +10,91 @@ export default function DoctorSidebar({ currentPath, onClose }) {
 
   const navGroups = [
     {
-      label: 'Main',
+      label: 'Menu',
       items: [
         { href: '/doctor/dashboard', label: 'Dashboard', Icon: LayoutDashboard },
-        { href: '/doctor/appointments', label: 'Appointments', Icon: CalendarDays },
+        { href: '/doctor/appointments', label: 'Appointments', Icon: CalendarDays, badge: null },
         { href: '/doctor/patients', label: 'Patients', Icon: Users },
         { href: '/doctor/prescriptions', label: 'Prescriptions', Icon: ClipboardList },
-      ]
+      ],
     },
     {
-      label: 'System',
+      label: 'Practice',
       items: [
         { href: '/doctor/chambers', label: 'Chambers', Icon: Stethoscope },
-        { href: '/doctor/schedule', label: 'Schedule', Icon: Settings },
-        { href: '/doctor/profile', label: 'My Profile', Icon: UserCog },
-      ]
-    }
+        { href: '/doctor/schedule', label: 'Schedule', Icon: CalendarClock },
+      ],
+    },
+    {
+      label: 'Settings',
+      items: [
+        { href: '/doctor/profile', label: 'Profile', Icon: UserCog },
+      ],
+    },
   ];
 
-  const isActive = (href) => {
-    return currentPath === href || currentPath.startsWith(href + '/');
-  };
+  const isActive = (href) => currentPath === href || currentPath.startsWith(href + '/');
 
   return (
     <div className="flex flex-col h-full bg-[#1e2a4a]">
-      {/* Mobile Close Button (inside sidebar) */}
+      {/* Mobile Close */}
       <div className="lg:hidden flex justify-end px-3 pt-3">
-        <button
-          onClick={onClose}
-          className="p-2 rounded-lg text-white/60 hover:bg-white/10 hover:text-white transition"
-          aria-label="Close sidebar"
-        >
+        <button onClick={onClose} className="p-2 rounded-lg text-white/60 hover:bg-white/10 hover:text-white transition" aria-label="Close sidebar">
           <X className="h-5 w-5" />
         </button>
       </div>
 
-      {/* Brand Header — desktop only */}
-      <div className="hidden lg:flex flex-shrink-0 px-5 py-5">
+      {/* Brand */}
+      <div className="flex-shrink-0 px-5 pt-6 pb-4">
         <Link href="/doctor/dashboard" className="flex items-center gap-3 group">
-          <div className="rounded-xl bg-white/15 p-2.5 group-hover:bg-white/20 transition">
+          <div className="rounded-xl bg-[#00acb1] p-2 group-hover:bg-[#009a9e] transition">
             <Globe className="h-5 w-5 text-white" />
           </div>
           <div>
-            <div className="text-base font-black text-white tracking-wide">MediCare</div>
-            <div className="text-[11px] text-white/50 font-medium">Doctor Portal</div>
+            <div className="text-[15px] font-bold text-white tracking-wide">MediCare</div>
+            <div className="text-[10px] text-white/40 font-medium tracking-wide">Doctor Portal</div>
           </div>
         </Link>
       </div>
 
       {/* Navigation */}
-      <div className="flex-1 overflow-y-auto px-3 pb-4 mt-2">
-        {navGroups.map((group, groupIndex) => (
-          <div key={groupIndex} className={groupIndex > 0 ? 'mt-7' : ''}>
-            <div className="px-3 mb-3">
-              <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">
-                {group.label}
-              </span>
+      <nav className="flex-1 overflow-y-auto px-3 pb-4">
+        {navGroups.map((group, gi) => (
+          <div key={gi} className={gi > 0 ? 'mt-6' : ''}>
+            <div className="px-3 mb-2">
+              <span className="text-[10px] font-bold text-white/30 uppercase tracking-[0.15em]">{group.label}</span>
             </div>
             <div className="space-y-0.5">
-              {group.items.map(({ href, label, Icon }) => (
-                <Link
-                  key={href}
-                  href={href}
-                  className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                    isActive(href)
-                      ? 'bg-white/15 text-white shadow-sm'
-                      : 'text-white/60 hover:bg-white/8 hover:text-white'
-                  }`}
-                >
-                  <Icon className={`h-[18px] w-[18px] flex-shrink-0 transition-colors ${
-                    isActive(href) ? 'text-white' : 'text-white/50 group-hover:text-white/80'
-                  }`} />
-                  <span className="flex-1 leading-none">{label}</span>
-                  {isActive(href) && (
-                    <span className="h-1.5 w-1.5 rounded-full bg-white/70 flex-shrink-0" />
-                  )}
-                </Link>
-              ))}
+              {group.items.map(({ href, label, Icon, badge }) => {
+                const active = isActive(href);
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all ${
+                      active
+                        ? 'bg-[#3b82f6] text-white shadow-lg shadow-blue-500/20'
+                        : 'text-white/70 hover:bg-white/8 hover:text-white'
+                    }`}
+                  >
+                    <Icon className={`h-[18px] w-[18px] flex-shrink-0 ${active ? 'text-white' : 'text-white/50 group-hover:text-white/80'}`} />
+                    <span className="flex-1">{label}</span>
+                    {badge != null && (
+                      <span className="rounded-full bg-[#3b82f6] px-2 py-0.5 text-[10px] font-bold text-white min-w-[20px] text-center">{badge}</span>
+                    )}
+                  </Link>
+                );
+              })}
             </div>
           </div>
         ))}
-      </div>
+      </nav>
 
-      {/* User Profile + Logout */}
-      <div className="flex-shrink-0 border-t border-white/10 p-3">
-        <div className="flex items-center gap-3 px-2 py-2 mb-1">
+      {/* Doctor Profile + Logout */}
+      <div className="flex-shrink-0 border-t border-white/10 p-4">
+        <Link href="/doctor/profile" className="flex items-center gap-3 group">
           <div className="relative flex-shrink-0">
-            <div className="h-9 w-9 overflow-hidden rounded-lg bg-white/15 flex items-center justify-center">
+            <div className="h-10 w-10 overflow-hidden rounded-full bg-white/15 flex items-center justify-center">
               {user?.profile_picture ? (
                 <img
                   src={user.profile_picture.startsWith('http') ? user.profile_picture : `/storage/${user.profile_picture}`}
@@ -105,22 +105,22 @@ export default function DoctorSidebar({ currentPath, onClose }) {
                 <User className="h-5 w-5 text-white/70" />
               )}
             </div>
-            <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-[#1e2a4a] bg-emerald-400" />
+            <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-[#1e2a4a] bg-emerald-400" />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-semibold text-white truncate">{user?.name || 'Doctor'}</div>
-            <div className="text-[11px] text-white/45 truncate">{user?.email || ''}</div>
+            <div className="text-sm font-semibold text-white/90 truncate">{user?.name || 'Doctor'}</div>
+            <div className="text-[11px] text-[#00acb1] font-medium">View Profile</div>
           </div>
-          <Link
-            href="/logout"
-            method="post"
-            as="button"
-            title="Logout"
-            className="flex-shrink-0 rounded-lg p-1.5 text-white/40 hover:bg-red-500/20 hover:text-red-300 transition"
-          >
-            <LogOut className="h-4 w-4" />
-          </Link>
-        </div>
+        </Link>
+        <Link
+          href="/logout"
+          method="post"
+          as="button"
+          className="mt-3 w-full flex items-center gap-2 px-3 py-2 rounded-lg text-[13px] font-medium text-white/50 hover:bg-white/8 hover:text-white/80 transition"
+        >
+          <LogOut className="h-4 w-4" />
+          Log Out
+        </Link>
       </div>
     </div>
   );

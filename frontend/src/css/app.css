@@ -2,8 +2,8 @@
 
 /* Theme Color Variables */
 :root {
-    --thm-font: "Heebo", sans-serif;
-    --thm-b-font: "Rubik", sans-serif;
+    --thm-font: "Montserrat", sans-serif;
+    --thm-b-font: "Source Code Pro", monospace;
     --thm-base: #00acb1;
     --thm-base-hover: #00787b;
     --thm-base-rgb: 0, 172, 177;

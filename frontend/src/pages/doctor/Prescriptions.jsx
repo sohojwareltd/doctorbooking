@@ -80,32 +80,6 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
 
   return (
     <DoctorLayout title="Prescriptions">
-      {/* Hero Banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#1e2a4a] via-[#1e3a5f] to-[#c2692a] p-6 shadow-lg mb-6">
-        <div className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full bg-white/5" />
-        <div className="pointer-events-none absolute -bottom-10 right-32 h-36 w-36 rounded-full bg-white/5" />
-        <div className="relative flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="flex-1">
-            <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-white/80">
-              <FileText className="h-3.5 w-3.5" />
-              Prescriptions
-            </div>
-            <h1 className="text-2xl font-black text-white">Prescriptions</h1>
-            <p className="mt-1 text-sm text-white/70">View and create prescriptions for your patients</p>
-          </div>
-          <div className="flex items-center gap-3 flex-shrink-0">
-            <span className="text-sm text-white/70"><span className="font-black text-white">{displayCount}</span> found</span>
-            <Link
-              href="/doctor/prescriptions/create"
-              className="inline-flex items-center gap-2 rounded-xl bg-white/15 border border-white/20 px-4 py-2.5 text-sm font-semibold text-white hover:bg-white/25 transition"
-            >
-              <PlusCircle className="h-4 w-4" />
-              Create Prescription
-            </Link>
-          </div>
-        </div>
-      </div>
-
       <div className="space-y-6">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
           {statsCards.map((stat, idx) => (

@@ -2,7 +2,6 @@ import React, { useMemo } from 'react';
 import { Head, useForm } from '@inertiajs/react';
 import { Settings as SettingsIcon } from 'lucide-react';
 import AdminLayout from '@/layouts/AdminLayout';
-import GlassCard from '@/components/GlassCard';
 import PrimaryButton from '@/components/PrimaryButton';
 import { toastError, toastSuccess } from '@/utils/toast';
 
@@ -185,22 +184,22 @@ export default function Settings({ auth, homeJson = '', status = null }) {
 
         {banner && (
           <div className="mb-4">
-            <GlassCard variant="solid" hover={false} className="p-4">
+            <div className="rounded-3xl bg-white border border-gray-100/80 p-7 shadow-sm">
               <div className="text-sm font-semibold text-[#005963]">{banner}</div>
-            </GlassCard>
+            </div>
           </div>
         )}
 
         {errors.home_json && (
           <div className="mb-4">
-            <GlassCard variant="solid" hover={false} className="p-4">
+            <div className="rounded-3xl bg-white border border-gray-100/80 p-7 shadow-sm">
               <div className="text-sm font-semibold text-red-700">{errors.home_json}</div>
-            </GlassCard>
+            </div>
           </div>
         )}
 
         <form onSubmit={onSubmit} className="space-y-6">
-          <GlassCard variant="solid" hover={false} className="p-6">
+          <div className="rounded-3xl bg-white border border-gray-100/80 p-7 shadow-sm">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <div className={sectionTitleClass}>Save Changes</div>
@@ -213,19 +212,19 @@ export default function Settings({ auth, homeJson = '', status = null }) {
                 {recentlySuccessful && <span className="text-sm text-gray-600">Saved.</span>}
               </div>
             </div>
-          </GlassCard>
+          </div>
 
-          <GlassCard variant="solid" hover={false} className="p-4">
+          <div className="rounded-3xl bg-white border border-gray-100/80 p-7 shadow-sm">
             <div className="flex flex-wrap gap-2">
               {tabs.map((t) => (
                 <TabButton key={t.key} tabKey={t.key}>{t.label}</TabButton>
               ))}
             </div>
-          </GlassCard>
+          </div>
 
           {/* Meta */}
           {activeTab === 'meta' && (
-          <GlassCard variant="solid" hover={false} className="p-6">
+          <div className="rounded-3xl bg-white border border-gray-100/80 p-7 shadow-sm">
             <div className="mb-4">
               <div className={sectionTitleClass}>Meta</div>
               <div className={sectionSubClass}>Browser title and SEO description.</div>
@@ -251,12 +250,12 @@ export default function Settings({ auth, homeJson = '', status = null }) {
                 />
               </div>
             </div>
-          </GlassCard>
+          </div>
           )}
 
           {/* Header */}
           {activeTab === 'header' && (
-          <GlassCard variant="solid" hover={false} className="p-6">
+          <div className="rounded-3xl bg-white border border-gray-100/80 p-7 shadow-sm">
             <div className="mb-4">
               <div className={sectionTitleClass}>Header</div>
               <div className={sectionSubClass}>Header logo configuration.</div>
@@ -303,12 +302,12 @@ export default function Settings({ auth, homeJson = '', status = null }) {
                 />
               </div>
             </div>
-          </GlassCard>
+          </div>
           )}
 
           {/* Services */}
           {activeTab === 'services' && (
-          <GlassCard variant="solid" hover={false} className="p-6">
+          <div className="rounded-3xl bg-white border border-gray-100/80 p-7 shadow-sm">
             <div className="mb-4">
               <div className={sectionTitleClass}>Services</div>
               <div className={sectionSubClass}>Service cards and treatments (add/edit/delete).</div>
@@ -377,12 +376,12 @@ export default function Settings({ auth, homeJson = '', status = null }) {
                 ))}
               </div>
             </div>
-          </GlassCard>
+          </div>
           )}
 
           {/* Case Studies */}
           {activeTab === 'caseStudies' && (
-          <GlassCard variant="solid" hover={false} className="p-6">
+          <div className="rounded-3xl bg-white border border-gray-100/80 p-7 shadow-sm">
             <div className="mb-4">
               <div className={sectionTitleClass}>Case Studies</div>
               <div className={sectionSubClass}>Horizontal success stories (add/edit/delete).</div>
@@ -457,12 +456,12 @@ export default function Settings({ auth, homeJson = '', status = null }) {
                 ))}
               </div>
             </div>
-          </GlassCard>
+          </div>
           )}
 
           {/* Gallery */}
           {activeTab === 'gallery' && (
-          <GlassCard variant="solid" hover={false} className="p-6">
+          <div className="rounded-3xl bg-white border border-gray-100/80 p-7 shadow-sm">
             <div className="mb-4">
               <div className={sectionTitleClass}>Gallery</div>
               <div className={sectionSubClass}>Gallery images (add/edit/delete).</div>
@@ -527,12 +526,12 @@ export default function Settings({ auth, homeJson = '', status = null }) {
                 ))}
               </div>
             </div>
-          </GlassCard>
+          </div>
           )}
 
           {/* Footer */}
           {activeTab === 'footer' && (
-          <GlassCard variant="solid" hover={false} className="p-6">
+          <div className="rounded-3xl bg-white border border-gray-100/80 p-7 shadow-sm">
             <div className="mb-4">
               <div className={sectionTitleClass}>Footer</div>
               <div className={sectionSubClass}>Footer content shown on the public site.</div>
@@ -662,12 +661,12 @@ export default function Settings({ auth, homeJson = '', status = null }) {
               </div>
 
             </div>
-          </GlassCard>
+          </div>
           )}
 
           {/* Prescription */}
           {activeTab === 'prescription' && (
-          <GlassCard variant="solid" hover={false} className="p-6">
+          <div className="rounded-3xl bg-white border border-gray-100/80 p-7 shadow-sm">
             <div className="mb-4">
               <div className={sectionTitleClass}>Prescription</div>
               <div className={sectionSubClass}>Clinic name, logo, and footer used on prescription pages.</div>
@@ -761,7 +760,7 @@ export default function Settings({ auth, homeJson = '', status = null }) {
                 />
               </div>
             </div>
-          </GlassCard>
+          </div>
           )}
 
           <input type="hidden" name="home_json" value={data.home_json} readOnly />

@@ -43,9 +43,9 @@ export default function PatientShow({ patient, appointments = [], prescriptions 
       
       <DoctorLayout>
         {/* Hero Banner */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#1e2a4a] via-[#1e3a5f] to-[#c2692a] p-6 shadow-lg mb-6">
-          <div className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full bg-white/5" />
-          <div className="pointer-events-none absolute -bottom-10 right-32 h-36 w-36 rounded-full bg-white/5" />
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#2d4a7a] via-[#3b6998] to-[#e08a4a] p-6 shadow-md mb-6">
+          <div className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full bg-white/10" />
+          <div className="pointer-events-none absolute -bottom-10 right-32 h-36 w-36 rounded-full bg-white/10" />
           <div className="relative flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
               <Link
@@ -61,59 +61,58 @@ export default function PatientShow({ patient, appointments = [], prescriptions 
           </div>
         </div>
 
-          {/* Stats Cards Row - Top */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-            <div className="rounded-2xl bg-white border border-gray-100 p-5 shadow-sm">
+            <div className="rounded-3xl bg-white border border-gray-100/80 p-7 shadow-sm hover:shadow-md transition-shadow">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <div className="text-xs font-semibold uppercase tracking-wider text-gray-500">Total Appointments</div>
-                  <div className="mt-3 text-4xl font-black text-blue-600">{appointmentStats.total}</div>
+                  <div className="text-sm font-medium text-gray-700">Total Appointments</div>
+                  <div className="mt-2 text-3xl font-bold text-gray-700">{appointmentStats.total}</div>
                 </div>
-                <div className="rounded-xl bg-blue-100 p-3">
-                  <Calendar className="h-6 w-6 text-blue-600" />
+                <div className="rounded-2xl bg-blue-50 p-3.5">
+                  <Calendar className="h-6 w-6 text-blue-400" />
                 </div>
               </div>
             </div>
 
-            <div className="rounded-2xl bg-white border border-gray-100 p-5 shadow-sm">
+            <div className="rounded-3xl bg-white border border-gray-100/80 p-7 shadow-sm hover:shadow-md transition-shadow">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <div className="text-xs font-semibold uppercase tracking-wider text-gray-500">Arrived</div>
-                  <div className="mt-3 text-4xl font-black text-green-600">{appointmentStats.arrived}</div>
+                  <div className="text-sm font-medium text-gray-700">Arrived</div>
+                  <div className="mt-2 text-3xl font-bold text-gray-700">{appointmentStats.arrived}</div>
                 </div>
-                <div className="rounded-xl bg-green-100 p-3">
-                  <CheckCircle className="h-6 w-6 text-green-600" />
+                <div className="rounded-2xl bg-green-50 p-3.5">
+                  <CheckCircle className="h-6 w-6 text-green-400" />
                 </div>
               </div>
             </div>
 
-            <div className="rounded-2xl bg-white border border-gray-100 p-5 shadow-sm">
+            <div className="rounded-3xl bg-white border border-gray-100/80 p-7 shadow-sm hover:shadow-md transition-shadow">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <div className="text-xs font-semibold uppercase tracking-wider text-gray-500">Prescribed</div>
-                  <div className="mt-3 text-4xl font-black text-cyan-600">{appointmentStats.prescribed}</div>
+                  <div className="text-sm font-medium text-gray-700">Prescribed</div>
+                  <div className="mt-2 text-3xl font-bold text-gray-700">{appointmentStats.prescribed}</div>
                 </div>
-                <div className="rounded-xl bg-cyan-100 p-3">
-                  <ClipboardList className="h-6 w-6 text-cyan-600" />
+                <div className="rounded-2xl bg-cyan-50 p-3.5">
+                  <ClipboardList className="h-6 w-6 text-cyan-400" />
                 </div>
               </div>
             </div>
 
-            <div className="rounded-2xl bg-white border border-gray-100 p-5 shadow-sm">
+            <div className="rounded-3xl bg-white border border-gray-100/80 p-7 shadow-sm hover:shadow-md transition-shadow">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <div className="text-xs font-semibold uppercase tracking-wider text-gray-500">Cancelled</div>
-                  <div className="mt-3 text-4xl font-black text-red-600">{appointmentStats.cancelled}</div>
+                  <div className="text-sm font-medium text-gray-700">Cancelled</div>
+                  <div className="mt-2 text-3xl font-bold text-gray-700">{appointmentStats.cancelled}</div>
                 </div>
-                <div className="rounded-xl bg-red-100 p-3">
-                  <XCircle className="h-6 w-6 text-red-600" />
+                <div className="rounded-2xl bg-red-50 p-3.5">
+                  <XCircle className="h-6 w-6 text-red-400" />
                 </div>
               </div>
             </div>
           </div>
 
           {/* Tabs Section - Personal Info, Appointments & Prescriptions */}
-          <div className="rounded-2xl bg-white border border-gray-100 shadow-sm mt-4">
+          <div className="rounded-3xl border border-gray-100/80 bg-white shadow-sm mt-4">
             <div className="border-b border-slate-200">
               <div className="flex">
                 <button

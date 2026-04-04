@@ -258,6 +258,12 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
             ->where('status', 'scheduled')
             ->whereDate('appointment_date', '>=', $today)
             ->count();
+
+        // Today's queue count (patients still waiting to be seen)
+        $waitingPatients = Appointment::where('doctor_id', $doctor->id)
+            ->whereDate('appointment_date', $today)
+            ->whereIn('status', ['scheduled', 'arrived'])
+            ->count();
         
         // Get total unique patients
         $totalPatients = Appointment::where('doctor_id', $doctor->id)
@@ -340,6 +346,8 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
                 'symptoms' => $a->symptoms,
                 'prescription_id' => $a->prescription?->id,
             ])->values();
+
+            $followUpsDue = $awaitingTestsAppointments->count();
         
         // Get scheduled patients for today (ordered by name)
         $scheduledToday = Appointment::with(['user:id,name,email,phone,address'])
@@ -434,10 +442,12 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
             'stats' => [
                 'todayAppointments' => $todayAppointments,
                 'scheduled' => $scheduled,
+                'waitingPatients' => $waitingPatients,
                 'totalPatients' => $totalPatients,
                 'totalPrescriptions' => $totalPrescriptions,
                 'prescribedThisMonth' => $prescribedThisMonth,
                 'inConsultation' => $inVisitAppointments->count(),
+                'followUpsDue' => $followUpsDue,
             ],
             'scheduledToday' => $scheduledToday,
             'recentAppointments' => $recentAppointments,

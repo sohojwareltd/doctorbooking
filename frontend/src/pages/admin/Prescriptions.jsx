@@ -2,7 +2,6 @@ import { Head, Link } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
 import { Search, FileText, Eye, Calendar, User } from 'lucide-react';
 import AdminLayout from '../../layouts/AdminLayout';
-import GlassCard from '../../components/GlassCard';
 import Pagination from '../../components/Pagination';
 import { formatDisplayDateWithYearFromDateLike } from '../../utils/dateFormat';
 
@@ -77,22 +76,22 @@ export default function Prescriptions({ prescriptions = [] }) {
       <div className="space-y-6">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
           {statsCards.map((stat, idx) => (
-            <GlassCard key={idx} variant="solid" className={`border-2 p-4 ${stat.color}`}>
+            <div key={idx} className="rounded-3xl bg-white border border-gray-100/80 p-7 shadow-sm hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-xs font-semibold uppercase tracking-wide opacity-70">{stat.label}</div>
-                  <div className="mt-2 text-2xl font-black">{stat.value}</div>
+                  <div className="text-sm font-medium text-gray-700">{stat.label}</div>
+                  <div className="mt-2 text-3xl font-bold text-gray-700">{stat.value}</div>
                 </div>
-                <div className="rounded-lg bg-white/60 p-2 text-[#005963]">
-                  <FileText className="h-4 w-4" />
+                <div className="rounded-2xl bg-gray-50 p-3.5">
+                  <FileText className="h-6 w-6 text-gray-400" />
                 </div>
               </div>
-            </GlassCard>
+            </div>
           ))}
         </div>
 
-        <GlassCard variant="solid" hover={false} className="overflow-hidden border border-[#00acb1]/20">
-          <div className="space-y-4 border-b border-gray-200 bg-gradient-to-r from-white to-[#00acb1]/5 px-6 py-5">
+        <div className="rounded-3xl border border-gray-100/80 bg-white shadow-sm overflow-hidden">
+          <div className="space-y-4 border-b border-gray-100/80 px-7 py-5">
             <div className="flex flex-col justify-between gap-3 md:flex-row md:items-center">
               <div className="text-sm font-semibold text-gray-700">
                 <span className="text-[#005963]">Today:</span> {todayLabel}
@@ -198,7 +197,7 @@ export default function Prescriptions({ prescriptions = [] }) {
           </div>
 
           <Pagination data={pagination} />
-        </GlassCard>
+        </div>
       </div>
     </>
   );
