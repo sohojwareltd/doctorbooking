@@ -1,13 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from '@inertiajs/react';
-import { FileText, Search, Eye, Share2, Printer, CalendarDays, CalendarCheck } from 'lucide-react';
+import { FileText, PlusCircle, Search, Eye, Download, Share2, Printer } from 'lucide-react';
 import DoctorLayout from '../../layouts/DoctorLayout';
 import Pagination from '../../components/Pagination';
 import { formatDisplayFromDateLike, formatDisplayDateWithYearFromDateLike } from '../../utils/dateFormat';
 import { toastSuccess, toastError } from '../../utils/toast';
-import StatCard from '../../components/doctor/StatCard';
-import PatientAvatar from '../../components/doctor/PatientAvatar';
-import { DocCard, DocEmptyState } from '../../components/doctor/DocUI';
 
 export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) {
   const pageRows = useMemo(() => (Array.isArray(prescriptions) ? prescriptions : (prescriptions?.data ?? [])), [prescriptions]);
@@ -49,14 +46,17 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
 
   const todayIso = new Date().toISOString().split('T')[0];
   const todayLabel = formatDisplayDateWithYearFromDateLike(todayIso) || todayIso;
+  const todayDate = new Date(todayIso);
 
   const filteredRows = useMemo(() => {
     return rows.filter((p) => {
       const patientAge = resolvePatientAge(p);
       const haystack = `${getPatientName(p)} ${p.patient_contact || p.user?.phone || ''} ${p.patient_gender || p.user?.gender || ''} ${patientAge ?? ''} ${p.user_id || ''}`.toLowerCase();
       const matchSearch = searchTerm === '' ? true : haystack.includes(searchTerm.toLowerCase());
+
       const createdDateOnly = (p.created_at || '').slice(0, 10);
       const dateOk = dateFilter === 'all' ? true : createdDateOnly === todayIso;
+
       return matchSearch && dateOk;
     });
   }, [rows, searchTerm, dateFilter, todayIso]);
@@ -71,71 +71,76 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
     const upcomingFollowUps = stats?.upcomingFollowUps ?? 0;
 
     return [
-      { label: 'Total Prescriptions', value: totalCount, variant: 'blue', icon: FileText },
-      { label: 'With Follow-up', value: withFollowUp, variant: 'emerald', icon: CalendarCheck },
-      { label: 'No Follow-up', value: withoutFollowUp, variant: 'amber', icon: CalendarDays },
-      { label: 'Upcoming Visits', value: upcomingFollowUps, variant: 'sky', icon: CalendarDays },
+      { label: 'Total Prescriptions', value: totalCount, iconBg: 'bg-blue-100', iconColor: 'text-blue-600' },
+      { label: 'With Follow-up', value: withFollowUp, iconBg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+      { label: 'No Follow-up', value: withoutFollowUp, iconBg: 'bg-amber-100', iconColor: 'text-amber-600' },
+      { label: 'Upcoming Visits', value: upcomingFollowUps, iconBg: 'bg-sky-100', iconColor: 'text-sky-600' }
     ];
   }, [pagination, stats]);
 
   return (
     <DoctorLayout title="Prescriptions">
-      <div className="mx-auto max-w-6xl space-y-6">
-        {/* Stats */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
           {statsCards.map((stat, idx) => (
-            <StatCard key={idx} label={stat.label} value={stat.value} icon={stat.icon} variant={stat.variant} />
+            <div key={idx} className="rounded-2xl bg-white border border-gray-100 p-6 shadow-sm">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{stat.label}</p>
+                  <p className="mt-2 text-4xl font-black text-gray-900">{stat.value}</p>
+                </div>
+                <div className={`rounded-xl p-3 ${stat.iconBg}`}>
+                  <FileText className={`h-6 w-6 ${stat.iconColor}`} />
+                </div>
+              </div>
+            </div>
           ))}
         </div>
 
-        {/* Table Card */}
-        <DocCard padding={false}>
-          <div className="space-y-4 border-b border-slate-100 px-5 py-5 md:px-6">
+        <div className="rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden">
+          <div className="space-y-4 border-b border-gray-200 bg-gradient-to-r from-white to-[#00acb1]/5 px-6 py-5">
             <div className="flex flex-col justify-between gap-3 md:flex-row md:items-center">
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-medium text-slate-500">
-                  Today: <span className="font-semibold text-slate-800">{todayLabel}</span>
-                </span>
-                <span className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-600">
-                  {displayCount} prescriptions
-                </span>
+              <div className="text-sm font-semibold text-gray-700">
+                <span className="text-[#005963]">Today:</span> {todayLabel}
               </div>
               {selectedIds.length > 0 && (
-                <span className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-1 text-sm font-semibold text-sky-600">{selectedIds.length} selected</span>
+                <div className="text-sm font-semibold text-[#005963]">{selectedIds.length} selected</div>
               )}
             </div>
 
             <div className="flex flex-col gap-3 md:flex-row md:items-end">
               <div className="flex-1">
-                <label className="mb-1.5 block text-sm font-medium text-slate-700">Search</label>
+                <label className="mb-2 block text-xs font-semibold text-gray-700">Search</label>
                 <div className="relative">
-                  <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                   <input
                     type="text"
                     placeholder="Search by patient, diagnosis or medication"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-900 placeholder-slate-400 transition doc-input-focus"
+                    className="w-full rounded-xl border border-[#00acb1]/30 bg-white pl-10 pr-4 py-2.5 text-sm font-semibold text-[#005963] placeholder-gray-400 focus:border-[#005963] focus:outline-none focus:ring-2 focus:ring-[#005963]/10"
                   />
                 </div>
               </div>
+
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-slate-700">Created date</label>
+                <label className="mb-2 block text-xs font-semibold text-gray-700">Created date</label>
                 <select
                   value={dateFilter}
                   onChange={(e) => setDateFilter(e.target.value)}
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 transition doc-input-focus"
+                  className="w-full rounded-xl border border-[#00acb1]/30 bg-white px-4 py-2.5 text-sm font-semibold text-[#005963] focus:border-[#005963] focus:outline-none focus:ring-2 focus:ring-[#005963]/10"
                 >
                   <option value="all">All dates</option>
                   <option value="today">Today</option>
                 </select>
               </div>
+
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-slate-700">Follow-up</label>
+                <label className="mb-2 block text-xs font-semibold text-gray-700">Follow-up</label>
                 <select
                   value="all"
                   disabled
-                  className="w-full rounded-lg border border-slate-200 bg-slate-100 px-3.5 py-2.5 text-sm text-slate-400"
+                  className="w-full rounded-xl border border-[#00acb1]/30 bg-gray-100 px-4 py-2.5 text-sm font-semibold text-gray-400"
                 >
                   <option value="all">N/A</option>
                 </select>
@@ -144,8 +149,8 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full divide-y divide-slate-100">
-              <thead className="bg-slate-50/80">
+            <table className="w-full divide-y divide-gray-100">
+              <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
                   <th className="w-12 px-4 py-3 text-left">
                     <input
@@ -158,23 +163,23 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
                         }
                       }}
                       checked={filteredRows.length > 0 && selectedIds.length === filteredRows.length}
-                      className="rounded border-slate-300 text-sky-600 focus:ring-sky-200"
+                      className="rounded border-gray-300"
                     />
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400">#</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400">Patient</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400">Age</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400">Gender</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400">Number</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400">Action</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">#</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Patient</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Age</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Gender</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Number</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50 bg-white">
+              <tbody className="divide-y divide-gray-100 bg-white">
                 {filteredRows.map((p, idx) => {
                   const isSelected = selectedIds.includes(p.id);
                   return (
-                    <tr key={p.id || idx} className={`transition ${isSelected ? 'bg-sky-50/50' : 'hover:bg-slate-50/50'}`}>
-                      <td className="px-4 py-3.5">
+                    <tr key={p.id || idx} className={`transition ${isSelected ? 'bg-[#00acb1]/10' : 'hover:bg-gray-50'}`}>
+                      <td className="px-4 py-4">
                         <input
                           type="checkbox"
                           checked={isSelected}
@@ -185,36 +190,37 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
                               setSelectedIds(selectedIds.filter((id) => id !== p.id));
                             }
                           }}
-                          className="rounded border-slate-300 text-sky-600 focus:ring-sky-200"
+                          className="rounded border-gray-300"
                         />
                       </td>
-                      <td className="px-4 py-3.5 text-sm font-medium text-slate-500">{p.id}</td>
-                      <td className="px-4 py-3.5">
-                        <div className="flex items-center gap-3">
-                          <PatientAvatar name={getPatientName(p)} size="sm" />
-                          <span className="font-semibold text-slate-800">{getPatientName(p)}</span>
-                        </div>
+                      <td className="px-5 py-3.5 text-sm font-semibold text-gray-600">{p.id}</td>
+                      <td className="px-5 py-3.5">
+                        <div className="font-semibold text-gray-900">{getPatientName(p)}</div>
                       </td>
-                      <td className="px-4 py-3.5 text-sm text-slate-500">{resolvePatientAge(p) ?? '—'}</td>
-                      <td className="px-4 py-3.5 text-sm text-slate-500 capitalize">{p.patient_gender || p.user?.gender || '—'}</td>
-                      <td className="px-4 py-3.5 text-sm text-slate-500 whitespace-nowrap">{p.patient_contact || p.user?.phone || '—'}</td>
-                      <td className="px-4 py-3.5 text-sm">
+                      <td className="px-4 py-3.5 text-sm text-gray-600">{resolvePatientAge(p) ?? '—'}</td>
+                      <td className="px-4 py-3.5 text-sm text-gray-600 capitalize">{p.patient_gender || p.user?.gender || '—'}</td>
+                      <td className="px-5 py-3.5 text-sm text-gray-600 whitespace-nowrap">{p.patient_contact || p.user?.phone || '—'}</td>
+                      <td className="px-5 py-3.5 text-sm">
                         <div className="flex items-center gap-3">
                           <Link
                             href={`/doctor/prescriptions/${p.id}`}
-                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-sky-600 hover:text-sky-700 transition"
+                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#005963] hover:text-[#005963]/75 transition"
                           >
-                            <Eye className="h-3.5 w-3.5" /> View
+                            <Eye className="h-3.5 w-3.5" />
+                            View
                           </Link>
                           <button
                             onClick={() => {
                               const printWindow = window.open(`/doctor/prescriptions/${p.id}?action=print`, '_blank');
-                              if (printWindow) toastSuccess('Opening prescription for printing...');
+                              if (printWindow) {
+                                toastSuccess('Opening prescription for printing...');
+                              }
                             }}
-                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-sky-600 transition"
+                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-800 transition"
                             title="Print"
                           >
-                            <Printer className="h-3.5 w-3.5" /> Print
+                            <Printer className="h-3.5 w-3.5" />
+                            Print
                           </button>
                           <Link
                             href={`/doctor/prescriptions/${p.id}?action=share`}
@@ -234,10 +240,11 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
                                 toastSuccess('Prescription link copied to clipboard');
                               }
                             }}
-                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-emerald-600 transition"
+                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-green-600 hover:text-green-800 transition"
                             title="Share"
                           >
-                            <Share2 className="h-3.5 w-3.5" /> Share
+                            <Share2 className="h-3.5 w-3.5" />
+                            Share
                           </Link>
                         </div>
                       </td>
@@ -246,8 +253,10 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
                 })}
                 {filteredRows.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="py-2">
-                      <DocEmptyState icon={FileText} title="No prescriptions found" />
+                    <td colSpan={7} className="px-6 py-12 text-center">
+                      <div className="text-gray-400">
+                        <p className="font-semibold">No prescriptions found</p>
+                      </div>
                     </td>
                   </tr>
                 )}
@@ -256,14 +265,14 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
           </div>
 
           {pagination && typeof pagination.total === 'number' ? (
-            <div className="border-t border-slate-100 bg-slate-50/50 px-5 py-3.5">
-              <p className="text-xs text-slate-500">
-                Showing <span className="font-semibold text-slate-700">{((pagination.current_page - 1) * pagination.per_page) + 1}</span> to <span className="font-semibold text-slate-700">{Math.min(pagination.per_page * pagination.current_page, pagination.total)}</span> of <span className="font-semibold text-slate-700">{pagination.total}</span> results
+            <div className="border-t border-gray-100 bg-white px-5 py-3.5">
+              <p className="text-xs text-gray-500">
+                Showing <span className="font-semibold text-gray-700">{((pagination.current_page - 1) * pagination.per_page) + 1}</span> to <span className="font-semibold text-gray-700">{Math.min(pagination.per_page * pagination.current_page, pagination.total)}</span> of <span className="font-semibold text-gray-700">{pagination.total}</span> results
               </p>
             </div>
           ) : null}
           <Pagination data={pagination} />
-        </DocCard>
+        </div>
       </div>
     </DoctorLayout>
   );

@@ -139,14 +139,13 @@ export default function DoctorProfile({ doctor = {} }) {
     };
 
     const inputClass =
-        'w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 doc-input-focus transition';
-    const labelClass = 'mb-2 block text-sm font-semibold text-slate-700';
+        'w-full rounded-2xl border border-[#00acb1]/30 bg-white px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-4 focus:ring-[#00acb1]/20 transition';
+    const labelClass = 'mb-2 block text-sm font-semibold text-[#005963]';
     const errorClass = 'mt-1 text-xs font-semibold text-rose-600';
 
     return (
         <DoctorLayout title="My Profile">
       <Head title="My Profile" />
-      <div className="mx-auto max-w-6xl space-y-6">
 
             {/* Photo View Modal */}
             {showPhotoModal && photoPreview && (
@@ -157,9 +156,9 @@ export default function DoctorProfile({ doctor = {} }) {
                     <div className="relative max-h-[90vh] max-w-[90vw]">
                         <button
                             onClick={() => setShowPhotoModal(false)}
-                            className="absolute -right-3 -top-3 rounded-full bg-white p-2 shadow-lg transition hover:bg-slate-100"
+                            className="absolute -right-3 -top-3 rounded-full bg-white p-2 shadow-lg transition hover:bg-gray-100"
                         >
-                            <X className="h-5 w-5 text-slate-700" />
+                            <X className="h-5 w-5 text-gray-700" />
                         </button>
                         <img
                             src={photoPreview}
@@ -185,20 +184,20 @@ export default function DoctorProfile({ doctor = {} }) {
             )}
 
             {/* Profile Photo & Preview Section */}
-            <div className="overflow-hidden rounded-xl bg-white border border-slate-200 shadow-sm">
+            <div className="mb-5 overflow-hidden rounded-xl bg-white border border-gray-100 shadow-sm">
                 <div className="flex flex-col lg:flex-row">
                     {/* Left Side - Photo Upload with Gradient Background */}
-                    <div className="relative flex-1 bg-gradient-to-br from-sky-50 via-white to-sky-50/50 p-8">
+                    <div className="relative flex-1 bg-gradient-to-br from-[#005963]/5 via-white to-[#00acb1]/5 p-8">
                  
                         
                         <div className="relative z-10">
                             <div className="mb-6 flex items-center gap-3">
-                                <div className="rounded-xl bg-slate-800 p-3 shadow-lg">
+                                <div className="rounded-2xl bg-gradient-to-br from-[#005963] to-[#00acb1] p-3 shadow-lg">
                                     <Camera className="h-6 w-6 text-white" />
                                 </div>
                                 <div>
-                                    <h2 className="text-xl font-bold text-slate-800">Profile Photo</h2>
-                                    <p className="text-sm text-slate-500">
+                                    <h2 className="text-xl font-black text-[#005963]">Profile Photo</h2>
+                                    <p className="text-sm text-gray-600">
                                         Upload your professional photo
                                     </p>
                                 </div>
@@ -207,7 +206,7 @@ export default function DoctorProfile({ doctor = {} }) {
                             <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-start">
                                 {/* Photo Preview with fancy border */}
                                 <div className="relative group">
-                                    <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-slate-800 to-sky-500 opacity-50 blur group-hover:opacity-75 transition"></div>
+                                    <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-[#005963] to-[#00acb1] opacity-50 blur group-hover:opacity-75 transition"></div>
                                     <div
                                         onClick={() => photoPreview && setShowPhotoModal(true)}
                                         className={`relative h-36 w-36 overflow-hidden rounded-full border-4 border-white bg-white shadow-2xl ${photoPreview ? 'cursor-pointer' : ''}`}
@@ -219,7 +218,7 @@ export default function DoctorProfile({ doctor = {} }) {
                                                 className="h-full w-full object-cover transition group-hover:scale-110"
                                             />
                                         ) : (
-                                            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-slate-800 to-sky-600">
+                                            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#005963] to-[#00acb1]">
                                                 <User className="h-16 w-16 text-white" />
                                             </div>
                                         )}
@@ -247,7 +246,7 @@ export default function DoctorProfile({ doctor = {} }) {
                                         type="button"
                                         onClick={() => fileInputRef.current?.click()}
                                         disabled={uploadingPhoto}
-                                        className="flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 hover:-translate-y-0.5 disabled:opacity-50"
+                                        className="flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#005963] to-[#00acb1] px-6 py-3 text-sm font-bold text-white shadow-lg transition hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-50"
                                     >
                                         <Upload className="h-5 w-5" />
                                         {photoPreview ? 'Change Photo' : 'Upload Photo'}
@@ -258,7 +257,7 @@ export default function DoctorProfile({ doctor = {} }) {
                                             <button
                                                 type="button"
                                                 onClick={() => setShowPhotoModal(true)}
-                                                className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 hover:border-slate-300"
+                                                className="flex flex-1 items-center justify-center gap-2 rounded-2xl border-2 border-[#005963]/30 bg-white px-4 py-2.5 text-sm font-semibold text-[#005963] transition hover:bg-[#005963]/5 hover:border-[#005963]/50"
                                             >
                                                 <Camera className="h-4 w-4" />
                                                 View
@@ -268,7 +267,7 @@ export default function DoctorProfile({ doctor = {} }) {
                                                 type="button"
                                                 onClick={handleDeletePhoto}
                                                 disabled={deletingPhoto}
-                                                className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-rose-200 bg-white px-4 py-2.5 text-sm font-medium text-rose-600 transition hover:bg-rose-50 hover:border-rose-300 disabled:opacity-50"
+                                                className="flex flex-1 items-center justify-center gap-2 rounded-2xl border-2 border-rose-200 bg-white px-4 py-2.5 text-sm font-semibold text-rose-600 transition hover:bg-rose-50 hover:border-rose-300 disabled:opacity-50"
                                             >
                                                 <Trash2 className="h-4 w-4" />
                                                 Delete
@@ -276,7 +275,7 @@ export default function DoctorProfile({ doctor = {} }) {
                                         </div>
                                     )}
 
-                                    <p className="text-center text-xs text-slate-400">
+                                    <p className="text-center text-xs text-gray-500">
                                         Max: 2MB • JPEG, PNG, GIF, WebP
                                     </p>
                                 </div>
@@ -285,19 +284,19 @@ export default function DoctorProfile({ doctor = {} }) {
                     </div>
 
                     {/* Right Side - Prescription Header Preview */}
-                    <div className="border-t border-dashed border-slate-200 bg-gradient-to-br from-slate-50 to-sky-50/50 p-8 lg:w-[340px] lg:border-l lg:border-t-0">
+                    <div className="border-t-2 border-dashed border-[#005963]/10 bg-gradient-to-br from-[#005963]/5 to-[#00acb1]/10 p-8 lg:w-[340px] lg:border-l-2 lg:border-t-0">
                         <div className="mb-4 flex items-center gap-2">
-                            <Stethoscope className="h-4 w-4 text-slate-400" />
-                            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                            <Stethoscope className="h-4 w-4 text-[#005963]/60" />
+                            <span className="text-xs font-bold uppercase tracking-wider text-[#005963]/60">
                                 Prescription Preview
                             </span>
                         </div>
                         
                         {/* Preview Card */}
-                        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                        <div className="rounded-2xl border border-[#005963]/20 bg-white p-5 shadow-lg">
                             <div className="flex items-start gap-4">
                                 {photoPreview ? (
-                                    <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-xl border border-slate-200 shadow-sm">
+                                    <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-2xl border-2 border-[#005963]/20 shadow-md">
                                         <img
                                             src={photoPreview}
                                             alt="Profile"
@@ -305,26 +304,26 @@ export default function DoctorProfile({ doctor = {} }) {
                                         />
                                     </div>
                                 ) : (
-                                    <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-slate-800 to-sky-600 shadow-sm">
+                                    <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#005963] to-[#00acb1] shadow-md">
                                         <Stethoscope className="h-8 w-8 text-white" />
                                     </div>
                                 )}
                                 <div className="min-w-0 flex-1">
-                                    <div className="text-lg font-bold text-slate-800">
+                                    <div className="text-lg font-black text-[#005963]">
                                         {data.name || 'Doctor Name'}
                                     </div>
                                     {data.degree && (
-                                        <div className="mt-0.5 text-sm font-semibold text-slate-600">
+                                        <div className="mt-0.5 text-sm font-semibold text-gray-700">
                                             {data.degree}
                                         </div>
                                     )}
                                     {data.specialization && (
-                                        <div className="mt-0.5 text-sm font-medium text-sky-600">
+                                        <div className="mt-0.5 text-sm font-medium text-[#00acb1]">
                                             {data.specialization}
                                         </div>
                                     )}
                                     {data.registration_no && (
-                                        <div className="mt-2 inline-flex items-center rounded-full bg-sky-50 px-2.5 py-1 text-xs font-medium text-sky-700">
+                                        <div className="mt-2 inline-flex items-center rounded-full bg-[#005963]/10 px-2.5 py-1 text-xs font-semibold text-[#005963]">
                                             Reg: {data.registration_no}
                                         </div>
                                     )}
@@ -332,7 +331,7 @@ export default function DoctorProfile({ doctor = {} }) {
                             </div>
                         </div>
                         
-                        <p className="mt-4 text-center text-xs text-slate-400">
+                        <p className="mt-4 text-center text-xs text-gray-500">
                             This is how your info appears on prescriptions
                         </p>
                     </div>
@@ -340,14 +339,14 @@ export default function DoctorProfile({ doctor = {} }) {
             </div>
 
             <form onSubmit={handleSubmit}>
-                <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1">
+                <div className="mb-5 inline-flex rounded-2xl border border-[#00acb1]/20 bg-white p-1">
                     <button
                         type="button"
                         onClick={() => setActiveTab('profile')}
-                        className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+                        className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
                             activeTab === 'profile'
-                                ? 'bg-slate-800 text-white'
-                                : 'text-slate-600 hover:bg-slate-100'
+                                ? 'bg-[#005963] text-white'
+                                : 'text-[#005963] hover:bg-[#005963]/10'
                         }`}
                     >
                         Profile
@@ -355,10 +354,10 @@ export default function DoctorProfile({ doctor = {} }) {
                     <button
                         type="button"
                         onClick={() => setActiveTab('about')}
-                        className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+                        className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
                             activeTab === 'about'
-                                ? 'bg-slate-800 text-white'
-                                : 'text-slate-600 hover:bg-slate-100'
+                                ? 'bg-[#005963] text-white'
+                                : 'text-[#005963] hover:bg-[#005963]/10'
                         }`}
                     >
                         About
@@ -368,16 +367,16 @@ export default function DoctorProfile({ doctor = {} }) {
                 {activeTab === 'profile' && (
                 <div className="grid gap-8 lg:grid-cols-2">
                     {/* Personal Information */}
-                    <div className="rounded-xl bg-white border border-slate-200 p-7 shadow-sm">
+                    <div className="rounded-xl bg-white border border-gray-100 p-7 shadow-sm">
                         <div className="mb-6 flex items-center gap-3">
-                            <div className="rounded-xl bg-sky-50 p-3">
-                                <User className="h-6 w-6 text-sky-600" />
+                            <div className="rounded-xl bg-[#005963]/10 p-3">
+                                <User className="h-6 w-6 text-[#005963]" />
                             </div>
                             <div>
-                                <h2 className="text-lg font-semibold text-slate-800">
+                                <h2 className="text-lg font-bold text-[#005963]">
                                     Personal Information
                                 </h2>
-                                <p className="text-sm text-slate-500">
+                                <p className="text-sm text-gray-600">
                                     Your basic personal details
                                 </p>
                             </div>
@@ -479,16 +478,16 @@ export default function DoctorProfile({ doctor = {} }) {
                     </div>
 
                     {/* Professional Information */}
-                    <div className="rounded-xl bg-white border border-slate-200 p-7 shadow-sm">
+                    <div className="rounded-xl bg-white border border-gray-100 p-7 shadow-sm">
                         <div className="mb-6 flex items-center gap-3">
-                            <div className="rounded-xl bg-sky-50 p-3">
-                                <Stethoscope className="h-6 w-6 text-sky-600" />
+                            <div className="rounded-xl bg-[#005963]/10 p-3">
+                                <Stethoscope className="h-6 w-6 text-[#005963]" />
                             </div>
                             <div>
-                                <h2 className="text-lg font-semibold text-slate-800">
+                                <h2 className="text-lg font-bold text-[#005963]">
                                     Professional Information
                                 </h2>
-                                <p className="text-sm text-slate-500">
+                                <p className="text-sm text-gray-600">
                                     Your medical credentials
                                 </p>
                             </div>
@@ -510,7 +509,7 @@ export default function DoctorProfile({ doctor = {} }) {
                                 {errors.specialization && (
                                     <p className={errorClass}>{errors.specialization}</p>
                                 )}
-                                <p className="mt-1 text-xs text-slate-400">
+                                <p className="mt-1 text-xs text-gray-500">
                                     Your area of medical expertise
                                 </p>
                             </div>
@@ -527,7 +526,7 @@ export default function DoctorProfile({ doctor = {} }) {
                                     placeholder="e.g., MBBS, FCPS (Medicine), MD"
                                 />
                                 {errors.degree && <p className={errorClass}>{errors.degree}</p>}
-                                <p className="mt-1 text-xs text-slate-400">
+                                <p className="mt-1 text-xs text-gray-500">
                                     List all your medical degrees and qualifications
                                 </p>
                             </div>
@@ -547,7 +546,7 @@ export default function DoctorProfile({ doctor = {} }) {
                                 {errors.registration_no && (
                                     <p className={errorClass}>{errors.registration_no}</p>
                                 )}
-                                <p className="mt-1 text-xs text-slate-400">
+                                <p className="mt-1 text-xs text-gray-500">
                                     Your Bangladesh Medical & Dental Council registration number
                                 </p>
                             </div>
@@ -557,14 +556,14 @@ export default function DoctorProfile({ doctor = {} }) {
                 )}
 
                 {activeTab === 'about' && (
-                    <div className="rounded-xl bg-white border border-slate-200 p-7 shadow-sm">
+                    <div className="rounded-xl bg-white border border-gray-100 p-7 shadow-sm">
                         <div className="mb-6 flex items-center gap-3">
-                            <div className="rounded-xl bg-sky-50 p-3">
-                                <FileText className="h-6 w-6 text-sky-600" />
+                            <div className="rounded-xl bg-[#005963]/10 p-3">
+                                <FileText className="h-6 w-6 text-[#005963]" />
                             </div>
                             <div>
-                                <h2 className="text-lg font-semibold text-slate-800">About Section Content</h2>
-                                <p className="text-sm text-slate-500">Homepage About section data manage করুন</p>
+                                <h2 className="text-lg font-bold text-[#005963]">About Section Content</h2>
+                                <p className="text-sm text-gray-600">Homepage About section data manage করুন</p>
                             </div>
                         </div>
 
@@ -691,17 +690,16 @@ export default function DoctorProfile({ doctor = {} }) {
                 )}
 
                 {/* Submit Button */}
-                <div className="mt-5 flex justify-end">
+                <div className="mt-5 mb-5 flex justify-end">
                     <button
                         type="submit"
                         disabled={processing}
-                        className="flex items-center gap-3 rounded-xl bg-sky-600 px-8 py-3.5 font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="flex items-center gap-3 rounded-2xl bg-gradient-to-r from-[#005963] to-[#00acb1] px-8 py-4 font-bold text-white shadow-lg transition hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50"
                     >
                         <Save className="h-5 w-5" />
                         {processing ? 'Saving...' : 'Save Profile'}
                     </button>
                 </div>
             </form>
-      </div>
         </DoctorLayout>    );
 }

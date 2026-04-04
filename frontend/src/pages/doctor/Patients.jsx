@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Search, Users, FileText, FilePlus, X, Calendar, Eye } from 'lucide-react';
+import { Search, Users, FileText, Calendar, Eye, Mail, Phone, X } from 'lucide-react';
 import { Link, router } from '@inertiajs/react';
 import DoctorLayout from '../../layouts/DoctorLayout';
-import GlassCard from '../../components/GlassCard';
 import Pagination from '../../components/Pagination';
 import { formatDisplayDateWithYearFromDateLike } from '../../utils/dateFormat';
+import StatCard from '../../components/doctor/StatCard';
+import PatientAvatar from '../../components/doctor/PatientAvatar';
+import DocModal from '../../components/doctor/DocModal';
+import { DocButton, DocCard, DocEmptyState } from '../../components/doctor/DocUI';
 
 export default function Patients({ patients = [], stats = {} }) {
   const pageRows = useMemo(() => (Array.isArray(patients) ? patients : (patients?.data ?? [])), [patients]);
@@ -47,27 +50,23 @@ export default function Patients({ patients = [], stats = {} }) {
     const hasPhone = stats?.hasPhone ?? 0;
     const emailOnly = stats?.emailOnly ?? 0;
     const noContact = stats?.noContact ?? 0;
-    
+
     return [
-      { label: 'Total Patients', value: totalCount, iconBg: 'bg-purple-100', iconColor: 'text-purple-600' },
-      { label: 'Has Phone', value: hasPhone, iconBg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
-      { label: 'Email Only', value: emailOnly, iconBg: 'bg-amber-100', iconColor: 'text-amber-600' },
-      { label: 'No Contact', value: noContact, iconBg: 'bg-rose-100', iconColor: 'text-rose-600' }
+      { label: 'Total Patients', value: totalCount, variant: 'violet', icon: Users },
+      { label: 'Has Phone', value: hasPhone, variant: 'emerald', icon: Phone },
+      { label: 'Email Only', value: emailOnly, variant: 'amber', icon: Mail },
+      { label: 'No Contact', value: noContact, variant: 'rose', icon: Users },
     ];
   }, [pagination, stats]);
 
   const handlePrescriptionClick = (patient) => {
     if (!patient.has_prescription) {
-      // No prescription - go to create page
       router.visit(`/doctor/prescriptions/create?patient=${patient.id}`);
       return;
     }
-
     if (patient.prescriptions_count === 1) {
-      // Only one prescription - go directly to show page
       router.visit(`/doctor/prescriptions/${patient.prescriptions[0].id}`);
     } else {
-      // Multiple prescriptions - show modal
       setPrescriptionModal(patient);
     }
   };
@@ -77,55 +76,51 @@ export default function Patients({ patients = [], stats = {} }) {
 
   return (
     <DoctorLayout title="Patients">
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+      <div className="mx-auto max-w-6xl space-y-6">
+        {/* Stats */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {statsCards.map((stat, idx) => (
-            <div key={idx} className="rounded-xl bg-white border border-gray-100 p-7 shadow-sm hover:shadow-md transition-shadow">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-700">{stat.label}</p>
-                  <p className="mt-2 text-3xl font-bold text-gray-700">{stat.value}</p>
-                </div>
-                <div className={`rounded-2xl p-3.5 ${stat.iconBg}`}>
-                  <Users className={`h-6 w-6 ${stat.iconColor}`} />
-                </div>
-              </div>
-            </div>
+            <StatCard key={idx} label={stat.label} value={stat.value} icon={stat.icon} variant={stat.variant} />
           ))}
         </div>
 
-        <div className="rounded-xl border border-gray-100 bg-white shadow-sm overflow-hidden">
-          <div className="space-y-4 border-b border-gray-100 px-7 py-5">
+        {/* Table Card */}
+        <DocCard padding={false}>
+          <div className="space-y-4 border-b border-slate-100 px-5 py-5 md:px-6">
             <div className="flex flex-col justify-between gap-3 md:flex-row md:items-center">
-              <div className="text-sm font-semibold text-gray-700">
-                <span className="text-[#005963]">Today:</span> {todayLabel}
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-medium text-slate-500">
+                  Today: <span className="font-semibold text-slate-800">{todayLabel}</span>
+                </span>
+                <span className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-600">
+                  {displayCount} patients
+                </span>
               </div>
               {selectedIds.length > 0 && (
-                <div className="text-sm font-semibold text-[#005963]">{selectedIds.length} selected</div>
+                <span className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-1 text-sm font-semibold text-sky-600">{selectedIds.length} selected</span>
               )}
             </div>
 
             <div className="flex flex-col gap-3 md:flex-row md:items-end">
               <div className="flex-1">
-                <label className="mb-2 block text-xs font-semibold text-gray-700">Search patient</label>
+                <label className="mb-1.5 block text-sm font-medium text-slate-700">Search patient</label>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                  <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <input
                     type="text"
                     placeholder="Search by name, email, phone..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full rounded-xl border border-[#00acb1]/30 bg-white pl-10 pr-4 py-2.5 text-sm font-semibold text-[#005963] placeholder-gray-400 focus:border-[#005963] focus:outline-none focus:ring-2 focus:ring-[#005963]/10"
+                    className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-900 placeholder-slate-400 transition doc-input-focus"
                   />
                 </div>
               </div>
-
               <div>
-                <label className="mb-2 block text-xs font-semibold text-gray-700">Contact filter</label>
+                <label className="mb-1.5 block text-sm font-medium text-slate-700">Contact filter</label>
                 <select
                   value={contactFilter}
                   onChange={(e) => setContactFilter(e.target.value)}
-                  className="w-full rounded-xl border border-[#00acb1]/30 bg-white px-4 py-2.5 text-sm font-semibold text-[#005963] focus:border-[#005963] focus:outline-none focus:ring-2 focus:ring-[#005963]/10"
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 transition doc-input-focus"
                 >
                   <option value="all">All</option>
                   <option value="phone">Has phone</option>
@@ -137,8 +132,8 @@ export default function Patients({ patients = [], stats = {} }) {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full divide-y divide-gray-100">
-              <thead className="bg-gray-50 border-b border-gray-100">
+            <table className="w-full divide-y divide-slate-100">
+              <thead className="bg-slate-50/80">
                 <tr>
                   <th className="w-12 px-4 py-3 text-left">
                     <input
@@ -151,23 +146,23 @@ export default function Patients({ patients = [], stats = {} }) {
                         }
                       }}
                       checked={filteredRows.length > 0 && selectedIds.length === filteredRows.length}
-                      className="rounded border-gray-300"
+                      className="rounded border-slate-300 text-sky-600 focus:ring-sky-200"
                     />
                   </th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">ID</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Patient</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Email</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Phone</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Joined</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Actions</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400">ID</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400">Patient</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400">Email</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400">Phone</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400">Joined</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 bg-white">
+              <tbody className="divide-y divide-slate-50 bg-white">
                 {filteredRows.map((p, idx) => {
                   const isSelected = selectedIds.includes(p.id);
                   return (
-                    <tr key={p.id || idx} className={`transition ${isSelected ? 'bg-[#00acb1]/10' : 'hover:bg-gray-50'}`}>
-                      <td className="px-4 py-4">
+                    <tr key={p.id || idx} className={`transition ${isSelected ? 'bg-sky-50/50' : 'hover:bg-slate-50/50'}`}>
+                      <td className="px-4 py-3.5">
                         <input
                           type="checkbox"
                           checked={isSelected}
@@ -178,38 +173,35 @@ export default function Patients({ patients = [], stats = {} }) {
                               setSelectedIds(selectedIds.filter((id) => id !== p.id));
                             }
                           }}
-                          className="rounded border-gray-300"
+                          className="rounded border-slate-300 text-sky-600 focus:ring-sky-200"
                         />
                       </td>
-                      <td className="px-5 py-3.5 text-sm font-semibold text-gray-600">{p.id}</td>
-                      <td className="px-5 py-3.5">
-                        <div className="font-semibold text-gray-900">{p.name || p.id}</div>
+                      <td className="px-4 py-3.5 text-sm font-medium text-slate-500">{p.id}</td>
+                      <td className="px-4 py-3.5">
+                        <div className="flex items-center gap-3">
+                          <PatientAvatar name={p.name || String(p.id)} size="sm" />
+                          <span className="font-semibold text-slate-800">{p.name || p.id}</span>
+                        </div>
                       </td>
-                      <td className="px-5 py-3.5 text-sm text-gray-600">{p.email || '—'}</td>
-                      <td className="px-5 py-3.5 text-sm text-gray-600 whitespace-nowrap">{p.phone || '—'}</td>
-                      <td className="px-5 py-3.5 text-sm text-gray-600 whitespace-nowrap">{p.created_at ? (formatDisplayDateWithYearFromDateLike(p.created_at) || p.created_at) : '—'}</td>
-                      <td className="px-5 py-3.5 text-sm">
+                      <td className="px-4 py-3.5 text-sm text-slate-500">{p.email || '—'}</td>
+                      <td className="px-4 py-3.5 text-sm text-slate-500 whitespace-nowrap">{p.phone || '—'}</td>
+                      <td className="px-4 py-3.5 text-sm text-slate-500 whitespace-nowrap">{p.created_at ? (formatDisplayDateWithYearFromDateLike(p.created_at) || p.created_at) : '—'}</td>
+                      <td className="px-4 py-3.5 text-sm">
                         <div className="flex items-center gap-3 flex-wrap">
                           <Link
                             href={`/doctor/patients/${p.id}`}
-                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition"
+                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-sky-600 hover:text-sky-700 transition"
                           >
                             <Eye className="h-3.5 w-3.5" /> View
                           </Link>
                           {p.email ? (
-                            <a
-                              href={`mailto:${p.email}`}
-                              className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-[#005963] transition"
-                            >
-                              Email
+                            <a href={`mailto:${p.email}`} className="inline-flex items-center gap-1 text-xs font-semibold text-slate-400 hover:text-sky-600 transition">
+                              <Mail className="h-3 w-3" /> Email
                             </a>
                           ) : null}
                           {p.phone ? (
-                            <a
-                              href={`tel:${p.phone}`}
-                              className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-[#005963] transition"
-                            >
-                              Call
+                            <a href={`tel:${p.phone}`} className="inline-flex items-center gap-1 text-xs font-semibold text-slate-400 hover:text-sky-600 transition">
+                              <Phone className="h-3 w-3" /> Call
                             </a>
                           ) : null}
                         </div>
@@ -219,10 +211,8 @@ export default function Patients({ patients = [], stats = {} }) {
                 })}
                 {filteredRows.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="px-6 py-12 text-center">
-                      <div className="text-gray-400">
-                        <p className="font-semibold">No patients found</p>
-                      </div>
+                    <td colSpan={7} className="py-2">
+                      <DocEmptyState icon={Users} title="No patients found" />
                     </td>
                   </tr>
                 )}
@@ -231,96 +221,65 @@ export default function Patients({ patients = [], stats = {} }) {
           </div>
 
           {pagination && typeof pagination.total === 'number' ? (
-            <div className="border-t border-gray-100 bg-white px-5 py-3.5">
-              <p className="text-xs text-gray-500">
-                Showing <span className="font-semibold text-gray-700">{((pagination.current_page - 1) * pagination.per_page) + 1}</span> to <span className="font-semibold text-gray-700">{Math.min(pagination.per_page * pagination.current_page, pagination.total)}</span> of <span className="font-semibold text-gray-700">{pagination.total}</span> results
+            <div className="border-t border-slate-100 bg-slate-50/50 px-5 py-3.5">
+              <p className="text-xs text-slate-500">
+                Showing <span className="font-semibold text-slate-700">{((pagination.current_page - 1) * pagination.per_page) + 1}</span> to <span className="font-semibold text-slate-700">{Math.min(pagination.per_page * pagination.current_page, pagination.total)}</span> of <span className="font-semibold text-slate-700">{pagination.total}</span> results
               </p>
             </div>
           ) : null}
           <Pagination data={pagination} />
-        </div>
+        </DocCard>
       </div>
 
       {/* Prescription Selection Modal */}
-      {prescriptionModal && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
-          onClick={() => setPrescriptionModal(null)}
-        >
-          <div 
-            className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl max-h-[80vh] overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal Header */}
-            <div className="bg-gradient-to-r from-[#005963] to-[#00acb1] px-6 py-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-bold text-white">Select Prescription</h3>
-                  <p className="text-sm text-white/80 mt-1">
-                    {prescriptionModal.name} has {prescriptionModal.prescriptions_count} prescriptions
-                  </p>
-                </div>
+      <DocModal
+        open={!!prescriptionModal}
+        onClose={() => setPrescriptionModal(null)}
+        title="Select Prescription"
+        icon={FileText}
+        size="md"
+        footer={
+          <DocButton variant="secondary" size="sm" onClick={() => setPrescriptionModal(null)}>Cancel</DocButton>
+        }
+      >
+        {prescriptionModal && (
+          <div>
+            <p className="mb-4 text-sm text-slate-500">
+              {prescriptionModal.name} has {prescriptionModal.prescriptions_count} prescriptions
+            </p>
+            <div className="space-y-2">
+              {prescriptionModal.prescriptions.map((prescription, index) => (
                 <button
-                  onClick={() => setPrescriptionModal(null)}
-                  className="rounded-lg p-2 text-white/80 hover:bg-white/20 transition"
+                  key={prescription.id}
+                  onClick={() => {
+                    router.visit(`/doctor/prescriptions/${prescription.id}`);
+                    setPrescriptionModal(null);
+                  }}
+                  className="w-full text-left p-4 rounded-xl border border-slate-200 hover:border-sky-300 hover:bg-sky-50/50 transition-all group"
                 >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-            </div>
-
-            {/* Modal Body */}
-            <div className="p-6 overflow-y-auto max-h-[calc(80vh-120px)]">
-              <div className="space-y-3">
-                {prescriptionModal.prescriptions.map((prescription, index) => (
-                  <button
-                    key={prescription.id}
-                    onClick={() => {
-                      router.visit(`/doctor/prescriptions/${prescription.id}`);
-                      setPrescriptionModal(null);
-                    }}
-                    className="w-full text-left p-4 rounded-xl border-2 border-gray-200 hover:border-[#00acb1] hover:bg-[#00acb1]/5 transition-all group"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <div className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-lg bg-[#005963]/10 text-[#005963] font-bold text-sm group-hover:bg-[#005963] group-hover:text-white transition-colors">
-                            {index + 1}
-                          </div>
-                          <div className="flex-1">
-                            <div className="font-semibold text-gray-900 group-hover:text-[#005963] transition-colors">
-                              {prescription.diagnosis || 'No diagnosis provided'}
-                            </div>
-                          </div>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-1.5">
+                        <div className="flex-shrink-0 flex items-center justify-center w-7 h-7 rounded-lg bg-slate-100 text-slate-600 font-bold text-xs group-hover:bg-sky-600 group-hover:text-white transition-colors">
+                          {index + 1}
                         </div>
-                        <div className="flex items-center gap-2 text-sm text-gray-500">
-                          <Calendar className="h-4 w-4" />
-                          <span>
-                            {formatDisplayDateWithYearFromDateLike(prescription.created_at)}
-                          </span>
+                        <div className="font-semibold text-slate-800 group-hover:text-sky-600 transition-colors text-sm">
+                          {prescription.diagnosis || 'No diagnosis provided'}
                         </div>
                       </div>
-                      <div className="flex-shrink-0">
-                        <FileText className="h-5 w-5 text-gray-400 group-hover:text-[#00acb1] transition-colors" />
+                      <div className="flex items-center gap-2 text-xs text-slate-400 ml-10">
+                        <Calendar className="h-3 w-3" />
+                        <span>{formatDisplayDateWithYearFromDateLike(prescription.created_at)}</span>
                       </div>
                     </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Modal Footer */}
-            <div className="border-t border-gray-200 px-6 py-4 bg-gray-50">
-              <button
-                onClick={() => setPrescriptionModal(null)}
-                className="w-full rounded-lg bg-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-300 transition"
-              >
-                Cancel
-              </button>
+                    <FileText className="h-4 w-4 text-slate-300 group-hover:text-sky-500 transition-colors flex-shrink-0 mt-1" />
+                  </div>
+                </button>
+              ))}
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </DocModal>
     </DoctorLayout>
   );
 }

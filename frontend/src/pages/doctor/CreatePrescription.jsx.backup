@@ -322,16 +322,16 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
     );
 
     const inputClass =
-        'w-full rounded-md bg-slate-50/50 px-3 py-2 text-sm text-slate-900 doc-input-focus';
+        'w-full rounded-md bg-gray-50/50 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#005963]/20';
     const medicineInputClass =
-        'w-full rounded-md bg-slate-50/50 px-2 py-1 text-xs text-slate-900 doc-input-focus';
-    const labelClass = 'mb-2 block text-xs font-semibold text-slate-700';
-    const helperClass = 'mt-1 text-xs text-slate-500';
+        'w-full rounded-md bg-gray-50/50 px-2 py-1 text-xs text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#005963]/20';
+    const labelClass = 'mb-2 block text-xs font-semibold text-[#005963]';
+    const helperClass = 'mt-1 text-xs text-gray-600';
     const errorClass = 'mt-1 text-xs font-semibold text-rose-700';
-    const sectionTitleClass = 'text-base font-bold text-slate-800';
-    const sectionSubClass = 'mt-1 text-xs text-slate-500';
+    const sectionTitleClass = 'text-base font-extrabold text-[#005963]';
+    const sectionSubClass = 'mt-1 text-xs text-gray-600';
     const chipClass =
-        'inline-flex items-center gap-2 rounded-full border border-sky-200 bg-white px-3 py-1.5 text-xs font-medium text-sky-700';
+        'inline-flex items-center gap-2 rounded-full border border-[#00acb1]/25 bg-white px-3 py-1.5 text-xs font-semibold text-[#005963]';
 
     const buildDiagnosisText = () => {
         const lines = [];
@@ -514,9 +514,8 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
 
     return (
         <DoctorLayout title="Create Prescription">
-          <div className="mx-auto max-w-6xl space-y-6">
             {/* Hero Banner */}
-            <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 p-8 shadow-sm">
+            <div className="relative mb-8 overflow-hidden rounded-3xl bg-gradient-to-br from-[#2d4a7a] via-[#3b6998] to-[#e08a4a] p-8 shadow-md">
                 {/* Decorative circles */}
                 <div className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full bg-white/10" />
                 <div className="pointer-events-none absolute -bottom-10 right-32 h-36 w-36 rounded-full bg-white/10" />
@@ -527,7 +526,7 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                             <FileText className="h-3.5 w-3.5" />
                             New Prescription
                         </div>
-                        <h1 className="text-3xl font-bold leading-tight text-white lg:text-4xl">
+                        <h1 className="text-3xl font-black leading-tight text-white lg:text-4xl">
                             Create Prescription
                         </h1>
                         <p className="mt-2 max-w-lg text-sm text-white/70">
@@ -569,8 +568,8 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
 
             {/* Prescription Header Card - Like real prescription pad (Matching PrescriptionShow) */}
 
-            <div>
-                <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+            <div className="mx-auto max-w-7xl">
+                <div className="overflow-hidden rounded-lg border border-gray-300 bg-white shadow-2xl">
                     
                     {/* Prescription Header - Doctor left, Chamber right */}
                     <div className="border-b-4 border-[#005963] bg-gradient-to-r from-[#005963] via-[#007f89] to-[#00acb1] p-6 text-white md:p-8">
@@ -625,47 +624,47 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                     </div>
 
                     {/* Patient Info Bar - Dynamic */}
-                    <div className="border-b-2 border-dashed border-slate-200 bg-slate-50 px-8 py-5">
+                    <div className="border-b-2 border-dashed border-gray-300 bg-gray-50 px-8 py-5">
                         <div className="flex flex-wrap items-center justify-between gap-4">
                             <div className="flex flex-wrap items-center gap-4">
                                 <div className="flex items-center gap-2">
-                                    <span className="text-xs font-semibold uppercase text-slate-400">Patient:</span>
-                                    <span className="text-base font-semibold text-slate-800">{state.patient.name || '—'}</span>
+                                    <span className="text-xs font-bold uppercase text-gray-500">Patient:</span>
+                                    <span className="text-base font-bold text-gray-900">{state.patient.name || '—'}</span>
                                 </div>
                                 {state.patient.age_value && (
-                                    <div className="flex items-center gap-1 text-sm text-slate-600">
+                                    <div className="flex items-center gap-1 text-sm text-gray-700">
                                         <span className="font-semibold">{state.patient.age_value}</span>
                                         <span>{state.patient.age_unit}</span>
                                     </div>
                                 )}
                                 {state.patient.gender && (
-                                    <div className="text-sm text-slate-600">{state.patient.gender}</div>
+                                    <div className="text-sm text-gray-700">{state.patient.gender}</div>
                                 )}
                                 {state.patient.weight && (
-                                    <div className="text-sm text-slate-600">{state.patient.weight} kg</div>
+                                    <div className="text-sm text-gray-700">{state.patient.weight} kg</div>
                                 )}
                                 {state.patient.contact && (
-                                    <div className="flex items-center gap-1 text-sm text-slate-500">
+                                    <div className="flex items-center gap-1 text-sm text-gray-600">
                                         <Phone className="h-3 w-3" />
                                         {state.patient.contact}
                                     </div>
                                 )}
                                 {state.visit.type && (
-                                    <div className="rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700">
+                                    <div className="rounded-full border border-[#00acb1]/40 bg-[#00acb1]/10 px-2 py-0.5 text-xs font-semibold text-[#005963]">
                                         {state.visit.type}
                                     </div>
                                 )}
                                 {visitDateLabel && (
-                                    <div className="flex items-center gap-1 text-sm text-slate-500">
+                                    <div className="flex items-center gap-1 text-sm text-gray-600">
                                         <Calendar className="h-3 w-3" />
                                         {visitDateLabel}
                                     </div>
                                 )}
                             </div>
                             {state.follow_up.date && (
-                                <div className="flex items-center gap-2 rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5">
-                                    <Calendar className="h-4 w-4 text-sky-600" />
-                                    <span className="text-xs font-semibold text-sky-700">Follow-up: {followUpDateLabel}</span>
+                                <div className="flex items-center gap-2 rounded-lg border border-[#005963]/30 bg-[#005963]/5 px-3 py-1.5">
+                                    <Calendar className="h-4 w-4 text-[#005963]" />
+                                    <span className="text-xs font-bold text-[#005963]">Follow-up: {followUpDateLabel}</span>
                                 </div>
                             )}
                         </div>
@@ -675,42 +674,42 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                     <div className="min-h-[500px] bg-white p-8 pb-12">
                         <form onSubmit={(e) => e.preventDefault()}>
                             {/* Patient Information Section - Editable Fields Above Prescription */}
-                            <div className="mb-6 rounded-lg border-2 border-dashed border-slate-200 bg-slate-50 p-4">
-                                <div className="mb-4 flex items-center gap-2 border-b border-slate-200 pb-2">
-                                    <User className="h-5 w-5 text-sky-700" />
-                                    <span className="text-sm font-semibold text-slate-800">Patient Information</span>
+                            <div className="mb-6 rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 p-4">
+                                <div className="mb-4 flex items-center gap-2 border-b border-gray-300 pb-2">
+                                    <User className="h-5 w-5 text-[#005963]" />
+                                    <span className="text-sm font-bold text-[#005963]">Patient Information</span>
                                 </div>
                                 <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6 xl:grid-cols-6">
                                     <div>
-                                        <label className="mb-1 block text-xs font-semibold text-slate-600">Patient Name *</label>
+                                        <label className="mb-1 block text-xs font-semibold text-gray-700">Patient Name *</label>
                                         <input
-                                            className="w-full rounded-md bg-slate-50/50 px-2 py-1.5 text-sm text-slate-900 doc-input-focus"
+                                            className="w-full rounded-md bg-gray-50/50 px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#005963]/20"
                                             value={state.patient.name}
                                             onChange={(e) => dispatch({ type: 'setField', path: ['patient', 'name'], value: e.target.value })}
                                             placeholder="Full name"
                                         />
                                     </div>
                                     <div>
-                                        <label className="mb-1 block text-xs font-semibold text-slate-600">Contact</label>
+                                        <label className="mb-1 block text-xs font-semibold text-gray-700">Contact</label>
                                         <input
-                                            className="w-full rounded-md bg-slate-50/50 px-2 py-1.5 text-sm text-slate-900 doc-input-focus"
+                                            className="w-full rounded-md bg-gray-50/50 px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#005963]/20"
                                             value={state.patient.contact}
                                             onChange={(e) => dispatch({ type: 'setField', path: ['patient', 'contact'], value: e.target.value })}
                                             placeholder="Phone"
                                         />
                                     </div>
                                     <div>
-                                        <label className="mb-1 block text-xs font-semibold text-slate-600">Age</label>
+                                        <label className="mb-1 block text-xs font-semibold text-gray-700">Age</label>
                                         <div className="flex gap-1">
                                             <input
                                                 inputMode="numeric"
-                                                className="w-full rounded-md bg-slate-50/50 px-2 py-1.5 text-sm text-slate-900 doc-input-focus"
+                                                className="w-full rounded-md bg-gray-50/50 px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#005963]/20"
                                                 value={state.patient.age_value}
                                                 onChange={(e) => dispatch({ type: 'setField', path: ['patient', 'age_value'], value: e.target.value })}
                                                 placeholder="25"
                                             />
                                             <select
-                                                className="w-20 rounded-md bg-slate-50/50 px-1 py-1.5 text-xs text-slate-900 doc-input-focus"
+                                                className="w-20 rounded-md bg-gray-50/50 px-1 py-1.5 text-xs text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#005963]/20"
                                                 value={state.patient.age_unit}
                                                 onChange={(e) => dispatch({ type: 'setField', path: ['patient', 'age_unit'], value: e.target.value })}
                                             >
@@ -720,9 +719,9 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                         </div>
                                     </div>
                                     <div>
-                                        <label className="mb-1 block text-xs font-semibold text-slate-600">Gender</label>
+                                        <label className="mb-1 block text-xs font-semibold text-gray-700">Gender</label>
                                         <select
-                                            className="w-full rounded-md bg-slate-50/50 px-2 py-1.5 text-sm text-slate-900 doc-input-focus"
+                                            className="w-full rounded-md bg-gray-50/50 px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#005963]/20"
                                             value={state.patient.gender}
                                             onChange={(e) => dispatch({ type: 'setField', path: ['patient', 'gender'], value: e.target.value })}
                                         >
@@ -733,19 +732,19 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                         </select>
                                     </div>
                                     <div>
-                                        <label className="mb-1 block text-xs font-semibold text-slate-600">Weight (kg)</label>
+                                        <label className="mb-1 block text-xs font-semibold text-gray-700">Weight (kg)</label>
                                         <input
                                             inputMode="decimal"
-                                            className="w-full rounded-md bg-slate-50/50 px-2 py-1.5 text-sm text-slate-900 doc-input-focus"
+                                            className="w-full rounded-md bg-gray-50/50 px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#005963]/20"
                                             value={state.patient.weight}
                                             onChange={(e) => dispatch({ type: 'setField', path: ['patient', 'weight'], value: e.target.value })}
                                             placeholder="70"
                                         />
                                     </div>
                                     <div>
-                                        <label className="mb-1 block text-xs font-semibold text-slate-600">Visit Type</label>
+                                        <label className="mb-1 block text-xs font-semibold text-gray-700">Visit Type</label>
                                         <select
-                                            className="w-full rounded-md bg-slate-50/50 px-2 py-1.5 text-sm text-slate-900 doc-input-focus"
+                                            className="w-full rounded-md bg-gray-50/50 px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#005963]/20"
                                             value={state.visit.type}
                                             onChange={(e) => dispatch({ type: 'setField', path: ['visit', 'type'], value: e.target.value })}
                                         >
@@ -760,21 +759,21 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                             <div className="grid grid-cols-12 gap-8">
                                 
                                 {/* Left Column - Narrow (Tests Top, Diagnosis Bottom) */}
-                                <div className="col-span-3 space-y-6 border-r-2 border-dashed border-slate-200 pr-8">
+                                <div className="col-span-3 space-y-6 border-r-2 border-dashed border-gray-200 pr-8">
                                     
                                     {/* Tests Section - Top Right */}
                                     <div>
-                                        <div className="mb-3 flex items-center gap-2 border-b border-slate-200 pb-2">
-                                            <FlaskConical className="h-4 w-4 text-sky-700" />
-                                            <span className="text-xs font-bold uppercase tracking-wider text-slate-700">Investigations</span>
+                                        <div className="mb-3 flex items-center gap-2 border-b border-[#005963]/20 pb-2">
+                                            <FlaskConical className="h-4 w-4 text-[#005963]" />
+                                            <span className="text-xs font-black uppercase tracking-wider text-[#005963]">Investigations</span>
                                         </div>
                                         
                                         {/* Common Tests */}
                                         <div className="mb-3">
-                                            <div className="mb-2 text-xs font-semibold text-slate-600">Common Tests</div>
+                                            <div className="mb-2 text-xs font-semibold text-gray-700">Common Tests</div>
                                             <div className="grid grid-cols-2 gap-1.5">
                                                 {COMMON_TESTS.map((test) => (
-                                                    <label key={test} className="flex items-center gap-1.5 cursor-pointer hover:bg-slate-50 p-1 rounded">
+                                                    <label key={test} className="flex items-center gap-1.5 cursor-pointer hover:bg-gray-50 p-1 rounded">
                                                         <input
                                                             type="checkbox"
                                                             checked={state.investigations.common[test] || false}
@@ -793,12 +792,12 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                         
                                         {/* Custom Tests */}
                                         <div>
-                                            <div className="mb-2 text-xs font-semibold text-slate-600">Custom Tests</div>
+                                            <div className="mb-2 text-xs font-semibold text-gray-700">Custom Tests</div>
                                             <div className="space-y-1.5">
                                                 {(state.investigations.custom || []).map((test, idx) => (
                                                     <div key={idx} className="flex gap-1">
                                                         <input
-                                                            className="w-full rounded-md bg-slate-50/50 px-2 py-1 text-xs text-slate-900 doc-input-focus"
+                                                            className="w-full rounded-md bg-gray-50/50 px-2 py-1 text-xs text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#005963]/20"
                                                             value={test}
                                                             onChange={(e) => dispatch({
                                                                 type: 'setCustomTest',
@@ -820,7 +819,7 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                                 ))}
                                                 <button
                                                     type="button"
-                                                    className="w-full rounded border border-sky-300 bg-sky-50 px-2 py-1 text-xs font-semibold text-sky-700 hover:bg-sky-100"
+                                                    className="w-full rounded border border-[#005963]/50 bg-[#005963]/5 px-2 py-1 text-xs font-semibold text-[#005963] hover:bg-[#005963]/10"
                                                     onClick={() => dispatch({ type: 'addCustomTest' })}
                                                 >
                                                     + Add Test
@@ -831,16 +830,16 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                     
                                     {/* Diagnosis & Complaints Section - Bottom Right */}
                                     <div>
-                                        <div className="mb-3 flex items-center gap-2 border-b border-slate-200 pb-2">
-                                            <Stethoscope className="h-4 w-4 text-sky-700" />
-                                            <span className="text-xs font-bold uppercase tracking-wider text-slate-700">Diagnosis</span>
+                                        <div className="mb-3 flex items-center gap-2 border-b border-[#005963]/20 pb-2">
+                                            <Stethoscope className="h-4 w-4 text-[#005963]" />
+                                            <span className="text-xs font-black uppercase tracking-wider text-[#005963]">Diagnosis</span>
                                         </div>
                                         
                                         {/* Provisional Diagnosis */}
                                         <div className="mb-3">
-                                            <label className="mb-1 block text-xs font-semibold text-slate-600">Provisional</label>
+                                            <label className="mb-1 block text-xs font-semibold text-gray-700">Provisional</label>
                                             <textarea
-                                                className="w-full rounded-md bg-slate-50/50 px-2 py-1.5 text-xs text-slate-900 doc-input-focus"
+                                                className="w-full rounded-md bg-gray-50/50 px-2 py-1.5 text-xs text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#005963]/20"
                                                 rows={2}
                                                 value={state.diagnosis.provisional}
                                                 onChange={(e) => dispatch({
@@ -854,9 +853,9 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                         
                                         {/* Final Diagnosis */}
                                         <div className="mb-3">
-                                            <label className="mb-1 block text-xs font-semibold text-slate-600">Final</label>
+                                            <label className="mb-1 block text-xs font-semibold text-gray-700">Final</label>
                                             <textarea
-                                                className="w-full rounded-md bg-slate-50/50 px-2 py-1.5 text-xs text-slate-900 doc-input-focus"
+                                                className="w-full rounded-md bg-gray-50/50 px-2 py-1.5 text-xs text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#005963]/20"
                                                 rows={2}
                                                 value={state.diagnosis.final}
                                                 onChange={(e) => dispatch({
@@ -871,7 +870,7 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                         {/* Chief Complaints */}
                                         <div>
                                             <div className="mb-2 flex items-center justify-between">
-                                                <label className="text-xs font-semibold text-slate-600">Complaints</label>
+                                                <label className="text-xs font-semibold text-gray-700">Complaints</label>
                                                 <button
                                                     type="button"
                                                     onClick={() => dispatch({
@@ -879,16 +878,16 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                                         section: 'complaints',
                                                         item: emptyComplaint(),
                                                     })}
-                                                    className="text-[10px] text-sky-600 hover:underline"
+                                                    className="text-[10px] text-[#005963] hover:underline"
                                                 >
                                                     + Add
                                                 </button>
                                             </div>
                                             <div className="space-y-1.5">
                                                 {(state.complaints || []).map((c, idx) => (
-                                                    <div key={idx} className="space-y-1 rounded border border-slate-200 bg-white p-1.5">
+                                                    <div key={idx} className="space-y-1 rounded border border-gray-200 bg-white p-1.5">
                                                         <input
-                                                            className="w-full rounded bg-slate-50/50 px-1.5 py-1 text-xs text-slate-900 doc-input-focus"
+                                                            className="w-full rounded bg-gray-50/50 px-1.5 py-1 text-xs text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#005963]/20"
                                                             value={c.description}
                                                             onChange={(e) => dispatch({
                                                                 type: 'setArrayItem',
@@ -899,7 +898,7 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                                             placeholder="Complaint"
                                                         />
                                                         <input
-                                                            className="w-full rounded bg-slate-50/50 px-1.5 py-1 text-xs text-slate-900 doc-input-focus"
+                                                            className="w-full rounded bg-gray-50/50 px-1.5 py-1 text-xs text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#005963]/20"
                                                             value={c.duration}
                                                             onChange={(e) => dispatch({
                                                                 type: 'setArrayItem',
@@ -929,12 +928,12 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                         </div>
                                         
                                         {/* Vitals */}
-                                        <div className="mt-3 border-t border-slate-200 pt-3">
-                                            <div className="mb-2 text-xs font-semibold text-slate-600">Vitals</div>
+                                        <div className="mt-3 border-t border-gray-200 pt-3">
+                                            <div className="mb-2 text-xs font-semibold text-gray-700">Vitals</div>
                                             <div className="grid grid-cols-2 gap-1.5">
                                                 <div>
                                                     <input
-                                                        className="w-full rounded bg-slate-50/50 px-1.5 py-1 text-xs text-slate-900 doc-input-focus"
+                                                        className="w-full rounded bg-gray-50/50 px-1.5 py-1 text-xs text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#005963]/20"
                                                         value={state.exam.bp}
                                                         onChange={(e) => dispatch({
                                                             type: 'setField',
@@ -946,7 +945,7 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                                 </div>
                                                 <div>
                                                     <input
-                                                        className="w-full rounded bg-slate-50/50 px-1.5 py-1 text-xs text-slate-900 doc-input-focus"
+                                                        className="w-full rounded bg-gray-50/50 px-1.5 py-1 text-xs text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#005963]/20"
                                                         value={state.exam.pulse}
                                                         onChange={(e) => dispatch({
                                                             type: 'setField',
@@ -958,7 +957,7 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                                 </div>
                                                 <div>
                                                     <input
-                                                        className="w-full rounded bg-slate-50/50 px-1.5 py-1 text-xs text-slate-900 doc-input-focus"
+                                                        className="w-full rounded bg-gray-50/50 px-1.5 py-1 text-xs text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#005963]/20"
                                                         value={state.exam.temperature}
                                                         onChange={(e) => dispatch({
                                                             type: 'setField',
@@ -970,7 +969,7 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                                 </div>
                                                 <div>
                                                     <input
-                                                        className="w-full rounded bg-slate-50/50 px-1.5 py-1 text-xs text-slate-900 doc-input-focus"
+                                                        className="w-full rounded bg-gray-50/50 px-1.5 py-1 text-xs text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#005963]/20"
                                                         value={state.exam.spo2}
                                                         onChange={(e) => dispatch({
                                                             type: 'setField',
@@ -991,16 +990,16 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                     {/* Rx Symbol and Medications - Main Area */}
                                     <div>
                                         <div className="mb-4 flex items-start gap-3">
-                                            <div className="text-5xl font-serif font-bold italic text-slate-800">℞</div>
+                                            <div className="text-5xl font-serif font-bold italic text-[#005963]">℞</div>
                                             <div className="flex-1 pt-2">
                                                 {/* Medicine Rows - Dynamic */}
                                                 <div className="space-y-2">
                                                     {(state.medicines || []).map((m, idx) => (
-                                                        <div key={idx} className="group/med flex items-start gap-2 rounded border border-slate-200 bg-white p-2 hover:border-sky-400 hover:bg-slate-50">
-                                                            <span className="mt-1 text-xs font-bold text-slate-400">{idx + 1}.</span>
+                                                        <div key={idx} className="group/med flex items-start gap-2 rounded border border-gray-200 bg-white p-2 hover:border-[#005963] hover:bg-gray-50">
+                                                            <span className="mt-1 text-xs font-bold text-gray-500">{idx + 1}.</span>
                                                             <div className="flex-1 grid grid-cols-6 gap-2">
                                                                 <input
-                                                                    className="col-span-2 rounded bg-slate-50/50 px-3 py-1.5 text-sm text-slate-900 doc-input-focus"
+                                                                    className="col-span-2 rounded bg-gray-50/50 px-3 py-1.5 text-sm text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#005963]/20"
                                                                     value={m.name}
                                                                     onChange={(e) => {
                                                                         const value = e.target.value;
@@ -1023,7 +1022,7 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                                                     list="medicine-suggestions"
                                                                 />
                                                                 <input
-                                                                    className="rounded bg-slate-50/50 px-3 py-1.5 text-sm text-slate-900 doc-input-focus"
+                                                                    className="rounded bg-gray-50/50 px-3 py-1.5 text-sm text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#005963]/20"
                                                                     value={m.strength}
                                                                     onChange={(e) => dispatch({
                                                                         type: 'setArrayItem',
@@ -1034,7 +1033,7 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                                                     placeholder="Strength"
                                                                 />
                                                                 <input
-                                                                    className="rounded bg-slate-50/50 px-3 py-1.5 text-sm text-slate-900 doc-input-focus"
+                                                                    className="rounded bg-gray-50/50 px-3 py-1.5 text-sm text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#005963]/20"
                                                                     value={m.dosage}
                                                                     onChange={(e) => dispatch({
                                                                         type: 'setArrayItem',
@@ -1045,7 +1044,7 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                                                     placeholder="e.g. 1+0+1"
                                                                 />
                                                                 <input
-                                                                    className="rounded bg-slate-50/50 px-3 py-1.5 text-sm text-slate-900 doc-input-focus"
+                                                                    className="rounded bg-gray-50/50 px-3 py-1.5 text-sm text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#005963]/20"
                                                                     value={m.duration}
                                                                     onChange={(e) => dispatch({
                                                                         type: 'setArrayItem',
@@ -1056,7 +1055,7 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                                                     placeholder="Duration"
                                                                 />
                                                             </div>
-                                                            <div className="flex flex-col gap-1 text-xs text-slate-600">
+                                                            <div className="flex flex-col gap-1 text-xs text-gray-700">
                                                                 <span className="font-semibold">Timing</span>
                                                                 <div className="flex items-center gap-3">
                                                                     <label className="inline-flex items-center gap-1">
@@ -1120,7 +1119,7 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                                                 item: emptyMedicine(),
                                                             });
                                                         }}
-                                                        className="w-full rounded border-2 border-dashed border-sky-300 bg-sky-50 px-3 py-2 text-xs font-semibold text-sky-700 hover:bg-sky-100 transition flex items-center justify-center gap-1"
+                                                        className="w-full rounded border-2 border-dashed border-[#005963]/30 bg-[#005963]/5 px-3 py-2 text-xs font-semibold text-[#005963] hover:bg-[#005963]/10 transition flex items-center justify-center gap-1"
                                                     >
                                                         <Plus className="h-3 w-3" />
                                                         Add Medicine Row
@@ -1145,17 +1144,17 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                     </div>
                                     
                                     {/* Advice Section - Bottom Right */}
-                                    <div className="border-t-2 border-dotted border-slate-200 pt-4">
+                                    <div className="border-t-2 border-dotted border-gray-200 pt-4">
                                         <div className="mb-2 flex items-center gap-2">
-                                            <FileText className="h-4 w-4 text-sky-700" />
-                                            <span className="text-xs font-bold uppercase tracking-wider text-slate-700">Advice</span>
+                                            <FileText className="h-4 w-4 text-[#005963]" />
+                                            <span className="text-xs font-black uppercase tracking-wider text-[#005963]">Advice</span>
                                         </div>
                                         
                                         <div className="space-y-3">
                                             <div>
-                                                <label className="mb-1 block text-xs font-semibold text-slate-600">Lifestyle</label>
+                                                <label className="mb-1 block text-xs font-semibold text-gray-700">Lifestyle</label>
                                                 <textarea
-                                                    className="w-full rounded-md bg-slate-50/50 px-2 py-1.5 text-xs text-slate-900 doc-input-focus"
+                                                    className="w-full rounded-md bg-gray-50/50 px-2 py-1.5 text-xs text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#005963]/20"
                                                     rows={2}
                                                     value={state.advice.lifestyle}
                                                     onChange={(e) => dispatch({
@@ -1167,9 +1166,9 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                                 />
                                             </div>
                                             <div>
-                                                <label className="mb-1 block text-xs font-semibold text-slate-600">Diet / Rest</label>
+                                                <label className="mb-1 block text-xs font-semibold text-gray-700">Diet / Rest</label>
                                                 <textarea
-                                                    className="w-full rounded-md bg-slate-50/50 px-2 py-1.5 text-xs text-slate-900 doc-input-focus"
+                                                    className="w-full rounded-md bg-gray-50/50 px-2 py-1.5 text-xs text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#005963]/20"
                                                     rows={2}
                                                     value={state.advice.diet_rest}
                                                     onChange={(e) => dispatch({
@@ -1181,10 +1180,10 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                                 />
                                             </div>
                                             <div>
-                                                <label className="mb-1 block text-xs font-semibold text-slate-600">Follow-up Date</label>
+                                                <label className="mb-1 block text-xs font-semibold text-gray-700">Follow-up Date</label>
                                                 <input
                                                     type="date"
-                                                    className="w-full rounded-md bg-slate-50/50 px-2 py-1.5 text-xs text-slate-900 doc-input-focus"
+                                                    className="w-full rounded-md bg-gray-50/50 px-2 py-1.5 text-xs text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#005963]/20"
                                                     value={state.follow_up.date}
                                                     onChange={(e) => dispatch({
                                                         type: 'setField',
@@ -1199,20 +1198,20 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                             </div>
 
                     {/* Form Submit Section - Enhanced */}
-                    <div className="mt-10 rounded-xl border border-slate-200 bg-slate-50 p-6">
+                    <div className="mt-10 rounded-2xl border-2 border-[#005963]/30 bg-gradient-to-r from-[#005963]/5 to-transparent p-6 shadow-md">
                         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                             <div className="flex items-center gap-3 text-sm">
                                 <div className="rounded-full bg-emerald-100 p-2">
                                     <CheckCircle2 className="h-5 w-5 text-emerald-600" />
                                 </div>
-                                <span className="font-medium text-slate-600">
+                                <span className="font-semibold text-gray-700">
                                     Form complete and ready to submit
                                 </span>
                             </div>
                             <div className="flex gap-3">
                                 <button
                                     type="button"
-                                    className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-6 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-50"
+                                    className="flex items-center gap-2 rounded-2xl border-2 border-[#005963]/30 bg-white px-6 py-3 text-sm font-semibold text-[#005963] shadow-sm transition hover:bg-[#005963]/5 hover:shadow-md disabled:opacity-50"
                                     onClick={() => {
                                         dispatch({ type: 'reset' });
                                         setSuccess('');
@@ -1225,7 +1224,7 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                 </button>
                                 <button
                                     type="button"
-                                    className="flex items-center gap-2 rounded-xl border border-amber-400 bg-amber-50 px-6 py-2.5 text-sm font-semibold text-amber-700 shadow-sm transition hover:bg-amber-100 disabled:opacity-50"
+                                    className="flex items-center gap-2 rounded-2xl border-2 border-amber-500 bg-amber-50 px-6 py-3 text-sm font-bold text-amber-700 shadow-sm transition hover:bg-amber-100 disabled:opacity-50"
                                     disabled={submitting}
                                     onClick={() => handleSubmit('awaiting_tests')}
                                 >
@@ -1243,7 +1242,7 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                 </button>
                                 <button
                                     type="button"
-                                    className="flex items-center gap-2 rounded-xl bg-sky-600 px-8 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:opacity-50"
+                                    className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-[#005963] to-[#00acb1] px-8 py-3 text-sm font-bold text-white shadow-lg transition hover:shadow-xl disabled:opacity-50"
                                     disabled={submitting}
                                     onClick={() => handleSubmit('prescribed')}
                                 >
@@ -1269,7 +1268,6 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
             
             {/* Bottom spacing to prevent overlap */}
             <div className="h-8"></div>
-          </div>
         </DoctorLayout>
     );
 }
