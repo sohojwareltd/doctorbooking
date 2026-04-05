@@ -1,5 +1,5 @@
 import { Head, Link } from '@inertiajs/react';
-import { User, Mail, Phone, MapPin, Calendar, Weight, FileText, ArrowLeft, Eye, CheckCircle, XCircle, ClipboardList } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Calendar, Weight, FileText, ArrowLeft, Eye, CheckCircle, XCircle, ClipboardList, Clock3 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import DoctorLayout from '../../layouts/DoctorLayout';
 import { formatDisplayFromDateLike, formatDisplayDate } from '../../utils/dateFormat';
@@ -18,6 +18,12 @@ export default function PatientShow({ patient, appointments = [], prescriptions 
       arrived: appointments.filter(a => a.status === 'arrived').length,
       prescribed: appointments.filter(a => a.status === 'prescribed').length,
       cancelled: appointments.filter(a => a.status === 'cancelled').length,
+      upcoming: appointments.filter((appointment) => {
+        if (!appointment.appointment_date) return false;
+        const appointmentMoment = new Date(`${appointment.appointment_date}T${appointment.appointment_time || '00:00'}`);
+        if (Number.isNaN(appointmentMoment.getTime())) return false;
+        return appointmentMoment >= new Date() && !['cancelled', 'prescribed'].includes(appointment.status);
+      }).length,
     };
   }, [appointments]);
 
@@ -46,7 +52,7 @@ export default function PatientShow({ patient, appointments = [], prescriptions 
       <DoctorLayout>
         <div className="mx-auto max-w-6xl space-y-6">
           {/* Hero Banner */}
-          <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-[#273664] via-[#3d466b] to-[#be7a4b] p-6 shadow-[0_20px_40px_-28px_rgba(33,45,80,0.85)]">
+          <div className="doc-banner-root relative overflow-hidden rounded-xl bg-gradient-to-r from-[#273664] via-[#3d466b] to-[#be7a4b] p-6 shadow-[0_20px_40px_-28px_rgba(33,45,80,0.85)]">
             <div className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full bg-white/10" />
             <div className="pointer-events-none absolute -bottom-10 right-32 h-36 w-36 rounded-full bg-[#efba92]/15" />
             <div className="relative grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-end">
@@ -99,8 +105,8 @@ export default function PatientShow({ patient, appointments = [], prescriptions 
 
           {/* Stats */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard label="Total Appointments" value={appointmentStats.total} icon={Calendar} variant="blue" />
-            <StatCard label="Arrived" value={appointmentStats.arrived} icon={CheckCircle} variant="emerald" />
+            <StatCard label="Scheduled" value={appointmentStats.scheduled} icon={Calendar} variant="blue" />
+            <StatCard label="Upcoming" value={appointmentStats.upcoming} icon={Clock3} variant="amber" />
             <StatCard label="Prescribed" value={appointmentStats.prescribed} icon={ClipboardList} variant="cyan" />
             <StatCard label="Cancelled" value={appointmentStats.cancelled} icon={XCircle} variant="rose" />
           </div>
@@ -148,19 +154,19 @@ export default function PatientShow({ patient, appointments = [], prescriptions 
               {activeTab === 'appointments' && (
                 <div>
                   {appointments.length > 0 ? (
-                    <div className="overflow-x-auto">
+                    <div className="overflow-x-auto rounded-[22px] border border-[#e5ecf8] bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] shadow-[0_16px_34px_rgba(15,23,42,0.05)]">
                       <table className="w-full text-sm">
                         <thead>
-                          <tr className="border-b border-slate-100">
-                            <th className="text-left py-2.5 px-3 text-xs font-medium uppercase tracking-wider text-slate-400">Date</th>
-                            <th className="text-left py-2.5 px-3 text-xs font-medium uppercase tracking-wider text-slate-400">Time</th>
-                            <th className="text-left py-2.5 px-3 text-xs font-medium uppercase tracking-wider text-slate-400">Status</th>
-                            <th className="text-left py-2.5 px-3 text-xs font-medium uppercase tracking-wider text-slate-400">Symptoms</th>
+                          <tr className="border-b border-[#e8eef8] bg-[linear-gradient(180deg,#f8fbff_0%,#eef4ff_100%)]">
+                            <th className="text-left py-2.5 px-3 text-xs font-medium uppercase tracking-wider text-[#89a0c4]">Date</th>
+                            <th className="text-left py-2.5 px-3 text-xs font-medium uppercase tracking-wider text-[#89a0c4]">Time</th>
+                            <th className="text-left py-2.5 px-3 text-xs font-medium uppercase tracking-wider text-[#89a0c4]">Status</th>
+                            <th className="text-left py-2.5 px-3 text-xs font-medium uppercase tracking-wider text-[#89a0c4]">Symptoms</th>
                           </tr>
                         </thead>
                         <tbody>
                           {appointments.slice(0, 5).map((appointment) => (
-                            <tr key={appointment.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                            <tr key={appointment.id} className="border-b border-slate-50 transition-colors even:bg-[#fbfdff] hover:bg-[#f8fbff]">
                               <td className="py-2.5 px-3 text-xs font-medium text-slate-800">
                                 {appointment.appointment_date ? formatDisplayDate(appointment.appointment_date) : '-'}
                               </td>

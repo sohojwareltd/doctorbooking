@@ -1,5 +1,5 @@
 import { Head } from '@inertiajs/react';
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { Calendar, Clock, RefreshCw, X, Link2, CalendarOff, Plus, Trash2, Pencil, ChevronDown, Check } from 'lucide-react';
 import DoctorLayout from '../../layouts/DoctorLayout';
 import { DocCard, DocButton } from '../../components/doctor/DocUI';
@@ -46,6 +46,14 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
   const [success, setSuccess] = useState('');
   const [warning, setWarning] = useState('');
   const [error, setError] = useState('');
+  const [chamberMenuOpen, setChamberMenuOpen] = useState(false);
+  const [chamberMenuStyle, setChamberMenuStyle] = useState(null);
+  const [highlightUnavailableIndex, setHighlightUnavailableIndex] = useState(null);
+  const bannerOverlayRef = useRef(null);
+  const chamberButtonRef = useRef(null);
+  const chamberMenuRef = useRef(null);
+  const unavailableSectionRef = useRef(null);
+  const unavailableCardRefs = useRef([]);
 
   const updateRow = (idx, patch) => {
     setRows((prev) => prev.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
@@ -83,18 +91,28 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
   };
 
   const addUnavailable = () => {
+    const nextIndex = Array.isArray(unavailable) ? unavailable.length : 0;
     setUnavailable((prev) => {
       const next = [...(Array.isArray(prev) ? prev : [])];
       next.push({ start_date: '', end_date: '' });
       return next;
     });
+    setHighlightUnavailableIndex(nextIndex);
   };
 
   const updateUnavailable = (idx, patch) => {
     setUnavailable((prev) => (Array.isArray(prev) ? prev.map((r, i) => (i === idx ? { ...r, ...patch } : r)) : prev));
+    if (idx === highlightUnavailableIndex) {
+      setHighlightUnavailableIndex(null);
+    }
   };
 
   const removeUnavailable = (idx) => {
+    setHighlightUnavailableIndex((prev) => {
+      if (prev === null) return prev;
+      if (prev === idx) return null;
+      return prev > idx ? prev - 1 : prev;
+    });
     setUnavailable((prev) => (Array.isArray(prev) ? prev.filter((_, i) => i !== idx) : prev));
   };
 
@@ -160,6 +178,23 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
     return { daysOpen, totalRanges, avgSlot, unavailableDays };
   }, [rows, unavailable]);
 
+  const selectedChamberId = String(current_chamber_id ?? (chambers[0]?.id ?? ''));
+  const selectedChamber = useMemo(() => {
+    if (!Array.isArray(chambers) || chambers.length === 0) return null;
+    return chambers.find((c) => String(c.id) === selectedChamberId) || chambers[0] || null;
+  }, [chambers, selectedChamberId]);
+
+  const syncChamberMenuPosition = useCallback(() => {
+    if (!chamberButtonRef.current || !bannerOverlayRef.current) return;
+    const rect = chamberButtonRef.current.getBoundingClientRect();
+    const containerRect = bannerOverlayRef.current.getBoundingClientRect();
+    setChamberMenuStyle({
+      top: rect.bottom - containerRect.top + 8,
+      left: rect.left - containerRect.left,
+      width: Math.max(rect.width, 220),
+    });
+  }, []);
+
   const [editingDay, setEditingDay] = useState(null);
 
   const formatTime12h = (time24) => {
@@ -172,6 +207,51 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
 
   // Quick Sync modal state
   const [syncModal, setSyncModal] = useState(null); // { fromIdx, selectedDays: Set }
+
+  useEffect(() => {
+    if (!chamberMenuOpen) return undefined;
+
+    syncChamberMenuPosition();
+
+    const handleOutsideClick = (event) => {
+      const clickedMenu = chamberMenuRef.current?.contains(event.target);
+      const clickedButton = chamberButtonRef.current?.contains(event.target);
+      if (!clickedMenu && !clickedButton) {
+        setChamberMenuOpen(false);
+      }
+    };
+
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') {
+        setChamberMenuOpen(false);
+      }
+    };
+
+    const updatePosition = () => syncChamberMenuPosition();
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('keydown', handleEscape);
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
+
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('keydown', handleEscape);
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+    };
+  }, [chamberMenuOpen, syncChamberMenuPosition]);
+
+  useEffect(() => {
+    if (highlightUnavailableIndex === null) return undefined;
+
+    const timer = window.setTimeout(() => {
+      unavailableSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      unavailableCardRefs.current[highlightUnavailableIndex]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 80);
+
+    return () => window.clearTimeout(timer);
+  }, [unavailable, highlightUnavailableIndex]);
 
   const openSyncModal = useCallback((fromIdx) => {
     const selected = new Set();
@@ -226,64 +306,100 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
       <div className="mx-auto max-w-6xl space-y-6">
 
         {/* ─── GRADIENT BANNER ─── */}
-        <DocCard padding={false} className="doc-banner-root relative overflow-hidden border-[#30416f]/20 bg-gradient-to-r from-[#273664] via-[#3d466b] to-[#be7a4b] text-white shadow-[0_20px_40px_-28px_rgba(33,45,80,0.85)] md:h-[260px]">
-          <div className="pointer-events-none absolute -top-16 -left-10 h-40 w-40 rounded-full bg-white/10" />
-          <div className="pointer-events-none absolute left-10 top-14 h-28 w-28 rounded-full bg-white/8" />
-          <div className="pointer-events-none absolute -right-14 -top-12 h-36 w-36 rounded-full bg-[#efba92]/12" />
+        <div ref={bannerOverlayRef} className="relative z-[40]">
+          <DocCard padding={false} className="doc-banner-root relative overflow-hidden border-[#30416f]/20 bg-gradient-to-r from-[#273664] via-[#3d466b] to-[#be7a4b] text-white shadow-[0_20px_40px_-28px_rgba(33,45,80,0.85)] md:h-[260px]">
+            <div className="pointer-events-none absolute -top-16 -left-10 h-40 w-40 rounded-full bg-white/10" />
+            <div className="pointer-events-none absolute left-10 top-14 h-28 w-28 rounded-full bg-white/8" />
+            <div className="pointer-events-none absolute -right-14 -top-12 h-36 w-36 rounded-full bg-[#efba92]/12" />
 
-          <div className="absolute inset-0 z-20 flex flex-col justify-end px-5 py-4 md:px-6 md:py-5">
-            <div className="grid w-full gap-3 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-end">
-              {/* Left */}
-              <div className="space-y-2">
-                <div className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-white/85">
-                  <Calendar className="h-3.5 w-3.5" />
-                  Schedule Manager
-                </div>
-                <h1 className="text-[1.8rem] font-black leading-tight tracking-tight text-white md:text-[2.05rem]">
-                  Manage Schedule
-                </h1>
-                <p className="max-w-xl text-[13px] text-white/80">Configure weekly time slots, set durations, and block unavailable dates for each chamber.</p>
-
-                <div className="flex flex-wrap items-center gap-2 pt-0.5">
-                  {Array.isArray(chambers) && chambers.length > 0 && (
-                    <select
-                      className="rounded-lg border border-white/25 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/20 backdrop-blur-sm [&>option]:text-slate-800"
-                      value={current_chamber_id ?? (chambers[0]?.id ?? '')}
-                      onChange={(e) => { window.location.href = `/doctor/schedule?chamber_id=${e.target.value}`; }}
-                    >
-                      {chambers.map((c) => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                      ))}
-                    </select>
-                  )}
-                  <button
-                    type="button"
-                    onClick={addUnavailable}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-white/25 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/20"
-                  >
-                    <CalendarOff className="h-3.5 w-3.5" />
-                    Add Vacation / Holiday
-                  </button>
-                </div>
-              </div>
-
-              {/* Right: metric tiles */}
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { label: 'Days Open', value: `${weekStats.daysOpen}/7`, tone: 'border-[#d6e1fa]/30 bg-[#d6e1fa]/14 text-[#f2f6ff]' },
-                  { label: 'Time Ranges', value: weekStats.totalRanges, tone: 'border-[#f0bf97]/35 bg-[#f0bf97]/16 text-[#ffe6d3]' },
-                  { label: 'Avg Slot', value: `${weekStats.avgSlot.toFixed(0)}m`, tone: 'border-[#c7d6f7]/30 bg-[#c7d6f7]/16 text-[#eaf0ff]' },
-                  { label: 'Unavailable', value: weekStats.unavailableDays, tone: 'border-[#e5b894]/36 bg-[#e5b894]/18 text-[#ffe3cf]' },
-                ].map((m) => (
-                  <div key={m.label} className={`rounded-lg border px-2.5 py-2 ${m.tone}`}>
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.11em]">{m.label}</div>
-                    <div className="mt-1 text-lg font-black leading-none">{m.value}</div>
+            <div className="absolute inset-0 z-20 flex flex-col justify-end px-5 py-4 md:px-6 md:py-5">
+              <div className="grid w-full gap-3 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-end">
+                {/* Left */}
+                <div className="space-y-2">
+                  <div className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-white/85">
+                    <Calendar className="h-3.5 w-3.5" />
+                    Schedule Manager
                   </div>
-                ))}
+                  <h1 className="text-[1.8rem] font-black leading-tight tracking-tight text-white md:text-[2.05rem]">
+                    Manage Schedule
+                  </h1>
+                  <p className="max-w-xl text-[13px] text-white/80">Configure weekly time slots, set durations, and block unavailable dates for each chamber.</p>
+
+                  <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                    {Array.isArray(chambers) && chambers.length > 0 && (
+                      <div className="relative">
+                        <button
+                          ref={chamberButtonRef}
+                          type="button"
+                          onClick={() => setChamberMenuOpen((prev) => !prev)}
+                          className="doc-banner-action group inline-flex min-w-[180px] items-center justify-between gap-3 rounded-lg border border-white/25 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white transition active:scale-[0.97]"
+                        >
+                          <span className="truncate">{selectedChamber?.name || 'Select Chamber'}</span>
+                          <ChevronDown className={`h-3.5 w-3.5 transition-transform ${chamberMenuOpen ? 'rotate-180' : ''}`} />
+                        </button>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={addUnavailable}
+                      className="doc-banner-action group inline-flex items-center gap-1.5 rounded-lg border border-white/25 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white transition active:scale-[0.97]"
+                    >
+                      <CalendarOff className="h-3.5 w-3.5" />
+                      Add Vacation / Holiday
+                    </button>
+                  </div>
+                </div>
+
+                {/* Right: metric tiles */}
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { label: 'Days Open', value: `${weekStats.daysOpen}/7`, tone: 'border-[#d6e1fa]/30 bg-[#d6e1fa]/14 text-[#f2f6ff]' },
+                    { label: 'Time Ranges', value: weekStats.totalRanges, tone: 'border-[#f0bf97]/35 bg-[#f0bf97]/16 text-[#ffe6d3]' },
+                    { label: 'Avg Slot', value: `${weekStats.avgSlot.toFixed(0)}m`, tone: 'border-[#c7d6f7]/30 bg-[#c7d6f7]/16 text-[#eaf0ff]' },
+                    { label: 'Unavailable', value: weekStats.unavailableDays, tone: 'border-[#e5b894]/36 bg-[#e5b894]/18 text-[#ffe3cf]' },
+                  ].map((m) => (
+                    <div key={m.label} className={`doc-banner-metric rounded-lg border px-2.5 py-2 ${m.tone}`}>
+                      <div className="text-[10px] font-semibold uppercase tracking-[0.11em]">{m.label}</div>
+                      <div className="mt-1 text-lg font-black leading-none">{m.value}</div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
-        </DocCard>
+          </DocCard>
+
+          {chamberMenuOpen && chamberMenuStyle && (
+            <div
+              ref={chamberMenuRef}
+              className="absolute z-[120] overflow-hidden rounded-2xl border border-[#d7e0f0] bg-[#f8faff] p-1.5 text-slate-800 shadow-[0_24px_40px_-18px_rgba(15,23,42,0.42)]"
+              style={{
+                top: `${chamberMenuStyle.top}px`,
+                left: `${chamberMenuStyle.left}px`,
+                width: `${chamberMenuStyle.width}px`,
+              }}
+            >
+              {chambers.map((c) => {
+                const active = String(c.id) === selectedChamberId;
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => {
+                      setChamberMenuOpen(false);
+                      if (!active) {
+                        window.location.href = `/doctor/schedule?chamber_id=${c.id}`;
+                      }
+                    }}
+                    className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm font-medium transition ${active ? 'bg-[#3556a6] text-white shadow-sm' : 'text-slate-700 hover:bg-slate-100'}`}
+                  >
+                    <span className="truncate">{c.name}</span>
+                    {active ? <Check className="h-4 w-4 flex-shrink-0" /> : null}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
 
         {/* No chambers message */}
         {(!Array.isArray(chambers) || chambers.length === 0) && (
@@ -391,21 +507,21 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
                           {isOpen && rangeCount > 0 && (
                             <button
                               type="button"
-                              className="rounded-md p-1.5 text-slate-400 hover:bg-sky-50 hover:text-sky-600 transition"
+                              className="rounded-md p-2 text-slate-400 hover:bg-sky-50 hover:text-sky-600 transition"
                               onClick={(e) => { e.stopPropagation(); openSyncModal(idx); }}
                               title="Quick Sync to other days"
                             >
-                              <Link2 className="h-3.5 w-3.5" />
+                              <Link2 className="h-4 w-4" />
                             </button>
                           )}
                           {isOpen && (
                             <button
                               type="button"
-                              className={`rounded-md p-1.5 transition ${isEditing ? 'bg-sky-500 text-white hover:bg-sky-600' : 'text-slate-400 hover:bg-sky-50 hover:text-sky-600'}`}
+                              className={`rounded-md p-2 transition ${isEditing ? 'bg-sky-500 text-white hover:bg-sky-600' : 'text-slate-400 hover:bg-sky-50 hover:text-sky-600'}`}
                               onClick={(e) => { e.stopPropagation(); setEditingDay(isEditing ? null : idx); }}
                               title={isEditing ? 'Done editing' : 'Edit schedule'}
                             >
-                              {isEditing ? <Check className="h-3.5 w-3.5" /> : <Pencil className="h-3.5 w-3.5" />}
+                              {isEditing ? <Check className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
                             </button>
                           )}
                         </div>
@@ -450,11 +566,11 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
                               )}
                               <button
                                 type="button"
-                                className="ml-auto rounded-md p-1 text-slate-300 hover:bg-rose-50 hover:text-rose-500 transition"
+                                className="ml-auto rounded-md p-1.5 text-slate-300 hover:bg-rose-50 hover:text-rose-500 transition"
                                 onClick={() => removeRange(idx, j)}
                                 title="Remove"
                               >
-                                <Trash2 className="h-3.5 w-3.5" />
+                                <Trash2 className="h-4 w-4" />
                               </button>
                             </div>
                           ))}
@@ -474,7 +590,7 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
               </div>
 
               {/* RIGHT: Unavailable Date Ranges */}
-              <div className="space-y-2">
+              <div ref={unavailableSectionRef} className="space-y-2">
                 <div className="flex items-center justify-between px-1 pb-1">
                   <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Unavailable Dates</h2>
                   <button
@@ -507,7 +623,13 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
                       </div>
                     )}
                     {Array.isArray(unavailable) && unavailable.length > 0 && unavailable.map((r, idx) => (
-                      <div key={`unavailable-${idx}`} className="rounded-lg border border-slate-200 bg-slate-50/60 p-3 space-y-2">
+                      <div
+                        key={`unavailable-${idx}`}
+                        ref={(element) => {
+                          unavailableCardRefs.current[idx] = element;
+                        }}
+                        className={`rounded-lg border p-3 space-y-2 transition ${idx === highlightUnavailableIndex ? 'border-rose-300 bg-rose-50/70 shadow-[0_0_0_1px_rgba(253,164,175,0.28)]' : 'border-slate-200 bg-slate-50/60'}`}
+                      >
                         <div className="flex items-center justify-between">
                           <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-500">
                             <CalendarOff className="h-3 w-3" />
@@ -515,11 +637,11 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
                           </span>
                           <button
                             type="button"
-                            className="rounded-md p-1 text-slate-300 hover:bg-rose-50 hover:text-rose-500 transition"
+                            className="rounded-md p-1.5 text-slate-300 hover:bg-rose-50 hover:text-rose-500 transition"
                             onClick={() => removeUnavailable(idx)}
                             title="Remove"
                           >
-                            <Trash2 className="h-3.5 w-3.5" />
+                            <Trash2 className="h-4 w-4" />
                           </button>
                         </div>
                         <div className="space-y-1.5">

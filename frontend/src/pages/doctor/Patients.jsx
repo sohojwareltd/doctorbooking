@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Search, Users, FileText, Calendar, Eye, Mail, Phone, X } from 'lucide-react';
-import { Link, router } from '@inertiajs/react';
+import { Search, Users, FileText, Calendar, Eye, Mail, Phone } from 'lucide-react';
+import { router } from '@inertiajs/react';
 import DoctorLayout from '../../layouts/DoctorLayout';
 import Pagination from '../../components/Pagination';
 import { formatDisplayDateWithYearFromDateLike } from '../../utils/dateFormat';
 import StatCard from '../../components/doctor/StatCard';
+import DocTableActionMenu from '../../components/doctor/DocTableActionMenu';
 import PatientAvatar from '../../components/doctor/PatientAvatar';
 import DocModal from '../../components/doctor/DocModal';
 import { DocButton, DocCard, DocEmptyState } from '../../components/doctor/DocUI';
@@ -44,20 +45,28 @@ export default function Patients({ patients = [], stats = {} }) {
   const displayCount = filtersActive
     ? filteredRows.length
     : (pagination?.total ?? filteredRows.length);
+  const activeStatsRows = useMemo(() => (filtersActive ? filteredRows : rows), [filtersActive, filteredRows, rows]);
 
   const statsCards = useMemo(() => {
-    const totalCount = pagination?.total || rows.length;
-    const hasPhone = stats?.hasPhone ?? 0;
-    const emailOnly = stats?.emailOnly ?? 0;
-    const noContact = stats?.noContact ?? 0;
+    const viewLabel = filtersActive ? 'filtered view' : 'current list';
+    const now = new Date();
+    const withEmail = activeStatsRows.filter((patient) => Boolean(patient.email)).length;
+    const bothContacts = activeStatsRows.filter((patient) => Boolean(patient.email) && Boolean(patient.phone)).length;
+    const withPrescription = activeStatsRows.filter((patient) => patient.has_prescription || (patient.prescriptions_count ?? 0) > 0).length;
+    const joinedThisMonth = activeStatsRows.filter((patient) => {
+      if (!patient.created_at) return false;
+      const joinedAt = new Date(patient.created_at);
+      if (Number.isNaN(joinedAt.getTime())) return false;
+      return joinedAt.getMonth() === now.getMonth() && joinedAt.getFullYear() === now.getFullYear();
+    }).length;
 
     return [
-      { label: 'Total Patients', value: totalCount, variant: 'violet', icon: Users },
-      { label: 'Has Phone', value: hasPhone, variant: 'emerald', icon: Phone },
-      { label: 'Email Only', value: emailOnly, variant: 'amber', icon: Mail },
-      { label: 'No Contact', value: noContact, variant: 'rose', icon: Users },
+      { label: 'With Email', value: withEmail, variant: 'cyan', icon: Mail, subtitle: viewLabel },
+      { label: 'Both Contacts', value: bothContacts, variant: 'emerald', icon: Phone, subtitle: viewLabel },
+      { label: 'Has Rx History', value: withPrescription, variant: 'violet', icon: FileText, subtitle: viewLabel },
+      { label: 'Joined This Month', value: joinedThisMonth, variant: 'amber', icon: Calendar, subtitle: viewLabel },
     ];
-  }, [pagination, stats]);
+  }, [activeStatsRows, filtersActive]);
 
   const handlePrescriptionClick = (patient) => {
     if (!patient.has_prescription) {
@@ -71,6 +80,16 @@ export default function Patients({ patients = [], stats = {} }) {
     }
   };
 
+  const handleEmailPatient = (email) => {
+    if (!email) return;
+    window.location.href = `mailto:${email}`;
+  };
+
+  const handleCallPatient = (phone) => {
+    if (!phone) return;
+    window.location.href = `tel:${phone}`;
+  };
+
   const todayIso = new Date().toISOString().split('T')[0];
   const todayLabel = formatDisplayDateWithYearFromDateLike(todayIso) || todayIso;
 
@@ -78,7 +97,7 @@ export default function Patients({ patients = [], stats = {} }) {
     { label: 'Patients', value: displayCount },
     { label: 'Has Phone', value: stats?.hasPhone ?? 0 },
     { label: 'Email Only', value: stats?.emailOnly ?? 0 },
-    { label: 'Selected', value: selectedIds.length },
+    { label: 'No Contact', value: stats?.noContact ?? 0 },
   ];
 
   return (
@@ -146,9 +165,10 @@ export default function Patients({ patients = [], stats = {} }) {
               )}
             </div>
 
-            <div className="flex flex-col gap-3 md:flex-row md:items-end">
-              <div className="flex-1">
-                <label className="mb-1.5 block text-sm font-medium text-slate-700">Search patient</label>
+            <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,320px)_180px] xl:items-end">
+              <div className="xl:w-[320px]">
+                <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Search patient</label>
                 <div className="relative">
                   <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <input
@@ -156,16 +176,16 @@ export default function Patients({ patients = [], stats = {} }) {
                     placeholder="Search by name, email, phone..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-900 placeholder-slate-400 transition doc-input-focus"
+                    className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-900 placeholder-slate-400 shadow-[0_1px_0_rgba(148,163,184,0.08)] transition doc-input-focus"
                   />
                 </div>
               </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-slate-700">Contact filter</label>
+              <div className="sm:max-w-[190px] xl:w-[180px]">
+                <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Contact filter</label>
                 <select
                   value={contactFilter}
                   onChange={(e) => setContactFilter(e.target.value)}
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 transition doc-input-focus"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-[0_1px_0_rgba(148,163,184,0.08)] transition doc-input-focus"
                 >
                   <option value="all">All</option>
                   <option value="phone">Has phone</option>
@@ -173,12 +193,13 @@ export default function Patients({ patients = [], stats = {} }) {
                   <option value="missing">Missing phone</option>
                 </select>
               </div>
+              </div>
             </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full divide-y divide-slate-100">
-              <thead className="bg-slate-50/80">
+          <div className="overflow-x-auto bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)]">
+            <table className="w-full min-w-[980px] divide-y divide-[#e7edf8]">
+              <thead className="bg-[linear-gradient(180deg,#f8fbff_0%,#eef4ff_100%)]">
                 <tr>
                   <th className="w-12 px-4 py-3 text-left">
                     <input
@@ -194,19 +215,50 @@ export default function Patients({ patients = [], stats = {} }) {
                       className="rounded border-slate-300 text-sky-600 focus:ring-sky-200"
                     />
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400">ID</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400">Patient</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400">Email</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400">Phone</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400">Joined</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400">Actions</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-[#89a0c4]">ID</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-[#89a0c4]">Patient</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-[#89a0c4]">Email</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-[#89a0c4]">Phone</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-[#89a0c4]">Joined</th>
+                  <th className="w-[176px] px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-[#89a0c4]">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50 bg-white">
                 {filteredRows.map((p, idx) => {
                   const isSelected = selectedIds.includes(p.id);
+                  const actionItems = [
+                    {
+                      key: 'view',
+                      label: 'View patient',
+                      icon: Eye,
+                      tone: 'accent',
+                      onSelect: () => router.visit(`/doctor/patients/${p.id}`),
+                    },
+                    {
+                      key: 'prescription',
+                      label: p.has_prescription || (p.prescriptions_count ?? 0) > 0 ? 'Open prescriptions' : 'Create prescription',
+                      icon: FileText,
+                      tone: 'violet',
+                      onSelect: () => handlePrescriptionClick(p),
+                    },
+                    p.email ? {
+                      key: 'email',
+                      label: 'Send email',
+                      icon: Mail,
+                      tone: 'amber',
+                      onSelect: () => handleEmailPatient(p.email),
+                    } : null,
+                    p.phone ? {
+                      key: 'call',
+                      label: 'Call patient',
+                      icon: Phone,
+                      tone: 'emerald',
+                      onSelect: () => handleCallPatient(p.phone),
+                    } : null,
+                  ];
+
                   return (
-                    <tr key={p.id || idx} className={`transition ${isSelected ? 'bg-sky-50/50' : 'hover:bg-slate-50/50'}`}>
+                    <tr key={p.id || idx} className={`border-l-2 transition-all duration-200 ${isSelected ? 'border-[#c6d9f7] bg-[#f0f6ff]' : 'border-transparent even:bg-[#fbfdff] hover:border-[#d6e4fb] hover:bg-[#f8fbff]'}`}>
                       <td className="px-4 py-3.5">
                         <input
                           type="checkbox"
@@ -221,7 +273,11 @@ export default function Patients({ patients = [], stats = {} }) {
                           className="rounded border-slate-300 text-sky-600 focus:ring-sky-200"
                         />
                       </td>
-                      <td className="px-4 py-3.5 text-sm font-medium text-slate-500">{p.id}</td>
+                      <td className="px-4 py-3.5 text-sm font-medium text-slate-500">
+                        <span className="inline-flex h-9 min-w-[2.25rem] items-center justify-center rounded-xl border border-[#e4ebf7] bg-white px-2.5 text-sm font-semibold text-[#5f7398] shadow-[0_8px_18px_-18px_rgba(37,53,102,0.6)]">
+                          {p.id}
+                        </span>
+                      </td>
                       <td className="px-4 py-3.5">
                         <div className="flex items-center gap-3">
                           <PatientAvatar name={p.name || String(p.id)} size="sm" />
@@ -231,25 +287,8 @@ export default function Patients({ patients = [], stats = {} }) {
                       <td className="px-4 py-3.5 text-sm text-slate-500">{p.email || '—'}</td>
                       <td className="px-4 py-3.5 text-sm text-slate-500 whitespace-nowrap">{p.phone || '—'}</td>
                       <td className="px-4 py-3.5 text-sm text-slate-500 whitespace-nowrap">{p.created_at ? (formatDisplayDateWithYearFromDateLike(p.created_at) || p.created_at) : '—'}</td>
-                      <td className="px-4 py-3.5 text-sm">
-                        <div className="flex items-center gap-3 flex-wrap">
-                          <Link
-                            href={`/doctor/patients/${p.id}`}
-                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-sky-600 hover:text-sky-700 transition"
-                          >
-                            <Eye className="h-3.5 w-3.5" /> View
-                          </Link>
-                          {p.email ? (
-                            <a href={`mailto:${p.email}`} className="inline-flex items-center gap-1 text-xs font-semibold text-slate-400 hover:text-sky-600 transition">
-                              <Mail className="h-3 w-3" /> Email
-                            </a>
-                          ) : null}
-                          {p.phone ? (
-                            <a href={`tel:${p.phone}`} className="inline-flex items-center gap-1 text-xs font-semibold text-slate-400 hover:text-sky-600 transition">
-                              <Phone className="h-3 w-3" /> Call
-                            </a>
-                          ) : null}
-                        </div>
+                      <td className="px-4 py-3.5 text-right text-sm">
+                        <DocTableActionMenu items={actionItems} />
                       </td>
                     </tr>
                   );

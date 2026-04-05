@@ -3,8 +3,9 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   ChevronDown,
   CalendarCheck2, CalendarRange, Clock, FileText, LayoutGrid,
-  ListFilter, Mail, MapPin, MoreHorizontal, Phone, Plus, Rows3, Search, User, X,
+  ListFilter, Mail, MapPin, Phone, Rows3, Search, Stethoscope, User, X,
 } from 'lucide-react';
+import DocTableActionMenu from '../../components/doctor/DocTableActionMenu';
 import DoctorAppointmentsOverview from '../../components/DoctorAppointmentsOverview';
 import DoctorLayout from '../../layouts/DoctorLayout';
 import { formatDisplayDateWithYearFromDateLike, formatDisplayTime12h } from '../../utils/dateFormat';
@@ -26,7 +27,6 @@ export default function DoctorAppointments({ appointments = [], filters = {} }) 
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [formData, setFormData] = useState({ name: '', phone: '', age: '', gender: '' });
-  const [openRowMenuId, setOpenRowMenuId] = useState(null);
   const [openFilterMenu, setOpenFilterMenu] = useState(null);
   const [sortConfig, setSortConfig] = useState({ key: 'appointment_date', direction: 'asc' });
   const [activeTab, setActiveTab] = useState(() => (
@@ -42,7 +42,6 @@ export default function DoctorAppointments({ appointments = [], filters = {} }) 
 
   useEffect(() => {
     const handleOutsideClick = () => {
-      setOpenRowMenuId(null);
       setOpenFilterMenu(null);
     };
     document.addEventListener('click', handleOutsideClick);
@@ -156,7 +155,6 @@ export default function DoctorAppointments({ appointments = [], filters = {} }) 
 
   const handleQuickStatus = async (appointment, status) => {
     await updateStatus(appointment.id, status);
-    setOpenRowMenuId(null);
   };
 
   const filteredRows = rows.filter((a) => {
@@ -281,6 +279,13 @@ export default function DoctorAppointments({ appointments = [], filters = {} }) 
     { label: 'Selected', value: selectedIds.length },
     { label: 'Date', value: todayLabel },
   ];
+  const workspaceCountLabel = `${activeTab === 'overview' ? previewCount : displayCount} ${activeTab === 'overview' ? 'preview' : 'appointments'}`;
+  const listGridColumns = 'lg:grid-cols-[44px_56px_minmax(260px,1.7fr)_minmax(220px,1fr)_190px_240px]';
+  const getHeaderSortClass = (key) => (
+    sortConfig.key === key
+      ? 'justify-self-start inline-flex items-center gap-1.5 font-semibold text-[#3556a6]'
+      : 'justify-self-start inline-flex items-center gap-1.5 text-slate-500 hover:text-slate-700'
+  );
 
   return (
     <DoctorLayout title="Appointments">
@@ -301,10 +306,6 @@ export default function DoctorAppointments({ appointments = [], filters = {} }) 
                 <h2 className="text-[1.8rem] font-black leading-tight tracking-tight text-white md:text-[2.05rem]">Appointments Workspace</h2>
                 <p className="max-w-xl text-[13px] text-white/80">Overview and list views stay dynamic with live filters, queue updates, and status transitions.</p>
                 <div className="flex flex-wrap items-center gap-2 pt-0.5">
-                  <DocButton onClick={() => setShowCreateModal(true)} className="!bg-[#c57945] !px-3 !py-1.5 !text-white hover:!bg-[#ad6639]">
-                    <Plus className="h-4 w-4" />
-                    New Appointment
-                  </DocButton>
                   <div className="rounded-lg border border-white/20 bg-black/10 px-2.5 py-1">
                     <div className="text-[9px] font-semibold uppercase tracking-[0.1em] text-white/60">Mode</div>
                     <div className="mt-0.5 text-xs font-bold text-white">{activeTab === 'overview' ? 'Overview' : 'List View'}</div>
@@ -328,18 +329,18 @@ export default function DoctorAppointments({ appointments = [], filters = {} }) 
           </div>
         </DocCard>
 
-        {/* ─── Page header with tab switcher ─── */}
         <DocCard padding={false}>
           <div className="flex flex-col gap-3 px-5 py-4 md:flex-row md:items-center md:justify-between md:px-6">
             <div>
-              <p className="text-xs font-medium uppercase tracking-wider text-slate-400">View System</p>
-              <h2 className="mt-1 text-lg font-semibold text-slate-900">Appointments Workspace</h2>
+              <h2 className="text-lg font-semibold text-slate-900">Appointments</h2>
               <p className="mt-1 text-sm text-slate-500">Switch between the compact overview and the detailed management list.</p>
             </div>
-            <DocButton onClick={() => setShowCreateModal(true)}>
-              <Plus className="h-4 w-4" />
-              New Appointment
-            </DocButton>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                <span className="h-2 w-2 rounded-full bg-sky-500" />
+                {workspaceCountLabel}
+              </span>
+            </div>
           </div>
 
           <div className="grid gap-2 border-t border-slate-100 bg-slate-50/60 p-2.5 md:grid-cols-2" role="tablist" aria-label="Appointments view tabs">
@@ -375,32 +376,27 @@ export default function DoctorAppointments({ appointments = [], filters = {} }) 
               );
             })}
           </div>
-        </DocCard>
 
-        {/* ─── Overview tab ─── */}
-        {activeTab === 'overview' ? (
-          <div id="appointments-panel-overview" role="tabpanel" aria-labelledby="appointments-tab-overview">
-            <DoctorAppointmentsOverview
-              title="Appointments"
-              appointments={filteredRows}
-              todayLabel={todayLabel}
-              currentDate={today}
-              dateFilter={dateFilter}
-              onDateFilterChange={(value) => handleFilterChange('date', value)}
-              statusFilter={statusFilter}
-              onStatusFilterChange={(value) => handleFilterChange('status', value)}
-              onAppointmentClick={setSelectedPatient}
-              onCreateAppointment={() => setShowCreateModal(true)}
-              createButtonLabel="New Appointment"
-              maxItems={5}
-            />
-          </div>
-        ) : null}
+          {activeTab === 'overview' ? (
+            <div id="appointments-panel-overview" role="tabpanel" aria-labelledby="appointments-tab-overview">
+              <DoctorAppointmentsOverview
+                title="Appointments"
+                appointments={filteredRows}
+                todayLabel={todayLabel}
+                currentDate={today}
+                dateFilter={dateFilter}
+                onDateFilterChange={(value) => handleFilterChange('date', value)}
+                statusFilter={statusFilter}
+                onStatusFilterChange={(value) => handleFilterChange('status', value)}
+                onAppointmentClick={setSelectedPatient}
+                maxItems={5}
+                embedded
+              />
+            </div>
+          ) : null}
 
-        {/* ─── List tab ─── */}
-        {activeTab === 'list' ? (
-          <div id="appointments-panel-list" role="tabpanel" aria-labelledby="appointments-tab-list">
-            <DocCard padding={false}>
+          {activeTab === 'list' ? (
+            <div id="appointments-panel-list" role="tabpanel" aria-labelledby="appointments-tab-list" className="border-t border-slate-100">
               {/* Filters header */}
               <div className="space-y-3 border-b border-slate-100 bg-slate-50/40 px-5 py-4 md:px-6">
                 <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
@@ -428,10 +424,10 @@ export default function DoctorAppointments({ appointments = [], filters = {} }) 
                   </div>
                 </div>
 
-                <div className="grid gap-3 xl:grid-cols-[1.55fr_1fr_1fr] xl:items-end">
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,320px)_180px_180px] xl:items-end xl:justify-start">
                   {/* Search */}
-                  <div className="flex-1">
-                    <label className="mb-1.5 block text-sm font-medium text-slate-700">Search Patient</label>
+                  <div className="xl:w-[320px]">
+                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Search Patient</label>
                     <div className="relative">
                       <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                       <input
@@ -459,8 +455,8 @@ export default function DoctorAppointments({ appointments = [], filters = {} }) 
                   </div>
 
                   {/* Date Filter */}
-                  <div>
-                    <label className="mb-1.5 block text-sm font-medium text-slate-700">Date Range</label>
+                  <div className="sm:max-w-[190px] xl:w-[180px]">
+                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Date Range</label>
                     <div className="relative" onClick={(e) => e.stopPropagation()}>
                       <button
                         type="button"
@@ -495,8 +491,8 @@ export default function DoctorAppointments({ appointments = [], filters = {} }) 
                   </div>
 
                   {/* Status Filter */}
-                  <div>
-                    <label className="mb-1.5 block text-sm font-medium text-slate-700">Status</label>
+                  <div className="sm:max-w-[190px] xl:w-[180px]">
+                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Status</label>
                     <div className="relative" onClick={(e) => e.stopPropagation()}>
                       <button
                         type="button"
@@ -535,7 +531,7 @@ export default function DoctorAppointments({ appointments = [], filters = {} }) 
               {/* Smart List */}
               <div className="px-4 pb-4 md:px-5 md:pb-5">
                 <div className="overflow-visible rounded-2xl border border-slate-200/80 bg-white shadow-[0_14px_34px_rgba(15,23,42,0.06)]">
-                  <div className="hidden lg:grid grid-cols-[44px_56px_minmax(240px,1.5fr)_180px_170px_180px_240px] items-center gap-2 border-b border-slate-100 bg-slate-50/90 px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                  <div className={`hidden ${listGridColumns} items-center gap-3 border-b border-slate-100 bg-slate-50/90 px-4 py-3.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 lg:grid`}>
                     <span>
                       <input
                         type="checkbox"
@@ -550,12 +546,11 @@ export default function DoctorAppointments({ appointments = [], filters = {} }) 
                         className="rounded border-slate-300 text-sky-600 focus:ring-sky-200"
                       />
                     </span>
-                    <span>#</span>
-                    <button type="button" onClick={() => handleSort('patient')} className="justify-self-start inline-flex items-center gap-1 hover:text-slate-600">Patient {sortConfig.key === 'patient' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : '↕'}</button>
-                    <button type="button" onClick={() => handleSort('appointment_date')} className="justify-self-start inline-flex items-center gap-1 hover:text-slate-600">Date {sortConfig.key === 'appointment_date' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : '↕'}</button>
-                    <button type="button" onClick={() => handleSort('appointment_time')} className="justify-self-start inline-flex items-center gap-1 hover:text-slate-600">Time {sortConfig.key === 'appointment_time' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : '↕'}</button>
-                    <button type="button" onClick={() => handleSort('status')} className="justify-self-start inline-flex items-center gap-1 hover:text-slate-600">Status {sortConfig.key === 'status' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : '↕'}</button>
-                    <span>Actions</span>
+                    <span className="pl-1">#</span>
+                    <button type="button" onClick={() => handleSort('patient')} className={getHeaderSortClass('patient')}>Patient {sortConfig.key === 'patient' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : '↕'}</button>
+                    <button type="button" onClick={() => handleSort('appointment_date')} className={getHeaderSortClass('appointment_date')}>Date & Time {sortConfig.key === 'appointment_date' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : '↕'}</button>
+                    <button type="button" onClick={() => handleSort('status')} className={getHeaderSortClass('status')}>Status {sortConfig.key === 'status' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : '↕'}</button>
+                    <span className="pl-1 text-[#89a0c4]">Actions</span>
                   </div>
 
                   <div className="space-y-2 p-3">
@@ -564,14 +559,71 @@ export default function DoctorAppointments({ appointments = [], filters = {} }) 
                       const isSelected = selectedIds.includes(a.id);
                       const theme = getRowTheme(a.status);
                       const displaySerial = a.serial_no || ((pagination?.current_page - 1) * (pagination?.per_page || 15) + idx + 1);
-                      const openMenuUpward = idx >= Math.max(0, sortedRows.length - 2);
+                      const actionItems = [
+                        {
+                          key: 'view-details',
+                          label: 'View details',
+                          icon: User,
+                          tone: 'accent',
+                          onSelect: () => setSelectedPatient(a),
+                        },
+                        a.has_prescription && a.prescription_id ? {
+                          key: 'view-rx',
+                          label: 'View prescription',
+                          icon: FileText,
+                          tone: 'emerald',
+                          onSelect: () => router.visit(`/doctor/prescriptions/${a.prescription_id}`),
+                        } : null,
+                        canCreatePrescription ? {
+                          key: 'create-rx',
+                          label: 'Create prescription',
+                          icon: FileText,
+                          tone: 'violet',
+                          onSelect: () => router.visit(`/doctor/prescriptions/create?appointment_id=${a.id}`),
+                        } : null,
+                        getPatientPhone(a) ? {
+                          key: 'call',
+                          label: 'Call patient',
+                          icon: Phone,
+                          tone: 'emerald',
+                          onSelect: () => handleCall(getPatientPhone(a)),
+                        } : null,
+                        getPatientEmail(a) ? {
+                          key: 'email',
+                          label: 'Email patient',
+                          icon: Mail,
+                          tone: 'amber',
+                          onSelect: () => handleEmail(getPatientEmail(a)),
+                        } : null,
+                        a.status !== 'scheduled' ? {
+                          key: 'scheduled',
+                          label: 'Mark as scheduled',
+                          icon: CalendarCheck2,
+                          tone: 'slate',
+                          onSelect: () => handleQuickStatus(a, 'scheduled'),
+                        } : null,
+                        a.status !== 'in_consultation' ? {
+                          key: 'consultation',
+                          label: 'Start consultation',
+                          icon: Stethoscope,
+                          tone: 'violet',
+                          onSelect: () => handleQuickStatus(a, 'in_consultation'),
+                        } : null,
+                        a.status !== 'cancelled' ? {
+                          key: 'cancel',
+                          label: 'Cancel appointment',
+                          icon: X,
+                          tone: 'danger',
+                          onSelect: () => handleQuickStatus(a, 'cancelled'),
+                        } : null,
+                      ];
 
                       return (
                         <div
                           key={a.id}
                           className={`group rounded-xl border px-3 py-3 transition hover:shadow-[0_10px_20px_rgba(148,163,184,0.14)] ${theme.row} ${theme.border}`}
                         >
-                          <div className="grid gap-3 lg:grid-cols-[44px_56px_minmax(240px,1.5fr)_180px_170px_180px_240px] lg:items-center">
+                          <div className={`grid gap-3 ${listGridColumns} lg:items-center`}>
                             <div>
                               <input
                                 type="checkbox"
@@ -594,30 +646,31 @@ export default function DoctorAppointments({ appointments = [], filters = {} }) 
                             <button onClick={() => setSelectedPatient(a)} className="flex items-center gap-2.5 text-left">
                               <PatientAvatar name={getPatientName(a)} size="sm" />
                               <div className="min-w-0">
-                                <div className="truncate text-sm font-semibold text-slate-800 transition group-hover:text-sky-600">{getPatientName(a)}</div>
+                                <div className="truncate text-[15px] font-semibold text-slate-900 transition group-hover:text-sky-600">{getPatientName(a)}</div>
                                 <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-slate-400">
                                   {getPatientPhone(a) ? (
-                                    <span className="inline-flex items-center gap-1">
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-2 py-0.5 font-medium text-slate-500 shadow-[0_1px_0_rgba(148,163,184,0.08)]">
                                       <Phone className="h-3 w-3" />
                                       {getPatientPhone(a)}
                                     </span>
                                   ) : null}
-                                  {a.symptoms ? <span className="truncate max-w-[200px]">{a.symptoms}</span> : null}
+                                  {a.symptoms ? <span className="truncate max-w-[220px] font-medium text-slate-500">{a.symptoms}</span> : null}
                                 </div>
                               </div>
                             </button>
 
-                            <div>
-                              <div className="text-sm font-medium text-slate-800 whitespace-nowrap">{formatDisplayDateWithYearFromDateLike(a.appointment_date) || a.appointment_date}</div>
-                              <div className="mt-0.5 text-xs text-slate-400">{a.appointment_date === today ? 'Today' : 'Appointment day'}</div>
+                            <div className="space-y-1">
+                              <div className="text-sm font-semibold text-slate-900 whitespace-nowrap">{formatDisplayDateWithYearFromDateLike(a.appointment_date) || a.appointment_date}</div>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-xs font-semibold text-[#6f86b7]">{a.appointment_date === today ? 'Today' : 'Appointment day'}</span>
+                                <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 shadow-[0_2px_10px_rgba(148,163,184,0.12)] whitespace-nowrap">
+                                  <Clock className="h-3.5 w-3.5 text-[#8da0c4]" />
+                                  {formatDisplayTime12h(a.appointment_time) || a.appointment_time}
+                                </span>
+                              </div>
                             </div>
 
-                            <div className="inline-flex items-center gap-1.5 rounded-md border border-slate-100 bg-white px-2.5 py-1 text-sm font-medium text-slate-700 shadow-sm whitespace-nowrap w-fit">
-                              <Clock className="h-3.5 w-3.5 text-slate-400" />
-                              {formatDisplayTime12h(a.appointment_time) || a.appointment_time}
-                            </div>
-
-                            <div className="relative inline-block min-w-[150px]">
+                            <div className="relative inline-block min-w-[180px]">
                               <select
                                 className={`w-full cursor-pointer appearance-none rounded-lg border px-3 py-2 pr-8 text-xs font-semibold shadow-sm transition hover:shadow focus:outline-none focus:ring-2 focus:ring-sky-100 ${getSelectTheme(a.status)}`}
                                 style={{
@@ -638,109 +691,8 @@ export default function DoctorAppointments({ appointments = [], filters = {} }) 
                               </select>
                             </div>
 
-                            <div className="flex items-center gap-2 lg:justify-start">
-                              {a.has_prescription && a.prescription_id ? (
-                                <Link
-                                  href={`/doctor/prescriptions/${a.prescription_id}`}
-                                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-sky-200 hover:text-sky-600"
-                                >
-                                  <FileText className="h-3.5 w-3.5" />
-                                  View Rx
-                                </Link>
-                              ) : canCreatePrescription ? (
-                                <Link
-                                  href={`/doctor/prescriptions/create?appointment_id=${a.id}`}
-                                  className="inline-flex items-center gap-1.5 rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-600 transition hover:bg-sky-100"
-                                >
-                                  <FileText className="h-3.5 w-3.5" />
-                                  Create Rx
-                                </Link>
-                              ) : (
-                                <span className="text-xs text-slate-300">No action</span>
-                              )}
-
-                              <div className="relative">
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setOpenRowMenuId((prev) => (prev === a.id ? null : a.id));
-                                  }}
-                                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:border-sky-200 hover:text-sky-600"
-                                >
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </button>
-
-                                {openRowMenuId === a.id && (
-                                  <div
-                                    className={`absolute right-0 z-20 w-48 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg ${openMenuUpward ? 'bottom-full mb-1.5' : 'top-full mt-1.5'}`}
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setSelectedPatient(a);
-                                        setOpenRowMenuId(null);
-                                      }}
-                                      className="w-full rounded-lg px-3 py-2 text-left text-xs font-medium text-slate-700 transition hover:bg-slate-50"
-                                    >
-                                      View details
-                                    </button>
-                                    {getPatientPhone(a) && (
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          handleCall(getPatientPhone(a));
-                                          setOpenRowMenuId(null);
-                                        }}
-                                        className="w-full rounded-lg px-3 py-2 text-left text-xs font-medium text-slate-700 transition hover:bg-slate-50"
-                                      >
-                                        Call patient
-                                      </button>
-                                    )}
-                                    {getPatientEmail(a) && (
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          handleEmail(getPatientEmail(a));
-                                          setOpenRowMenuId(null);
-                                        }}
-                                        className="w-full rounded-lg px-3 py-2 text-left text-xs font-medium text-slate-700 transition hover:bg-slate-50"
-                                      >
-                                        Email patient
-                                      </button>
-                                    )}
-                                    <div className="my-1 border-t border-slate-100" />
-                                    {a.status !== 'scheduled' && (
-                                      <button
-                                        type="button"
-                                        onClick={() => handleQuickStatus(a, 'scheduled')}
-                                        className="w-full rounded-lg px-3 py-2 text-left text-xs font-medium text-slate-700 transition hover:bg-slate-50"
-                                      >
-                                        Mark as Scheduled
-                                      </button>
-                                    )}
-                                    {a.status !== 'in_consultation' && (
-                                      <button
-                                        type="button"
-                                        onClick={() => handleQuickStatus(a, 'in_consultation')}
-                                        className="w-full rounded-lg px-3 py-2 text-left text-xs font-medium text-violet-700 transition hover:bg-violet-50"
-                                      >
-                                        Start Consultation
-                                      </button>
-                                    )}
-                                    {a.status !== 'cancelled' && (
-                                      <button
-                                        type="button"
-                                        onClick={() => handleQuickStatus(a, 'cancelled')}
-                                        className="w-full rounded-lg px-3 py-2 text-left text-xs font-medium text-rose-700 transition hover:bg-rose-50"
-                                      >
-                                        Cancel Appointment
-                                      </button>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
+                            <div className="flex items-center justify-end lg:justify-start">
+                              <DocTableActionMenu items={actionItems} />
                             </div>
                           </div>
                         </div>
@@ -792,9 +744,9 @@ export default function DoctorAppointments({ appointments = [], filters = {} }) 
                   </div>
                 </div>
               ) : null}
-            </DocCard>
-          </div>
-        ) : null}
+            </div>
+          ) : null}
+        </DocCard>
       </div>
 
       {/* ─── Patient Info Modal ─── */}

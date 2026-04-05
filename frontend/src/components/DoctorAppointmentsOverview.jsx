@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  BarChart3,
   Building2,
   CalendarDays,
-  CalendarRange,
   ChevronLeft,
   ChevronRight,
   Clock3,
@@ -11,13 +9,6 @@ import {
   Rows3,
   X,
 } from 'lucide-react';
-
-const DATE_FILTER_LABELS = {
-  today: 'Today',
-  week: 'This Week',
-  month: 'This Month',
-  all: 'All Dates',
-};
 
 const STATUS_FILTER_LABELS = {
   all: 'All Status',
@@ -82,6 +73,10 @@ function getAppointmentSubtitle(appointment) {
   const visitLabel = appointment?.is_guest ? 'New Patient' : 'Follow-up';
   const typeLabel = appointment?.type || 'Consultation';
   return `${visitLabel} - ${typeLabel}`;
+}
+
+function getChamberLabel(appointment) {
+  return appointment?.chamber?.name || appointment?.chamber_name || appointment?.chamber?.title || appointment?.chamber || null;
 }
 
 function getStatusMeta(status) {
@@ -296,6 +291,7 @@ export default function DoctorAppointmentsOverview({
   onStatusFilterChange,
   onAppointmentClick,
   maxItems = 5,
+  embedded = false,
 }) {
   const [viewMode, setViewMode] = useState('timeline');
   const [calendarBaseDate, setCalendarBaseDate] = useState(() => toDate(currentDate));
@@ -316,6 +312,7 @@ export default function DoctorAppointmentsOverview({
   }, [appointments]);
 
   const visibleAppointments = useMemo(() => sortedAppointments.slice(0, maxItems), [sortedAppointments, maxItems]);
+  const currentDateKey = useMemo(() => toDateKey(currentDate), [currentDate]);
 
   const appointmentCounts = useMemo(() => {
     return sortedAppointments.reduce((counts, appointment) => {
@@ -344,24 +341,28 @@ export default function DoctorAppointmentsOverview({
         value: sortedAppointments.length,
         valueClassName: 'text-sky-700',
         markerClassName: 'bg-sky-500',
+        panelClassName: 'border-[#d8e7fb] bg-[#f4f8ff]',
       },
       {
         label: 'Completed',
         value: sortedAppointments.filter((appointment) => (appointment?.status || '').toLowerCase() === 'prescribed').length,
         valueClassName: 'text-emerald-700',
         markerClassName: 'bg-emerald-500',
+        panelClassName: 'border-[#d9efe4] bg-[#f5fcf8]',
       },
       {
         label: 'Cancelled',
         value: sortedAppointments.filter((appointment) => (appointment?.status || '').toLowerCase() === 'cancelled').length,
         valueClassName: 'text-rose-700',
         markerClassName: 'bg-rose-500',
+        panelClassName: 'border-[#f2dde5] bg-[#fff7f9]',
       },
       {
         label: 'No Show',
         value: sortedAppointments.filter((appointment) => (appointment?.status || '').toLowerCase() === 'no_show').length,
         valueClassName: 'text-slate-600',
         markerClassName: 'bg-slate-400',
+        panelClassName: 'border-[#e5e7eb] bg-[#f8fafc]',
       },
     ];
   }, [sortedAppointments]);
@@ -384,56 +385,84 @@ export default function DoctorAppointmentsOverview({
   };
 
   const tabItems = [
-    { key: 'timeline', label: 'Timeline', icon: Rows3 },
-    { key: 'day', label: 'Day Board', icon: LayoutGrid },
-    { key: 'insights', label: 'Insights', icon: BarChart3 },
+    { key: 'timeline', label: 'Timeline', description: 'Queue flow and patient cards', icon: Rows3 },
+    { key: 'day', label: 'Day Board', description: 'Selected date appointment view', icon: LayoutGrid },
   ];
 
-  const dateFilterItems = [
-    { label: 'Today', value: todayLabel || 'Today', icon: CalendarDays },
-    { label: 'Date Range', value: DATE_FILTER_LABELS[dateFilter] || 'Today', icon: CalendarRange },
-    { label: 'Chamber', value: 'All Chambers', icon: Building2 },
-    { label: 'Status', value: STATUS_FILTER_LABELS[statusFilter] || 'All Status', icon: Clock3 },
-  ];
+  useEffect(() => {
+    if (viewMode !== 'timeline' && viewMode !== 'day') {
+      setViewMode('timeline');
+    }
+  }, [viewMode]);
+
+  const getAppointmentMetaItems = (appointment, options = {}) => {
+    const { includeDate = true } = options;
+    const items = [];
+
+    if (includeDate && appointment?.appointment_date) {
+      items.push({
+        key: 'date',
+        icon: CalendarDays,
+        value: appointment.appointment_date === currentDateKey
+          ? 'Today'
+          : toDate(appointment.appointment_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      });
+    }
+
+    if (appointment?.appointment_time) {
+      items.push({
+        key: 'time',
+        icon: Clock3,
+        value: formatTimeLabel(appointment.appointment_time),
+      });
+    }
+
+    const chamberLabel = getChamberLabel(appointment);
+    if (chamberLabel) {
+      items.push({
+        key: 'chamber',
+        icon: Building2,
+        value: chamberLabel,
+      });
+    }
+
+    return items;
+  };
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div className="border-b border-slate-100 px-4 py-4 md:px-5">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h2 className="text-base font-semibold text-slate-900 md:text-lg">{title}</h2>
-            <p className="mt-1 text-xs text-slate-500">Smart appointment control with modern data surfaces</p>
-          </div>
+    <section className={embedded ? '' : 'overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm'}>
+      <div className={`${embedded ? 'border-t border-slate-100 px-4 py-4 md:px-5' : 'border-b border-slate-100 px-4 py-4 md:px-5'}`}>
+        {!embedded && (
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h2 className="text-base font-semibold text-slate-900 md:text-lg">{title}</h2>
+              <p className="mt-1 text-xs text-slate-500">Smart appointment control with modern data surfaces</p>
+            </div>
 
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
-              <span className="h-2 w-2 rounded-full bg-sky-500" />
-              {sortedAppointments.length} appointments
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                <span className="h-2 w-2 rounded-full bg-sky-500" />
+                {sortedAppointments.length} appointments
+              </span>
+            </div>
           </div>
-        </div>
+        )}
 
-        <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-3">
-          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-            {dateFilterItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <div key={item.label} className="rounded-xl border border-slate-200 bg-white/90 px-3 py-2.5 shadow-[0_1px_0_rgba(148,163,184,0.08)]">
-                  <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">{item.label}</div>
-                  <div className="mt-1.5 inline-flex items-center gap-1.5 text-sm font-semibold text-slate-700">
-                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-md bg-slate-100 text-slate-500">
-                      <Icon className="h-3.5 w-3.5" />
-                    </span>
-                    {item.value}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        <div className={`${embedded ? 'grid gap-3 xl:grid-cols-[minmax(0,1.12fr)_minmax(320px,0.88fr)] xl:items-start' : 'mt-4 grid gap-3 xl:grid-cols-[minmax(0,1.12fr)_minmax(320px,0.88fr)] xl:items-start'}`}>
+          <div className="rounded-[24px] border border-slate-200/80 bg-gradient-to-br from-white via-white to-[#f7fbff] p-3.5 shadow-[0_14px_30px_rgba(15,23,42,0.05)]">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">View Mode</p>
+                <h3 className="mt-1 text-sm font-semibold text-slate-800">{viewMode === 'timeline' ? 'Timeline Overview' : 'Day Board Focus'}</h3>
+                <p className="mt-1 text-xs text-slate-500">Use timeline for queue flow and switch to day board for a selected date snapshot.</p>
+              </div>
+              <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                <span className="h-2 w-2 rounded-full bg-sky-500" />
+                {sortedAppointments.length} appointments
+              </span>
+            </div>
 
-        <div className="mt-3 grid gap-3 xl:grid-cols-[minmax(0,1fr)_420px]">
-          <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white p-2">
+            <div className="mt-4 flex flex-wrap gap-2">
             {tabItems.map((tab) => {
               const Icon = tab.icon;
               const active = tab.key === viewMode;
@@ -442,23 +471,31 @@ export default function DoctorAppointmentsOverview({
                   key={tab.key}
                   type="button"
                   onClick={() => setViewMode(tab.key)}
-                  className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition ${active ? 'bg-sky-50 text-sky-700 ring-1 ring-sky-200 shadow-sm' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'}`}
+                  className={`group min-w-[180px] rounded-2xl border px-3.5 py-3 text-left transition-all duration-200 ${active ? 'border-[#d4e1f7] bg-[#edf4ff] shadow-[0_12px_24px_rgba(53,86,166,0.12)]' : 'border-slate-200 bg-white hover:border-[#d9e3f4] hover:bg-slate-50'}`}
                 >
-                  <Icon className="h-4 w-4" />
-                  {tab.label}
+                  <div className="flex items-start gap-3">
+                    <span className={`inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl transition ${active ? 'bg-[#3556a6] text-white shadow-sm' : 'bg-slate-100 text-slate-500'}`}>
+                      <Icon className="h-4 w-4" />
+                    </span>
+                    <span className="min-w-0">
+                      <span className={`block text-sm font-semibold ${active ? 'text-slate-900' : 'text-slate-700'}`}>{tab.label}</span>
+                      <span className="mt-0.5 block text-xs text-slate-500">{tab.description}</span>
+                    </span>
+                  </div>
                 </button>
               );
             })}
+            </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-2.5 self-start">
             {statItems.map((item) => (
-              <div key={item.label} className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-[0_1px_0_rgba(148,163,184,0.08)]">
+              <div key={item.label} className={`rounded-[20px] border px-3.5 py-3 shadow-[0_10px_24px_rgba(15,23,42,0.05)] ${item.panelClassName}`}>
                 <div className="inline-flex items-center gap-2 text-xs font-medium text-slate-500">
                   <span className={`h-2.5 w-2.5 rounded-full ${item.markerClassName}`} />
                   {item.label}
                 </div>
-                <div className={`mt-1 text-lg font-bold ${item.valueClassName}`}>
+                <div className={`mt-2 text-[1.7rem] font-bold leading-none ${item.valueClassName}`}>
                   <AnimatedCount value={item.value} />
                 </div>
               </div>
@@ -489,7 +526,7 @@ export default function DoctorAppointmentsOverview({
                       key={appointment?.id || `${patientName}-${index}`}
                       type="button"
                       onClick={() => onAppointmentClick?.(appointment)}
-                      className={`flex w-full items-center gap-3 rounded-xl border px-3.5 py-2.5 text-left transition hover:shadow-[0_10px_20px_rgba(148,163,184,0.14)] ${statusMeta.panelClassName}`}
+                      className={`flex w-full items-start gap-3 rounded-xl border px-3.5 py-3 text-left transition hover:shadow-[0_10px_20px_rgba(148,163,184,0.14)] ${statusMeta.panelClassName}`}
                     >
                       <div className="w-[86px] shrink-0 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
                         {formatTimeLabel(appointment?.appointment_time)}
@@ -501,6 +538,20 @@ export default function DoctorAppointmentsOverview({
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-sm font-semibold text-slate-800">{patientName}</div>
                         <div className="mt-0.5 truncate text-xs text-slate-500">{getAppointmentSubtitle(appointment)}</div>
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {getAppointmentMetaItems(appointment).map((item) => {
+                            const Icon = item.icon;
+                            return (
+                              <span
+                                key={`${appointment?.id || patientName}-${item.key}`}
+                                className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-white/80 bg-white/85 px-2.5 py-1 text-[11px] font-medium text-slate-600 shadow-[0_1px_0_rgba(148,163,184,0.08)]"
+                              >
+                                <Icon className="h-3.5 w-3.5 flex-shrink-0 text-slate-400" />
+                                <span className="truncate">{item.value}</span>
+                              </span>
+                            );
+                          })}
+                        </div>
                       </div>
                       <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${statusMeta.badgeClassName}`}>
                         {statusMeta.label}
@@ -549,7 +600,7 @@ export default function DoctorAppointmentsOverview({
                         key={appointment?.id || `${patientName}-${index}`}
                         type="button"
                         onClick={() => onAppointmentClick?.(appointment)}
-                        className={`flex w-full items-center gap-3 rounded-xl border px-3.5 py-2.5 text-left transition hover:shadow-[0_10px_20px_rgba(148,163,184,0.14)] ${statusMeta.panelClassName}`}
+                        className={`flex w-full items-start gap-3 rounded-xl border px-3.5 py-3 text-left transition hover:shadow-[0_10px_20px_rgba(148,163,184,0.14)] ${statusMeta.panelClassName}`}
                       >
                         <div className={`flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold ${avatarClassName}`}>
                           {initials || 'PT'}
@@ -557,6 +608,20 @@ export default function DoctorAppointmentsOverview({
                         <div className="min-w-0 flex-1">
                           <div className="truncate text-sm font-semibold text-slate-800">{patientName}</div>
                           <div className="mt-0.5 text-xs text-slate-500">{formatTimeLabel(appointment?.appointment_time)} - {getAppointmentSubtitle(appointment)}</div>
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            {getAppointmentMetaItems(appointment, { includeDate: false }).map((item) => {
+                              const Icon = item.icon;
+                              return (
+                                <span
+                                  key={`${appointment?.id || patientName}-${item.key}`}
+                                  className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-white/80 bg-white/85 px-2.5 py-1 text-[11px] font-medium text-slate-600 shadow-[0_1px_0_rgba(148,163,184,0.08)]"
+                                >
+                                  <Icon className="h-3.5 w-3.5 flex-shrink-0 text-slate-400" />
+                                  <span className="truncate">{item.value}</span>
+                                </span>
+                              );
+                            })}
+                          </div>
                         </div>
                         <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${statusMeta.badgeClassName}`}>
                           {statusMeta.label}
@@ -571,23 +636,6 @@ export default function DoctorAppointmentsOverview({
                   <p className="mt-1 text-xs text-slate-500">Pick another date from the calendar popup.</p>
                 </div>
               )}
-            </div>
-          )}
-
-
-          {viewMode === 'insights' && (
-            <div className="grid gap-3 sm:grid-cols-2">
-              {statItems.map((item) => (
-                <div key={item.label} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-medium text-slate-500">{item.label}</span>
-                    <span className={`h-2.5 w-2.5 rounded-full ${item.markerClassName}`} />
-                  </div>
-                  <div className={`mt-2 text-2xl font-bold ${item.valueClassName}`}>
-                    <AnimatedCount value={item.value} />
-                  </div>
-                </div>
-              ))}
             </div>
           )}
         </div>

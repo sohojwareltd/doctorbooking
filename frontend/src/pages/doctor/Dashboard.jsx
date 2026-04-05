@@ -3,7 +3,7 @@ import { useState } from 'react';
 import {
   CalendarDays, ClipboardList, Users, Clock, CheckCircle,
   FileText, Stethoscope, Phone, Mail,
-  UserPlus, ArrowRight, Star,
+  UserPlus, ArrowRight,
   CalendarClock, FlaskConical
 } from 'lucide-react';
 import DoctorLayout from '../../layouts/DoctorLayout';
@@ -116,6 +116,8 @@ export default function DoctorDashboard({
   const hour = now.getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
   const todayStr = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+  const doctorName = (user?.name || '').trim() || 'Doctor';
+  const doctorDisplayName = /^dr\.?\s/i.test(doctorName) ? doctorName : `Dr. ${doctorName}`;
 
   const tabAppointments =
     activeTab === 'today' ? todayAppointments :
@@ -138,44 +140,45 @@ export default function DoctorDashboard({
       label: 'Today Appointments',
       value: defaultStats.todayAppointments,
       tone: 'border-[#d6e1fa]/30 bg-[#d6e1fa]/14 text-[#f2f6ff]',
+      href: '/doctor/appointments?date_filter=today',
+      hoverTone: 'doc-banner-metric-sky',
     },
     {
       label: 'In Queue',
       value: defaultStats.waitingPatients,
       tone: 'border-[#f0bf97]/35 bg-[#f0bf97]/16 text-[#ffe6d3]',
+      href: '/doctor/appointments?status_filter=arrived',
+      hoverTone: 'doc-banner-metric-amber',
     },
     {
       label: 'In Progress',
       value: activeCount,
       tone: 'border-[#c7d6f7]/30 bg-[#c7d6f7]/16 text-[#eaf0ff]',
+      href: '/doctor/appointments?status_filter=in_consultation',
+      hoverTone: 'doc-banner-metric-violet',
     },
     {
       label: 'Tests Pending',
       value: awaitingList.length,
       tone: 'border-[#e5b894]/36 bg-[#e5b894]/18 text-[#ffe3cf]',
+      href: '/doctor/appointments?status_filter=awaiting_tests',
+      hoverTone: 'doc-banner-metric-orange',
     },
   ];
 
   const heroSnapshots = [
-    { label: 'Next Slot', value: upcomingAppointment ? fmtTime(upcomingAppointment.appointment_time) : 'No slot' },
-    { label: 'Completion', value: `${completionRate}%` },
-    { label: 'Total Patients', value: defaultStats.totalPatients },
-    { label: 'RX This Month', value: defaultStats.prescribedThisMonth },
+    { label: 'Next Slot', value: upcomingAppointment ? fmtTime(upcomingAppointment.appointment_time) : 'No slot', href: '/doctor/appointments?date_filter=today' },
+    { label: 'Completion', value: `${completionRate}%`, href: '/doctor/appointments?status_filter=prescribed' },
+    { label: 'Total Patients', value: defaultStats.totalPatients, href: '/doctor/patients' },
+    { label: 'RX This Month', value: defaultStats.prescribedThisMonth, href: '/doctor/prescriptions' },
   ];
 
   const statCardItems = [
-    { label: "Today's Appts", value: defaultStats.todayAppointments, icon: CalendarDays, variant: 'sky' },
-    { label: 'In Queue', value: defaultStats.waitingPatients, icon: Users, variant: 'amber' },
-    { label: 'In Consult', value: activeCount, icon: Stethoscope, variant: 'violet' },
-    { label: 'Rx This Month', value: defaultStats.prescribedThisMonth, icon: ClipboardList, variant: 'emerald' },
-    { label: 'Total Patients', value: defaultStats.totalPatients, icon: Star, variant: 'cyan' },
-  ];
-
-  const bannerQuickActions = [
-    { label: 'New Appt', icon: CalendarDays, action: 'modal' },
-    { label: 'New Rx', icon: FileText, href: '/doctor/prescriptions/create' },
-    { label: 'Patients', icon: Users, href: '/doctor/patients' },
-    { label: 'Prescriptions', icon: ClipboardList, href: '/doctor/prescriptions' },
+    { label: 'Scheduled Today', value: defaultStats.scheduled, icon: CalendarClock, variant: 'sky' },
+    { label: 'Completed Today', value: completedCount, icon: CheckCircle, variant: 'emerald' },
+    { label: 'Follow Ups Due', value: defaultStats.followUpsDue, icon: Clock, variant: 'amber' },
+    { label: 'Total Patients', value: defaultStats.totalPatients, icon: Users, variant: 'cyan' },
+    { label: 'Rx This Month', value: defaultStats.prescribedThisMonth, icon: ClipboardList, variant: 'violet' },
   ];
 
   return (
@@ -198,65 +201,56 @@ export default function DoctorDashboard({
 
                 <p className="text-xs font-medium uppercase tracking-wider text-white/70">{todayStr}</p>
                 <h1 className="text-[1.8rem] font-black leading-tight tracking-tight text-white md:text-[2.05rem]">
-                  {greeting}, Dr. {(user?.name || 'Doctor').split(' ')[0]}
+                  {greeting}, {doctorDisplayName}
                 </h1>
                 <p className="max-w-xl text-[13px] text-white/80">Patient flow, appointment queue, and prescription output are live.</p>
 
                 <div className="flex flex-wrap items-center gap-2 pt-0.5">
                   <Link
                     href="/doctor/schedule"
-                    className="inline-flex items-center gap-2 rounded-lg border border-white/25 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/20 active:scale-[0.97]"
+                    className="doc-banner-action group inline-flex items-center gap-2 rounded-lg border border-white/25 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white transition active:scale-[0.97]"
                   >
                     <CalendarDays className="h-3.5 w-3.5" />
                     My Schedule
+                    <ArrowRight className="doc-banner-action-arrow h-3.5 w-3.5" />
                   </Link>
-                  <DocButton onClick={() => setShowCreateModal(true)} className="!bg-[#c57945] !px-3 !py-1.5 !text-white hover:!bg-[#ad6639]">
+                  <DocButton onClick={() => setShowCreateModal(true)} className="doc-banner-action group !bg-[#c57945] !px-3 !py-1.5 !text-white hover:!bg-[#ad6639]">
                     <UserPlus className="h-4 w-4" />
                     New Appointment
+                    <ArrowRight className="doc-banner-action-arrow h-3.5 w-3.5" />
                   </DocButton>
+                  <Link
+                    href="/doctor/prescriptions/create"
+                    className="doc-banner-action group inline-flex items-center gap-2 rounded-lg border border-white/25 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white transition active:scale-[0.97]"
+                  >
+                    <FileText className="h-3.5 w-3.5" />
+                    Create Prescription
+                    <ArrowRight className="doc-banner-action-arrow h-3.5 w-3.5" />
+                  </Link>
                   <div className="hidden gap-2 lg:flex">
                     {heroSnapshots.slice(0, 2).map((item) => (
-                      <div key={item.label} className="rounded-lg border border-white/20 bg-black/10 px-2.5 py-1">
-                        <div className="text-[9px] font-semibold uppercase tracking-[0.1em] text-white/60">{item.label}</div>
+                      <Link key={item.label} href={item.href} className="doc-banner-hover-card group rounded-lg border border-white/20 bg-black/10 px-2.5 py-1">
+                        <div className="flex items-center justify-between gap-2 text-[9px] font-semibold uppercase tracking-[0.1em] text-white/60">
+                          <span>{item.label}</span>
+                          <ArrowRight className="doc-banner-hover-icon h-3.5 w-3.5" />
+                        </div>
                         <div className="mt-0.5 text-xs font-bold text-white">{item.value}</div>
-                      </div>
+                      </Link>
                     ))}
                   </div>
                 </div>
 
-                <div className="mt-1 hidden grid-cols-4 gap-2 lg:grid">
-                  {bannerQuickActions.map((item) => {
-                    const Icon = item.icon;
-                    const inner = (
-                      <div className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-white/20 bg-white/10 px-2 py-1.5 text-[11px] font-semibold text-white transition hover:bg-white/20">
-                        <Icon className="h-3.5 w-3.5" />
-                        {item.label}
-                      </div>
-                    );
-
-                    if (item.href) {
-                      return (
-                        <Link key={item.label} href={item.href}>
-                          {inner}
-                        </Link>
-                      );
-                    }
-
-                    return (
-                      <button key={item.label} type="button" onClick={() => setShowCreateModal(true)}>
-                        {inner}
-                      </button>
-                    );
-                  })}
-                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-2">
                 {heroMetrics.map((metric) => (
-                  <div key={metric.label} className={`rounded-lg border px-2.5 py-2 ${metric.tone}`}>
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.11em]">{metric.label}</div>
+                  <Link key={metric.label} href={metric.href} className={`doc-banner-metric doc-banner-hover-card ${metric.hoverTone} group rounded-lg border px-2.5 py-2 ${metric.tone}`}>
+                    <div className="flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-[0.11em]">
+                      <span>{metric.label}</span>
+                      <ArrowRight className="doc-banner-hover-icon h-3.5 w-3.5" />
+                    </div>
                     <div className="mt-1 text-lg font-black leading-none">{metric.value}</div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             </div>
@@ -264,11 +258,13 @@ export default function DoctorDashboard({
         </DocCard>
 
         {/* STAT CARDS */}
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+        <div className="grid auto-rows-min grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">
           {statCardItems.map((item) => (
             <StatCard key={item.label} label={item.label} value={item.value} icon={item.icon} variant={item.variant} />
           ))}
         </div>
+
+        {/* Quick actions hidden for now */}
 
         {/* MAIN 2-COLUMN GRID */}
         <div className="grid gap-6 lg:grid-cols-3">
@@ -431,23 +427,23 @@ export default function DoctorDashboard({
               </div>
 
               {tabAppointments.length > 0 ? (
-                <div className="overflow-x-auto doc-table-scroll">
+                <div className="overflow-x-auto doc-table-scroll rounded-[24px] border border-[#e5ecf8] bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] shadow-[0_16px_34px_rgba(15,23,42,0.05)]">
                   <table className="w-full">
                     <thead>
-                      <tr className="border-b border-slate-100">
-                        <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 w-10">#</th>
-                        <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400">Patient</th>
-                        <th className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 hidden md:table-cell">Time</th>
-                        <th className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400 hidden lg:table-cell">Type</th>
-                        <th className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400">Status</th>
-                        <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400">Action</th>
+                      <tr className="border-b border-[#e8eef8] bg-[linear-gradient(180deg,#f8fbff_0%,#eef4ff_100%)]">
+                        <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-[#89a0c4] w-10">#</th>
+                        <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-[#89a0c4]">Patient</th>
+                        <th className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-[#89a0c4] hidden md:table-cell">Time</th>
+                        <th className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-[#89a0c4] hidden lg:table-cell">Type</th>
+                        <th className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-[#89a0c4]">Status</th>
+                        <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-[#89a0c4]">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
                       {tabAppointments.map((a, i) => (
-                        <tr key={a.id || i} className="doc-table-row group">
+                        <tr key={a.id || i} className="doc-table-row group transition-colors even:bg-[#fbfdff] hover:bg-[#f8fbff]">
                           <td className="px-5 py-3.5">
-                            <span className="text-xs font-medium text-slate-400">{getSerial(a, i + 1)}</span>
+                            <span className="inline-flex h-9 min-w-[2.25rem] items-center justify-center rounded-xl border border-[#e4ebf7] bg-white px-2.5 text-xs font-semibold text-[#5f7398] shadow-[0_8px_18px_-18px_rgba(37,53,102,0.6)]">{getSerial(a, i + 1)}</span>
                           </td>
                           <td className="px-5 py-3.5 cursor-pointer" onClick={() => setSelectedPatient(a)}>
                             <div className="flex items-center gap-3">

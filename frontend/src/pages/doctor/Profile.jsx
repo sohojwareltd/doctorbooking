@@ -143,26 +143,53 @@ export default function DoctorProfile({ doctor = {} }) {
         'w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 doc-input-focus transition';
     const labelClass = 'mb-2 block text-sm font-semibold text-slate-700';
     const errorClass = 'mt-1 text-xs font-semibold text-rose-600';
-    const profileMetrics = [
+    const isFilled = (value) => String(value ?? '').trim() !== '';
+    const doctorName = data.name || doctor.name || 'Doctor Name';
+    const profileReadyCount = [
+        data.name,
+        data.email,
+        data.phone,
+        data.address,
+        data.date_of_birth,
+        data.gender,
+        data.specialization,
+        data.degree,
+        data.registration_no,
+    ].filter(isFilled).length;
+    const aboutReadyCount = [
+        data.about_subtitle,
+        data.about_bio_details,
+        data.about_credentials_title,
+        data.about_credentials_text,
+        data.about_highlight_value,
+        data.about_highlight_label,
+        data.about_stats_patients_treated,
+        data.about_stats_years_experience,
+        data.about_stats_patient_satisfaction,
+        data.about_stats_medical_cases,
+    ].filter(isFilled).length;
+    const bannerTabs = [
         {
-            label: 'Doctor',
-            value: (data.name || doctor.name || 'Doctor').split(' ')[0],
-            tone: 'border-[#d6e1fa]/30 bg-[#d6e1fa]/14 text-[#f2f6ff]',
+            key: 'profile',
+            label: 'Profile Setup',
+            title: data.specialization || 'Personal and professional details',
+            summary: photoPreview ? 'Photo ready' : 'Photo pending',
+            secondary: data.registration_no ? `BMDC ${data.registration_no}` : 'BMDC pending',
+            count: `${profileReadyCount}/9`,
+            icon: User,
+            accent: 'from-[#d6e1fa]/26 to-[#c7d6f7]/16',
         },
         {
-            label: 'Specialty',
-            value: data.specialization || 'Pending',
-            tone: 'border-[#f0bf97]/35 bg-[#f0bf97]/16 text-[#ffe6d3]',
-        },
-        {
-            label: 'BMDC',
-            value: data.registration_no || 'Pending',
-            tone: 'border-[#c7d6f7]/30 bg-[#c7d6f7]/16 text-[#eaf0ff]',
-        },
-        {
-            label: 'Editing',
-            value: activeTab === 'profile' ? 'Profile' : 'About',
-            tone: 'border-[#e5b894]/36 bg-[#e5b894]/18 text-[#ffe3cf]',
+            key: 'about',
+            label: 'About Content',
+            title: data.about_subtitle || 'Homepage story and stats',
+            summary: data.about_highlight_value && data.about_highlight_label
+                ? `${data.about_highlight_value} ${data.about_highlight_label}`
+                : 'Highlight pending',
+            secondary: data.about_credentials_title || 'Credentials pending',
+            count: `${aboutReadyCount}/10`,
+            icon: FileText,
+            accent: 'from-[#f0bf97]/28 to-[#e5b894]/18',
         },
     ];
 
@@ -176,7 +203,7 @@ export default function DoctorProfile({ doctor = {} }) {
                 <div className="pointer-events-none absolute -bottom-16 right-[-26px] h-52 w-52 rounded-full bg-[#efba92]/15" />
 
                 <div className="absolute inset-0 z-20 flex flex-col justify-end px-5 py-4 md:px-6 md:py-5">
-                    <div className="grid w-full gap-3 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-end">
+                    <div className="grid w-full gap-3 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-end">
                         <div className="space-y-2">
                             <div className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-white/85">
                                 <User className="h-3.5 w-3.5" />
@@ -184,26 +211,78 @@ export default function DoctorProfile({ doctor = {} }) {
                             </div>
                             <p className="text-xs font-medium uppercase tracking-wider text-white/70">Doctor Identity</p>
                             <h1 className="text-[1.8rem] font-black leading-tight tracking-tight text-white md:text-[2.05rem]">Profile Workspace</h1>
-                            <p className="max-w-xl text-[13px] text-white/80">Manage profile identity, medical credentials, prescription preview, and homepage about content in one place.</p>
+                            <p className="max-w-xl text-[13px] text-white/80">Manage photo, credentials, and homepage about content from one focused workspace.</p>
                             <div className="flex flex-wrap items-center gap-2 pt-0.5">
                                 <div className="rounded-lg border border-white/20 bg-black/10 px-2.5 py-1">
-                                    <div className="text-[9px] font-semibold uppercase tracking-[0.1em] text-white/60">Tab</div>
+                                    <div className="text-[9px] font-semibold uppercase tracking-[0.1em] text-white/60">Active Section</div>
                                     <div className="mt-0.5 text-xs font-bold text-white">{activeTab === 'profile' ? 'Profile' : 'About'}</div>
                                 </div>
                                 <div className="rounded-lg border border-white/20 bg-black/10 px-2.5 py-1">
-                                    <div className="text-[9px] font-semibold uppercase tracking-[0.1em] text-white/60">Photo</div>
+                                    <div className="text-[9px] font-semibold uppercase tracking-[0.1em] text-white/60">Photo Status</div>
                                     <div className="mt-0.5 text-xs font-bold text-white">{photoPreview ? 'Uploaded' : 'Pending'}</div>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-2">
-                            {profileMetrics.map((item) => (
-                                <div key={item.label} className={`rounded-lg border px-2.5 py-2 ${item.tone}`}>
-                                    <div className="text-[10px] font-semibold uppercase tracking-[0.11em]">{item.label}</div>
-                                    <div className="mt-1 text-lg font-black leading-none">{item.value}</div>
-                                </div>
-                            ))}
+                        <div className="grid grid-cols-2 gap-2 lg:self-end">
+                            {bannerTabs.map((item) => {
+                                const Icon = item.icon;
+                                const active = activeTab === item.key;
+
+                                return (
+                                    <button
+                                        key={item.key}
+                                        type="button"
+                                        onClick={() => setActiveTab(item.key)}
+                                        className={`group relative min-h-[128px] overflow-hidden rounded-[22px] border px-3 py-2.5 text-left transition duration-200 ${
+                                            active
+                                                ? 'border-white/70 bg-white/22 ring-1 ring-white/30 shadow-[0_18px_34px_-22px_rgba(13,19,38,0.9)]'
+                                                : 'border-white/14 bg-black/10 hover:border-white/30 hover:bg-white/12'
+                                        }`}
+                                    >
+                                        <div className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${active ? 'opacity-100' : 'opacity-88'} ${item.accent}`} />
+                                        <div className="relative flex h-full flex-col gap-2.5">
+                                            <div className="flex items-start gap-2.5">
+                                                {item.key === 'profile' && photoPreview ? (
+                                                    <div className="h-10 w-10 flex-shrink-0 overflow-hidden rounded-2xl border border-white/35 shadow-sm">
+                                                        <img src={photoPreview} alt={doctorName} className="h-full w-full object-cover" />
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl border border-white/25 bg-white/16 shadow-sm">
+                                                        <Icon className="h-4 w-4 text-white" />
+                                                    </div>
+                                                )}
+
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="flex items-start justify-between gap-2">
+                                                        <div className="min-w-0 flex-1">
+                                                            <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-white/65">{item.label}</div>
+                                                            <div className="mt-1 truncate text-[13px] font-black leading-tight text-white">{item.title}</div>
+                                                        </div>
+
+                                                        <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-[0.08em] ${active ? 'bg-white text-[#24345d]' : 'bg-black/10 text-white/80'}`}>
+                                                            {active ? <BadgeCheck className="h-3 w-3" /> : null}
+                                                            {active ? 'Active' : 'Open'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-center justify-between gap-2">
+                                                <span className={`inline-flex max-w-[118px] items-center truncate rounded-full border px-2.5 py-1 text-[10px] font-semibold ${active ? 'border-white/35 bg-white/18 text-white' : 'border-white/18 bg-black/10 text-white/82'}`}>
+                                                    {item.summary}
+                                                </span>
+
+                                                <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${active ? 'bg-[#24345d]/30 text-white ring-1 ring-white/16' : 'bg-black/10 text-white/74'}`}>
+                                                    {item.count}
+                                                </span>
+                                            </div>
+
+                                            <div className="truncate text-[10px] font-medium text-white/72">{item.secondary}</div>
+                                        </div>
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
                 </div>
@@ -245,28 +324,32 @@ export default function DoctorProfile({ doctor = {} }) {
                 </div>
             )}
 
-            {/* Profile Photo & Preview Section */}
-            <div className="overflow-hidden rounded-xl bg-white border border-slate-200 shadow-sm">
-                <div className="flex flex-col lg:flex-row">
-                    {/* Left Side - Photo Upload with Gradient Background */}
-                    <div className="relative flex-1 bg-gradient-to-br from-[#eef2ff] via-white to-[#fff3ea]/70 p-8">
-                 
-                        
+            {activeTab === 'profile' && (
+                <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                    <div className="relative bg-gradient-to-br from-[#eef2ff] via-white to-[#fff3ea]/70 p-8">
                         <div className="relative z-10">
-                            <div className="mb-6 flex items-center gap-3">
-                                <div className="rounded-xl bg-[#253566] p-3 shadow-lg">
-                                    <Camera className="h-6 w-6 text-white" />
+                            <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="rounded-xl bg-[#253566] p-3 shadow-lg">
+                                        <Camera className="h-6 w-6 text-white" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-xl font-bold text-slate-800">Profile Photo</h2>
+                                        <p className="text-sm text-slate-500">Upload the professional photo shown across your doctor profile.</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h2 className="text-xl font-bold text-slate-800">Profile Photo</h2>
-                                    <p className="text-sm text-slate-500">
-                                        Upload your professional photo
-                                    </p>
+
+                                <div className="flex flex-wrap gap-2">
+                                    <span className="rounded-full border border-slate-200 bg-white/90 px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm">
+                                        {photoPreview ? 'Photo ready' : 'No photo uploaded'}
+                                    </span>
+                                    <span className="rounded-full border border-slate-200 bg-white/90 px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm">
+                                        {data.degree || 'Degree pending'}
+                                    </span>
                                 </div>
                             </div>
 
                             <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-start">
-                                {/* Photo Preview with fancy border */}
                                 <div className="relative group">
                                     <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-[#253566] to-[#c57945] opacity-50 blur transition group-hover:opacity-75"></div>
                                     <div
@@ -290,11 +373,9 @@ export default function DoctorProfile({ doctor = {} }) {
                                             <div className="h-10 w-10 animate-spin rounded-full border-4 border-white border-t-transparent"></div>
                                         </div>
                                     )}
-                                    {/* Online indicator */}
                                     <div className="absolute bottom-2 right-2 h-5 w-5 rounded-full border-3 border-white bg-emerald-500 shadow-lg"></div>
                                 </div>
 
-                                {/* Photo Actions - Styled buttons */}
                                 <div className="flex flex-col gap-3">
                                     <input
                                         ref={fileInputRef}
@@ -337,95 +418,15 @@ export default function DoctorProfile({ doctor = {} }) {
                                         </div>
                                     )}
 
-                                    <p className="text-center text-xs text-slate-400">
-                                        Max: 2MB • JPEG, PNG, GIF, WebP
-                                    </p>
+                                    <p className="text-center text-xs text-slate-400">Max: 2MB • JPEG, PNG, GIF, WebP</p>
                                 </div>
                             </div>
                         </div>
-                    </div>
-
-                    {/* Right Side - Prescription Header Preview */}
-                    <div className="border-t border-dashed border-slate-200 bg-gradient-to-br from-slate-50 to-[#fff3ea]/60 p-8 lg:w-[340px] lg:border-l lg:border-t-0">
-                        <div className="mb-4 flex items-center gap-2">
-                            <Stethoscope className="h-4 w-4 text-slate-400" />
-                            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                                Prescription Preview
-                            </span>
-                        </div>
-                        
-                        {/* Preview Card */}
-                        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-                            <div className="flex items-start gap-4">
-                                {photoPreview ? (
-                                    <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-xl border border-slate-200 shadow-sm">
-                                        <img
-                                            src={photoPreview}
-                                            alt="Profile"
-                                            className="h-full w-full object-cover"
-                                        />
-                                    </div>
-                                ) : (
-                                    <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#253566] to-[#c57945] shadow-sm">
-                                        <Stethoscope className="h-8 w-8 text-white" />
-                                    </div>
-                                )}
-                                <div className="min-w-0 flex-1">
-                                    <div className="text-lg font-bold text-slate-800">
-                                        {data.name || 'Doctor Name'}
-                                    </div>
-                                    {data.degree && (
-                                        <div className="mt-0.5 text-sm font-semibold text-slate-600">
-                                            {data.degree}
-                                        </div>
-                                    )}
-                                    {data.specialization && (
-                                        <div className="mt-0.5 text-sm font-medium text-[#3556a6]">
-                                            {data.specialization}
-                                        </div>
-                                    )}
-                                    {data.registration_no && (
-                                        <div className="mt-2 inline-flex items-center rounded-full border border-[#d7dfec] bg-[#edf1fb] px-2.5 py-1 text-xs font-medium text-[#3556a6]">
-                                            Reg: {data.registration_no}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <p className="mt-4 text-center text-xs text-slate-400">
-                            This is how your info appears on prescriptions
-                        </p>
                     </div>
                 </div>
-            </div>
+            )}
 
             <form onSubmit={handleSubmit}>
-                <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1">
-                    <button
-                        type="button"
-                        onClick={() => setActiveTab('profile')}
-                        className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
-                            activeTab === 'profile'
-                                ? 'bg-[#253566] text-white'
-                                : 'text-slate-600 hover:bg-slate-100'
-                        }`}
-                    >
-                        Profile
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setActiveTab('about')}
-                        className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
-                            activeTab === 'about'
-                                ? 'bg-[#253566] text-white'
-                                : 'text-slate-600 hover:bg-slate-100'
-                        }`}
-                    >
-                        About
-                    </button>
-                </div>
-
                 {activeTab === 'profile' && (
                 <div className="grid gap-8 lg:grid-cols-2">
                     {/* Personal Information */}

@@ -86,7 +86,7 @@ export default function DoctorChambers() {
                   { label: 'Mapped', value: mappedCount, tone: 'border-[#c7d6f7]/30 bg-[#c7d6f7]/16 text-[#eaf0ff]' },
                   { label: 'Draft', value: chambers.length - activeCount, tone: 'border-[#e5b894]/36 bg-[#e5b894]/18 text-[#ffe3cf]' },
                 ].map((item) => (
-                  <div key={item.label} className={`rounded-lg border px-2.5 py-2 ${item.tone}`}>
+                  <div key={item.label} className={`doc-banner-metric rounded-lg border px-2.5 py-2 ${item.tone}`}>
                     <div className="text-[10px] font-semibold uppercase tracking-[0.11em]">{item.label}</div>
                     <div className="mt-1 text-lg font-black leading-none">{item.value}</div>
                   </div>

@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from '@inertiajs/react';
-import { FileText, Search, Eye, Share2, Printer, CalendarDays, CalendarCheck } from 'lucide-react';
+import { router } from '@inertiajs/react';
+import { FileText, Search, Eye, Share2, Printer, CalendarDays, CalendarCheck, Users, Phone } from 'lucide-react';
 import DoctorLayout from '../../layouts/DoctorLayout';
 import Pagination from '../../components/Pagination';
-import { formatDisplayFromDateLike, formatDisplayDateWithYearFromDateLike } from '../../utils/dateFormat';
+import { formatDisplayDateWithYearFromDateLike } from '../../utils/dateFormat';
 import { toastSuccess, toastError } from '../../utils/toast';
 import StatCard from '../../components/doctor/StatCard';
+import DocTableActionMenu from '../../components/doctor/DocTableActionMenu';
 import PatientAvatar from '../../components/doctor/PatientAvatar';
 import { DocCard, DocEmptyState } from '../../components/doctor/DocUI';
 
@@ -63,27 +64,65 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
 
   const filtersActive = dateFilter !== 'all' || searchTerm !== '';
   const displayCount = filtersActive ? filteredRows.length : (pagination?.total ?? filteredRows.length);
+  const activeStatsRows = useMemo(() => (filtersActive ? filteredRows : rows), [filtersActive, filteredRows, rows]);
 
   const statsCards = useMemo(() => {
-    const totalCount = pagination?.total || rows.length;
-    const withFollowUp = stats?.withFollowUp ?? 0;
-    const withoutFollowUp = stats?.withoutFollowUp ?? 0;
-    const upcomingFollowUps = stats?.upcomingFollowUps ?? 0;
+    const viewLabel = filtersActive ? 'filtered view' : 'current list';
+    const createdToday = activeStatsRows.filter((prescription) => (prescription.created_at || '').slice(0, 10) === todayIso).length;
+    const seniorPatients = activeStatsRows.filter((prescription) => {
+      const age = resolvePatientAge(prescription);
+      return typeof age === 'number' && age >= 50;
+    }).length;
+    const missingContact = activeStatsRows.filter((prescription) => !(prescription.patient_contact || prescription.user?.phone)).length;
 
     return [
-      { label: 'Total Prescriptions', value: totalCount, variant: 'blue', icon: FileText },
-      { label: 'With Follow-up', value: withFollowUp, variant: 'emerald', icon: CalendarCheck },
-      { label: 'No Follow-up', value: withoutFollowUp, variant: 'amber', icon: CalendarDays },
-      { label: 'Upcoming Visits', value: upcomingFollowUps, variant: 'sky', icon: CalendarDays },
+      { label: 'Created Today', value: createdToday, variant: 'sky', icon: CalendarCheck, subtitle: viewLabel },
+      { label: 'Age 50+', value: seniorPatients, variant: 'violet', icon: Users, subtitle: viewLabel },
+      { label: 'Missing Contact', value: missingContact, variant: 'rose', icon: Phone, subtitle: viewLabel },
+      { label: 'Selected', value: selectedIds.length, variant: 'cyan', icon: Eye, subtitle: 'table selection' },
     ];
-  }, [pagination, stats]);
+  }, [activeStatsRows, filtersActive, selectedIds.length, todayIso]);
 
   const prescriptionHeaderMetrics = [
     { label: 'Prescriptions', value: displayCount },
     { label: 'With Follow-up', value: stats?.withFollowUp ?? 0 },
     { label: 'Upcoming Visits', value: stats?.upcomingFollowUps ?? 0 },
-    { label: 'Selected', value: selectedIds.length },
+    { label: 'No Follow-up', value: stats?.withoutFollowUp ?? 0 },
   ];
+
+  const handlePrintPrescription = (prescription) => {
+    const printWindow = window.open(`/doctor/prescriptions/${prescription.id}?action=print`, '_blank');
+    if (printWindow) {
+      toastSuccess('Opening prescription for printing...');
+      return;
+    }
+    toastError('Unable to open the print view right now.');
+  };
+
+  const handleSharePrescription = async (prescription) => {
+    const shareUrl = `${window.location.origin}/doctor/prescriptions/${prescription.id}`;
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: `Prescription for ${getPatientName(prescription)}`,
+          text: `Prescription ID: #${prescription.id}`,
+          url: shareUrl,
+        });
+        return;
+      }
+
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareUrl);
+        toastSuccess('Prescription link copied to clipboard');
+        return;
+      }
+
+      throw new Error('Clipboard unavailable');
+    } catch {
+      toastError('Unable to share prescription right now.');
+    }
+  };
 
   return (
     <DoctorLayout title="Prescriptions">
@@ -150,9 +189,10 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
               )}
             </div>
 
-            <div className="flex flex-col gap-3 md:flex-row md:items-end">
-              <div className="flex-1">
-                <label className="mb-1.5 block text-sm font-medium text-slate-700">Search</label>
+            <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,320px)_170px_160px] xl:items-end">
+              <div className="xl:w-[320px]">
+                <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Search</label>
                 <div className="relative">
                   <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <input
@@ -160,37 +200,38 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
                     placeholder="Search by patient, diagnosis or medication"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-900 placeholder-slate-400 transition doc-input-focus"
+                    className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-900 placeholder-slate-400 shadow-[0_1px_0_rgba(148,163,184,0.08)] transition doc-input-focus"
                   />
                 </div>
               </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-slate-700">Created date</label>
+              <div className="sm:max-w-[180px] xl:w-[170px]">
+                <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Created date</label>
                 <select
                   value={dateFilter}
                   onChange={(e) => setDateFilter(e.target.value)}
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 transition doc-input-focus"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-[0_1px_0_rgba(148,163,184,0.08)] transition doc-input-focus"
                 >
                   <option value="all">All dates</option>
                   <option value="today">Today</option>
                 </select>
               </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-slate-700">Follow-up</label>
+              <div className="sm:max-w-[170px] xl:w-[160px]">
+                <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Follow-up</label>
                 <select
                   value="all"
                   disabled
-                  className="w-full rounded-lg border border-slate-200 bg-slate-100 px-3.5 py-2.5 text-sm text-slate-400"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-100 px-3.5 py-2.5 text-sm text-slate-400"
                 >
                   <option value="all">N/A</option>
                 </select>
               </div>
+              </div>
             </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full divide-y divide-slate-100">
-              <thead className="bg-slate-50/80">
+          <div className="overflow-x-auto bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)]">
+            <table className="w-full min-w-[980px] divide-y divide-[#e7edf8]">
+              <thead className="bg-[linear-gradient(180deg,#f8fbff_0%,#eef4ff_100%)]">
                 <tr>
                   <th className="w-12 px-4 py-3 text-left">
                     <input
@@ -206,19 +247,43 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
                       className="rounded border-slate-300 text-sky-600 focus:ring-sky-200"
                     />
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400">#</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400">Patient</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400">Age</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400">Gender</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400">Number</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400">Action</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-[#89a0c4]">#</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-[#89a0c4]">Patient</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-[#89a0c4]">Age</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-[#89a0c4]">Gender</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-[#89a0c4]">Number</th>
+                  <th className="w-[176px] px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-[#89a0c4]">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50 bg-white">
                 {filteredRows.map((p, idx) => {
                   const isSelected = selectedIds.includes(p.id);
+                  const actionItems = [
+                    {
+                      key: 'view',
+                      label: 'View prescription',
+                      icon: Eye,
+                      tone: 'accent',
+                      onSelect: () => router.visit(`/doctor/prescriptions/${p.id}`),
+                    },
+                    {
+                      key: 'print',
+                      label: 'Print',
+                      icon: Printer,
+                      tone: 'amber',
+                      onSelect: () => handlePrintPrescription(p),
+                    },
+                    {
+                      key: 'share',
+                      label: 'Share',
+                      icon: Share2,
+                      tone: 'emerald',
+                      onSelect: () => handleSharePrescription(p),
+                    },
+                  ];
+
                   return (
-                    <tr key={p.id || idx} className={`transition ${isSelected ? 'bg-sky-50/50' : 'hover:bg-slate-50/50'}`}>
+                    <tr key={p.id || idx} className={`border-l-2 transition-all duration-200 ${isSelected ? 'border-[#c6d9f7] bg-[#f0f6ff]' : 'border-transparent even:bg-[#fbfdff] hover:border-[#d6e4fb] hover:bg-[#f8fbff]'}`}>
                       <td className="px-4 py-3.5">
                         <input
                           type="checkbox"
@@ -233,7 +298,11 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
                           className="rounded border-slate-300 text-sky-600 focus:ring-sky-200"
                         />
                       </td>
-                      <td className="px-4 py-3.5 text-sm font-medium text-slate-500">{p.id}</td>
+                      <td className="px-4 py-3.5 text-sm font-medium text-slate-500">
+                        <span className="inline-flex h-9 min-w-[2.25rem] items-center justify-center rounded-xl border border-[#e4ebf7] bg-white px-2.5 text-sm font-semibold text-[#5f7398] shadow-[0_8px_18px_-18px_rgba(37,53,102,0.6)]">
+                          {p.id}
+                        </span>
+                      </td>
                       <td className="px-4 py-3.5">
                         <div className="flex items-center gap-3">
                           <PatientAvatar name={getPatientName(p)} size="sm" />
@@ -243,48 +312,8 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
                       <td className="px-4 py-3.5 text-sm text-slate-500">{resolvePatientAge(p) ?? '—'}</td>
                       <td className="px-4 py-3.5 text-sm text-slate-500 capitalize">{p.patient_gender || p.user?.gender || '—'}</td>
                       <td className="px-4 py-3.5 text-sm text-slate-500 whitespace-nowrap">{p.patient_contact || p.user?.phone || '—'}</td>
-                      <td className="px-4 py-3.5 text-sm">
-                        <div className="flex items-center gap-3">
-                          <Link
-                            href={`/doctor/prescriptions/${p.id}`}
-                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-sky-600 hover:text-sky-700 transition"
-                          >
-                            <Eye className="h-3.5 w-3.5" /> View
-                          </Link>
-                          <button
-                            onClick={() => {
-                              const printWindow = window.open(`/doctor/prescriptions/${p.id}?action=print`, '_blank');
-                              if (printWindow) toastSuccess('Opening prescription for printing...');
-                            }}
-                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-sky-600 transition"
-                            title="Print"
-                          >
-                            <Printer className="h-3.5 w-3.5" /> Print
-                          </button>
-                          <Link
-                            href={`/doctor/prescriptions/${p.id}?action=share`}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              if (navigator.share) {
-                                navigator.share({
-                                  title: `Prescription for ${getPatientName(p)}`,
-                                  text: `Prescription ID: #${p.id}`,
-                                  url: `${window.location.origin}/doctor/prescriptions/${p.id}`,
-                                }).catch(() => {
-                                  navigator.clipboard.writeText(`${window.location.origin}/doctor/prescriptions/${p.id}`);
-                                  toastSuccess('Prescription link copied to clipboard');
-                                });
-                              } else {
-                                navigator.clipboard.writeText(`${window.location.origin}/doctor/prescriptions/${p.id}`);
-                                toastSuccess('Prescription link copied to clipboard');
-                              }
-                            }}
-                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-emerald-600 transition"
-                            title="Share"
-                          >
-                            <Share2 className="h-3.5 w-3.5" /> Share
-                          </Link>
-                        </div>
+                      <td className="px-4 py-3.5 text-right text-sm">
+                        <DocTableActionMenu items={actionItems} />
                       </td>
                     </tr>
                   );

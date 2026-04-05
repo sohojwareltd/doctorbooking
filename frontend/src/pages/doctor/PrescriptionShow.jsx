@@ -377,7 +377,7 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
       <div className="mx-auto max-w-6xl space-y-6">
 
       {/* Hero Banner */}
-      <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-[#273664] via-[#3d466b] to-[#be7a4b] p-8 shadow-[0_20px_40px_-28px_rgba(33,45,80,0.85)] print:hidden">
+      <div className="doc-banner-root relative overflow-hidden rounded-xl bg-gradient-to-r from-[#273664] via-[#3d466b] to-[#be7a4b] p-8 shadow-[0_20px_40px_-28px_rgba(33,45,80,0.85)] print:hidden">
         {/* Decorative circles */}
         <div className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full bg-white/10" />
         <div className="pointer-events-none absolute -bottom-10 right-32 h-36 w-36 rounded-full bg-[#efba92]/15" />
