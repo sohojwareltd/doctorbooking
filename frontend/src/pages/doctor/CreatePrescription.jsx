@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useReducer, useState } from 'react';
 import DoctorLayout from '../../layouts/DoctorLayout';
+import { DocCard } from '../../components/doctor/DocUI';
 import { toastError, toastSuccess } from '../../utils/toast';
 
 const COMMON_TESTS = [
@@ -320,6 +321,15 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
         () => formatDisplayDate(state.follow_up.date),
         [state.follow_up.date],
     );
+    const selectedTestsCount = useMemo(() => {
+        const common = Object.values(state.investigations.common || {}).filter(Boolean).length;
+        const custom = (state.investigations.custom || []).map((item) => String(item || '').trim()).filter(Boolean).length;
+        return common + custom;
+    }, [state.investigations.common, state.investigations.custom]);
+    const medicineCount = useMemo(
+        () => (state.medicines || []).filter((item) => String(item.name || '').trim()).length,
+        [state.medicines],
+    );
 
     const inputClass =
         'w-full rounded-md bg-slate-50/50 px-3 py-2 text-sm text-slate-900 doc-input-focus';
@@ -330,8 +340,6 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
     const errorClass = 'mt-1 text-xs font-semibold text-rose-700';
     const sectionTitleClass = 'text-base font-bold text-slate-800';
     const sectionSubClass = 'mt-1 text-xs text-slate-500';
-    const chipClass =
-        'inline-flex items-center gap-2 rounded-full border border-sky-200 bg-white px-3 py-1.5 text-xs font-medium text-sky-700';
 
     const buildDiagnosisText = () => {
         const lines = [];
@@ -516,32 +524,53 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
         <DoctorLayout title="Create Prescription">
           <div className="mx-auto max-w-6xl space-y-6">
             {/* Hero Banner */}
-            <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 p-8 shadow-sm">
+            <DocCard padding={false} className="doc-banner-root relative overflow-hidden border-[#30416f]/20 bg-gradient-to-r from-[#273664] via-[#3d466b] to-[#be7a4b] text-white shadow-[0_20px_40px_-28px_rgba(33,45,80,0.85)] md:h-[260px]">
                 {/* Decorative circles */}
                 <div className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full bg-white/10" />
-                <div className="pointer-events-none absolute -bottom-10 right-32 h-36 w-36 rounded-full bg-white/10" />
+                <div className="pointer-events-none absolute -bottom-10 right-32 h-36 w-36 rounded-full bg-[#efba92]/15" />
 
-                <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex-1">
-                        <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-white/80 backdrop-blur-sm">
-                            <FileText className="h-3.5 w-3.5" />
-                            New Prescription
+                <div className="absolute inset-0 z-20 flex flex-col justify-end px-5 py-4 md:px-6 md:py-5">
+                    <div className="grid w-full gap-3 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-end">
+                        <div className="space-y-2">
+                            <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/80 backdrop-blur-sm">
+                                <FileText className="h-3.5 w-3.5" />
+                                New Prescription
+                            </div>
+                            <p className="text-xs font-medium uppercase tracking-wider text-white/70">Prescription Builder</p>
+                            <h1 className="text-[1.8rem] font-black leading-tight text-white md:text-[2.05rem]">Create Prescription</h1>
+                            <p className="max-w-lg text-[13px] text-white/78">Fill in patient details, diagnosis, investigations, and medicines to generate a complete prescription.</p>
+                            <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                                <Link
+                                    href="/doctor/prescriptions"
+                                    className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/20"
+                                >
+                                    ← Back to List
+                                </Link>
+                                {state.follow_up.date && (
+                                    <div className="rounded-lg border border-white/20 bg-black/10 px-2.5 py-1">
+                                        <div className="text-[9px] font-semibold uppercase tracking-[0.1em] text-white/60">Follow Up</div>
+                                        <div className="mt-0.5 text-xs font-bold text-white">{followUpDateLabel}</div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
-                        <h1 className="text-3xl font-bold leading-tight text-white lg:text-4xl">
-                            Create Prescription
-                        </h1>
-                        <p className="mt-2 max-w-lg text-sm text-white/70">
-                            Fill in patient details, diagnosis, and medications to generate a complete prescription.
-                        </p>
+
+                        <div className="grid grid-cols-2 gap-2">
+                            {[
+                                { label: 'Patient', value: state.patient.name || 'Pending', tone: 'border-[#d6e1fa]/30 bg-[#d6e1fa]/14 text-[#f2f6ff]' },
+                                { label: 'Medicines', value: medicineCount, tone: 'border-[#f0bf97]/35 bg-[#f0bf97]/16 text-[#ffe6d3]' },
+                                { label: 'Tests', value: selectedTestsCount, tone: 'border-[#c7d6f7]/30 bg-[#c7d6f7]/16 text-[#eaf0ff]' },
+                                { label: 'Visit', value: state.visit.type || 'New', tone: 'border-[#e5b894]/36 bg-[#e5b894]/18 text-[#ffe3cf]' },
+                            ].map((item) => (
+                                <div key={item.label} className={`rounded-lg border px-2.5 py-2 ${item.tone}`}>
+                                    <div className="text-[10px] font-semibold uppercase tracking-[0.11em]">{item.label}</div>
+                                    <div className="mt-1 text-sm font-bold leading-tight">{item.value}</div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
-                    <Link
-                        href="/doctor/prescriptions"
-                        className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-5 py-2.5 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/20"
-                    >
-                        ← Back to List
-                    </Link>
                 </div>
-            </div>
+            </DocCard>
 
             {/* Alert Messages with Icons */}
             {(success || error) && (
@@ -549,16 +578,16 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                     className={`animate-in slide-in-from-top mb-6 duration-300`}
                 >
                     <div
-                        className={`rounded-2xl border p-5 ${success ? 'border-emerald-300 bg-gradient-to-r from-emerald-50 to-emerald-100/60' : 'border-rose-300 bg-gradient-to-r from-rose-50 to-rose-100/60'}`}
+                        className={`rounded-2xl border p-5 ${success ? 'border-[#efc7a9] bg-gradient-to-r from-[#fff6ee] to-[#f8eadc]' : 'border-rose-300 bg-gradient-to-r from-rose-50 to-rose-100/60'}`}
                     >
                         <div className="flex items-center gap-3">
                             {success ? (
-                                <CheckCircle2 className="h-6 w-6 flex-shrink-0 text-emerald-600" />
+                                <CheckCircle2 className="h-6 w-6 flex-shrink-0 text-[#c57945]" />
                             ) : (
                                 <AlertCircle className="h-6 w-6 flex-shrink-0 text-rose-600" />
                             )}
                             <div
-                                className={`text-sm font-semibold ${success ? 'text-emerald-900' : 'text-rose-900'}`}
+                                className={`text-sm font-semibold ${success ? 'text-[#7a4b2a]' : 'text-rose-900'}`}
                             >
                                 {success || error}
                             </div>
@@ -573,7 +602,7 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                 <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
                     
                     {/* Prescription Header - Doctor left, Chamber right */}
-                    <div className="border-b-4 border-[#005963] bg-gradient-to-r from-[#005963] via-[#007f89] to-[#00acb1] p-6 text-white md:p-8">
+                    <div className="border-b-4 border-[#253566] bg-gradient-to-r from-[#253566] via-[#3d466b] to-[#c57945] p-6 text-white md:p-8">
                         <div className="grid gap-4 md:grid-cols-2 md:gap-6">
                             {/* Doctor Info - Left */}
                             <div className="rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur-sm md:p-5">
@@ -651,7 +680,7 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                     </div>
                                 )}
                                 {state.visit.type && (
-                                    <div className="rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700">
+                                    <div className="rounded-full border border-[#d7dfec] bg-[#edf1fb] px-2 py-0.5 text-xs font-medium text-[#3556a6]">
                                         {state.visit.type}
                                     </div>
                                 )}
@@ -663,9 +692,9 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                 )}
                             </div>
                             {state.follow_up.date && (
-                                <div className="flex items-center gap-2 rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5">
-                                    <Calendar className="h-4 w-4 text-sky-600" />
-                                    <span className="text-xs font-semibold text-sky-700">Follow-up: {followUpDateLabel}</span>
+                                <div className="flex items-center gap-2 rounded-lg border border-[#d7dfec] bg-[#edf1fb] px-3 py-1.5">
+                                    <Calendar className="h-4 w-4 text-[#3556a6]" />
+                                    <span className="text-xs font-semibold text-[#3556a6]">Follow-up: {followUpDateLabel}</span>
                                 </div>
                             )}
                         </div>
@@ -677,7 +706,7 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                             {/* Patient Information Section - Editable Fields Above Prescription */}
                             <div className="mb-6 rounded-lg border-2 border-dashed border-slate-200 bg-slate-50 p-4">
                                 <div className="mb-4 flex items-center gap-2 border-b border-slate-200 pb-2">
-                                    <User className="h-5 w-5 text-sky-700" />
+                                    <User className="h-5 w-5 text-[#3556a6]" />
                                     <span className="text-sm font-semibold text-slate-800">Patient Information</span>
                                 </div>
                                 <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6 xl:grid-cols-6">
@@ -765,7 +794,7 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                     {/* Tests Section - Top Right */}
                                     <div>
                                         <div className="mb-3 flex items-center gap-2 border-b border-slate-200 pb-2">
-                                            <FlaskConical className="h-4 w-4 text-sky-700" />
+                                            <FlaskConical className="h-4 w-4 text-[#3556a6]" />
                                             <span className="text-xs font-bold uppercase tracking-wider text-slate-700">Investigations</span>
                                         </div>
                                         
@@ -820,7 +849,7 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                                 ))}
                                                 <button
                                                     type="button"
-                                                    className="w-full rounded border border-sky-300 bg-sky-50 px-2 py-1 text-xs font-semibold text-sky-700 hover:bg-sky-100"
+                                                    className="w-full rounded border border-[#d7dfec] bg-[#edf1fb] px-2 py-1 text-xs font-semibold text-[#3556a6] transition hover:bg-[#e4eafb]"
                                                     onClick={() => dispatch({ type: 'addCustomTest' })}
                                                 >
                                                     + Add Test
@@ -832,7 +861,7 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                     {/* Diagnosis & Complaints Section - Bottom Right */}
                                     <div>
                                         <div className="mb-3 flex items-center gap-2 border-b border-slate-200 pb-2">
-                                            <Stethoscope className="h-4 w-4 text-sky-700" />
+                                            <Stethoscope className="h-4 w-4 text-[#3556a6]" />
                                             <span className="text-xs font-bold uppercase tracking-wider text-slate-700">Diagnosis</span>
                                         </div>
                                         
@@ -879,7 +908,7 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                                         section: 'complaints',
                                                         item: emptyComplaint(),
                                                     })}
-                                                    className="text-[10px] text-sky-600 hover:underline"
+                                                    className="text-[10px] text-[#3556a6] hover:underline"
                                                 >
                                                     + Add
                                                 </button>
@@ -996,7 +1025,7 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                                 {/* Medicine Rows - Dynamic */}
                                                 <div className="space-y-2">
                                                     {(state.medicines || []).map((m, idx) => (
-                                                        <div key={idx} className="group/med flex items-start gap-2 rounded border border-slate-200 bg-white p-2 hover:border-sky-400 hover:bg-slate-50">
+                                                        <div key={idx} className="group/med flex items-start gap-2 rounded border border-slate-200 bg-white p-2 transition hover:border-[#b9caee] hover:bg-slate-50">
                                                             <span className="mt-1 text-xs font-bold text-slate-400">{idx + 1}.</span>
                                                             <div className="flex-1 grid grid-cols-6 gap-2">
                                                                 <input
@@ -1120,7 +1149,7 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                                                 item: emptyMedicine(),
                                                             });
                                                         }}
-                                                        className="w-full rounded border-2 border-dashed border-sky-300 bg-sky-50 px-3 py-2 text-xs font-semibold text-sky-700 hover:bg-sky-100 transition flex items-center justify-center gap-1"
+                                                        className="w-full rounded border-2 border-dashed border-[#d7dfec] bg-[#edf1fb] px-3 py-2 text-xs font-semibold text-[#3556a6] transition hover:bg-[#e4eafb] flex items-center justify-center gap-1"
                                                     >
                                                         <Plus className="h-3 w-3" />
                                                         Add Medicine Row
@@ -1147,7 +1176,7 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                     {/* Advice Section - Bottom Right */}
                                     <div className="border-t-2 border-dotted border-slate-200 pt-4">
                                         <div className="mb-2 flex items-center gap-2">
-                                            <FileText className="h-4 w-4 text-sky-700" />
+                                            <FileText className="h-4 w-4 text-[#3556a6]" />
                                             <span className="text-xs font-bold uppercase tracking-wider text-slate-700">Advice</span>
                                         </div>
                                         
@@ -1202,8 +1231,8 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                     <div className="mt-10 rounded-xl border border-slate-200 bg-slate-50 p-6">
                         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                             <div className="flex items-center gap-3 text-sm">
-                                <div className="rounded-full bg-emerald-100 p-2">
-                                    <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                                <div className="rounded-full bg-[#f6ece5] p-2">
+                                    <CheckCircle2 className="h-5 w-5 text-[#c57945]" />
                                 </div>
                                 <span className="font-medium text-slate-600">
                                     Form complete and ready to submit
@@ -1243,7 +1272,7 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                 </button>
                                 <button
                                     type="button"
-                                    className="flex items-center gap-2 rounded-xl bg-sky-600 px-8 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:opacity-50"
+                                    className="flex items-center gap-2 rounded-xl bg-[#3556a6] px-8 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#2a488f] disabled:opacity-50"
                                     disabled={submitting}
                                     onClick={() => handleSubmit('prescribed')}
                                 >

@@ -377,10 +377,10 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
       <div className="mx-auto max-w-6xl space-y-6">
 
       {/* Hero Banner */}
-      <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 p-8 shadow-sm print:hidden">
+      <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-[#273664] via-[#3d466b] to-[#be7a4b] p-8 shadow-[0_20px_40px_-28px_rgba(33,45,80,0.85)] print:hidden">
         {/* Decorative circles */}
         <div className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full bg-white/10" />
-        <div className="pointer-events-none absolute -bottom-10 right-32 h-36 w-36 rounded-full bg-white/10" />
+        <div className="pointer-events-none absolute -bottom-10 right-32 h-36 w-36 rounded-full bg-[#efba92]/15" />
 
         <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           {/* Left */}
@@ -395,9 +395,9 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
             <div className="mt-2 flex flex-wrap items-center gap-3">
               {data?.appointment?.status && (
                 <span className={`rounded-full px-3 py-1 text-xs font-bold ${
-                  data.appointment.status === 'prescribed' ? 'bg-emerald-400/20 text-emerald-200 border border-emerald-400/30' :
-                  data.appointment.status === 'awaiting_tests' ? 'bg-amber-400/20 text-amber-200 border border-amber-400/30' :
-                  data.appointment.status === 'in_consultation' ? 'bg-blue-400/20 text-blue-200 border border-blue-400/30' :
+                  data.appointment.status === 'prescribed' ? 'bg-[#c57945]/20 text-[#ffe1c9] border border-[#efc7a9]/40' :
+                  data.appointment.status === 'awaiting_tests' ? 'bg-[#efba92]/20 text-[#ffe6d3] border border-[#efba92]/35' :
+                  data.appointment.status === 'in_consultation' ? 'bg-[#3556a6]/20 text-[#dfe8ff] border border-[#b9caee]/35' :
                   'bg-white/10 text-white/70 border border-white/20'
                 }`}>
                   {data.appointment.status.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}
@@ -432,7 +432,7 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
                   <div className="fixed inset-0 z-40" onClick={() => setSharing(false)} />
                   <div className="absolute right-0 top-full z-50 mt-2 w-48 rounded-xl border border-slate-200 bg-white shadow-lg">
                     <button onClick={() => { handleShareEmail(); setSharing(false); }} className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-medium text-slate-700 hover:bg-slate-50 transition first:rounded-t-xl">
-                      <Mail className="h-4 w-4 text-blue-600" /> Share via Email
+                      <Mail className="h-4 w-4 text-[#3556a6]" /> Share via Email
                     </button>
                     <button onClick={() => { handleShareWhatsApp(); setSharing(false); }} className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-medium text-slate-700 hover:bg-slate-50 transition">
                       <MessageCircle className="h-4 w-4 text-green-600" /> Share via WhatsApp
@@ -470,7 +470,7 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
         <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm print:border-0 print:shadow-none">
 
           {/* Header - Two Glass Cards */}
-          <div className="border-b-4 border-[#005963] bg-gradient-to-r from-[#005963] via-[#007f89] to-[#00acb1] p-6 text-white md:p-8">
+          <div className="border-b-4 border-[#253566] bg-gradient-to-r from-[#253566] via-[#3d466b] to-[#c57945] p-6 text-white md:p-8">
             <div className="grid gap-4 md:grid-cols-2 md:gap-6">
               {/* Doctor Info - Left */}
               <div className="rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur-sm md:p-5">
@@ -520,7 +520,7 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
           {/* Patient Info Section - Editable Grid (same as CreatePrescription) */}
           <div className="border-b-2 border-dashed border-slate-200 bg-slate-50 px-8 py-5">
             <div className="mb-4 flex items-center gap-2 border-b border-slate-200 pb-2">
-              <User className="h-5 w-5 text-sky-700" />
+              <User className="h-5 w-5 text-[#3556a6]" />
               <span className="text-sm font-semibold text-slate-800">Patient Information</span>
               <span className="ml-auto text-xs text-slate-400">Prescription #{data?.id} · {visitDateLabel || createdAtDateLabel}</span>
             </div>
@@ -608,7 +608,7 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
                 {/* Investigations */}
                 <div>
                   <div className="mb-3 flex items-center gap-2 border-b border-slate-200 pb-2">
-                    <FlaskConical className="h-4 w-4 text-sky-700" />
+                    <FlaskConical className="h-4 w-4 text-[#3556a6]" />
                     <span className="text-xs font-bold uppercase tracking-wider text-slate-700">Investigations</span>
                   </div>
                   <textarea
@@ -623,7 +623,7 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
                 {/* Diagnosis */}
                 <div>
                   <div className="mb-3 flex items-center gap-2 border-b border-slate-200 pb-2">
-                    <Stethoscope className="h-4 w-4 text-sky-700" />
+                    <Stethoscope className="h-4 w-4 text-[#3556a6]" />
                     <span className="text-xs font-bold uppercase tracking-wider text-slate-700">Diagnosis</span>
                   </div>
                   <textarea
@@ -645,7 +645,7 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
                     <div className="flex-1 pt-2">
                       <div className="space-y-2">
                         {medicines.map((m, idx) => (
-                          <div key={idx} className="group/med flex items-start gap-2 rounded border border-slate-200 bg-white p-2 hover:border-sky-400 hover:bg-slate-50">
+                          <div key={idx} className="group/med flex items-start gap-2 rounded border border-slate-200 bg-white p-2 hover:border-[#b9caee] hover:bg-slate-50">
                             <span className="mt-2 text-xs font-bold text-slate-400 flex-shrink-0">{idx + 1}.</span>
                             <div className="flex-1 grid grid-cols-6 gap-2">
                               <input
@@ -712,7 +712,7 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
                         <button
                           type="button"
                           onClick={addMedicine}
-                          className="w-full rounded border-2 border-dashed border-sky-300 bg-sky-50 px-3 py-2 text-xs font-semibold text-sky-700 hover:bg-sky-100 transition flex items-center justify-center gap-1"
+                          className="w-full rounded border-2 border-dashed border-[#d7dfec] bg-[#edf1fb] px-3 py-2 text-xs font-semibold text-[#3556a6] transition hover:bg-[#e4eafb] flex items-center justify-center gap-1"
                         >
                           <Plus className="h-3 w-3" />
                           Add Medicine Row
@@ -733,7 +733,7 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
                 {/* Advice / Instructions */}
                 <div className="border-t-2 border-dotted border-slate-200 pt-4">
                   <div className="mb-2 flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-sky-700" />
+                    <FileText className="h-4 w-4 text-[#3556a6]" />
                     <span className="text-xs font-bold uppercase tracking-wider text-slate-700">Advice</span>
                   </div>
                   <textarea
@@ -749,7 +749,7 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
                 <div className="border-t border-slate-200 pt-4">
                   <div className="flex items-center gap-4">
                     <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-sky-700" />
+                      <Calendar className="h-4 w-4 text-[#3556a6]" />
                       <span className="text-xs font-bold uppercase tracking-wider text-slate-700">Follow-up Date</span>
                     </div>
                     <input
@@ -759,7 +759,7 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
                       onChange={(e) => handleChange('next_visit_date', e.target.value)}
                     />
                     {form.next_visit_date && (
-                      <span className="rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700">
+                      <span className="rounded-full border border-[#d7dfec] bg-[#edf1fb] px-3 py-1 text-xs font-semibold text-[#3556a6]">
                         {nextVisitLabel}
                       </span>
                     )}
@@ -788,7 +788,7 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
                     type="button"
                     onClick={handleSave}
                     disabled={saving}
-                    className="flex items-center gap-2 rounded-xl bg-sky-600 px-8 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:opacity-50"
+                    className="flex items-center gap-2 rounded-xl bg-[#3556a6] px-8 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#2a488f] disabled:opacity-50"
                   >
                     {saving ? (
                       <>
@@ -807,7 +807,7 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
                       type="button"
                       onClick={handleSaveAndComplete}
                       disabled={saving}
-                      className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 px-8 py-3 text-sm font-bold text-white shadow-lg transition hover:shadow-xl disabled:opacity-50"
+                      className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-[#3556a6] to-[#c57945] px-8 py-3 text-sm font-bold text-white shadow-lg transition hover:shadow-xl disabled:opacity-50"
                     >
                       {saving ? (
                         <>

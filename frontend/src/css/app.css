@@ -514,6 +514,10 @@ html {
 
 .doctor-theme .bg-sky-500,
 .doctor-theme .bg-sky-600,
+.doctor-theme .bg-blue-600,
+.doctor-theme .bg-indigo-600,
+.doctor-theme .bg-violet-600,
+.doctor-theme .bg-teal-600,
 .doctor-theme .bg-blue-500,
 .doctor-theme .bg-indigo-500,
 .doctor-theme .bg-violet-500,
@@ -522,7 +526,9 @@ html {
 }
 
 .doctor-theme .bg-emerald-500,
+.doctor-theme .bg-emerald-600,
 .doctor-theme .bg-amber-500,
+.doctor-theme .bg-amber-600,
 .doctor-theme .bg-orange-500 {
     background-color: #c57945 !important;
 }
@@ -540,6 +546,7 @@ html {
 
 .doctor-theme .border-emerald-100,
 .doctor-theme .border-emerald-200,
+.doctor-theme .border-emerald-300,
 .doctor-theme .border-amber-200,
 .doctor-theme .border-amber-300,
 .doctor-theme .border-amber-400,
@@ -569,10 +576,24 @@ html {
     background-color: #e3ebfa !important;
 }
 
+.doctor-theme .hover\:bg-sky-700:hover,
+.doctor-theme .hover\:bg-blue-700:hover,
+.doctor-theme .hover\:bg-indigo-700:hover,
+.doctor-theme .hover\:bg-violet-700:hover,
+.doctor-theme .hover\:bg-teal-700:hover {
+    background-color: #2a488f !important;
+}
+
 .doctor-theme .hover\:bg-emerald-50:hover,
 .doctor-theme .hover\:bg-amber-100:hover,
 .doctor-theme .hover\:bg-orange-50:hover {
     background-color: #f2e4d9 !important;
+}
+
+.doctor-theme .hover\:bg-emerald-700:hover,
+.doctor-theme .hover\:bg-amber-700:hover,
+.doctor-theme .hover\:bg-orange-700:hover {
+    background-color: #ad6639 !important;
 }
 
 .doctor-theme .hover\:text-sky-600:hover,
@@ -589,6 +610,7 @@ html {
 
 .doctor-theme .hover\:border-sky-200:hover,
 .doctor-theme .hover\:border-sky-300:hover,
+.doctor-theme .hover\:border-sky-400:hover,
 .doctor-theme .hover\:border-violet-200:hover {
     border-color: #aebee3 !important;
 }

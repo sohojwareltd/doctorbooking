@@ -312,7 +312,7 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
             )}
 
             {/* ─── Two Column Layout: Weekly Schedule + Unavailable ─── */}
-            <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
+            <div className="grid gap-5 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
 
               {/* LEFT: Weekly Schedule */}
               <div className="space-y-2">

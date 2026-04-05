@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import DoctorLayout from '../../layouts/DoctorLayout';
+import { DocCard } from '../../components/doctor/DocUI';
 import { toastError, toastSuccess } from '../../utils/toast';
 
 export default function DoctorProfile({ doctor = {} }) {
@@ -142,11 +143,71 @@ export default function DoctorProfile({ doctor = {} }) {
         'w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 doc-input-focus transition';
     const labelClass = 'mb-2 block text-sm font-semibold text-slate-700';
     const errorClass = 'mt-1 text-xs font-semibold text-rose-600';
+    const profileMetrics = [
+        {
+            label: 'Doctor',
+            value: (data.name || doctor.name || 'Doctor').split(' ')[0],
+            tone: 'border-[#d6e1fa]/30 bg-[#d6e1fa]/14 text-[#f2f6ff]',
+        },
+        {
+            label: 'Specialty',
+            value: data.specialization || 'Pending',
+            tone: 'border-[#f0bf97]/35 bg-[#f0bf97]/16 text-[#ffe6d3]',
+        },
+        {
+            label: 'BMDC',
+            value: data.registration_no || 'Pending',
+            tone: 'border-[#c7d6f7]/30 bg-[#c7d6f7]/16 text-[#eaf0ff]',
+        },
+        {
+            label: 'Editing',
+            value: activeTab === 'profile' ? 'Profile' : 'About',
+            tone: 'border-[#e5b894]/36 bg-[#e5b894]/18 text-[#ffe3cf]',
+        },
+    ];
 
     return (
         <DoctorLayout title="My Profile">
       <Head title="My Profile" />
       <div className="mx-auto max-w-6xl space-y-6">
+
+            <DocCard padding={false} className="doc-banner-root relative overflow-hidden border-[#30416f]/20 bg-gradient-to-r from-[#273664] via-[#3d466b] to-[#be7a4b] text-white shadow-[0_20px_40px_-28px_rgba(33,45,80,0.85)] md:h-[260px]">
+                <div className="pointer-events-none absolute -top-20 left-[-50px] h-48 w-48 rounded-full bg-white/10" />
+                <div className="pointer-events-none absolute -bottom-16 right-[-26px] h-52 w-52 rounded-full bg-[#efba92]/15" />
+
+                <div className="absolute inset-0 z-20 flex flex-col justify-end px-5 py-4 md:px-6 md:py-5">
+                    <div className="grid w-full gap-3 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-end">
+                        <div className="space-y-2">
+                            <div className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-white/85">
+                                <User className="h-3.5 w-3.5" />
+                                Profile Studio
+                            </div>
+                            <p className="text-xs font-medium uppercase tracking-wider text-white/70">Doctor Identity</p>
+                            <h1 className="text-[1.8rem] font-black leading-tight tracking-tight text-white md:text-[2.05rem]">Profile Workspace</h1>
+                            <p className="max-w-xl text-[13px] text-white/80">Manage profile identity, medical credentials, prescription preview, and homepage about content in one place.</p>
+                            <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                                <div className="rounded-lg border border-white/20 bg-black/10 px-2.5 py-1">
+                                    <div className="text-[9px] font-semibold uppercase tracking-[0.1em] text-white/60">Tab</div>
+                                    <div className="mt-0.5 text-xs font-bold text-white">{activeTab === 'profile' ? 'Profile' : 'About'}</div>
+                                </div>
+                                <div className="rounded-lg border border-white/20 bg-black/10 px-2.5 py-1">
+                                    <div className="text-[9px] font-semibold uppercase tracking-[0.1em] text-white/60">Photo</div>
+                                    <div className="mt-0.5 text-xs font-bold text-white">{photoPreview ? 'Uploaded' : 'Pending'}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                            {profileMetrics.map((item) => (
+                                <div key={item.label} className={`rounded-lg border px-2.5 py-2 ${item.tone}`}>
+                                    <div className="text-[10px] font-semibold uppercase tracking-[0.11em]">{item.label}</div>
+                                    <div className="mt-1 text-lg font-black leading-none">{item.value}</div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </DocCard>
 
             {/* Photo View Modal */}
             {showPhotoModal && photoPreview && (
@@ -173,10 +234,10 @@ export default function DoctorProfile({ doctor = {} }) {
                         {/* Success Message */}
             {showSuccess && (
                 <div className="animate-in slide-in-from-top mb-6 duration-300">
-                    <div className="rounded-2xl border border-emerald-300 bg-gradient-to-r from-emerald-50 to-emerald-100/60 p-5">
+                    <div className="rounded-2xl border border-[#efc7a9] bg-gradient-to-r from-[#fff6ee] to-[#f8eadc] p-5">
                         <div className="flex items-center gap-3">
-                            <BadgeCheck className="h-6 w-6 flex-shrink-0 text-emerald-600" />
-                            <div className="text-sm font-semibold text-emerald-900">
+                            <BadgeCheck className="h-6 w-6 flex-shrink-0 text-[#c57945]" />
+                            <div className="text-sm font-semibold text-[#7a4b2a]">
                                 Profile updated successfully!
                             </div>
                         </div>
@@ -188,12 +249,12 @@ export default function DoctorProfile({ doctor = {} }) {
             <div className="overflow-hidden rounded-xl bg-white border border-slate-200 shadow-sm">
                 <div className="flex flex-col lg:flex-row">
                     {/* Left Side - Photo Upload with Gradient Background */}
-                    <div className="relative flex-1 bg-gradient-to-br from-sky-50 via-white to-sky-50/50 p-8">
+                    <div className="relative flex-1 bg-gradient-to-br from-[#eef2ff] via-white to-[#fff3ea]/70 p-8">
                  
                         
                         <div className="relative z-10">
                             <div className="mb-6 flex items-center gap-3">
-                                <div className="rounded-xl bg-slate-800 p-3 shadow-lg">
+                                <div className="rounded-xl bg-[#253566] p-3 shadow-lg">
                                     <Camera className="h-6 w-6 text-white" />
                                 </div>
                                 <div>
@@ -207,7 +268,7 @@ export default function DoctorProfile({ doctor = {} }) {
                             <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-start">
                                 {/* Photo Preview with fancy border */}
                                 <div className="relative group">
-                                    <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-slate-800 to-sky-500 opacity-50 blur group-hover:opacity-75 transition"></div>
+                                    <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-[#253566] to-[#c57945] opacity-50 blur transition group-hover:opacity-75"></div>
                                     <div
                                         onClick={() => photoPreview && setShowPhotoModal(true)}
                                         className={`relative h-36 w-36 overflow-hidden rounded-full border-4 border-white bg-white shadow-2xl ${photoPreview ? 'cursor-pointer' : ''}`}
@@ -219,7 +280,7 @@ export default function DoctorProfile({ doctor = {} }) {
                                                 className="h-full w-full object-cover transition group-hover:scale-110"
                                             />
                                         ) : (
-                                            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-slate-800 to-sky-600">
+                                            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#253566] to-[#c57945]">
                                                 <User className="h-16 w-16 text-white" />
                                             </div>
                                         )}
@@ -247,7 +308,7 @@ export default function DoctorProfile({ doctor = {} }) {
                                         type="button"
                                         onClick={() => fileInputRef.current?.click()}
                                         disabled={uploadingPhoto}
-                                        className="flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 hover:-translate-y-0.5 disabled:opacity-50"
+                                        className="flex items-center justify-center gap-2 rounded-xl bg-[#3556a6] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#2a488f] hover:-translate-y-0.5 disabled:opacity-50"
                                     >
                                         <Upload className="h-5 w-5" />
                                         {photoPreview ? 'Change Photo' : 'Upload Photo'}
@@ -285,7 +346,7 @@ export default function DoctorProfile({ doctor = {} }) {
                     </div>
 
                     {/* Right Side - Prescription Header Preview */}
-                    <div className="border-t border-dashed border-slate-200 bg-gradient-to-br from-slate-50 to-sky-50/50 p-8 lg:w-[340px] lg:border-l lg:border-t-0">
+                    <div className="border-t border-dashed border-slate-200 bg-gradient-to-br from-slate-50 to-[#fff3ea]/60 p-8 lg:w-[340px] lg:border-l lg:border-t-0">
                         <div className="mb-4 flex items-center gap-2">
                             <Stethoscope className="h-4 w-4 text-slate-400" />
                             <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
@@ -305,7 +366,7 @@ export default function DoctorProfile({ doctor = {} }) {
                                         />
                                     </div>
                                 ) : (
-                                    <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-slate-800 to-sky-600 shadow-sm">
+                                    <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#253566] to-[#c57945] shadow-sm">
                                         <Stethoscope className="h-8 w-8 text-white" />
                                     </div>
                                 )}
@@ -319,12 +380,12 @@ export default function DoctorProfile({ doctor = {} }) {
                                         </div>
                                     )}
                                     {data.specialization && (
-                                        <div className="mt-0.5 text-sm font-medium text-sky-600">
+                                        <div className="mt-0.5 text-sm font-medium text-[#3556a6]">
                                             {data.specialization}
                                         </div>
                                     )}
                                     {data.registration_no && (
-                                        <div className="mt-2 inline-flex items-center rounded-full bg-sky-50 px-2.5 py-1 text-xs font-medium text-sky-700">
+                                        <div className="mt-2 inline-flex items-center rounded-full border border-[#d7dfec] bg-[#edf1fb] px-2.5 py-1 text-xs font-medium text-[#3556a6]">
                                             Reg: {data.registration_no}
                                         </div>
                                     )}
@@ -346,7 +407,7 @@ export default function DoctorProfile({ doctor = {} }) {
                         onClick={() => setActiveTab('profile')}
                         className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
                             activeTab === 'profile'
-                                ? 'bg-slate-800 text-white'
+                                ? 'bg-[#253566] text-white'
                                 : 'text-slate-600 hover:bg-slate-100'
                         }`}
                     >
@@ -357,7 +418,7 @@ export default function DoctorProfile({ doctor = {} }) {
                         onClick={() => setActiveTab('about')}
                         className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
                             activeTab === 'about'
-                                ? 'bg-slate-800 text-white'
+                                ? 'bg-[#253566] text-white'
                                 : 'text-slate-600 hover:bg-slate-100'
                         }`}
                     >
@@ -370,8 +431,8 @@ export default function DoctorProfile({ doctor = {} }) {
                     {/* Personal Information */}
                     <div className="rounded-xl bg-white border border-slate-200 p-7 shadow-sm">
                         <div className="mb-6 flex items-center gap-3">
-                            <div className="rounded-xl bg-sky-50 p-3">
-                                <User className="h-6 w-6 text-sky-600" />
+                            <div className="rounded-xl bg-[#edf1fb] p-3">
+                                <User className="h-6 w-6 text-[#3556a6]" />
                             </div>
                             <div>
                                 <h2 className="text-lg font-semibold text-slate-800">
@@ -481,8 +542,8 @@ export default function DoctorProfile({ doctor = {} }) {
                     {/* Professional Information */}
                     <div className="rounded-xl bg-white border border-slate-200 p-7 shadow-sm">
                         <div className="mb-6 flex items-center gap-3">
-                            <div className="rounded-xl bg-sky-50 p-3">
-                                <Stethoscope className="h-6 w-6 text-sky-600" />
+                            <div className="rounded-xl bg-[#edf1fb] p-3">
+                                <Stethoscope className="h-6 w-6 text-[#3556a6]" />
                             </div>
                             <div>
                                 <h2 className="text-lg font-semibold text-slate-800">
@@ -559,8 +620,8 @@ export default function DoctorProfile({ doctor = {} }) {
                 {activeTab === 'about' && (
                     <div className="rounded-xl bg-white border border-slate-200 p-7 shadow-sm">
                         <div className="mb-6 flex items-center gap-3">
-                            <div className="rounded-xl bg-sky-50 p-3">
-                                <FileText className="h-6 w-6 text-sky-600" />
+                            <div className="rounded-xl bg-[#edf1fb] p-3">
+                                <FileText className="h-6 w-6 text-[#3556a6]" />
                             </div>
                             <div>
                                 <h2 className="text-lg font-semibold text-slate-800">About Section Content</h2>
@@ -695,7 +756,7 @@ export default function DoctorProfile({ doctor = {} }) {
                     <button
                         type="submit"
                         disabled={processing}
-                        className="flex items-center gap-3 rounded-xl bg-sky-600 px-8 py-3.5 font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="flex items-center gap-3 rounded-xl bg-[#3556a6] px-8 py-3.5 font-semibold text-white shadow-sm transition hover:bg-[#2a488f] disabled:cursor-not-allowed disabled:opacity-50"
                     >
                         <Save className="h-5 w-5" />
                         {processing ? 'Saving...' : 'Save Profile'}
