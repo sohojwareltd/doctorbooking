@@ -133,52 +133,50 @@ export default function DoctorDashboard({
   ];
 
   const completedCount = todayAppointments.filter((a) => a.status === 'prescribed').length;
-  const completionRate = todayAppointments.length ? Math.round((completedCount / todayAppointments.length) * 100) : 0;
-
   const heroMetrics = [
     {
-      label: 'Today Appointments',
+      label: "Today's Appointments",
       value: defaultStats.todayAppointments,
-      tone: 'border-[#d6e1fa]/30 bg-[#d6e1fa]/14 text-[#f2f6ff]',
+      tone: 'border-[#d6e1fa]/30 bg-[#d6e1fa]/14 text-[#f8fbff]',
       href: '/doctor/appointments?date_filter=today',
       hoverTone: 'doc-banner-metric-sky',
+      icon: CalendarDays,
+      iconTone: 'bg-white/20 border-white/30',
     },
     {
       label: 'In Queue',
       value: defaultStats.waitingPatients,
-      tone: 'border-[#f0bf97]/35 bg-[#f0bf97]/16 text-[#ffe6d3]',
+      tone: 'border-[#f0bf97]/35 bg-[#f0bf97]/16 text-[#fff1e2]',
       href: '/doctor/appointments?status_filter=arrived',
       hoverTone: 'doc-banner-metric-amber',
+      icon: Users,
+      iconTone: 'bg-white/20 border-white/30',
     },
     {
       label: 'In Progress',
       value: activeCount,
-      tone: 'border-[#c7d6f7]/30 bg-[#c7d6f7]/16 text-[#eaf0ff]',
+      tone: 'border-[#c7d6f7]/30 bg-[#c7d6f7]/16 text-[#f3f7ff]',
       href: '/doctor/appointments?status_filter=in_consultation',
       hoverTone: 'doc-banner-metric-violet',
+      icon: Stethoscope,
+      iconTone: 'bg-white/20 border-white/30',
     },
     {
-      label: 'Tests Pending',
+      label: 'Pending Tests',
       value: awaitingList.length,
-      tone: 'border-[#e5b894]/36 bg-[#e5b894]/18 text-[#ffe3cf]',
+      tone: 'border-[#e5b894]/36 bg-[#e5b894]/18 text-[#fff0e2]',
       href: '/doctor/appointments?status_filter=awaiting_tests',
       hoverTone: 'doc-banner-metric-orange',
+      icon: FlaskConical,
+      iconTone: 'bg-white/20 border-white/30',
     },
-  ];
-
-  const heroSnapshots = [
-    { label: 'Next Slot', value: upcomingAppointment ? fmtTime(upcomingAppointment.appointment_time) : 'No slot', href: '/doctor/appointments?date_filter=today' },
-    { label: 'Completion', value: `${completionRate}%`, href: '/doctor/appointments?status_filter=prescribed' },
-    { label: 'Total Patients', value: defaultStats.totalPatients, href: '/doctor/patients' },
-    { label: 'RX This Month', value: defaultStats.prescribedThisMonth, href: '/doctor/prescriptions' },
   ];
 
   const statCardItems = [
-    { label: 'Scheduled Today', value: defaultStats.scheduled, icon: CalendarClock, variant: 'sky' },
     { label: 'Completed Today', value: completedCount, icon: CheckCircle, variant: 'emerald' },
     { label: 'Follow Ups Due', value: defaultStats.followUpsDue, icon: Clock, variant: 'amber' },
     { label: 'Total Patients', value: defaultStats.totalPatients, icon: Users, variant: 'cyan' },
-    { label: 'Rx This Month', value: defaultStats.prescribedThisMonth, icon: ClipboardList, variant: 'violet' },
+    { label: 'Prescribed This Month', value: defaultStats.prescribedThisMonth, icon: ClipboardList, variant: 'violet' },
   ];
 
   return (
@@ -192,7 +190,7 @@ export default function DoctorDashboard({
           <div className="pointer-events-none absolute -right-14 -top-12 h-32 w-32 rounded-full bg-[#efba92]/14" />
 
           <div className="absolute inset-0 z-20 flex flex-col justify-end px-5 py-4 md:px-6 md:py-5">
-            <div className="grid w-full gap-3 lg:grid-cols-[minmax(0,1fr)_260px] lg:items-end">
+            <div className="grid w-full gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-end">
               <div className="space-y-2">
                 <div className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-white/85">
                   <Clock className="h-3.5 w-3.5" />
@@ -227,29 +225,23 @@ export default function DoctorDashboard({
                     Create Prescription
                     <ArrowRight className="doc-banner-action-arrow h-3.5 w-3.5" />
                   </Link>
-                  <div className="hidden gap-2 lg:flex">
-                    {heroSnapshots.slice(0, 2).map((item) => (
-                      <Link key={item.label} href={item.href} className="doc-banner-hover-card group rounded-lg border border-white/20 bg-black/10 px-2.5 py-1">
-                        <div className="flex items-center justify-between gap-2 text-[9px] font-semibold uppercase tracking-[0.1em] text-white/60">
-                          <span>{item.label}</span>
-                          <ArrowRight className="doc-banner-hover-icon h-3.5 w-3.5" />
-                        </div>
-                        <div className="mt-0.5 text-xs font-bold text-white">{item.value}</div>
-                      </Link>
-                    ))}
-                  </div>
                 </div>
 
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-2.5">
                 {heroMetrics.map((metric) => (
-                  <Link key={metric.label} href={metric.href} className={`doc-banner-metric doc-banner-hover-card ${metric.hoverTone} group rounded-lg border px-2.5 py-2 ${metric.tone}`}>
-                    <div className="flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-[0.11em]">
-                      <span>{metric.label}</span>
+                  <Link key={metric.label} href={metric.href} className={`doc-banner-metric doc-banner-hover-card ${metric.hoverTone} group rounded-xl border px-3.5 py-2.5 ${metric.tone}`}>
+                    <div className="flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-[0.08em]">
+                      <div className="flex items-center gap-1.5">
+                        <span className={`inline-flex h-6 w-6 items-center justify-center rounded-md border ${metric.iconTone}`}>
+                          <metric.icon className="h-4 w-4" />
+                        </span>
+                        <span>{metric.label}</span>
+                      </div>
                       <ArrowRight className="doc-banner-hover-icon h-3.5 w-3.5" />
                     </div>
-                    <div className="mt-1 text-lg font-black leading-none">{metric.value}</div>
+                    <div className="mt-1.5 text-[1.8rem] font-black leading-none tracking-tight">{metric.value}</div>
                   </Link>
                 ))}
               </div>
@@ -258,7 +250,7 @@ export default function DoctorDashboard({
         </DocCard>
 
         {/* STAT CARDS */}
-        <div className="grid auto-rows-min grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {statCardItems.map((item) => (
             <StatCard key={item.label} label={item.label} value={item.value} icon={item.icon} variant={item.variant} />
           ))}
@@ -394,23 +386,23 @@ export default function DoctorDashboard({
             ) : null}
 
             {/* TABBED APPOINTMENTS TABLE */}
-            <DocCard padding={false}>
-              <div className="px-5 pt-4 border-b border-slate-100">
+            <DocCard padding={false} className="overflow-hidden border border-[#d5dfef] bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] shadow-[0_18px_34px_-26px_rgba(30,41,59,0.75)]">
+              <div className="border-b border-[#e6edf8] bg-[linear-gradient(180deg,#fbfdff_0%,#f3f7ff_100%)] px-5 pt-4">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-slate-900">Appointments</h3>
-                  <Link href="/doctor/appointments" className="inline-flex items-center gap-1 text-xs font-medium text-sky-600 hover:text-sky-700 transition">
+                  <h3 className="text-sm font-bold tracking-wide text-slate-900">Appointments</h3>
+                  <Link href="/doctor/appointments" className="inline-flex items-center gap-1 rounded-full border border-[#d8e4f8] bg-white px-2.5 py-1 text-xs font-semibold text-[#365aa6] shadow-sm transition hover:bg-[#f4f8ff]">
                     View all <ArrowRight className="h-3 w-3" />
                   </Link>
                 </div>
-                <div className="flex gap-0.5 overflow-x-auto scrollbar-hide -mb-px">
+                <div className="-mb-px flex gap-1 overflow-x-auto scrollbar-hide pb-0.5">
                   {TABS.map((tab) => (
                     <button
                       key={tab.key}
                       onClick={() => setActiveTab(tab.key)}
-                      className={`flex items-center gap-1.5 whitespace-nowrap px-3 py-2.5 text-xs font-medium border-b-2 transition-colors ${
+                      className={`flex items-center gap-1.5 whitespace-nowrap rounded-t-lg border-b-2 px-3 py-2.5 text-xs font-semibold transition-colors ${
                         activeTab === tab.key
-                          ? 'text-sky-600 border-sky-500'
-                          : 'text-slate-400 border-transparent hover:text-slate-600'
+                          ? 'border-sky-500 bg-white text-sky-700'
+                          : 'border-transparent text-slate-400 hover:bg-white/70 hover:text-slate-600'
                       }`}
                     >
                       {tab.label}
@@ -427,7 +419,7 @@ export default function DoctorDashboard({
               </div>
 
               {tabAppointments.length > 0 ? (
-                <div className="overflow-x-auto doc-table-scroll rounded-[24px] border border-[#e5ecf8] bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] shadow-[0_16px_34px_rgba(15,23,42,0.05)]">
+                <div className="doc-table-scroll overflow-x-auto rounded-b-[24px] border-t border-[#e5ecf8] bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)]">
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-[#e8eef8] bg-[linear-gradient(180deg,#f8fbff_0%,#eef4ff_100%)]">
@@ -441,7 +433,7 @@ export default function DoctorDashboard({
                     </thead>
                     <tbody className="divide-y divide-slate-50">
                       {tabAppointments.map((a, i) => (
-                        <tr key={a.id || i} className="doc-table-row group transition-colors even:bg-[#fbfdff] hover:bg-[#f8fbff]">
+                        <tr key={a.id || i} className="doc-table-row group border-l-2 border-transparent transition-colors even:bg-[#fbfdff] hover:border-[#d6e4fb] hover:bg-[#f8fbff]">
                           <td className="px-5 py-3.5">
                             <span className="inline-flex h-9 min-w-[2.25rem] items-center justify-center rounded-xl border border-[#e4ebf7] bg-white px-2.5 text-xs font-semibold text-[#5f7398] shadow-[0_8px_18px_-18px_rgba(37,53,102,0.6)]">{getSerial(a, i + 1)}</span>
                           </td>
@@ -459,7 +451,7 @@ export default function DoctorDashboard({
                             </div>
                           </td>
                           <td className="px-3 py-3.5 hidden md:table-cell">
-                            <span className="text-xs font-medium text-slate-600 bg-slate-50 rounded-md px-2 py-1">{fmtTime(a.appointment_time)}</span>
+                            <span className="rounded-md border border-[#dfe8f8] bg-white px-2 py-1 text-xs font-semibold text-[#4f6591]">{fmtTime(a.appointment_time)}</span>
                           </td>
                           <td className="px-3 py-3.5 text-xs text-slate-500 hidden lg:table-cell">{a.type || 'Consultation'}</td>
                           <td className="px-3 py-3.5">
@@ -470,6 +462,7 @@ export default function DoctorDashboard({
                               <DocButton
                                 variant="primary"
                                 size="xs"
+                                className="!h-8 !min-w-[92px] !justify-center !rounded-lg !px-3 !text-xs !font-semibold"
                                 onClick={async () => {
                                   setActiveVisitPatient({ ...a, status: 'in_consultation' });
                                   const ok = await updateStatus(a.id, 'in_consultation');
@@ -482,7 +475,7 @@ export default function DoctorDashboard({
                             {a.status === 'in_consultation' && (
                               <Link
                                 href={a.prescription_id ? '/doctor/prescriptions/' + a.prescription_id : '/doctor/prescriptions/create?appointment_id=' + a.id}
-                                className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 active:scale-[0.97] transition"
+                                className="inline-flex h-8 min-w-[92px] items-center justify-center gap-1 rounded-lg bg-emerald-600 px-3 text-xs font-semibold text-white transition hover:bg-emerald-700 active:scale-[0.97]"
                               >
                                 <FileText className="h-2.5 w-2.5" /> Prescribe
                               </Link>
@@ -490,7 +483,7 @@ export default function DoctorDashboard({
                             {a.status === 'awaiting_tests' && a.prescription_id && (
                               <Link
                                 href={'/doctor/prescriptions/' + a.prescription_id + '?from=dashboard'}
-                                className="inline-flex items-center gap-1 rounded-lg bg-orange-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-orange-700 active:scale-[0.97] transition"
+                                className="inline-flex h-8 min-w-[92px] items-center justify-center gap-1 rounded-lg bg-orange-600 px-3 text-xs font-semibold text-white transition hover:bg-orange-700 active:scale-[0.97]"
                               >
                                 <FlaskConical className="h-2.5 w-2.5" /> Complete
                               </Link>
@@ -547,25 +540,25 @@ export default function DoctorDashboard({
             )}
 
             {/* Today's Schedule */}
-            <DocCard padding={false}>
-              <div className="px-4 py-3.5 border-b border-slate-100 flex items-center justify-between">
+            <DocCard padding={false} className="overflow-hidden border border-[#d5dfef] bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] shadow-[0_18px_34px_-26px_rgba(30,41,59,0.75)]">
+              <div className="flex items-center justify-between border-b border-[#e6edf8] bg-[linear-gradient(180deg,#fbfdff_0%,#f3f7ff_100%)] px-4 py-3.5">
                 <div className="flex items-center gap-2">
                   <CalendarClock className="h-4 w-4 text-slate-400" />
-                  <h3 className="text-xs font-semibold text-slate-900">Today's Schedule</h3>
+                  <h3 className="text-xs font-bold tracking-wide text-slate-900">Today's Schedule</h3>
                 </div>
-                <Link href="/doctor/appointments" className="inline-flex items-center gap-0.5 text-xs font-medium text-sky-600 hover:text-sky-700 transition">
+                <Link href="/doctor/appointments" className="inline-flex items-center gap-0.5 rounded-full border border-[#d8e4f8] bg-white px-2 py-1 text-xs font-semibold text-[#365aa6] shadow-sm transition hover:bg-[#f4f8ff]">
                   All <ArrowRight className="h-3 w-3" />
                 </Link>
               </div>
-              <div className="divide-y divide-slate-50">
+              <div className="divide-y divide-[#ecf1f9]">
                 {scheduledToday && scheduledToday.length > 0 ? scheduledToday.slice(0, 5).map((a, i) => (
-                  <div key={i} className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors">
+                  <div key={i} className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-[#f7faff]">
                     <PatientAvatar name={getName(a)} size="sm" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-slate-900 truncate">{getName(a)}</p>
                       <p className="text-xs text-slate-400">{fmt(a.appointment_date)}</p>
                     </div>
-                    <span className="text-xs font-bold text-slate-300">
+                    <span className="inline-flex h-7 min-w-[2rem] items-center justify-center rounded-md border border-[#e0e9f8] bg-white px-1.5 text-xs font-bold text-[#6a7fa7]">
                       #{String(a.serial_no || i + 1).padStart(2, '0')}
                     </span>
                   </div>

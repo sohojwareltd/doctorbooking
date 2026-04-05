@@ -1,6 +1,6 @@
 import { Head } from '@inertiajs/react';
 import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
-import { Calendar, Clock, RefreshCw, X, Link2, CalendarOff, Plus, Trash2, Pencil, ChevronDown, Check } from 'lucide-react';
+import { Calendar, Clock, RefreshCw, X, Link2, CalendarOff, Plus, Trash2, Pencil, ChevronDown, Check, ArrowRight } from 'lucide-react';
 import DoctorLayout from '../../layouts/DoctorLayout';
 import { DocCard, DocButton } from '../../components/doctor/DocUI';
 import { toastError, toastSuccess, toastWarning } from '../../utils/toast';
@@ -313,7 +313,7 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
             <div className="pointer-events-none absolute -right-14 -top-12 h-36 w-36 rounded-full bg-[#efba92]/12" />
 
             <div className="absolute inset-0 z-20 flex flex-col justify-end px-5 py-4 md:px-6 md:py-5">
-              <div className="grid w-full gap-3 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-end">
+              <div className="grid w-full gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-end">
                 {/* Left */}
                 <div className="space-y-2">
                   <div className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-white/85">
@@ -351,16 +351,52 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
                 </div>
 
                 {/* Right: metric tiles */}
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-2.5">
                   {[
-                    { label: 'Days Open', value: `${weekStats.daysOpen}/7`, tone: 'border-[#d6e1fa]/30 bg-[#d6e1fa]/14 text-[#f2f6ff]' },
-                    { label: 'Time Ranges', value: weekStats.totalRanges, tone: 'border-[#f0bf97]/35 bg-[#f0bf97]/16 text-[#ffe6d3]' },
-                    { label: 'Avg Slot', value: `${weekStats.avgSlot.toFixed(0)}m`, tone: 'border-[#c7d6f7]/30 bg-[#c7d6f7]/16 text-[#eaf0ff]' },
-                    { label: 'Unavailable', value: weekStats.unavailableDays, tone: 'border-[#e5b894]/36 bg-[#e5b894]/18 text-[#ffe3cf]' },
+                    {
+                      label: 'Days Open',
+                      value: `${weekStats.daysOpen}/7`,
+                      icon: Calendar,
+                      tone: 'border-[#d6e1fa]/30 bg-[#d6e1fa]/14 text-[#f8fbff]',
+                      hoverTone: 'doc-banner-metric-sky',
+                      iconTone: 'bg-white/20 border-white/30',
+                    },
+                    {
+                      label: 'Time Ranges',
+                      value: weekStats.totalRanges,
+                      icon: Clock,
+                      tone: 'border-[#f0bf97]/35 bg-[#f0bf97]/16 text-[#fff1e2]',
+                      hoverTone: 'doc-banner-metric-amber',
+                      iconTone: 'bg-white/20 border-white/30',
+                    },
+                    {
+                      label: 'Avg Slot',
+                      value: `${weekStats.avgSlot.toFixed(0)}m`,
+                      icon: RefreshCw,
+                      tone: 'border-[#c7d6f7]/30 bg-[#c7d6f7]/16 text-[#f3f7ff]',
+                      hoverTone: 'doc-banner-metric-violet',
+                      iconTone: 'bg-white/20 border-white/30',
+                    },
+                    {
+                      label: 'Unavailable',
+                      value: weekStats.unavailableDays,
+                      icon: CalendarOff,
+                      tone: 'border-[#e5b894]/36 bg-[#e5b894]/18 text-[#fff0e2]',
+                      hoverTone: 'doc-banner-metric-orange',
+                      iconTone: 'bg-white/20 border-white/30',
+                    },
                   ].map((m) => (
-                    <div key={m.label} className={`doc-banner-metric rounded-lg border px-2.5 py-2 ${m.tone}`}>
-                      <div className="text-[10px] font-semibold uppercase tracking-[0.11em]">{m.label}</div>
-                      <div className="mt-1 text-lg font-black leading-none">{m.value}</div>
+                    <div key={m.label} className={`doc-banner-metric doc-banner-hover-card ${m.hoverTone} group rounded-xl border px-3.5 py-2.5 min-h-[96px] ${m.tone}`}>
+                      <div className="flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-[0.08em]">
+                        <div className="flex items-center gap-1.5">
+                          <span className={`inline-flex h-6 w-6 items-center justify-center rounded-md border ${m.iconTone}`}>
+                            <m.icon className="h-4 w-4" />
+                          </span>
+                          <span>{m.label}</span>
+                        </div>
+                        <ArrowRight className="doc-banner-hover-icon h-3.5 w-3.5" />
+                      </div>
+                      <div className="mt-1.5 text-[1.8rem] font-black leading-none tracking-tight">{m.value}</div>
                     </div>
                   ))}
                 </div>
@@ -431,7 +467,7 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
             <div className="grid gap-5 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
 
               {/* LEFT: Weekly Schedule */}
-              <div className="space-y-2">
+              <div className="space-y-2 rounded-2xl border border-[#d7dfef] bg-[linear-gradient(180deg,#f8fbff_0%,#f2f6fc_100%)] p-2.5 shadow-[0_14px_30px_-26px_rgba(30,41,59,0.6)]">
                 <div className="flex items-center justify-between px-1 pb-1">
                   <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Weekly Schedule</h2>
                   <span className="text-[10px] font-semibold text-slate-400">{weekStats.daysOpen} of 7 days open</span>
@@ -442,10 +478,10 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
                   const rangeCount = Array.isArray(r.ranges) ? r.ranges.length : 0;
 
                   return (
-                    <DocCard key={r.day_of_week} padding={false} className={`transition-all ${isEditing ? 'ring-2 ring-sky-200' : ''}`}>
+                    <DocCard key={r.day_of_week} padding={false} className={`border border-[#d5dfef] shadow-[0_10px_24px_-22px_rgba(37,53,102,0.7)] transition-all ${isEditing ? 'ring-2 ring-sky-200 shadow-[0_14px_30px_-22px_rgba(56,189,248,0.45)]' : 'hover:border-[#c7d6ee] hover:shadow-[0_14px_30px_-22px_rgba(37,53,102,0.45)]'}`}>
                       {/* ── Compact header strip ── */}
                       <div
-                        className={`flex items-center gap-3 px-4 py-3 ${r.is_closed ? 'bg-rose-50/50' : isEditing ? 'bg-sky-50/50' : 'bg-white'} ${isOpen ? 'cursor-pointer hover:bg-slate-50' : ''}`}
+                        className={`flex items-center gap-3 rounded-xl px-4 py-3 ${r.is_closed ? 'bg-rose-50/70' : isEditing ? 'bg-sky-50/70' : 'bg-white'} ${isOpen ? 'cursor-pointer hover:bg-slate-50' : ''}`}
                         onClick={() => { if (isOpen) setEditingDay(isEditing ? null : idx); }}
                       >
                         {/* Toggle */}
@@ -529,9 +565,9 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
 
                       {/* ── Expanded editing area ── */}
                       {isOpen && isEditing && (
-                        <div className="border-t border-slate-100 bg-slate-50/30 px-4 py-3 space-y-2.5">
+                        <div className="border-t border-slate-100 bg-[linear-gradient(180deg,#f8fbff_0%,#f6f9ff_100%)] px-4 py-3 space-y-2.5">
                           {Array.isArray(r.ranges) && r.ranges.map((rg, j) => (
-                            <div key={`${r.day_of_week}-${j}`} className="flex flex-wrap items-center gap-2.5 rounded-lg border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
+                            <div key={`${r.day_of_week}-${j}`} className="flex flex-wrap items-center gap-2.5 rounded-xl border border-[#d8e2f2] bg-white px-3 py-2.5 shadow-[0_10px_18px_-16px_rgba(51,65,85,0.7)]">
                               <div className="flex items-center gap-2">
                                 <Clock className="h-3.5 w-3.5 text-sky-400" />
                                 <input
@@ -590,7 +626,7 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
               </div>
 
               {/* RIGHT: Unavailable Date Ranges */}
-              <div ref={unavailableSectionRef} className="space-y-2">
+              <div ref={unavailableSectionRef} className="space-y-2 rounded-2xl border border-[#d7dfef] bg-[linear-gradient(180deg,#f8fbff_0%,#f2f6fc_100%)] p-2.5 shadow-[0_14px_30px_-26px_rgba(30,41,59,0.6)]">
                 <div className="flex items-center justify-between px-1 pb-1">
                   <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Unavailable Dates</h2>
                   <button
@@ -603,7 +639,7 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
                   </button>
                 </div>
 
-                <DocCard padding={false}>
+                <DocCard padding={false} className="border border-[#d5dfef] shadow-[0_10px_24px_-22px_rgba(37,53,102,0.7)]">
                   <div className="p-4 space-y-3">
                     {(!Array.isArray(unavailable) || unavailable.length === 0) && (
                       <div className="flex flex-col items-center justify-center py-8 text-center">
@@ -628,7 +664,7 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
                         ref={(element) => {
                           unavailableCardRefs.current[idx] = element;
                         }}
-                        className={`rounded-lg border p-3 space-y-2 transition ${idx === highlightUnavailableIndex ? 'border-rose-300 bg-rose-50/70 shadow-[0_0_0_1px_rgba(253,164,175,0.28)]' : 'border-slate-200 bg-slate-50/60'}`}
+                        className={`rounded-xl border p-3 space-y-2 transition ${idx === highlightUnavailableIndex ? 'border-rose-300 bg-rose-50/70 shadow-[0_0_0_1px_rgba(253,164,175,0.28)]' : 'border-[#d8e1f0] bg-white shadow-[0_10px_18px_-16px_rgba(51,65,85,0.7)]'}`}
                       >
                         <div className="flex items-center justify-between">
                           <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-500">

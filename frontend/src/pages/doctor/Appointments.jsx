@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   ChevronDown,
   CalendarCheck2, CalendarRange, Clock, FileText, LayoutGrid,
-  ListFilter, Mail, MapPin, Phone, Rows3, Search, Stethoscope, User, X,
+  ListFilter, Mail, MapPin, Phone, Rows3, Search, Stethoscope, User, X, ArrowRight,
 } from 'lucide-react';
 import DocTableActionMenu from '../../components/doctor/DocTableActionMenu';
 import DoctorAppointmentsOverview from '../../components/DoctorAppointmentsOverview';
@@ -274,10 +274,22 @@ export default function DoctorAppointments({ appointments = [], filters = {} }) 
   };
 
   const compactHeaderMetrics = [
-    { label: 'Loaded', value: displayCount },
-    { label: 'Preview', value: previewCount },
-    { label: 'Selected', value: selectedIds.length },
-    { label: 'Date', value: todayLabel },
+    {
+      label: 'Loaded',
+      value: displayCount,
+      icon: ListFilter,
+      tone: 'border-[#d6e1fa]/30 bg-[#d6e1fa]/14 text-[#f2f6ff]',
+      hoverTone: 'doc-banner-metric-sky',
+      iconTone: 'bg-white/20 border-white/30',
+    },
+    {
+      label: 'Preview',
+      value: previewCount,
+      icon: CalendarCheck2,
+      tone: 'border-[#f0bf97]/35 bg-[#f0bf97]/16 text-[#ffe6d3]',
+      hoverTone: 'doc-banner-metric-amber',
+      iconTone: 'bg-white/20 border-white/30',
+    },
   ];
   const workspaceCountLabel = `${activeTab === 'overview' ? previewCount : displayCount} ${activeTab === 'overview' ? 'preview' : 'appointments'}`;
   const listGridColumns = 'lg:grid-cols-[44px_56px_minmax(260px,1.7fr)_minmax(220px,1fr)_190px_240px]';
@@ -296,7 +308,7 @@ export default function DoctorAppointments({ appointments = [], filters = {} }) 
           <div className="pointer-events-none absolute -bottom-16 right-[-26px] h-52 w-52 rounded-full bg-[#efba92]/15" />
 
           <div className="absolute inset-0 z-20 flex flex-col justify-end px-5 py-4 md:px-6 md:py-5">
-            <div className="grid w-full gap-3 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-end">
+            <div className="grid w-full gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-end">
               <div className="space-y-2">
                 <div className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-white/85">
                   <CalendarRange className="h-3.5 w-3.5" />
@@ -317,11 +329,19 @@ export default function DoctorAppointments({ appointments = [], filters = {} }) 
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-2.5">
                 {compactHeaderMetrics.map((item) => (
-                  <div key={item.label} className="rounded-lg border border-white/20 bg-black/10 px-3 py-2">
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-white/65">{item.label}</div>
-                    <div className="mt-1 text-sm font-bold text-white">{item.value}</div>
+                  <div key={item.label} className={`doc-banner-metric doc-banner-hover-card ${item.hoverTone} group rounded-xl border px-4 py-3.5 min-h-[96px] ${item.tone}`}>
+                    <div className="flex items-center justify-between gap-2 text-[9px] font-semibold uppercase tracking-[0.1em]">
+                      <div className="flex items-center gap-1.5">
+                        <span className={`inline-flex h-6 w-6 items-center justify-center rounded-md border ${item.iconTone}`}>
+                          <item.icon className="h-4 w-4" />
+                        </span>
+                        <span>{item.label}</span>
+                      </div>
+                      <ArrowRight className="doc-banner-hover-icon h-3.5 w-3.5" />
+                    </div>
+                    <div className="mt-2 text-[1.95rem] font-black leading-none tracking-tight">{item.value}</div>
                   </div>
                 ))}
               </div>

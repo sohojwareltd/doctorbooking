@@ -988,6 +988,16 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
 
         return redirect()->back()->with('success', 'Chamber saved successfully.');
     })->name('chambers.save');
+
+    Route::delete('/chambers/{chamber}', function (\App\Models\Chamber $chamber) {
+        $doctor = Auth::user();
+
+        abort_unless($chamber->doctor_id === $doctor->id, 403);
+
+        $chamber->delete();
+
+        return redirect()->back()->with('success', 'Chamber deleted successfully.');
+    })->name('chambers.delete');
 });
 
 /*

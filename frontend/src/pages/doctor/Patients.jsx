@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Search, Users, FileText, Calendar, Eye, Mail, Phone } from 'lucide-react';
+import { Search, Users, FileText, Calendar, Eye, Mail, Phone, ChevronDown, UserX, ArrowRight } from 'lucide-react';
 import { router } from '@inertiajs/react';
 import DoctorLayout from '../../layouts/DoctorLayout';
 import Pagination from '../../components/Pagination';
 import { formatDisplayDateWithYearFromDateLike } from '../../utils/dateFormat';
-import StatCard from '../../components/doctor/StatCard';
 import DocTableActionMenu from '../../components/doctor/DocTableActionMenu';
 import PatientAvatar from '../../components/doctor/PatientAvatar';
 import DocModal from '../../components/doctor/DocModal';
@@ -47,27 +46,6 @@ export default function Patients({ patients = [], stats = {} }) {
     : (pagination?.total ?? filteredRows.length);
   const activeStatsRows = useMemo(() => (filtersActive ? filteredRows : rows), [filtersActive, filteredRows, rows]);
 
-  const statsCards = useMemo(() => {
-    const viewLabel = filtersActive ? 'filtered view' : 'current list';
-    const now = new Date();
-    const withEmail = activeStatsRows.filter((patient) => Boolean(patient.email)).length;
-    const bothContacts = activeStatsRows.filter((patient) => Boolean(patient.email) && Boolean(patient.phone)).length;
-    const withPrescription = activeStatsRows.filter((patient) => patient.has_prescription || (patient.prescriptions_count ?? 0) > 0).length;
-    const joinedThisMonth = activeStatsRows.filter((patient) => {
-      if (!patient.created_at) return false;
-      const joinedAt = new Date(patient.created_at);
-      if (Number.isNaN(joinedAt.getTime())) return false;
-      return joinedAt.getMonth() === now.getMonth() && joinedAt.getFullYear() === now.getFullYear();
-    }).length;
-
-    return [
-      { label: 'With Email', value: withEmail, variant: 'cyan', icon: Mail, subtitle: viewLabel },
-      { label: 'Both Contacts', value: bothContacts, variant: 'emerald', icon: Phone, subtitle: viewLabel },
-      { label: 'Has Rx History', value: withPrescription, variant: 'violet', icon: FileText, subtitle: viewLabel },
-      { label: 'Joined This Month', value: joinedThisMonth, variant: 'amber', icon: Calendar, subtitle: viewLabel },
-    ];
-  }, [activeStatsRows, filtersActive]);
-
   const handlePrescriptionClick = (patient) => {
     if (!patient.has_prescription) {
       router.visit(`/doctor/prescriptions/create?patient=${patient.id}`);
@@ -94,10 +72,38 @@ export default function Patients({ patients = [], stats = {} }) {
   const todayLabel = formatDisplayDateWithYearFromDateLike(todayIso) || todayIso;
 
   const patientHeaderMetrics = [
-    { label: 'Patients', value: displayCount },
-    { label: 'Has Phone', value: stats?.hasPhone ?? 0 },
-    { label: 'Email Only', value: stats?.emailOnly ?? 0 },
-    { label: 'No Contact', value: stats?.noContact ?? 0 },
+    {
+      label: 'Patients',
+      value: displayCount,
+      icon: Users,
+      tone: 'border-[#d6e1fa]/30 bg-[#d6e1fa]/14 text-[#f8fbff]',
+      hoverTone: 'doc-banner-metric-sky',
+      iconTone: 'bg-white/20 border-white/30',
+    },
+    {
+      label: 'Has Phone',
+      value: stats?.hasPhone ?? 0,
+      icon: Phone,
+      tone: 'border-[#f0bf97]/35 bg-[#f0bf97]/16 text-[#fff1e2]',
+      hoverTone: 'doc-banner-metric-amber',
+      iconTone: 'bg-white/20 border-white/30',
+    },
+    {
+      label: 'Email Only',
+      value: stats?.emailOnly ?? 0,
+      icon: Mail,
+      tone: 'border-[#c7d6f7]/30 bg-[#c7d6f7]/16 text-[#f3f7ff]',
+      hoverTone: 'doc-banner-metric-violet',
+      iconTone: 'bg-white/20 border-white/30',
+    },
+    {
+      label: 'No Contact',
+      value: stats?.noContact ?? 0,
+      icon: UserX,
+      tone: 'border-[#e5b894]/36 bg-[#e5b894]/18 text-[#fff0e2]',
+      hoverTone: 'doc-banner-metric-orange',
+      iconTone: 'bg-white/20 border-white/30',
+    },
   ];
 
   return (
@@ -108,7 +114,7 @@ export default function Patients({ patients = [], stats = {} }) {
           <div className="pointer-events-none absolute -bottom-16 right-[-26px] h-52 w-52 rounded-full bg-[#efba92]/15" />
 
           <div className="absolute inset-0 z-20 flex flex-col justify-end px-5 py-4 md:px-6 md:py-5">
-            <div className="grid w-full gap-3 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-end">
+            <div className="grid w-full gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-end">
               <div className="space-y-2">
                 <div className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-white/85">
                   <Users className="h-3.5 w-3.5" />
@@ -129,11 +135,19 @@ export default function Patients({ patients = [], stats = {} }) {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-2.5">
                 {patientHeaderMetrics.map((item) => (
-                  <div key={item.label} className="rounded-lg border border-white/20 bg-black/10 px-3 py-2">
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-white/65">{item.label}</div>
-                    <div className="mt-1 text-sm font-bold text-white">{item.value}</div>
+                  <div key={item.label} className={`doc-banner-metric doc-banner-hover-card ${item.hoverTone} group rounded-xl border px-3.5 py-2.5 min-h-[96px] ${item.tone}`}>
+                    <div className="flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-[0.08em]">
+                      <div className="flex items-center gap-1.5">
+                        <span className={`inline-flex h-6 w-6 items-center justify-center rounded-md border ${item.iconTone}`}>
+                          <item.icon className="h-4 w-4" />
+                        </span>
+                        <span>{item.label}</span>
+                      </div>
+                      <ArrowRight className="doc-banner-hover-icon h-3.5 w-3.5" />
+                    </div>
+                    <div className="mt-1.5 text-[1.8rem] font-black leading-none tracking-tight">{item.value}</div>
                   </div>
                 ))}
               </div>
@@ -141,28 +155,23 @@ export default function Patients({ patients = [], stats = {} }) {
           </div>
         </DocCard>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {statsCards.map((stat, idx) => (
-            <StatCard key={idx} label={stat.label} value={stat.value} icon={stat.icon} variant={stat.variant} />
-          ))}
-        </div>
-
         {/* Table Card */}
         <DocCard padding={false}>
           <div className="space-y-4 border-b border-slate-100 px-5 py-5 md:px-6">
             <div className="flex flex-col justify-between gap-3 md:flex-row md:items-center">
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-medium text-slate-500">
-                  Today: <span className="font-semibold text-slate-800">{todayLabel}</span>
-                </span>
-                <span className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-600">
-                  {displayCount} patients
-                </span>
+              <div className="flex flex-col gap-2 md:ml-auto md:flex-row md:items-center md:justify-end">
+                {selectedIds.length > 0 && (
+                  <span className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-1 text-sm font-semibold text-sky-600">{selectedIds.length} selected</span>
+                )}
+                <div className="flex items-center gap-3 md:justify-end">
+                  <span className="text-sm font-medium text-slate-500">
+                    Today: <span className="font-semibold text-slate-800">{todayLabel}</span>
+                  </span>
+                  <span className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-600">
+                    {displayCount} patients
+                  </span>
+                </div>
               </div>
-              {selectedIds.length > 0 && (
-                <span className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-1 text-sm font-semibold text-sky-600">{selectedIds.length} selected</span>
-              )}
             </div>
 
             <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
@@ -182,16 +191,19 @@ export default function Patients({ patients = [], stats = {} }) {
               </div>
               <div className="sm:max-w-[190px] xl:w-[180px]">
                 <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Contact filter</label>
-                <select
-                  value={contactFilter}
-                  onChange={(e) => setContactFilter(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-[0_1px_0_rgba(148,163,184,0.08)] transition doc-input-focus"
-                >
-                  <option value="all">All</option>
-                  <option value="phone">Has phone</option>
-                  <option value="email">Has email</option>
-                  <option value="missing">Missing phone</option>
-                </select>
+                <div className="relative">
+                  <select
+                    value={contactFilter}
+                    onChange={(e) => setContactFilter(e.target.value)}
+                    className="w-full appearance-none rounded-xl border border-[#d4e1f7] bg-[linear-gradient(180deg,#ffffff_0%,#f4f8ff_100%)] px-3.5 py-2.5 pr-9 text-sm font-semibold text-[#2f4a79] shadow-[0_2px_10px_rgba(148,163,184,0.12)] transition doc-input-focus"
+                  >
+                    <option value="all">All</option>
+                    <option value="phone">Has phone</option>
+                    <option value="email">Has email</option>
+                    <option value="missing">Missing phone</option>
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6f86b7]" />
+                </div>
               </div>
               </div>
             </div>
@@ -284,9 +296,9 @@ export default function Patients({ patients = [], stats = {} }) {
                           <span className="font-semibold text-slate-800">{p.name || p.id}</span>
                         </div>
                       </td>
-                      <td className="px-4 py-3.5 text-sm text-slate-500">{p.email || '—'}</td>
-                      <td className="px-4 py-3.5 text-sm text-slate-500 whitespace-nowrap">{p.phone || '—'}</td>
-                      <td className="px-4 py-3.5 text-sm text-slate-500 whitespace-nowrap">{p.created_at ? (formatDisplayDateWithYearFromDateLike(p.created_at) || p.created_at) : '—'}</td>
+                      <td className="px-4 py-3.5 text-sm font-medium text-slate-700">{p.email || '—'}</td>
+                      <td className="px-4 py-3.5 text-sm font-medium text-slate-700 whitespace-nowrap">{p.phone || '—'}</td>
+                      <td className="px-4 py-3.5 text-sm font-medium text-slate-700 whitespace-nowrap">{p.created_at ? (formatDisplayDateWithYearFromDateLike(p.created_at) || p.created_at) : '—'}</td>
                       <td className="px-4 py-3.5 text-right text-sm">
                         <DocTableActionMenu items={actionItems} />
                       </td>

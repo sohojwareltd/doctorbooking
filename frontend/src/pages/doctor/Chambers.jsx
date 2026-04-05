@@ -1,14 +1,50 @@
-import { Head, useForm, usePage } from '@inertiajs/react';
-import { Building2, MapPin, Phone, ToggleLeft, ToggleRight, ExternalLink } from 'lucide-react';
+import { Head, useForm, usePage, router } from '@inertiajs/react';
+import { useState } from 'react';
+import { Building2, MapPin, Phone, ToggleLeft, ToggleRight, ExternalLink, ArrowRight, Pencil, Trash2 } from 'lucide-react';
 import DoctorLayout from '../../layouts/DoctorLayout';
-import { DocButton, DocCard, DocEmptyState, DocInput } from '../../components/doctor/DocUI';
+import { DocButton, DocCard, DocEmptyState } from '../../components/doctor/DocUI';
 
 export default function DoctorChambers() {
   const page = usePage();
   const chambers = Array.isArray(page?.props?.chambers) ? page.props.chambers : [];
   const flashSuccess = page?.props?.flash?.success || '';
+  const [deletingId, setDeletingId] = useState(null);
   const activeCount = chambers.filter((ch) => !!ch.is_active).length;
   const mappedCount = chambers.filter((ch) => (ch.google_maps_url && ch.google_maps_url.trim() !== '') || ch.location).length;
+  const chamberHeaderMetrics = [
+    {
+      label: 'Total',
+      value: chambers.length,
+      icon: Building2,
+      tone: 'border-[#d6e1fa]/30 bg-[#d6e1fa]/14 text-[#f8fbff]',
+      hoverTone: 'doc-banner-metric-sky',
+      iconTone: 'bg-white/20 border-white/30',
+    },
+    {
+      label: 'Active',
+      value: activeCount,
+      icon: ToggleRight,
+      tone: 'border-[#f0bf97]/35 bg-[#f0bf97]/16 text-[#fff1e2]',
+      hoverTone: 'doc-banner-metric-amber',
+      iconTone: 'bg-white/20 border-white/30',
+    },
+    {
+      label: 'Mapped',
+      value: mappedCount,
+      icon: MapPin,
+      tone: 'border-[#c7d6f7]/30 bg-[#c7d6f7]/16 text-[#f3f7ff]',
+      hoverTone: 'doc-banner-metric-violet',
+      iconTone: 'bg-white/20 border-white/30',
+    },
+    {
+      label: 'Draft',
+      value: chambers.length - activeCount,
+      icon: ToggleLeft,
+      tone: 'border-[#e5b894]/36 bg-[#e5b894]/18 text-[#fff0e2]',
+      hoverTone: 'doc-banner-metric-orange',
+      iconTone: 'bg-white/20 border-white/30',
+    },
+  ];
 
   const { data, setData, post, processing, reset } = useForm({
     id: null,
@@ -49,6 +85,25 @@ export default function DoctorChambers() {
     });
   };
 
+  const handleDelete = (chamber) => {
+    if (!chamber?.id) return;
+    const ok = window.confirm(`Delete chamber \"${chamber.name || 'this chamber'}\"?`);
+    if (!ok) return;
+
+    setDeletingId(chamber.id);
+    router.delete(`/doctor/chambers/${chamber.id}`, {
+      preserveScroll: true,
+      onSuccess: () => {
+        if (data.id === chamber.id) {
+          handleNew();
+        }
+      },
+      onFinish: () => {
+        setDeletingId(null);
+      },
+    });
+  };
+
   return (
     <DoctorLayout title="Chambers">
       <Head title="Chambers" />
@@ -59,7 +114,7 @@ export default function DoctorChambers() {
           <div className="pointer-events-none absolute -bottom-16 right-[-26px] h-52 w-52 rounded-full bg-[#efba92]/15" />
 
           <div className="absolute inset-0 z-20 flex flex-col justify-end px-5 py-4 md:px-6 md:py-5">
-            <div className="grid w-full gap-3 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-end">
+            <div className="grid w-full gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-end">
               <div className="space-y-2">
                 <div className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-white/85">
                   <Building2 className="h-3.5 w-3.5" />
@@ -79,16 +134,19 @@ export default function DoctorChambers() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { label: 'Total', value: chambers.length, tone: 'border-[#d6e1fa]/30 bg-[#d6e1fa]/14 text-[#f2f6ff]' },
-                  { label: 'Active', value: activeCount, tone: 'border-[#f0bf97]/35 bg-[#f0bf97]/16 text-[#ffe6d3]' },
-                  { label: 'Mapped', value: mappedCount, tone: 'border-[#c7d6f7]/30 bg-[#c7d6f7]/16 text-[#eaf0ff]' },
-                  { label: 'Draft', value: chambers.length - activeCount, tone: 'border-[#e5b894]/36 bg-[#e5b894]/18 text-[#ffe3cf]' },
-                ].map((item) => (
-                  <div key={item.label} className={`doc-banner-metric rounded-lg border px-2.5 py-2 ${item.tone}`}>
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.11em]">{item.label}</div>
-                    <div className="mt-1 text-lg font-black leading-none">{item.value}</div>
+              <div className="grid grid-cols-2 gap-2.5">
+                {chamberHeaderMetrics.map((item) => (
+                  <div key={item.label} className={`doc-banner-metric doc-banner-hover-card ${item.hoverTone} group rounded-xl border px-3.5 py-2.5 min-h-[96px] ${item.tone}`}>
+                    <div className="flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-[0.08em]">
+                      <div className="flex items-center gap-1.5">
+                        <span className={`inline-flex h-6 w-6 items-center justify-center rounded-md border ${item.iconTone}`}>
+                          <item.icon className="h-4 w-4" />
+                        </span>
+                        <span>{item.label}</span>
+                      </div>
+                      <ArrowRight className="doc-banner-hover-icon h-3.5 w-3.5" />
+                    </div>
+                    <div className="mt-1.5 text-[1.8rem] font-black leading-none tracking-tight">{item.value}</div>
                   </div>
                 ))}
               </div>
@@ -222,32 +280,54 @@ export default function DoctorChambers() {
                 return (
                   <div
                     key={ch.id}
-                    className="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm transition group hover:border-[#d9c2ac] hover:bg-[#fff7f0]"
+                    className="flex w-full items-start justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm transition group hover:border-[#d9c2ac] hover:bg-[#fff7f0]"
                   >
-                    <button type="button" onClick={() => handleEdit(ch)} className="flex-1 text-left">
-                      <div className="font-semibold text-slate-800 transition-colors group-hover:text-[#3556a6]">{ch.name}</div>
-                      {ch.location && <div className="text-xs text-slate-500 mt-0.5">{ch.location}</div>}
-                      {ch.phone && <div className="text-xs text-slate-400 mt-0.5">{ch.phone}</div>}
+                    <div className="min-w-0 flex-1 pr-3">
+                      <button type="button" onClick={() => handleEdit(ch)} className="text-left">
+                        <div className="font-semibold text-slate-800 transition-colors group-hover:text-[#3556a6]">{ch.name}</div>
+                      </button>
+                      {ch.location && <div className="mt-0.5 text-xs text-slate-500">{ch.location}</div>}
+                      {ch.phone && <div className="mt-0.5 text-xs text-slate-400">{ch.phone}</div>}
                       {mapsUrl && (
                         <button
                           type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            window.open(mapsUrl, '_blank', 'noopener,noreferrer');
-                          }}
+                          onClick={() => window.open(mapsUrl, '_blank', 'noopener,noreferrer')}
                           className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-[#3556a6] transition hover:text-[#2a488f]"
                         >
                           <ExternalLink className="h-3 w-3" />
                           Open in Google Maps
                         </button>
                       )}
-                    </button>
-                    <div className="ml-3 text-xs font-semibold">
-                      {ch.is_active ? (
-                        <span className="rounded-full border border-[#efc7a9] bg-[#fff6ee] px-2.5 py-1 text-[#ad6639]">Active</span>
-                      ) : (
-                        <span className="rounded-full bg-slate-50 px-2.5 py-1 text-slate-500 border border-slate-200">Inactive</span>
-                      )}
+                    </div>
+
+                    <div className="ml-2 flex flex-col items-end gap-2">
+                      <div className="text-xs font-semibold">
+                        {ch.is_active ? (
+                          <span className="rounded-full border border-[#efc7a9] bg-[#fff6ee] px-2.5 py-1 text-[#ad6639]">Active</span>
+                        ) : (
+                          <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-slate-500">Inactive</span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleEdit(ch)}
+                          className="inline-flex items-center gap-1 rounded-md border border-[#d8e2f8] bg-white px-2 py-1 text-[11px] font-semibold text-[#3556a6] transition hover:bg-[#f3f7ff]"
+                        >
+                          <Pencil className="h-3 w-3" />
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(ch)}
+                          disabled={processing || deletingId === ch.id}
+                          className="inline-flex items-center gap-1 rounded-md border border-[#f2c4c4] bg-[#fff6f6] px-2 py-1 text-[11px] font-semibold text-[#b74444] transition hover:bg-[#ffeaea] disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                          {deletingId === ch.id ? 'Deleting...' : 'Delete'}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );
