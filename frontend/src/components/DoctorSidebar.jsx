@@ -1,12 +1,33 @@
+import { useState, useRef, useEffect } from 'react';
 import { Link, usePage } from '@inertiajs/react';
 import {
   CalendarDays, ClipboardList, LayoutDashboard, Users, User, UserCog, X,
-  Stethoscope, Globe, CalendarClock, LogOut, ChevronLeft, Activity
+  Stethoscope, Globe, CalendarClock, LogOut, ChevronLeft, Activity, ChevronDown, Settings
 } from 'lucide-react';
 
 export default function DoctorSidebar({ currentPath, onClose, collapsed = false, onToggleCollapse }) {
   const { auth } = usePage().props;
   const user = auth?.user;
+
+  const practiceSettingsItems = [
+    { href: '/doctor/chambers', label: 'Chambers', Icon: Stethoscope },
+    { href: '/doctor/schedule', label: 'Schedule', Icon: CalendarClock },
+    { href: '/doctor/profile', label: 'Profile', Icon: UserCog },
+  ];
+
+  const practiceSettingsActive = practiceSettingsItems.some(
+    (item) => currentPath === item.href || currentPath.startsWith(item.href + '/')
+  );
+
+  const [practiceOpen, setPracticeOpen] = useState(practiceSettingsActive);
+  const dropdownRef = useRef(null);
+  const [dropdownHeight, setDropdownHeight] = useState(0);
+
+  useEffect(() => {
+    if (dropdownRef.current) {
+      setDropdownHeight(dropdownRef.current.scrollHeight);
+    }
+  }, [practiceOpen]);
 
   const navGroups = [
     {
@@ -16,19 +37,6 @@ export default function DoctorSidebar({ currentPath, onClose, collapsed = false,
         { href: '/doctor/appointments', label: 'Appointments', Icon: CalendarDays, badge: null },
         { href: '/doctor/patients', label: 'Patients', Icon: Users },
         { href: '/doctor/prescriptions', label: 'Prescriptions', Icon: ClipboardList },
-      ],
-    },
-    {
-      label: 'Practice',
-      items: [
-        { href: '/doctor/chambers', label: 'Chambers', Icon: Stethoscope },
-        { href: '/doctor/schedule', label: 'Schedule', Icon: CalendarClock },
-      ],
-    },
-    {
-      label: 'Settings',
-      items: [
-        { href: '/doctor/profile', label: 'Profile', Icon: UserCog },
       ],
     },
   ];
@@ -96,6 +104,68 @@ export default function DoctorSidebar({ currentPath, onClose, collapsed = false,
             </div>
           </div>
         ))}
+
+        {/* Practice Settings Dropdown */}
+        <div className="mt-5">
+          {!collapsed && (
+            <div className="px-3 mb-2 doc-nav-group-label">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#b9c9eb]">Practice & Settings</span>
+            </div>
+          )}
+
+          {/* Dropdown Toggle */}
+          <button
+            onClick={() => setPracticeOpen((prev) => !prev)}
+            className={`doc-nav-live group relative flex w-full items-center gap-3 ${collapsed ? 'justify-center px-2.5' : 'px-3.5'} rounded-xl py-3 text-[14px] font-semibold transition-all duration-150 ${
+              practiceSettingsActive && !practiceOpen
+                ? 'border border-[#b8caf5]/35 bg-[#3c5694]/88 text-white shadow-sm shadow-[#0f1a35]/40'
+                : 'text-[#d6e2fb] hover:bg-white/12 hover:text-white'
+            }`}
+            title={collapsed ? 'Practice Settings' : undefined}
+          >
+            <Settings className={`h-5 w-5 flex-shrink-0 ${practiceSettingsActive ? 'text-[#ffd8b5]' : 'text-[#c4d3f4] group-hover:text-white'}`} />
+            {!collapsed && <span className="flex-1 text-left doc-nav-label">Practice Settings</span>}
+            {!collapsed && (
+              <ChevronDown
+                className={`h-4 w-4 flex-shrink-0 text-[#c4d3f4] transition-transform duration-300 ease-in-out ${practiceOpen ? 'rotate-180' : 'rotate-0'}`}
+              />
+            )}
+          </button>
+
+          {/* Dropdown Items with smooth animation */}
+          <div
+            ref={dropdownRef}
+            className="overflow-hidden transition-all duration-300 ease-in-out"
+            style={{
+              maxHeight: practiceOpen ? `${dropdownHeight}px` : '0px',
+              opacity: practiceOpen ? 1 : 0,
+            }}
+          >
+            <div className="mt-1 ml-3 space-y-0.5 border-l border-white/10 pl-2">
+              {practiceSettingsItems.map(({ href, label, Icon }) => {
+                const active = isActive(href);
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    className={`doc-nav-live group relative flex items-center gap-3 ${collapsed ? 'justify-center px-2' : 'px-3'} rounded-xl py-2.5 text-[13px] font-semibold transition-all duration-150 ${
+                      active
+                        ? 'border border-[#b8caf5]/35 bg-[#3c5694]/88 text-white shadow-sm shadow-[#0f1a35]/40'
+                        : 'text-[#d6e2fb] hover:bg-white/12 hover:text-white'
+                    }`}
+                    title={collapsed ? label : undefined}
+                  >
+                    {active && (
+                      <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-[#ebb17f]" />
+                    )}
+                    <Icon className={`h-4 w-4 flex-shrink-0 ${active ? 'text-[#ffd8b5]' : 'text-[#c4d3f4] group-hover:text-white'}`} />
+                    {!collapsed && <span className="flex-1 doc-nav-label">{label}</span>}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </div>
       </nav>
 
       {/* Collapse toggle (desktop only) */}
