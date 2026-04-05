@@ -36,24 +36,24 @@ export default function DoctorSidebar({ currentPath, onClose, collapsed = false,
   const isActive = (href) => currentPath === href || currentPath.startsWith(href + '/');
 
   return (
-    <div className="flex flex-col h-full border-r border-slate-200/80 bg-gradient-to-b from-white/95 to-slate-50/70 backdrop-blur-md shadow-[8px_0_26px_-18px_rgba(15,23,42,0.32)]">
+    <div className="flex h-full flex-col border-r border-[#455b93] bg-gradient-to-b from-[#253561] via-[#2c3f70] to-[#253561] text-[#ecf3ff] backdrop-blur-md shadow-[10px_0_34px_-20px_rgba(17,26,54,0.78)]">
       {/* Mobile Close */}
       <div className="lg:hidden flex justify-end px-3 pt-3">
-        <button onClick={onClose} className="doc-kinetic-btn p-2 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition" aria-label="Close sidebar">
+        <button onClick={onClose} className="doc-kinetic-btn rounded-lg p-2 text-[#c5d4f6] transition hover:bg-white/12 hover:text-white" aria-label="Close sidebar">
           <X className="h-5 w-5" />
         </button>
       </div>
 
       {/* Brand Header */}
-      <div className={`flex-shrink-0 border-b border-slate-100/90 bg-white/70 ${collapsed ? 'px-3 py-5' : 'px-5 py-5'}`}>
+      <div className={`flex-shrink-0 border-b border-white/12 bg-white/[0.05] ${collapsed ? 'px-3 py-5' : 'px-5 py-5'}`}>
         <Link href="/doctor/dashboard" className="flex items-center gap-3 group">
-          <div className="rounded-lg bg-sky-600 p-2 group-hover:bg-sky-500 transition flex-shrink-0 shadow-md shadow-sky-300/50">
-            <Activity className="h-4.5 w-4.5 text-white" style={{ width: 18, height: 18 }} />
+          <div className="rounded-lg bg-[#cf8650] p-2.5 transition group-hover:bg-[#dd9865] flex-shrink-0 shadow-md shadow-[#cf8650]/40">
+            <Activity className="text-white" style={{ width: 20, height: 20 }} />
           </div>
           {!collapsed && (
             <div className="min-w-0">
-              <div className="text-sm font-bold text-slate-900 tracking-wide">MediCare</div>
-              <div className="text-[10px] text-slate-500 font-medium">Doctor Portal</div>
+              <div className="text-base font-bold tracking-wide text-white">MediCare</div>
+              <div className="text-[11px] font-medium text-[#c6d4f3]">Doctor Portal</div>
             </div>
           )}
         </Link>
@@ -65,7 +65,7 @@ export default function DoctorSidebar({ currentPath, onClose, collapsed = false,
           <div key={gi} className={gi > 0 ? 'mt-5' : ''}>
             {!collapsed && (
               <div className="px-3 mb-2 doc-nav-group-label">
-                <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.12em]">{group.label}</span>
+                <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#b9c9eb]">{group.label}</span>
               </div>
             )}
             <div className="space-y-0.5">
@@ -75,20 +75,20 @@ export default function DoctorSidebar({ currentPath, onClose, collapsed = false,
                   <Link
                     key={href}
                     href={href}
-                    className={`doc-nav-live group relative flex items-center gap-3 ${collapsed ? 'justify-center px-2' : 'px-3'} py-2.5 rounded-lg text-[13px] font-medium transition-all duration-150 ${
+                    className={`doc-nav-live group relative flex items-center gap-3 ${collapsed ? 'justify-center px-2.5' : 'px-3.5'} rounded-xl py-3 text-[14px] font-semibold transition-all duration-150 ${
                       active
-                        ? 'bg-sky-50/95 text-sky-700 border border-sky-100 shadow-sm shadow-sky-100/80'
-                        : 'text-slate-600 hover:bg-white/80 hover:shadow-sm hover:shadow-slate-200/70 hover:text-slate-900'
+                        ? 'border border-[#b8caf5]/35 bg-[#3c5694]/88 text-white shadow-sm shadow-[#0f1a35]/40'
+                        : 'text-[#d6e2fb] hover:bg-white/12 hover:text-white'
                     }`}
                     title={collapsed ? label : undefined}
                   >
                     {active && (
-                      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-sky-500 rounded-r-full" />
+                      <span className="absolute left-0 top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-r-full bg-[#ebb17f]" />
                     )}
-                    <Icon className={`h-[18px] w-[18px] flex-shrink-0 ${active ? 'text-sky-600' : 'text-slate-400 group-hover:text-slate-700'}`} />
+                    <Icon className={`h-5 w-5 flex-shrink-0 ${active ? 'text-[#ffd8b5]' : 'text-[#c4d3f4] group-hover:text-white'}`} />
                     {!collapsed && <span className="flex-1 doc-nav-label">{label}</span>}
                     {!collapsed && badge != null && (
-                      <span className="rounded-full bg-sky-600 px-2 py-0.5 text-[10px] font-bold text-white min-w-[20px] text-center">{badge}</span>
+                      <span className="min-w-[22px] rounded-full bg-[#cf8650] px-2 py-0.5 text-center text-[11px] font-bold text-white">{badge}</span>
                     )}
                   </Link>
                 );
@@ -103,19 +103,19 @@ export default function DoctorSidebar({ currentPath, onClose, collapsed = false,
         <div className="hidden lg:block px-3 pb-2">
           <button
             onClick={onToggleCollapse}
-            className="doc-kinetic-btn w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-slate-500 hover:bg-white/80 hover:shadow-sm hover:text-slate-700 transition"
+            className="doc-kinetic-btn flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#d0dcf6] transition hover:bg-white/12 hover:text-white"
           >
-            <ChevronLeft className={`h-4 w-4 transition-transform duration-200 ${collapsed ? 'rotate-180' : ''}`} />
+            <ChevronLeft className={`h-[18px] w-[18px] transition-transform duration-200 ${collapsed ? 'rotate-180' : ''}`} />
             {!collapsed && <span>Collapse</span>}
           </button>
         </div>
       )}
 
       {/* Doctor Profile + Logout */}
-      <div className="flex-shrink-0 border-t border-slate-100/90 bg-white/55 p-3">
-        <Link href="/doctor/profile" className={`doc-kinetic-btn flex items-center gap-3 group rounded-lg ${collapsed ? 'justify-center p-2' : 'p-2'} hover:bg-white/80 hover:shadow-sm transition`}>
+      <div className="flex-shrink-0 border-t border-white/12 bg-white/[0.05] p-3">
+        <Link href="/doctor/profile" className={`doc-kinetic-btn group flex items-center gap-3 rounded-xl ${collapsed ? 'justify-center p-2.5' : 'p-2.5'} transition hover:bg-white/12`}>
           <div className="relative flex-shrink-0">
-            <div className="h-9 w-9 overflow-hidden rounded-lg bg-slate-100 flex items-center justify-center border border-slate-200">
+            <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl border border-white/20 bg-white/12">
               {user?.profile_picture ? (
                 <img
                   src={user.profile_picture.startsWith('http') ? user.profile_picture : `/storage/${user.profile_picture}`}
@@ -123,15 +123,15 @@ export default function DoctorSidebar({ currentPath, onClose, collapsed = false,
                   className="h-full w-full object-cover"
                 />
               ) : (
-                <User className="h-4 w-4 text-slate-500" />
+                <User className="h-[18px] w-[18px] text-[#d6e2fb]" />
               )}
             </div>
-            <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-400" />
+            <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-[#1f2c52] bg-emerald-400" />
           </div>
           {!collapsed && (
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium text-slate-800 truncate">{user?.name || 'Doctor'}</div>
-              <div className="text-[11px] text-slate-500 truncate">{user?.email || 'View Profile'}</div>
+              <div className="truncate text-[15px] font-semibold text-white">{user?.name || 'Doctor'}</div>
+              <div className="truncate text-[12px] text-[#c4d1ef]">{user?.email || 'View Profile'}</div>
             </div>
           )}
         </Link>
@@ -139,9 +139,9 @@ export default function DoctorSidebar({ currentPath, onClose, collapsed = false,
           href="/logout"
           method="post"
           as="button"
-          className={`doc-kinetic-btn mt-1 w-full flex items-center gap-2 ${collapsed ? 'justify-center px-2' : 'px-3'} py-2 rounded-lg text-[13px] font-medium text-slate-500 hover:bg-red-50 hover:text-red-600 transition`}
+          className={`doc-kinetic-btn mt-1.5 flex w-full items-center gap-2 rounded-xl py-2.5 text-[14px] font-medium ${collapsed ? 'justify-center px-2.5' : 'px-3.5'} text-[#d5e1fa] transition hover:bg-[#553344]/45 hover:text-[#ffe1e6]`}
         >
-          <LogOut className="h-4 w-4" />
+          <LogOut className="h-[18px] w-[18px]" />
           {!collapsed && 'Log Out'}
         </Link>
       </div>

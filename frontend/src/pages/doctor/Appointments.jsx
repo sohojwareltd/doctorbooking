@@ -275,9 +275,44 @@ export default function DoctorAppointments({ appointments = [], filters = {} }) 
     return `${cfg.border} ${cfg.bg} ${cfg.text}`;
   };
 
+  const compactHeaderMetrics = [
+    { label: 'Loaded', value: displayCount },
+    { label: 'Preview', value: previewCount },
+    { label: 'Selected', value: selectedIds.length },
+    { label: 'Date', value: todayLabel },
+  ];
+
   return (
     <DoctorLayout title="Appointments">
       <div className="mx-auto max-w-6xl space-y-6">
+
+        <DocCard padding={false} className="relative overflow-hidden border-[#30416f]/20 bg-gradient-to-r from-[#273664] via-[#3d466b] to-[#be7a4b] text-white shadow-[0_20px_40px_-28px_rgba(33,45,80,0.85)] md:h-[260px]">
+          <div className="pointer-events-none absolute -top-20 left-[-50px] h-48 w-48 rounded-full bg-white/10" />
+          <div className="pointer-events-none absolute -bottom-16 right-[-26px] h-52 w-52 rounded-full bg-[#efba92]/15" />
+
+          <div className="relative grid gap-3 px-5 py-4 md:grid-cols-[minmax(0,1fr)_320px] md:px-6">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-white/70">Appointments Hub</p>
+              <h2 className="mt-1 text-2xl font-black tracking-tight text-white">Appointments Workspace</h2>
+              <p className="mt-1 text-sm text-white/80">Overview and list views stay dynamic with live filters and status updates.</p>
+              <div className="mt-3">
+                <DocButton onClick={() => setShowCreateModal(true)} className="!bg-[#c57945] !px-3.5 !py-2 !text-white hover:!bg-[#ad6639]">
+                  <Plus className="h-4 w-4" />
+                  New Appointment
+                </DocButton>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 self-end">
+              {compactHeaderMetrics.map((item) => (
+                <div key={item.label} className="rounded-lg border border-white/20 bg-black/10 px-3 py-2">
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-white/65">{item.label}</div>
+                  <div className="mt-1 text-sm font-bold text-white">{item.value}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </DocCard>
 
         {/* ─── Page header with tab switcher ─── */}
         <DocCard padding={false}>

@@ -19,21 +19,21 @@
     --thm-secondary-rgb: 0, 89, 99;
 
     /* --- Doctor Dashboard Colors --- */
-    --doc-sidebar: #0f172a;
-    --doc-sidebar-hover: #1e293b;
-    --doc-sidebar-active: #0ea5e9;
-    --doc-surface: #f8fafc;
-    --doc-card: #ffffff;
-    --doc-border: #e2e8f0;
-    --doc-border-light: #f1f5f9;
-    --doc-text: #0f172a;
-    --doc-text-muted: #64748b;
-    --doc-text-light: #94a3b8;
-    --doc-primary: #0ea5e9;
-    --doc-primary-hover: #0284c7;
-    --doc-primary-light: #e0f2fe;
-    --doc-accent: #00acb1;
-    --doc-accent-hover: #00787b;
+    --doc-sidebar: #1f2c52;
+    --doc-sidebar-hover: #2c3a66;
+    --doc-sidebar-active: #b9caee;
+    --doc-surface: #edf1f8;
+    --doc-card: #f8fafe;
+    --doc-border: #d7dfec;
+    --doc-border-light: #e8edf6;
+    --doc-text: #1d2844;
+    --doc-text-muted: #63718d;
+    --doc-text-light: #8b99b3;
+    --doc-primary: #3657a7;
+    --doc-primary-hover: #2a488f;
+    --doc-primary-light: #e4eafb;
+    --doc-accent: #c57945;
+    --doc-accent-hover: #ad6639;
 
     /* --- Semantic Status Colors --- */
     --status-scheduled-bg: #eff6ff;
@@ -263,6 +263,16 @@ html {
 .doctor-route-stagger > * > *:nth-child(5) { animation-delay: 0.32s; }
 .doctor-route-stagger > * > *:nth-child(6) { animation-delay: 0.38s; }
 
+.doctor-route-stagger > * > .doc-banner-root,
+.doctor-route-stagger > * > .doc-banner-root *,
+.doctor-route-stagger .doc-banner-root,
+.doctor-route-stagger .doc-banner-root * {
+    opacity: 1 !important;
+    animation: none !important;
+    transform: none !important;
+    filter: none !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
     .doctor-route-stagger > *,
     .doctor-route-stagger > * > * {
@@ -346,7 +356,8 @@ html {
 }
 
 .doc-header-shell {
-    box-shadow: 0 8px 24px -18px rgba(15, 23, 42, 0.28);
+    box-shadow: 0 10px 24px -18px rgba(31, 44, 82, 0.34);
+    background: linear-gradient(130deg, rgba(255, 255, 255, 0.88) 0%, rgba(241, 245, 252, 0.93) 100%);
 }
 
 .doc-title-live {
@@ -360,7 +371,7 @@ html {
     bottom: -3px;
     width: 100%;
     height: 2px;
-    background: linear-gradient(90deg, transparent 0%, rgba(14, 165, 233, 0.85) 50%, transparent 100%);
+    background: linear-gradient(90deg, transparent 0%, rgba(54, 87, 167, 0.85) 50%, transparent 100%);
     background-size: 220% 100%;
     opacity: 0.75;
     animation: docTitleSheen 4.8s linear infinite;
@@ -383,8 +394,8 @@ html {
 }
 
 .doc-search-live:hover {
-    border-color: #cbd5e1;
-    box-shadow: 0 8px 22px -18px rgba(14, 165, 233, 0.5);
+    border-color: rgba(54, 87, 167, 0.4);
+    box-shadow: 0 8px 24px -18px rgba(54, 87, 167, 0.45);
 }
 
 .doc-dropdown-enter {
@@ -425,7 +436,7 @@ html {
     top: 12%;
     width: 240px;
     height: 240px;
-    background: radial-gradient(circle, rgba(14, 165, 233, 0.3), rgba(14, 165, 233, 0));
+    background: radial-gradient(circle, rgba(54, 87, 167, 0.34), rgba(54, 87, 167, 0));
 }
 
 .doc-ambient-orb-b {
@@ -433,8 +444,153 @@ html {
     bottom: 4%;
     width: 210px;
     height: 210px;
-    background: radial-gradient(circle, rgba(20, 184, 166, 0.25), rgba(20, 184, 166, 0));
+    background: radial-gradient(circle, rgba(197, 121, 69, 0.3), rgba(197, 121, 69, 0));
     animation-delay: 1.8s;
+}
+
+.doctor-theme {
+    color: var(--doc-text);
+    background:
+        radial-gradient(460px 260px at 104% 8%, rgba(197, 121, 69, 0.24), transparent 60%),
+        radial-gradient(360px 240px at 6% 94%, rgba(54, 87, 167, 0.2), transparent 62%),
+        linear-gradient(180deg, #edf1f8 0%, #e8edf6 100%);
+}
+
+.doctor-theme .doc-panel {
+    background-color: var(--doc-card);
+    border-color: var(--doc-border);
+}
+
+.doctor-theme .doc-glass-panel {
+    background: linear-gradient(130deg, rgba(246, 249, 255, 0.92) 0%, rgba(240, 245, 252, 0.86) 100%);
+    border: 1px solid rgba(146, 161, 194, 0.26);
+    box-shadow: 0 10px 30px -24px rgba(31, 44, 82, 0.45);
+}
+
+/*
+   Legacy Tailwind color remap inside doctor scope.
+   This keeps old doctor page/menu classes visually aligned with the new palette.
+*/
+.doctor-theme .text-sky-600,
+.doctor-theme .text-sky-700,
+.doctor-theme .text-blue-600,
+.doctor-theme .text-indigo-600,
+.doctor-theme .text-violet-600,
+.doctor-theme .text-violet-700,
+.doctor-theme .text-teal-600,
+.doctor-theme .text-teal-700 {
+    color: #3556a6 !important;
+}
+
+.doctor-theme .text-emerald-600,
+.doctor-theme .text-emerald-700,
+.doctor-theme .text-amber-600,
+.doctor-theme .text-amber-700,
+.doctor-theme .text-orange-600,
+.doctor-theme .text-orange-700 {
+    color: #a9653a !important;
+}
+
+.doctor-theme .bg-sky-50,
+.doctor-theme .bg-sky-100,
+.doctor-theme .bg-blue-50,
+.doctor-theme .bg-blue-100,
+.doctor-theme .bg-indigo-50,
+.doctor-theme .bg-violet-50,
+.doctor-theme .bg-violet-100,
+.doctor-theme .bg-teal-50,
+.doctor-theme .bg-teal-100 {
+    background-color: #eaf0fb !important;
+}
+
+.doctor-theme .bg-emerald-50,
+.doctor-theme .bg-emerald-100,
+.doctor-theme .bg-amber-50,
+.doctor-theme .bg-amber-100,
+.doctor-theme .bg-orange-50,
+.doctor-theme .bg-orange-100 {
+    background-color: #f6ece5 !important;
+}
+
+.doctor-theme .bg-sky-500,
+.doctor-theme .bg-sky-600,
+.doctor-theme .bg-blue-500,
+.doctor-theme .bg-indigo-500,
+.doctor-theme .bg-violet-500,
+.doctor-theme .bg-teal-500 {
+    background-color: #3556a6 !important;
+}
+
+.doctor-theme .bg-emerald-500,
+.doctor-theme .bg-amber-500,
+.doctor-theme .bg-orange-500 {
+    background-color: #c57945 !important;
+}
+
+.doctor-theme .border-sky-100,
+.doctor-theme .border-sky-200,
+.doctor-theme .border-sky-300,
+.doctor-theme .border-blue-200,
+.doctor-theme .border-indigo-200,
+.doctor-theme .border-violet-100,
+.doctor-theme .border-violet-200,
+.doctor-theme .border-teal-200 {
+    border-color: #c5d3ee !important;
+}
+
+.doctor-theme .border-emerald-100,
+.doctor-theme .border-emerald-200,
+.doctor-theme .border-amber-200,
+.doctor-theme .border-amber-300,
+.doctor-theme .border-amber-400,
+.doctor-theme .border-orange-200 {
+    border-color: #e4c2aa !important;
+}
+
+.doctor-theme .ring-sky-100,
+.doctor-theme .ring-sky-200 {
+    --tw-ring-color: rgba(53, 86, 166, 0.22) !important;
+}
+
+.doctor-theme .focus\:ring-sky-100:focus,
+.doctor-theme .focus\:ring-sky-200:focus {
+    --tw-ring-color: rgba(53, 86, 166, 0.24) !important;
+}
+
+.doctor-theme .focus\:border-sky-300:focus,
+.doctor-theme .focus\:border-sky-500:focus {
+    border-color: #3556a6 !important;
+}
+
+.doctor-theme .hover\:bg-sky-50:hover,
+.doctor-theme .hover\:bg-sky-100:hover,
+.doctor-theme .hover\:bg-violet-50:hover,
+.doctor-theme .hover\:bg-teal-50:hover {
+    background-color: #e3ebfa !important;
+}
+
+.doctor-theme .hover\:bg-emerald-50:hover,
+.doctor-theme .hover\:bg-amber-100:hover,
+.doctor-theme .hover\:bg-orange-50:hover {
+    background-color: #f2e4d9 !important;
+}
+
+.doctor-theme .hover\:text-sky-600:hover,
+.doctor-theme .hover\:text-sky-700:hover,
+.doctor-theme .hover\:text-violet-700:hover,
+.doctor-theme .hover\:text-teal-700:hover {
+    color: #2a488f !important;
+}
+
+.doctor-theme .hover\:text-emerald-700:hover,
+.doctor-theme .hover\:text-amber-700:hover {
+    color: #94592f !important;
+}
+
+.doctor-theme .hover\:border-sky-200:hover,
+.doctor-theme .hover\:border-sky-300:hover,
+.doctor-theme .hover\:border-violet-200:hover {
+    border-color: #aebee3 !important;
 }
 
 /* Thin scrollbar for tables */
@@ -516,7 +672,7 @@ html {
 /* Focus ring for inputs */
 .doc-input-focus:focus {
     border-color: var(--doc-primary);
-    box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+    box-shadow: 0 0 0 3px rgba(54, 87, 167, 0.14);
     outline: none;
 }
 

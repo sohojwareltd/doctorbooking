@@ -4,14 +4,14 @@ import {
   CalendarDays, ClipboardList, Users, Clock, CheckCircle,
   FileText, Stethoscope, Phone, Mail,
   UserPlus, ArrowRight, Star,
-  CalendarClock, FlaskConical, Zap
+  CalendarClock, FlaskConical
 } from 'lucide-react';
 import DoctorLayout from '../../layouts/DoctorLayout';
 import StatCard from '../../components/doctor/StatCard';
 import StatusBadge, { getStatusConfig } from '../../components/doctor/StatusBadge';
 import PatientAvatar from '../../components/doctor/PatientAvatar';
 import DocModal from '../../components/doctor/DocModal';
-import { DocButton, DocInput, DocSelect, DocCard, DocCardHeader, DocEmptyState } from '../../components/doctor/DocUI';
+import { DocButton, DocInput, DocSelect, DocCard, DocEmptyState } from '../../components/doctor/DocUI';
 
 export default function DoctorDashboard({
   stats = {},
@@ -130,57 +130,144 @@ export default function DoctorDashboard({
     { key: 'prescribed',      label: 'Completed',       count: todayAppointments.filter((a) => a.status === 'prescribed').length },
   ];
 
+  const completedCount = todayAppointments.filter((a) => a.status === 'prescribed').length;
+  const completionRate = todayAppointments.length ? Math.round((completedCount / todayAppointments.length) * 100) : 0;
+
+  const heroMetrics = [
+    {
+      label: 'Today Appointments',
+      value: defaultStats.todayAppointments,
+      tone: 'border-[#d6e1fa]/30 bg-[#d6e1fa]/14 text-[#f2f6ff]',
+    },
+    {
+      label: 'In Queue',
+      value: defaultStats.waitingPatients,
+      tone: 'border-[#f0bf97]/35 bg-[#f0bf97]/16 text-[#ffe6d3]',
+    },
+    {
+      label: 'In Progress',
+      value: activeCount,
+      tone: 'border-[#c7d6f7]/30 bg-[#c7d6f7]/16 text-[#eaf0ff]',
+    },
+    {
+      label: 'Tests Pending',
+      value: awaitingList.length,
+      tone: 'border-[#e5b894]/36 bg-[#e5b894]/18 text-[#ffe3cf]',
+    },
+  ];
+
+  const heroSnapshots = [
+    { label: 'Next Slot', value: upcomingAppointment ? fmtTime(upcomingAppointment.appointment_time) : 'No slot' },
+    { label: 'Completion', value: `${completionRate}%` },
+    { label: 'Total Patients', value: defaultStats.totalPatients },
+    { label: 'RX This Month', value: defaultStats.prescribedThisMonth },
+  ];
+
+  const statCardItems = [
+    { label: "Today's Appts", value: defaultStats.todayAppointments, icon: CalendarDays, variant: 'sky' },
+    { label: 'In Queue', value: defaultStats.waitingPatients, icon: Users, variant: 'amber' },
+    { label: 'In Consult', value: activeCount, icon: Stethoscope, variant: 'violet' },
+    { label: 'Rx This Month', value: defaultStats.prescribedThisMonth, icon: ClipboardList, variant: 'emerald' },
+    { label: 'Total Patients', value: defaultStats.totalPatients, icon: Star, variant: 'cyan' },
+  ];
+
+  const bannerQuickActions = [
+    { label: 'New Appt', icon: CalendarDays, action: 'modal' },
+    { label: 'New Rx', icon: FileText, href: '/doctor/prescriptions/create' },
+    { label: 'Patients', icon: Users, href: '/doctor/patients' },
+    { label: 'Prescriptions', icon: ClipboardList, href: '/doctor/prescriptions' },
+  ];
+
   return (
     <DoctorLayout title="Dashboard">
       <div className="mx-auto max-w-6xl space-y-6">
 
         {/* GREETING BANNER */}
-        <DocCard padding={false}>
-          <div className="flex flex-col gap-4 px-5 py-4 sm:flex-row sm:items-center sm:justify-between md:px-6">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wider text-slate-400">{todayStr}</p>
-              <h1 className="mt-1 text-lg font-semibold text-slate-900">
-                {greeting}, Dr. {(user?.name || 'Doctor').split(' ')[0]}
-              </h1>
-              <p className="mt-1 text-sm text-slate-500">Here's what's happening with your practice today.</p>
-            </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <Link
-                href="/doctor/schedule"
-                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 transition hover:border-sky-200 hover:text-sky-600 active:scale-[0.97]"
-              >
-                <CalendarDays className="h-3.5 w-3.5" />
-                My Schedule
-              </Link>
-              <DocButton onClick={() => setShowCreateModal(true)}>
-                <UserPlus className="h-4 w-4" />
-                New Appointment
-              </DocButton>
-            </div>
-          </div>
+        <DocCard padding={false} className="doc-banner-root relative overflow-hidden border-[#2f3d69]/20 bg-gradient-to-r from-[#253566] via-[#3a456a] to-[#be7846] text-white shadow-[0_22px_38px_-28px_rgba(37,51,89,0.85)] md:h-[260px]">
+          <div className="pointer-events-none absolute -left-8 -top-10 h-24 w-24 rounded-full bg-white/12" />
+          <div className="pointer-events-none absolute left-8 top-12 h-26 w-26 rounded-full bg-white/10" style={{ width: 110, height: 110 }} />
+          <div className="pointer-events-none absolute -right-14 -top-12 h-32 w-32 rounded-full bg-[#efba92]/14" />
 
-          <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 bg-slate-50/50 px-5 py-3 md:px-6">
-            {[
-              { label: 'Appointments', value: defaultStats.todayAppointments, color: 'bg-sky-50 text-sky-600 border-sky-200' },
-              { label: 'In queue',     value: defaultStats.waitingPatients,   color: 'bg-amber-50 text-amber-600 border-amber-200' },
-              { label: 'Active',       value: activeCount,                    color: 'bg-violet-50 text-violet-600 border-violet-200' },
-              { label: 'Tests pending',value: awaitingList.length,            color: 'bg-orange-50 text-orange-600 border-orange-200' },
-            ].map((f, i) => (
-              <div key={i} className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium ${f.color}`}>
-                <span className="text-sm font-bold">{f.value}</span>
-                <span className="opacity-70">{f.label}</span>
+          <div className="absolute inset-0 z-20 flex flex-col justify-end px-5 py-4 md:px-6 md:py-5">
+            <div className="grid w-full gap-3 lg:grid-cols-[minmax(0,1fr)_260px] lg:items-end">
+              <div className="space-y-2">
+                <div className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-white/85">
+                  <Clock className="h-3.5 w-3.5" />
+                  Doctor Command Center
+                </div>
+
+                <p className="text-xs font-medium uppercase tracking-wider text-white/70">{todayStr}</p>
+                <h1 className="text-[1.8rem] font-black leading-tight tracking-tight text-white md:text-[2.05rem]">
+                  {greeting}, Dr. {(user?.name || 'Doctor').split(' ')[0]}
+                </h1>
+                <p className="max-w-xl text-[13px] text-white/80">Patient flow, appointment queue, and prescription output are live.</p>
+
+                <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                  <Link
+                    href="/doctor/schedule"
+                    className="inline-flex items-center gap-2 rounded-lg border border-white/25 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/20 active:scale-[0.97]"
+                  >
+                    <CalendarDays className="h-3.5 w-3.5" />
+                    My Schedule
+                  </Link>
+                  <DocButton onClick={() => setShowCreateModal(true)} className="!bg-[#c57945] !px-3 !py-1.5 !text-white hover:!bg-[#ad6639]">
+                    <UserPlus className="h-4 w-4" />
+                    New Appointment
+                  </DocButton>
+                  <div className="hidden gap-2 lg:flex">
+                    {heroSnapshots.slice(0, 2).map((item) => (
+                      <div key={item.label} className="rounded-lg border border-white/20 bg-black/10 px-2.5 py-1">
+                        <div className="text-[9px] font-semibold uppercase tracking-[0.1em] text-white/60">{item.label}</div>
+                        <div className="mt-0.5 text-xs font-bold text-white">{item.value}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mt-1 hidden grid-cols-4 gap-2 lg:grid">
+                  {bannerQuickActions.map((item) => {
+                    const Icon = item.icon;
+                    const inner = (
+                      <div className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-white/20 bg-white/10 px-2 py-1.5 text-[11px] font-semibold text-white transition hover:bg-white/20">
+                        <Icon className="h-3.5 w-3.5" />
+                        {item.label}
+                      </div>
+                    );
+
+                    if (item.href) {
+                      return (
+                        <Link key={item.label} href={item.href}>
+                          {inner}
+                        </Link>
+                      );
+                    }
+
+                    return (
+                      <button key={item.label} type="button" onClick={() => setShowCreateModal(true)}>
+                        {inner}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            ))}
+
+              <div className="grid grid-cols-2 gap-2">
+                {heroMetrics.map((metric) => (
+                  <div key={metric.label} className={`rounded-lg border px-2.5 py-2 ${metric.tone}`}>
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.11em]">{metric.label}</div>
+                    <div className="mt-1 text-lg font-black leading-none">{metric.value}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </DocCard>
 
         {/* STAT CARDS */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-          <StatCard label="Today's Appts"  value={defaultStats.todayAppointments}  icon={CalendarDays}  variant="sky" />
-          <StatCard label="In Queue"       value={defaultStats.waitingPatients}     icon={Users}         variant="amber" />
-          <StatCard label="In Consult"     value={activeCount}                      icon={Stethoscope}   variant="violet" />
-          <StatCard label="Rx This Month"  value={defaultStats.prescribedThisMonth} icon={ClipboardList} variant="emerald" />
-          <StatCard label="Total Patients" value={defaultStats.totalPatients}       icon={Star}          variant="cyan" />
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+          {statCardItems.map((item) => (
+            <StatCard key={item.label} label={item.label} value={item.value} icon={item.icon} variant={item.variant} />
+          ))}
         </div>
 
         {/* MAIN 2-COLUMN GRID */}
@@ -430,30 +517,6 @@ export default function DoctorDashboard({
 
           {/* RIGHT SIDEBAR (1/3) */}
           <div className="space-y-5">
-
-            {/* Quick Actions */}
-            <DocCard>
-              <DocCardHeader title="Quick Actions" icon={Zap} />
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { label: 'New Appt',     icon: CalendarDays,  color: 'bg-sky-50 text-sky-600',         action: 'modal' },
-                  { label: 'New Rx',        icon: FileText,      color: 'bg-emerald-50 text-emerald-600', href: '/doctor/prescriptions/create' },
-                  { label: 'Patients',      icon: Users,         color: 'bg-violet-50 text-violet-600',   href: '/doctor/patients' },
-                  { label: 'Prescriptions', icon: ClipboardList, color: 'bg-orange-50 text-orange-600',   href: '/doctor/prescriptions' },
-                ].map((item, i) => {
-                  const inner = (
-                    <div className="flex flex-col items-center gap-2.5 rounded-lg border border-slate-100 hover:border-slate-200 hover:bg-slate-50 p-3.5 transition cursor-pointer text-center">
-                      <div className={`rounded-lg p-2 ${item.color}`}>
-                        <item.icon className="h-4 w-4" />
-                      </div>
-                      <span className="text-xs font-medium text-slate-600">{item.label}</span>
-                    </div>
-                  );
-                  if (item.href) return <Link key={i} href={item.href}>{inner}</Link>;
-                  return <button key={i} type="button" onClick={() => setShowCreateModal(true)} className="w-full text-left">{inner}</button>;
-                })}
-              </div>
-            </DocCard>
 
             {/* Awaiting Tests */}
             {awaitingList.length > 0 && (

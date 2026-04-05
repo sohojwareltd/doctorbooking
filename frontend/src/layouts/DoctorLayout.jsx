@@ -19,11 +19,11 @@ export default function DoctorLayout({ children, title = '' }) {
   return (
     <>
       <Head title={title ? `${title} - Doctor Dashboard` : 'Doctor Dashboard'} />
-      <div className="min-h-screen bg-[var(--doc-surface)]" style={{ fontFamily: 'var(--thm-font)' }}>
+      <div className="doctor-theme min-h-screen bg-[var(--doc-surface)]" style={{ fontFamily: 'var(--thm-font)' }}>
         <div className="min-h-screen flex flex-col lg:flex-row">
           {/* Mobile overlay */}
           {sidebarOpen && (
-            <div className="lg:hidden fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-30" onClick={() => setSidebarOpen(false)} />
+            <div className="lg:hidden fixed inset-0 z-30 bg-[rgba(26,36,67,0.52)] backdrop-blur-[2px]" onClick={() => setSidebarOpen(false)} />
           )}
 
           {/* Sidebar */}
@@ -58,6 +58,8 @@ export default function DoctorLayout({ children, title = '' }) {
               <DoctorHeader title={title} onMenuClick={() => setSidebarOpen(true)} />
               <div className="relative flex-1 overflow-y-auto">
                 <div className="pointer-events-none absolute inset-0 overflow-hidden">
+                  <div className="absolute right-[-120px] top-[-80px] h-[300px] w-[300px] rounded-full bg-[radial-gradient(circle,rgba(197,121,69,0.22),rgba(197,121,69,0))]" />
+                  <div className="absolute left-[-90px] bottom-[-110px] h-[280px] w-[280px] rounded-full bg-[radial-gradient(circle,rgba(54,87,167,0.2),rgba(54,87,167,0))]" />
                   <div className="doc-ambient-orb doc-ambient-orb-a" />
                   <div className="doc-ambient-orb doc-ambient-orb-b" />
                 </div>

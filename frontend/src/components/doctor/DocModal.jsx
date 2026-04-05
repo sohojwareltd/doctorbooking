@@ -25,26 +25,26 @@ export default function DocModal({ open, onClose, title, icon: Icon, children, s
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-[2px]" />
+      <div className="absolute inset-0 bg-[rgba(24,34,63,0.58)] backdrop-blur-[2px]" />
       <div
-        className={`relative w-full ${widthClass} bg-white rounded-xl shadow-2xl max-h-[90vh] overflow-hidden flex flex-col`}
+        className={`relative flex max-h-[90vh] w-full flex-col overflow-hidden rounded-xl border border-[var(--doc-border)] bg-white shadow-2xl ${widthClass}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         {title && (
-          <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+          <div className="flex items-center justify-between border-b border-[var(--doc-border-light)] bg-[var(--doc-primary-light)]/35 px-6 py-4">
             <div className="flex items-center gap-3">
               {Icon && (
-                <div className="rounded-lg bg-sky-50 p-2">
-                  <Icon className="h-4 w-4 text-sky-600" />
+                <div className="rounded-lg bg-white/90 p-2">
+                  <Icon className="h-4 w-4 text-[var(--doc-primary)]" />
                 </div>
               )}
-              <h3 className="text-base font-semibold text-slate-900">{title}</h3>
+              <h3 className="text-base font-semibold text-[var(--doc-text)]">{title}</h3>
             </div>
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition"
+              className="rounded-lg p-1.5 text-[var(--doc-text-light)] transition hover:bg-white hover:text-[var(--doc-text)]"
             >
               <X className="h-4 w-4" />
             </button>
@@ -58,7 +58,7 @@ export default function DocModal({ open, onClose, title, icon: Icon, children, s
 
         {/* Footer */}
         {footer && (
-          <div className="border-t border-slate-100 bg-slate-50/50 px-6 py-4 flex items-center justify-end gap-2">
+          <div className="flex items-center justify-end gap-2 border-t border-[var(--doc-border-light)] bg-[var(--doc-primary-light)]/25 px-6 py-4">
             {footer}
           </div>
         )}
