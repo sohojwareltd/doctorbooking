@@ -1,129 +1,177 @@
+import { Link, router } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
-import { router } from '@inertiajs/react';
-import { FileText, Search, Eye, Share2, Printer, CalendarDays, CalendarCheck, Users, Phone, ArrowRight, ChevronDown } from 'lucide-react';
+import { Calendar, ClipboardList, Eye, FileText, Hash, Mars, Phone, Printer, Search, Share2, Stethoscope, User, Venus } from 'lucide-react';
 import DoctorLayout from '../../layouts/DoctorLayout';
-import Pagination from '../../components/Pagination';
+import { DocEmptyState } from '../../components/doctor/DocUI';
 import { formatDisplayDateWithYearFromDateLike } from '../../utils/dateFormat';
-import { toastSuccess, toastError } from '../../utils/toast';
-import StatCard from '../../components/doctor/StatCard';
-import DocTableActionMenu from '../../components/doctor/DocTableActionMenu';
-import PatientAvatar from '../../components/doctor/PatientAvatar';
-import { DocCard, DocEmptyState } from '../../components/doctor/DocUI';
+import { toastError, toastSuccess } from '../../utils/toast';
+
+function renderHighlighted(value, query) {
+  const text = String(value ?? '');
+  const needle = query.trim();
+
+  if (!needle) {
+    return text;
+  }
+
+  const lowerText = text.toLowerCase();
+  const lowerNeedle = needle.toLowerCase();
+  const start = lowerText.indexOf(lowerNeedle);
+
+  if (start === -1) {
+    return text;
+  }
+
+  const end = start + needle.length;
+
+  return (
+    <>
+      {text.slice(0, start)}
+      <span className="font-semibold text-slate-900">{text.slice(start, end)}</span>
+      {text.slice(end)}
+    </>
+  );
+}
+
+function getPrescriptionSummaryTone(key) {
+  const tones = {
+    today: 'border-[#CBD5E1] bg-slate-50 text-slate-700',
+    withFollowUp: 'border-violet-200 bg-violet-50 text-violet-700',
+    upcoming: 'border-sky-200 bg-sky-50 text-sky-700',
+    withoutFollowUp: 'border-orange-200 bg-orange-50 text-orange-700',
+  };
+
+  return tones[key] || tones.today;
+}
+
+function GenderIconAvatar({ gender }) {
+  const value = String(gender || '').toLowerCase();
+
+  if (value === 'female') {
+    return (
+      <span className="relative inline-flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-pink-400 to-rose-500 text-white shadow-[0_6px_14px_-8px_rgba(244,63,94,0.9)]" title="Female">
+        <User className="h-4 w-4" />
+        <span className="absolute -bottom-1 -right-1 inline-flex h-4.5 w-4.5 items-center justify-center rounded-full border border-white bg-pink-100 text-pink-600 shadow-sm">
+          <Venus className="h-2.5 w-2.5" />
+        </span>
+      </span>
+    );
+  }
+
+  if (value === 'male') {
+    return (
+      <span className="relative inline-flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-sky-400 to-indigo-500 text-white shadow-[0_6px_14px_-8px_rgba(59,130,246,0.95)]" title="Male">
+        <User className="h-4 w-4" />
+        <span className="absolute -bottom-1 -right-1 inline-flex h-4.5 w-4.5 items-center justify-center rounded-full border border-white bg-sky-100 text-sky-600 shadow-sm">
+          <Mars className="h-2.5 w-2.5" />
+        </span>
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-500">
+      <User className="h-4 w-4" />
+    </span>
+  );
+}
 
 export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) {
   const pageRows = useMemo(() => (Array.isArray(prescriptions) ? prescriptions : (prescriptions?.data ?? [])), [prescriptions]);
   const pagination = useMemo(() => (Array.isArray(prescriptions) ? null : prescriptions), [prescriptions]);
+
   const [rows, setRows] = useState(pageRows);
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState('all');
-  const [followUpFilter, setFollowUpFilter] = useState('all');
-  const [selectedIds, setSelectedIds] = useState([]);
+
+  useEffect(() => {
+    setRows(pageRows);
+  }, [pageRows]);
 
   const resolvePatientAge = (p) => {
     if (p?.patient_age !== undefined && p?.patient_age !== null && p?.patient_age !== '') {
       return p.patient_age;
     }
+
     if (p?.user?.age !== undefined && p?.user?.age !== null && p?.user?.age !== '') {
       return p.user.age;
     }
+
     const dob = p?.user?.date_of_birth;
     if (!dob) return null;
+
     const birthDate = new Date(dob);
     if (Number.isNaN(birthDate.getTime())) return null;
-    const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+
+    const todayDate = new Date();
+    let age = todayDate.getFullYear() - birthDate.getFullYear();
+    const monthDiff = todayDate.getMonth() - birthDate.getMonth();
+
+    if (monthDiff < 0 || (monthDiff === 0 && todayDate.getDate() < birthDate.getDate())) {
       age -= 1;
     }
+
     return age >= 0 ? age : null;
   };
 
-  const getPatientName = (prescription) => {
-    return prescription?.patient_name || prescription?.user?.name || String(prescription?.user_id || 'Patient');
+  const getPatientName = (prescription) => (
+    prescription?.patient_name || prescription?.user?.name || `Patient #${prescription?.user_id || ''}`
+  );
+
+  const getPatientPhone = (prescription) => prescription?.patient_contact || prescription?.user?.phone || null;
+  const getPatientGender = (prescription) => prescription?.patient_gender || prescription?.user?.gender || 'N/A';
+  const formatGender = (gender) => {
+    const value = String(gender || '').trim().toLowerCase();
+    if (!value) return 'N/A';
+    return value.charAt(0).toUpperCase() + value.slice(1);
   };
 
-  useEffect(() => {
-    setRows(pageRows);
-    setSelectedIds([]);
-  }, [pageRows]);
+  const formatAgeLabel = (prescription) => {
+    const age = resolvePatientAge(prescription);
+    return age ? `${age}y` : 'Age N/A';
+  };
 
   const todayIso = new Date().toISOString().split('T')[0];
-  const todayLabel = formatDisplayDateWithYearFromDateLike(todayIso) || todayIso;
 
   const filteredRows = useMemo(() => {
+    const needle = searchTerm.trim().toLowerCase();
+
     return rows.filter((p) => {
-      const patientAge = resolvePatientAge(p);
-      const haystack = `${getPatientName(p)} ${p.patient_contact || p.user?.phone || ''} ${p.patient_gender || p.user?.gender || ''} ${patientAge ?? ''} ${p.user_id || ''}`.toLowerCase();
-      const matchSearch = searchTerm === '' ? true : haystack.includes(searchTerm.toLowerCase());
       const createdDateOnly = (p.created_at || '').slice(0, 10);
-      const dateOk = dateFilter === 'all' ? true : createdDateOnly === todayIso;
-      return matchSearch && dateOk;
+      const dateOk = dateFilter === 'all' || createdDateOnly === todayIso;
+
+      if (!dateOk) {
+        return false;
+      }
+
+      if (!needle) {
+        return true;
+      }
+
+      const haystack = `${p.id || ''} ${getPatientName(p)} ${getPatientPhone(p) || ''} ${p.diagnosis || ''} ${p.instructions || ''} ${p.symptoms || ''} ${p.patient_gender || p.user?.gender || ''}`.toLowerCase();
+      return haystack.includes(needle);
     });
   }, [rows, searchTerm, dateFilter, todayIso]);
 
-  const filtersActive = dateFilter !== 'all' || searchTerm !== '';
-  const displayCount = filtersActive ? filteredRows.length : (pagination?.total ?? filteredRows.length);
-  const activeStatsRows = useMemo(() => (filtersActive ? filteredRows : rows), [filtersActive, filteredRows, rows]);
-
-  const statsCards = useMemo(() => {
-    const viewLabel = filtersActive ? 'filtered view' : 'current list';
-    const createdToday = activeStatsRows.filter((prescription) => (prescription.created_at || '').slice(0, 10) === todayIso).length;
-    const seniorPatients = activeStatsRows.filter((prescription) => {
-      const age = resolvePatientAge(prescription);
-      return typeof age === 'number' && age >= 50;
-    }).length;
-    const missingContact = activeStatsRows.filter((prescription) => !(prescription.patient_contact || prescription.user?.phone)).length;
-
-    return [
-      { label: 'Created Today', value: createdToday, variant: 'sky', icon: CalendarCheck, subtitle: viewLabel },
-      { label: 'Age 50+', value: seniorPatients, variant: 'violet', icon: Users, subtitle: viewLabel },
-      { label: 'Missing Contact', value: missingContact, variant: 'rose', icon: Phone, subtitle: viewLabel },
-      { label: 'Selected', value: selectedIds.length, variant: 'cyan', icon: Eye, subtitle: 'table selection' },
-    ];
-  }, [activeStatsRows, filtersActive, selectedIds.length, todayIso]);
-
-  const prescriptionHeaderMetrics = [
-    {
-      label: 'Prescriptions',
-      value: displayCount,
-      icon: FileText,
-      tone: 'border-[#d6e1fa]/30 bg-[#d6e1fa]/14 text-[#f8fbff]',
-      hoverTone: 'doc-banner-metric-sky',
-      iconTone: 'bg-white/20 border-white/30',
-    },
-    {
-      label: 'With Follow-up',
-      value: stats?.withFollowUp ?? 0,
-      icon: CalendarCheck,
-      tone: 'border-[#f0bf97]/35 bg-[#f0bf97]/16 text-[#fff1e2]',
-      hoverTone: 'doc-banner-metric-amber',
-      iconTone: 'bg-white/20 border-white/30',
-    },
-    {
-      label: 'Upcoming Visits',
-      value: stats?.upcomingFollowUps ?? 0,
-      icon: CalendarDays,
-      tone: 'border-[#c7d6f7]/30 bg-[#c7d6f7]/16 text-[#f3f7ff]',
-      hoverTone: 'doc-banner-metric-violet',
-      iconTone: 'bg-white/20 border-white/30',
-    },
-    {
-      label: 'No Follow-up',
-      value: stats?.withoutFollowUp ?? 0,
-      icon: Users,
-      tone: 'border-[#e5b894]/36 bg-[#e5b894]/18 text-[#fff0e2]',
-      hoverTone: 'doc-banner-metric-orange',
-      iconTone: 'bg-white/20 border-white/30',
-    },
-  ];
+  const statsView = useMemo(() => ({
+    visible: filteredRows.length,
+    today: rows.filter((item) => (item.created_at || '').slice(0, 10) === todayIso).length,
+    withFollowUp: stats?.withFollowUp ?? rows.filter((item) => Boolean(item.follow_up_date)).length,
+    upcoming: stats?.upcomingFollowUps ?? rows.filter((item) => {
+      if (!item.follow_up_date) return false;
+      return item.follow_up_date >= todayIso;
+    }).length,
+    withoutFollowUp: stats?.withoutFollowUp ?? rows.filter((item) => !item.follow_up_date).length,
+  }), [filteredRows.length, rows, stats, todayIso]);
 
   const handlePrintPrescription = (prescription) => {
     const printWindow = window.open(`/doctor/prescriptions/${prescription.id}?action=print`, '_blank');
+
     if (printWindow) {
       toastSuccess('Opening prescription for printing...');
       return;
     }
+
     toastError('Unable to open the print view right now.');
   };
 
@@ -153,230 +201,212 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
   };
 
   return (
-    <DoctorLayout title="Prescriptions">
-      <div className="mx-auto max-w-6xl space-y-6">
-        <DocCard padding={false} className="doc-banner-root relative overflow-hidden border-[#30416f]/20 bg-gradient-to-r from-[#283766] via-[#3d466b] to-[#be7a4b] text-white shadow-[0_20px_40px_-28px_rgba(33,45,80,0.85)] md:h-[260px]">
-          <div className="pointer-events-none absolute -top-20 left-[-50px] h-48 w-48 rounded-full bg-white/10" />
-          <div className="pointer-events-none absolute -bottom-16 right-[-26px] h-52 w-52 rounded-full bg-[#efba92]/15" />
-
-          <div className="absolute inset-0 z-20 flex flex-col justify-end px-5 py-4 md:px-6 md:py-5">
-            <div className="grid w-full gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-end">
-              <div className="space-y-2">
-                <div className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-white/85">
-                  <FileText className="h-3.5 w-3.5" />
-                  Prescription Desk
-                </div>
-                <p className="text-xs font-medium uppercase tracking-wider text-white/70">{todayLabel}</p>
-                <h2 className="text-[1.8rem] font-black leading-tight tracking-tight text-white md:text-[2.05rem]">Prescription Workspace</h2>
-                <p className="max-w-xl text-[13px] text-white/80">Dynamic prescription records with date filters, follow-up tracking, and instant record actions.</p>
-                <div className="flex flex-wrap items-center gap-2 pt-0.5">
-                  <div className="rounded-lg border border-white/20 bg-black/10 px-2.5 py-1">
-                    <div className="text-[9px] font-semibold uppercase tracking-[0.1em] text-white/60">Date Filter</div>
-                    <div className="mt-0.5 text-xs font-bold text-white">{dateFilter === 'all' ? 'All Dates' : dateFilter === 'today' ? 'Today' : dateFilter === 'week' ? 'This Week' : 'This Month'}</div>
-                  </div>
-                  <div className="rounded-lg border border-white/20 bg-black/10 px-2.5 py-1">
-                    <div className="text-[9px] font-semibold uppercase tracking-[0.1em] text-white/60">Follow Up</div>
-                    <div className="mt-0.5 text-xs font-bold text-white">{followUpFilter === 'all' ? 'All Status' : followUpFilter === 'yes' ? 'With Follow Up' : 'No Follow Up'}</div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2.5">
-                {prescriptionHeaderMetrics.map((item) => (
-                  <div key={item.label} className={`doc-banner-metric doc-banner-hover-card ${item.hoverTone} group rounded-xl border px-3.5 py-2.5 min-h-[96px] ${item.tone}`}>
-                    <div className="flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-[0.08em]">
-                      <div className="flex items-center gap-1.5">
-                        <span className={`inline-flex h-6 w-6 items-center justify-center rounded-md border ${item.iconTone}`}>
-                          <item.icon className="h-4 w-4" />
-                        </span>
-                        <span>{item.label}</span>
-                      </div>
-                      <ArrowRight className="doc-banner-hover-icon h-3.5 w-3.5" />
-                    </div>
-                    <div className="mt-1.5 text-[1.8rem] font-black leading-none tracking-tight">{item.value}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </DocCard>
-
-        {/* Stats */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {statsCards.map((stat, idx) => (
-            <StatCard key={idx} label={stat.label} value={stat.value} icon={stat.icon} variant={stat.variant} />
-          ))}
-        </div>
-
-        {/* Table Card */}
-        <DocCard padding={false}>
-          <div className="space-y-4 border-b border-slate-100 px-5 py-5 md:px-6">
+    <DoctorLayout title="Prescriptions" gradient={false}>
+      <div className="mx-auto max-w-[1400px]">
+        <section className="surface-card rounded-3xl overflow-hidden">
+          <div className="px-6 py-5 border-b border-slate-100">
             <div className="flex flex-col justify-between gap-3 md:flex-row md:items-center">
               <div className="flex items-center gap-3">
-                <span className="text-sm font-medium text-slate-500">
-                  Today: <span className="font-semibold text-slate-800">{todayLabel}</span>
-                </span>
-                <span className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-600">
-                  {displayCount} prescriptions
+                <h2 className="text-xl font-semibold text-[#2D3A74]">Prescriptions</h2>
+                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
+                  {statsView.visible}
                 </span>
               </div>
-              {selectedIds.length > 0 && (
-                <span className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-1 text-sm font-semibold text-sky-600">{selectedIds.length} selected</span>
-              )}
-            </div>
-
-            <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,320px)_170px_160px] xl:items-end">
-              <div className="xl:w-[320px]">
-                <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Search</label>
-                <div className="relative">
-                  <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <input
-                    type="text"
-                    placeholder="Search by patient, diagnosis or medication"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-900 placeholder-slate-400 shadow-[0_1px_0_rgba(148,163,184,0.08)] transition doc-input-focus"
-                  />
+              <div className="grid grid-cols-2 gap-2 text-xs sm:flex sm:flex-wrap sm:items-center sm:gap-2.5">
+                <div className={`rounded-xl border px-2.5 py-1.5 ${getPrescriptionSummaryTone('today')}`}>
+                  Today: <span className="font-semibold">{statsView.today}</span>
+                </div>
+                <div className={`rounded-xl border px-2.5 py-1.5 ${getPrescriptionSummaryTone('withFollowUp')}`}>
+                  With Follow-up: <span className="font-semibold">{statsView.withFollowUp}</span>
+                </div>
+                <div className={`rounded-xl border px-2.5 py-1.5 ${getPrescriptionSummaryTone('upcoming')}`}>
+                  Upcoming Visits: <span className="font-semibold">{statsView.upcoming}</span>
+                </div>
+                <div className={`rounded-xl border px-2.5 py-1.5 ${getPrescriptionSummaryTone('withoutFollowUp')}`}>
+                  No Follow-up: <span className="font-semibold">{statsView.withoutFollowUp}</span>
                 </div>
               </div>
-              <div className="sm:max-w-[180px] xl:w-[170px]">
-                <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Created date</label>
-                <div className="relative">
+            </div>
+
+            <div className="mt-4 flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,320px)_180px] xl:items-end">
+                <div className="xl:w-[320px]">
+                  <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Search</label>
+                  <div className="relative">
+                    <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="text"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      placeholder="Patient, phone, diagnosis or id"
+                      className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-900 placeholder-slate-400 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+                    />
+                  </div>
+                </div>
+
+                <div className="sm:max-w-[190px] xl:w-[180px]">
+                  <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Created date</label>
                   <select
                     value={dateFilter}
                     onChange={(e) => setDateFilter(e.target.value)}
-                    className="w-full appearance-none rounded-xl border border-[#d4e1f7] bg-[linear-gradient(180deg,#ffffff_0%,#f4f8ff_100%)] px-3.5 py-2.5 pr-9 text-sm font-semibold text-[#2f4a79] shadow-[0_2px_10px_rgba(148,163,184,0.12)] transition doc-input-focus"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-700 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
                   >
                     <option value="all">All dates</option>
                     <option value="today">Today</option>
                   </select>
-                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6f86b7]" />
                 </div>
-              </div>
-              <div className="sm:max-w-[170px] xl:w-[160px]">
-                <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Follow-up</label>
-                <select
-                  value="all"
-                  disabled
-                  className="w-full rounded-xl border border-slate-200 bg-slate-100 px-3.5 py-2.5 text-sm text-slate-400"
-                >
-                  <option value="all">N/A</option>
-                </select>
-              </div>
               </div>
             </div>
           </div>
 
-          <div className="overflow-x-auto bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)]">
-            <table className="w-full min-w-[980px] divide-y divide-[#e7edf8]">
-              <thead className="bg-[linear-gradient(180deg,#f8fbff_0%,#eef4ff_100%)]">
+          <div className="overflow-x-auto border-t border-slate-100">
+            <table className="min-w-full text-sm">
+              <thead className="bg-slate-50 text-slate-500 uppercase text-xs tracking-[0.12em]">
                 <tr>
-                  <th className="w-12 px-4 py-3 text-left">
-                    <input
-                      type="checkbox"
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedIds(filteredRows.map((p) => p.id));
-                        } else {
-                          setSelectedIds([]);
-                        }
-                      }}
-                      checked={filteredRows.length > 0 && selectedIds.length === filteredRows.length}
-                      className="rounded border-slate-300 text-sky-600 focus:ring-sky-200"
-                    />
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-[#89a0c4]">#</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-[#89a0c4]">Patient</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-[#89a0c4]">Age</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-[#89a0c4]">Gender</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-[#89a0c4]">Number</th>
-                  <th className="w-[176px] px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-[#89a0c4]">Action</th>
+                  <th className="px-4 py-3.5 text-left">#</th>
+                  <th className="px-4 py-3.5 text-left">Patient</th>
+                  <th className="px-4 py-3.5 text-left">Contact</th>
+                  <th className="px-4 py-3.5 text-left">Symptoms</th>
+                  <th className="px-4 py-3.5 text-left">Diagnosis / Advice</th>
+                  <th className="px-4 py-3.5 text-left">Created</th>
+                  <th className="px-4 py-3.5 text-center">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50 bg-white">
-                {filteredRows.map((p, idx) => {
-                  const isSelected = selectedIds.includes(p.id);
-                  const actionItems = [
-                    {
-                      key: 'view',
-                      label: 'View prescription',
-                      icon: Eye,
-                      tone: 'accent',
-                      onSelect: () => router.visit(`/doctor/prescriptions/${p.id}`),
-                    },
-                    {
-                      key: 'print',
-                      label: 'Print',
-                      icon: Printer,
-                      tone: 'amber',
-                      onSelect: () => handlePrintPrescription(p),
-                    },
-                    {
-                      key: 'share',
-                      label: 'Share',
-                      icon: Share2,
-                      tone: 'emerald',
-                      onSelect: () => handleSharePrescription(p),
-                    },
-                  ];
+              <tbody className="divide-y divide-slate-100 bg-white">
+                {filteredRows.map((p, index) => {
+                  const serial = p.serial_no || (((pagination?.current_page || 1) - 1) * (pagination?.per_page || 15) + index + 1);
 
                   return (
-                    <tr key={p.id || idx} className={`border-l-2 transition-all duration-200 ${isSelected ? 'border-[#c6d9f7] bg-[#f0f6ff]' : 'border-transparent even:bg-[#fbfdff] hover:border-[#d6e4fb] hover:bg-[#f8fbff]'}`}>
-                      <td className="px-4 py-3.5">
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedIds([...selectedIds, p.id]);
-                            } else {
-                              setSelectedIds(selectedIds.filter((id) => id !== p.id));
-                            }
-                          }}
-                          className="rounded border-slate-300 text-sky-600 focus:ring-sky-200"
-                        />
-                      </td>
-                      <td className="px-4 py-3.5 text-sm font-medium text-slate-500">
-                        <span className="inline-flex h-9 min-w-[2.25rem] items-center justify-center rounded-xl border border-[#e4ebf7] bg-white px-2.5 text-sm font-semibold text-[#5f7398] shadow-[0_8px_18px_-18px_rgba(37,53,102,0.6)]">
-                          {p.id}
+                    <tr
+                      key={p.id || index}
+                      className="cursor-pointer hover:bg-slate-50/80 transition-colors"
+                      onClick={() => router.visit(`/doctor/prescriptions/${p.id}`)}
+                    >
+                      <td className="px-4 py-3.5 font-medium text-slate-600">
+                        <span className="inline-flex items-center gap-1.5">
+                          <Hash className="h-3.5 w-3.5 text-slate-400" />
+                          {renderHighlighted(serial, searchTerm)}
                         </span>
                       </td>
                       <td className="px-4 py-3.5">
-                        <div className="flex items-center gap-3">
-                          <PatientAvatar name={getPatientName(p)} size="sm" />
-                          <span className="font-semibold text-slate-800">{getPatientName(p)}</span>
+                        <div className="flex items-center gap-2.5 text-left">
+                          <GenderIconAvatar gender={getPatientGender(p)} />
+                          <div>
+                            <div className="font-semibold text-slate-900">{renderHighlighted(getPatientName(p), searchTerm)}</div>
+                            <div className="mt-0.5 text-xs font-medium text-slate-500">Prescription #{p.id}</div>
+                            <div className="text-xs font-medium text-slate-500">{formatAgeLabel(p)}</div>
+                          </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3.5 text-sm text-slate-500">{resolvePatientAge(p) ?? '—'}</td>
-                      <td className="px-4 py-3.5 text-sm text-slate-500 capitalize">{p.patient_gender || p.user?.gender || '—'}</td>
-                      <td className="px-4 py-3.5 text-sm text-slate-500 whitespace-nowrap">{p.patient_contact || p.user?.phone || '—'}</td>
-                      <td className="px-4 py-3.5 text-right text-sm">
-                        <DocTableActionMenu items={actionItems} />
+                      <td className="px-4 py-3.5 text-[13px] font-medium text-slate-700 whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1.5">
+                          <Phone className="h-3.5 w-3.5 text-slate-400" />
+                          {renderHighlighted(getPatientPhone(p) || 'N/A', searchTerm)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3.5 text-[13px] font-medium text-slate-700">
+                        <div className="max-w-[180px] truncate inline-flex items-center gap-1.5" title={p.symptoms || 'N/A'}>
+                          <ClipboardList className="h-3.5 w-3.5 flex-shrink-0 text-slate-400" />
+                          {renderHighlighted(p.symptoms || 'N/A', searchTerm)}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3.5 text-[13px] font-medium text-slate-700">
+                        <div className="max-w-[200px] truncate inline-flex items-center gap-1.5" title={p.diagnosis || p.instructions || 'N/A'}>
+                          <Stethoscope className="h-3.5 w-3.5 flex-shrink-0 text-slate-400" />
+                          {renderHighlighted(p.diagnosis || p.instructions || 'N/A', searchTerm)}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3.5 text-[13px] font-medium text-slate-700">
+                        <span className="inline-flex items-center gap-1.5">
+                          <Calendar className="h-3.5 w-3.5 text-slate-400" />
+                          {formatDisplayDateWithYearFromDateLike(p.created_at) || p.created_at}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => router.visit(`/doctor/prescriptions/${p.id}`)}
+                            className="group relative inline-flex h-8 w-8 items-center justify-center rounded-md border border-sky-200 bg-sky-50 text-sky-700 transition hover:border-sky-300 hover:bg-sky-100 hover:text-sky-800"
+                            aria-label="View prescription"
+                          >
+                            <Eye className="h-4 w-4" />
+                            <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-[10px] font-medium text-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
+                              View Prescription
+                            </span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handlePrintPrescription(p)}
+                            className="group relative inline-flex h-8 w-8 items-center justify-center rounded-md border border-amber-200 bg-amber-50 text-amber-700 transition hover:border-amber-300 hover:bg-amber-100 hover:text-amber-800"
+                            aria-label="Print prescription"
+                          >
+                            <Printer className="h-4 w-4" />
+                            <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-[10px] font-medium text-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
+                              Print
+                            </span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleSharePrescription(p)}
+                            className="group relative inline-flex h-8 w-8 items-center justify-center rounded-md border border-emerald-200 bg-emerald-50 text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100 hover:text-emerald-800"
+                            aria-label="Share prescription"
+                          >
+                            <Share2 className="h-4 w-4" />
+                            <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-[10px] font-medium text-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
+                              Share
+                            </span>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
                 })}
-                {filteredRows.length === 0 && (
-                  <tr>
-                    <td colSpan={7} className="py-2">
-                      <DocEmptyState icon={FileText} title="No prescriptions found" />
-                    </td>
-                  </tr>
-                )}
               </tbody>
             </table>
           </div>
 
-          {pagination && typeof pagination.total === 'number' ? (
-            <div className="border-t border-slate-100 bg-slate-50/50 px-5 py-3.5">
-              <p className="text-xs text-slate-500">
-                Showing <span className="font-semibold text-slate-700">{((pagination.current_page - 1) * pagination.per_page) + 1}</span> to <span className="font-semibold text-slate-700">{Math.min(pagination.per_page * pagination.current_page, pagination.total)}</span> of <span className="font-semibold text-slate-700">{pagination.total}</span> results
-              </p>
+          {filteredRows.length === 0 ? (
+            <div className="p-5">
+              <DocEmptyState
+                icon={FileText}
+                title="No prescriptions found"
+                description="Try another date filter or keyword."
+              />
             </div>
           ) : null}
-          <Pagination data={pagination} />
-        </DocCard>
+
+          {pagination?.data && typeof pagination.current_page === 'number' ? (
+            <div className="flex flex-col gap-3 border-t border-slate-100 bg-slate-50 px-6 py-3.5 md:flex-row md:items-center md:justify-between">
+              <p className="text-xs text-slate-500">
+                Showing <span className="font-semibold text-slate-700">{filteredRows.length}</span> row(s) on this page
+              </p>
+              <div className="flex items-center gap-2">
+                {(() => {
+                  const prev = (pagination.links || []).find((item) => String(item.label).toLowerCase().includes('previous'));
+                  const next = (pagination.links || []).find((item) => String(item.label).toLowerCase().includes('next'));
+
+                  return (
+                    <>
+                      {prev?.url ? (
+                        <Link href={prev.url} className="rounded-lg bg-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-300">Previous</Link>
+                      ) : (
+                        <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-400">Previous</span>
+                      )}
+                      {next?.url ? (
+                        <Link href={next.url} className="rounded-lg bg-[#2D3A74] px-3 py-1.5 text-sm font-medium text-white transition hover:bg-[#243063]">Next</Link>
+                      ) : (
+                        <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-400">Next</span>
+                      )}
+                    </>
+                  );
+                })()}
+              </div>
+            </div>
+          ) : null}
+        </section>
       </div>
     </DoctorLayout>
   );

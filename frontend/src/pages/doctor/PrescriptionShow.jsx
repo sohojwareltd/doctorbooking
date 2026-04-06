@@ -374,94 +374,79 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
 
   return (
     <DoctorLayout title="Prescription Details">
-      <div className="mx-auto max-w-6xl space-y-6">
+      <div className="mx-auto max-w-[1400px] space-y-6">
 
-      {/* Hero Banner */}
-      <div className="doc-banner-root relative overflow-hidden rounded-xl bg-gradient-to-r from-[#273664] via-[#3d466b] to-[#be7a4b] p-8 shadow-[0_20px_40px_-28px_rgba(33,45,80,0.85)] print:hidden">
-        {/* Decorative circles */}
-        <div className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full bg-white/10" />
-        <div className="pointer-events-none absolute -bottom-10 right-32 h-36 w-36 rounded-full bg-[#efba92]/15" />
-
-        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-          {/* Left */}
-          <div className="flex-1">
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-white/80 backdrop-blur-sm">
-              <FileText className="h-3.5 w-3.5" />
-              Prescription Details
-            </div>
-            <h1 className="text-3xl font-bold leading-tight text-white lg:text-4xl">
-              Prescription <span className="text-white/70">#{data?.id}</span>
-            </h1>
-            <div className="mt-2 flex flex-wrap items-center gap-3">
-              {data?.appointment?.status && (
-                <span className={`rounded-full px-3 py-1 text-xs font-bold ${
-                  data.appointment.status === 'prescribed' ? 'bg-[#c57945]/20 text-[#ffe1c9] border border-[#efc7a9]/40' :
-                  data.appointment.status === 'awaiting_tests' ? 'bg-[#efba92]/20 text-[#ffe6d3] border border-[#efba92]/35' :
-                  data.appointment.status === 'in_consultation' ? 'bg-[#3556a6]/20 text-[#dfe8ff] border border-[#b9caee]/35' :
-                  'bg-white/10 text-white/70 border border-white/20'
-                }`}>
-                  {data.appointment.status.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}
-                </span>
-              )}
-              {patientName && (
-                <span className="text-sm text-white/60">Patient: <span className="font-semibold text-white/90">{patientName}</span></span>
-              )}
-            </div>
-          </div>
-
-          {/* Right – Actions */}
-          <div className="flex flex-wrap items-center gap-2 lg:flex-shrink-0">
-            <Link
-              href="/doctor/prescriptions"
-              className="flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/20"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back
-            </Link>
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setSharing(!sharing)}
-                className="flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/20"
-              >
-                <Share2 className="h-4 w-4" />
-                Share
-              </button>
-              {sharing && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setSharing(false)} />
-                  <div className="absolute right-0 top-full z-50 mt-2 w-48 rounded-xl border border-slate-200 bg-white shadow-lg">
-                    <button onClick={() => { handleShareEmail(); setSharing(false); }} className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-medium text-slate-700 hover:bg-slate-50 transition first:rounded-t-xl">
-                      <Mail className="h-4 w-4 text-[#3556a6]" /> Share via Email
-                    </button>
-                    <button onClick={() => { handleShareWhatsApp(); setSharing(false); }} className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-medium text-slate-700 hover:bg-slate-50 transition">
-                      <MessageCircle className="h-4 w-4 text-green-600" /> Share via WhatsApp
-                    </button>
-                    <button onClick={() => { handleShareLink(); setSharing(false); }} className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-medium text-slate-700 hover:bg-slate-50 transition last:rounded-b-xl">
-                      <Share2 className="h-4 w-4 text-slate-500" /> Copy Link
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
+      {/* Actions bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
+        <div className="flex flex-wrap items-center gap-2">
+          <h1 className="text-xl font-bold text-slate-800">
+            Prescription <span className="text-slate-500">#{data?.id}</span>
+          </h1>
+          {data?.appointment?.status && (
+            <span className={`rounded-full px-3 py-1 text-xs font-bold border ${
+              data.appointment.status === 'prescribed' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+              data.appointment.status === 'awaiting_tests' ? 'bg-orange-50 text-orange-700 border-orange-200' :
+              data.appointment.status === 'in_consultation' ? 'bg-sky-50 text-sky-700 border-sky-200' :
+              'bg-slate-50 text-slate-600 border-slate-200'
+            }`}>
+              {data.appointment.status.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}
+            </span>
+          )}
+          {patientName && (
+            <span className="text-sm text-slate-500">Patient: <span className="font-semibold text-slate-700">{patientName}</span></span>
+          )}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/doctor/prescriptions"
+            className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back
+          </Link>
+          <div className="relative">
             <button
               type="button"
-              onClick={handleDownloadPDF}
-              disabled={downloadingPDF}
-              className="flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/20 disabled:opacity-50"
+              onClick={() => setSharing(!sharing)}
+              className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300"
             >
-              {downloadingPDF ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" /> : <Download className="h-4 w-4" />}
-              {downloadingPDF ? 'Generating...' : 'PDF'}
+              <Share2 className="h-4 w-4" />
+              Share
             </button>
-            <button
-              type="button"
-              onClick={handlePrint}
-              className="flex items-center gap-2 rounded-xl bg-white/20 px-4 py-2 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/30"
-            >
-              <Printer className="h-4 w-4" />
-              Print
-            </button>
+            {sharing && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setSharing(false)} />
+                <div className="absolute right-0 top-full z-50 mt-2 w-48 rounded-xl border border-slate-200 bg-white shadow-lg">
+                  <button onClick={() => { handleShareEmail(); setSharing(false); }} className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-medium text-slate-700 hover:bg-slate-50 transition first:rounded-t-xl">
+                    <Mail className="h-4 w-4 text-[#3556a6]" /> Share via Email
+                  </button>
+                  <button onClick={() => { handleShareWhatsApp(); setSharing(false); }} className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-medium text-slate-700 hover:bg-slate-50 transition">
+                    <MessageCircle className="h-4 w-4 text-green-600" /> Share via WhatsApp
+                  </button>
+                  <button onClick={() => { handleShareLink(); setSharing(false); }} className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-medium text-slate-700 hover:bg-slate-50 transition last:rounded-b-xl">
+                    <Share2 className="h-4 w-4 text-slate-500" /> Copy Link
+                  </button>
+                </div>
+              </>
+            )}
           </div>
+          <button
+            type="button"
+            onClick={handleDownloadPDF}
+            disabled={downloadingPDF}
+            className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 disabled:opacity-50"
+          >
+            {downloadingPDF ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-400 border-t-transparent" /> : <Download className="h-4 w-4" />}
+            {downloadingPDF ? 'Generating...' : 'PDF'}
+          </button>
+          <button
+            type="button"
+            onClick={handlePrint}
+            className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300"
+          >
+            <Printer className="h-4 w-4" />
+            Print
+          </button>
         </div>
       </div>
 
@@ -469,50 +454,50 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
       <div ref={prescriptionRef}>
         <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm print:border-0 print:shadow-none">
 
-          {/* Header - Two Glass Cards */}
-          <div className="border-b-4 border-[#253566] bg-gradient-to-r from-[#253566] via-[#3d466b] to-[#c57945] p-6 text-white md:p-8">
-            <div className="grid gap-4 md:grid-cols-2 md:gap-6">
-              {/* Doctor Info - Left */}
-              <div className="rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur-sm md:p-5">
-                <div className="mb-2 text-xs font-bold uppercase tracking-wider text-white/80">Doctor Information</div>
-                <div className="text-2xl font-black tracking-wide">{authUser?.name || 'Doctor'}</div>
-                <div className="mt-1 text-sm font-medium text-white/90">{authUser?.specialization || authUser?.degree || 'MBBS, FCPS'}</div>
-                {authUser?.phone && (
-                  <div className="mt-3 flex items-center gap-2 text-sm">
-                    <Phone className="h-4 w-4" />
-                    <span>{authUser.phone}</span>
-                  </div>
-                )}
-                {authUser?.email && (
-                  <div className="mt-1 flex items-center gap-2 text-sm">
-                    <Mail className="h-4 w-4" />
-                    <span>{authUser.email}</span>
-                  </div>
-                )}
+          {/* Header - Updated Card Style */}
+          <div className="border-b border-slate-200 bg-slate-50 p-5 md:p-6">
+            <div className="grid gap-4 md:grid-cols-2 md:gap-5">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
+                <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-[#2D3A74]/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#2D3A74]">
+                  <Stethoscope className="h-3.5 w-3.5" />
+                  Doctor Information
+                </div>
+                <div className="text-2xl font-black tracking-tight text-slate-900">{authUser?.name || 'Doctor'}</div>
+                <div className="mt-1 text-sm font-medium text-slate-600">{authUser?.specialization || authUser?.degree || 'MBBS, FCPS'}</div>
+                <div className="mt-4 space-y-2">
+                  {authUser?.phone ? (
+                    <div className="flex items-center gap-2 text-sm text-slate-700">
+                      <Phone className="h-4 w-4 text-[#3556a6]" />
+                      <span>{authUser.phone}</span>
+                    </div>
+                  ) : null}
+                  {authUser?.email ? (
+                    <div className="flex items-center gap-2 text-sm text-slate-700">
+                      <Mail className="h-4 w-4 text-[#3556a6]" />
+                      <span>{authUser.email}</span>
+                    </div>
+                  ) : null}
+                </div>
               </div>
 
-              {/* Chamber Info - Right */}
-              <div className="rounded-2xl border border-white/20 bg-white/10 p-4 text-right backdrop-blur-sm md:p-5">
-                <div className="mb-2 text-xs font-bold uppercase tracking-wider text-white/80">Chamber Information</div>
-                <div className="text-lg font-bold">{chamberName || 'Not set'}</div>
-                {chamberAddress && (
-                  <div className="mt-2 border-t border-white/20 pt-1.5">
-                    <div className="mb-0.5 text-[10px] font-semibold opacity-80">Chamber</div>
-                    <div className="flex items-start justify-end gap-1 text-[10px] opacity-75">
-                      <MapPin className="h-2.5 w-2.5 mt-0.5 flex-shrink-0" />
-                      <span className="max-w-xs leading-tight">{chamberAddress}</span>
-                    </div>
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
+                <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-amber-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-amber-800">
+                  <MapPin className="h-3.5 w-3.5" />
+                  Chamber Information
+                </div>
+                <div className="text-xl font-extrabold tracking-tight text-slate-900">{chamberName || 'Not set'}</div>
+                {chamberAddress ? (
+                  <div className="mt-3 flex items-start gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                    <MapPin className="mt-0.5 h-4 w-4 flex-shrink-0 text-slate-500" />
+                    <span>{chamberAddress}</span>
                   </div>
-                )}
-                {chamberPhone && (
-                  <div className="mt-2 space-y-0.5 border-t border-white/20 pt-1.5">
-                    <div className="flex items-center justify-end gap-1 text-[10px]">
-                      <Phone className="h-2.5 w-2.5" />
-                      <span className="font-medium">Call:</span>
-                      <span className="opacity-90">{chamberPhone}</span>
-                    </div>
+                ) : null}
+                {chamberPhone ? (
+                  <div className="mt-2 flex items-center gap-2 text-sm font-medium text-slate-700">
+                    <Phone className="h-4 w-4 text-amber-700" />
+                    <span>{chamberPhone}</span>
                   </div>
-                )}
+                ) : null}
               </div>
             </div>
           </div>

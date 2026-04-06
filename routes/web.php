@@ -13,8 +13,11 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use App\Models\Appointment;
+use App\Models\DoctorSchedule;
+use App\Models\DoctorScheduleRange;
 use App\Models\Prescription;
 use App\Models\Medicine;
+use App\Models\DoctorUnavailableRange;
 use App\Models\SiteContent;
 use App\Models\User;
 
@@ -378,6 +381,65 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
                 'status' => $a->status,
                 'symptoms' => $a->symptoms,
             ]);
+
+        // Weekly schedule rows for today (dashboard schedule section)
+        $todayDow = now()->dayOfWeek;
+
+        $weeklyScheduleToday = DoctorScheduleRange::query()
+            ->leftJoin('chambers', 'doctor_schedule_ranges.chamber_id', '=', 'chambers.id')
+            ->where('doctor_schedule_ranges.doctor_id', $doctor->id)
+            ->where('doctor_schedule_ranges.day_of_week', $todayDow)
+            ->orderBy('doctor_schedule_ranges.start_time')
+            ->select([
+                'doctor_schedule_ranges.id',
+                'doctor_schedule_ranges.start_time',
+                'doctor_schedule_ranges.end_time',
+                'doctor_schedule_ranges.chamber_id',
+                'chambers.name as chamber_name',
+            ])
+            ->get()
+            ->map(fn ($range) => [
+                'id' => $range->id,
+                'start_time' => $range->start_time ? substr((string) $range->start_time, 0, 5) : null,
+                'end_time' => $range->end_time ? substr((string) $range->end_time, 0, 5) : null,
+                'chamber_id' => $range->chamber_id,
+                'chamber_name' => $range->chamber_name,
+            ])
+            ->values();
+
+        $isScheduleClosedToday = false;
+        if ($weeklyScheduleToday->isEmpty()) {
+            $legacyTodaySchedule = DoctorSchedule::query()
+                ->where('doctor_id', $doctor->id)
+                ->where('day_of_week', $todayDow)
+                ->first(['start_time', 'end_time', 'slot_minutes', 'is_closed']);
+
+            if ($legacyTodaySchedule?->is_closed) {
+                $isScheduleClosedToday = true;
+            } elseif ($legacyTodaySchedule?->start_time && $legacyTodaySchedule?->end_time) {
+                $weeklyScheduleToday = collect([[
+                    'id' => 'legacy-' . $todayDow,
+                    'start_time' => substr((string) $legacyTodaySchedule->start_time, 0, 5),
+                    'end_time' => substr((string) $legacyTodaySchedule->end_time, 0, 5),
+                    'chamber_id' => null,
+                    'chamber_name' => null,
+                ]]);
+            }
+        }
+
+        // Upcoming unavailable date ranges (today onward)
+        $unavailableRanges = DoctorUnavailableRange::query()
+            ->where('doctor_id', $doctor->id)
+            ->whereDate('end_date', '>=', $today)
+            ->orderBy('start_date')
+            ->limit(12)
+            ->get()
+            ->map(fn ($range) => [
+                'id' => $range->id,
+                'start_date' => $range->start_date?->toDateString(),
+                'end_date' => $range->end_date?->toDateString(),
+            ])
+            ->values();
         
         // Get recent appointments (last 7 days)
         $recentAppointments = Appointment::with(['user:id,name,email,phone,address'])
@@ -450,11 +512,14 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
                 'followUpsDue' => $followUpsDue,
             ],
             'scheduledToday' => $scheduledToday,
+            'weeklyScheduleToday' => $weeklyScheduleToday,
+            'isScheduleClosedToday' => $isScheduleClosedToday,
             'recentAppointments' => $recentAppointments,
             'upcomingAppointment' => $upcoming,
             'inVisitAppointment' => $inVisitAppointment,
             'inVisitAppointments' => $inVisitAppointments,
             'awaitingTestsAppointments' => $awaitingTestsAppointments,
+            'unavailableRanges' => $unavailableRanges,
         ]);
     })->name('dashboard');
 
@@ -463,7 +528,7 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
         $today = now()->toDateString();
         
         // Get filter parameters
-        $dateFilter = $request->get('date_filter', 'today'); // today, week, month, all
+        $dateFilter = $request->get('date_filter', 'all'); // today, week, month, all
         $statusFilter = $request->get('status_filter', 'all');
         $search = $request->get('search', '');
         
@@ -489,12 +554,18 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->whereHas('user', function ($userQuery) use ($search) {
-                    $userQuery->where('name', 'like', "%{$search}%");
+                    $userQuery->where('name', 'like', "%{$search}%")
+                        ->orWhere('phone', 'like', "%{$search}%");
                 });
 
                 // Only search guest name column if it exists (on databases where guest fields were migrated)
                 if (Schema::hasColumn('appointments', 'name')) {
-                    $q->orWhere('name', 'like', "%{$search}%");
+                    $q->orWhere('appointments.name', 'like', "%{$search}%");
+                }
+
+                // Search guest phone when guest phone column exists
+                if (Schema::hasColumn('appointments', 'phone')) {
+                    $q->orWhere('appointments.phone', 'like', "%{$search}%");
                 }
             });
         }
@@ -732,7 +803,7 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
         // Get paginated prescriptions with patient details
         $prescriptions = Prescription::with([
                 'user:id,name,phone,age,gender,date_of_birth',
-            'appointment:id,name,age,gender,phone',
+            'appointment:id,name,age,gender,phone,symptoms',
             ])
             ->where('doctor_id', $doctor->id)
             ->orderByDesc('id')
@@ -765,6 +836,7 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
                     'patient_age' => $calculatedAge ?? $p->appointment?->age,
                     'patient_gender' => $p->user?->gender ?? $p->appointment?->gender,
                     'patient_contact' => $p->user?->phone ?? $p->appointment?->phone,
+                    'symptoms' => $p->appointment?->symptoms,
                     'diagnosis' => $p->diagnosis,
                     'medications' => $p->medications,
                     'instructions' => $p->instructions,

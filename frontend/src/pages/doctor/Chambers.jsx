@@ -1,13 +1,14 @@
 import { Head, useForm, usePage, router } from '@inertiajs/react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Building2, MapPin, Phone, ToggleLeft, ToggleRight, ExternalLink, ArrowRight, Pencil, Trash2 } from 'lucide-react';
 import DoctorLayout from '../../layouts/DoctorLayout';
 import { DocButton, DocCard, DocEmptyState } from '../../components/doctor/DocUI';
+import { toastError, toastSuccess } from '../../utils/toast';
 
 export default function DoctorChambers() {
   const page = usePage();
   const chambers = Array.isArray(page?.props?.chambers) ? page.props.chambers : [];
-  const flashSuccess = page?.props?.flash?.success || '';
+  const flash = page?.props?.flash || {};
   const [deletingId, setDeletingId] = useState(null);
   const activeCount = chambers.filter((ch) => !!ch.is_active).length;
   const mappedCount = chambers.filter((ch) => (ch.google_maps_url && ch.google_maps_url.trim() !== '') || ch.location).length;
@@ -56,6 +57,15 @@ export default function DoctorChambers() {
   });
 
   const isEditing = data.id !== null;
+
+  useEffect(() => {
+    if (flash?.success) {
+      toastSuccess(flash.success);
+    }
+    if (flash?.error) {
+      toastError(flash.error);
+    }
+  }, [flash]);
 
   const handleEdit = (ch) => {
     setData({
@@ -108,59 +118,30 @@ export default function DoctorChambers() {
     <DoctorLayout title="Chambers">
       <Head title="Chambers" />
 
-      <div className="mx-auto max-w-6xl space-y-6">
-        <DocCard padding={false} className="doc-banner-root relative overflow-hidden border-[#30416f]/20 bg-gradient-to-r from-[#273664] via-[#3d466b] to-[#be7a4b] text-white shadow-[0_20px_40px_-28px_rgba(33,45,80,0.85)] md:h-[260px]">
-          <div className="pointer-events-none absolute -top-20 left-[-50px] h-48 w-48 rounded-full bg-white/10" />
-          <div className="pointer-events-none absolute -bottom-16 right-[-26px] h-52 w-52 rounded-full bg-[#efba92]/15" />
-
-          <div className="absolute inset-0 z-20 flex flex-col justify-end px-5 py-4 md:px-6 md:py-5">
-            <div className="grid w-full gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-end">
-              <div className="space-y-2">
-                <div className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-white/85">
-                  <Building2 className="h-3.5 w-3.5" />
-                  Practice Locations
-                </div>
-                <p className="text-xs font-medium uppercase tracking-wider text-white/70">Doctor Chambers</p>
-                <h1 className="text-[1.8rem] font-black leading-tight tracking-tight text-white md:text-[2.05rem]">Chamber Workspace</h1>
-                <p className="max-w-xl text-[13px] text-white/80">Manage chamber addresses, contact details, map links, and public visibility from one place.</p>
-                <div className="flex flex-wrap items-center gap-2 pt-0.5">
-                  <div className="rounded-lg border border-white/20 bg-black/10 px-2.5 py-1">
-                    <div className="text-[9px] font-semibold uppercase tracking-[0.1em] text-white/60">Mode</div>
-                    <div className="mt-0.5 text-xs font-bold text-white">{isEditing ? 'Editing Chamber' : 'Add Chamber'}</div>
-                  </div>
-                  <DocButton type="button" size="sm" variant="accent" onClick={handleNew} disabled={processing} className="!px-3 !py-1.5">
-                    New Chamber
-                  </DocButton>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2.5">
-                {chamberHeaderMetrics.map((item) => (
-                  <div key={item.label} className={`doc-banner-metric doc-banner-hover-card ${item.hoverTone} group rounded-xl border px-3.5 py-2.5 min-h-[96px] ${item.tone}`}>
-                    <div className="flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-[0.08em]">
-                      <div className="flex items-center gap-1.5">
-                        <span className={`inline-flex h-6 w-6 items-center justify-center rounded-md border ${item.iconTone}`}>
-                          <item.icon className="h-4 w-4" />
-                        </span>
-                        <span>{item.label}</span>
-                      </div>
-                      <ArrowRight className="doc-banner-hover-icon h-3.5 w-3.5" />
-                    </div>
-                    <div className="mt-1.5 text-[1.8rem] font-black leading-none tracking-tight">{item.value}</div>
-                  </div>
-                ))}
-              </div>
+      <div className="mx-auto max-w-[1400px] space-y-6">
+        <section className="surface-card rounded-3xl overflow-hidden">
+          <div className="px-6 py-5 border-b border-slate-100 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h2 className="text-xl font-semibold text-[#2D3A74]">Chambers</h2>
+              <p className="text-sm text-slate-500">Manage chamber details and public visibility.</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <span className="rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-slate-600">Total: <span className="font-semibold text-slate-900">{chambers.length}</span></span>
+              <span className="rounded-xl border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-emerald-700">Active: <span className="font-semibold">{activeCount}</span></span>
+              <span className="rounded-xl border border-sky-200 bg-sky-50 px-2.5 py-1.5 text-sky-700">Mapped: <span className="font-semibold">{mappedCount}</span></span>
             </div>
           </div>
-        </DocCard>
+        </section>
 
         <div className="grid gap-6 lg:grid-cols-3">
         {/* Form */}
-        <DocCard className="lg:col-span-1">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-400">
-            {isEditing ? 'Edit Chamber' : 'Add Chamber'}
-          </h2>
-          <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+        <section className="surface-card rounded-3xl overflow-hidden lg:col-span-1">
+          <div className="px-5 py-4 border-b border-slate-100">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-400">
+              {isEditing ? 'Edit Chamber' : 'Add Chamber'}
+            </h2>
+          </div>
+          <form onSubmit={handleSubmit} className="space-y-4 p-5">
             <div>
               <label className="mb-1.5 block text-sm font-medium text-slate-700">Name</label>
               <div className="relative">
@@ -252,19 +233,18 @@ export default function DoctorChambers() {
               </DocButton>
             </div>
 
-            {flashSuccess && (
-              <div className="mt-3 rounded-lg border border-[#efc7a9] bg-[#fff6ee] px-3 py-2 text-xs font-semibold text-[#ad6639]">
-                {flashSuccess}
-              </div>
-            )}
           </form>
-        </DocCard>
+        </section>
 
         {/* List */}
-        <DocCard className="lg:col-span-2">
-          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-400">
-            Existing Chambers
-          </h2>
+        <section className="surface-card rounded-3xl overflow-hidden lg:col-span-2">
+          <div className="px-5 py-4 border-b border-slate-100">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-400">
+              Existing Chambers
+            </h2>
+          </div>
+
+          <div className="p-5">
 
           {chambers.length === 0 ? (
             <DocEmptyState icon={Building2} title="You have not added any chambers yet." />
@@ -280,7 +260,7 @@ export default function DoctorChambers() {
                 return (
                   <div
                     key={ch.id}
-                    className="flex w-full items-start justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm transition group hover:border-[#d9c2ac] hover:bg-[#fff7f0]"
+                    className="flex w-full items-start justify-between gap-4 rounded-xl border border-slate-200 bg-white px-4 py-3.5 text-sm transition group hover:border-[#d9c2ac] hover:bg-[#fff7f0]"
                   >
                     <div className="min-w-0 flex-1 pr-3">
                       <button type="button" onClick={() => handleEdit(ch)} className="text-left">
@@ -300,20 +280,20 @@ export default function DoctorChambers() {
                       )}
                     </div>
 
-                    <div className="ml-2 flex flex-col items-end gap-2">
+                    <div className="ml-2 flex shrink-0 flex-col items-end gap-3">
                       <div className="text-xs font-semibold">
                         {ch.is_active ? (
-                          <span className="rounded-full border border-[#efc7a9] bg-[#fff6ee] px-2.5 py-1 text-[#ad6639]">Active</span>
+                          <span className="rounded-full border border-[#efc7a9] bg-[#fff6ee] px-3 py-1 text-[#ad6639]">Active</span>
                         ) : (
-                          <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-slate-500">Inactive</span>
+                          <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-slate-500">Inactive</span>
                         )}
                       </div>
 
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-2">
                         <button
                           type="button"
                           onClick={() => handleEdit(ch)}
-                          className="inline-flex items-center gap-1 rounded-md border border-[#d8e2f8] bg-white px-2 py-1 text-[11px] font-semibold text-[#3556a6] transition hover:bg-[#f3f7ff]"
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-[#d8e2f8] bg-white px-3 py-1.5 text-xs font-semibold text-[#3556a6] transition hover:bg-[#f3f7ff]"
                         >
                           <Pencil className="h-3 w-3" />
                           Edit
@@ -322,7 +302,7 @@ export default function DoctorChambers() {
                           type="button"
                           onClick={() => handleDelete(ch)}
                           disabled={processing || deletingId === ch.id}
-                          className="inline-flex items-center gap-1 rounded-md border border-[#f2c4c4] bg-[#fff6f6] px-2 py-1 text-[11px] font-semibold text-[#b74444] transition hover:bg-[#ffeaea] disabled:cursor-not-allowed disabled:opacity-60"
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-[#f2c4c4] bg-[#fff6f6] px-3 py-1.5 text-xs font-semibold text-[#b74444] transition hover:bg-[#ffeaea] disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           <Trash2 className="h-3 w-3" />
                           {deletingId === ch.id ? 'Deleting...' : 'Delete'}
@@ -334,7 +314,8 @@ export default function DoctorChambers() {
               })}
             </div>
           )}
-        </DocCard>
+          </div>
+        </section>
         </div>
       </div>
     </DoctorLayout>

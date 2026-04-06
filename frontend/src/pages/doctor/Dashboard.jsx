@@ -1,21 +1,22 @@
 import { Link, usePage, router } from '@inertiajs/react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
-  CalendarDays, ClipboardList, Users, Clock, CheckCircle,
-  FileText, Stethoscope, Phone, Mail,
-  UserPlus, ArrowRight,
-  CalendarClock, FlaskConical
+  Building2, CalendarDays, ClipboardList, Users, Clock, CheckCircle,
+  FileText, Stethoscope, Phone, User, X,
+  CalendarClock, FlaskConical, Hash
 } from 'lucide-react';
 import DoctorLayout from '../../layouts/DoctorLayout';
-import StatCard from '../../components/doctor/StatCard';
 import StatusBadge, { getStatusConfig } from '../../components/doctor/StatusBadge';
 import PatientAvatar from '../../components/doctor/PatientAvatar';
 import DocModal from '../../components/doctor/DocModal';
-import { DocButton, DocInput, DocSelect, DocCard, DocEmptyState } from '../../components/doctor/DocUI';
+import { DocButton, DocInput, DocSelect, DocEmptyState } from '../../components/doctor/DocUI';
 
 export default function DoctorDashboard({
   stats = {},
   scheduledToday = [],
+  weeklyScheduleToday = [],
+  isScheduleClosedToday = false,
+  unavailableRanges = [],
   recentAppointments = [],
   upcomingAppointment = null,
   inVisitAppointment = null,
@@ -26,9 +27,12 @@ export default function DoctorDashboard({
   const user = auth?.user;
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [activeVisitPatient, setActiveVisitPatient] = useState(inVisitAppointment || null);
+  const [hideActiveVisitCard, setHideActiveVisitCard] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createForm, setCreateForm] = useState({ name: '', phone: '', age: '', gender: '' });
   const [activeTab, setActiveTab] = useState('today');
+  const [scheduleTab, setScheduleTab] = useState('today');
+  const performanceRange = 'today';
 
   const handleCreateAppointment = async (e) => {
     e.preventDefault();
@@ -75,8 +79,19 @@ export default function DoctorDashboard({
   const fmtTime = (t) => t || '';
   const getName = (a) => a?.patient_name || a?.user?.name || 'Patient';
   const getPhone = (a) => a?.patient_phone || a?.user?.phone || null;
+  const getGender = (a) => String(a?.patient_gender || a?.user?.gender || '').toLowerCase();
+  const getAge = (a) => a?.patient_age || a?.user?.age || null;
   const getEmail = (a) => a?.patient_email || a?.user?.email || null;
   const getSerial = (a, fallback) => a?.serial_no || fallback;
+  const formatGender = (value) => {
+    if (!value) return 'N/A';
+    return value.charAt(0).toUpperCase() + value.slice(1);
+  };
+  const genderIconTone = (value) => {
+    if (value === 'female') return 'border-pink-200 bg-pink-50 text-pink-600';
+    if (value === 'male') return 'border-sky-200 bg-sky-50 text-sky-600';
+    return 'border-slate-200 bg-slate-50 text-slate-500';
+  };
 
   const updateStatus = async (id, status) => {
     if (!id) return false;
@@ -104,6 +119,10 @@ export default function DoctorDashboard({
   };
 
   const visitPatient = activeVisitPatient || inVisitAppointment;
+
+  useEffect(() => {
+    setHideActiveVisitCard(false);
+  }, [activeVisitPatient?.id, inVisitAppointment?.id]);
   const todayAppointments = [...(recentAppointments || [])].sort((a, b) => {
     const at = (a.appointment_date || '') + ' ' + (a.appointment_time || '');
     const bt = (b.appointment_date || '') + ' ' + (b.appointment_time || '');
@@ -124,6 +143,28 @@ export default function DoctorDashboard({
     activeTab === 'awaiting' ? awaitingList :
     todayAppointments.filter((a) => a.status === activeTab);
 
+  const formatRangeTime = (start, end) => {
+    const startLabel = start ? fmtTime(start) : '-';
+    const endLabel = end ? fmtTime(end) : '-';
+    return `${startLabel} - ${endLabel}`;
+  };
+
+  const todayScheduleRows = (weeklyScheduleToday || []).map((row, idx) => ({
+    id: `s-${row.id || idx}`,
+    serial: idx + 1,
+    range: formatRangeTime(row.start_time, row.end_time),
+    chamber: row.chamber_name || 'Default chamber',
+    slot: 'Available',
+  }));
+
+  const unavailableDateRows = (unavailableRanges || []).map((r, idx) => ({
+    id: `u-${r.id || idx}`,
+    serial: idx + 1,
+    from: fmt(r.start_date) || r.start_date,
+    to: fmt(r.end_date) || r.end_date,
+    note: r.start_date === r.end_date ? 'Unavailable this day' : 'Unavailable range',
+  }));
+
   const TABS = [
     { key: 'today',           label: 'All Today',       count: todayAppointments.length },
     { key: 'scheduled',       label: 'Scheduled',       count: todayAppointments.filter((a) => a.status === 'scheduled').length },
@@ -131,6 +172,43 @@ export default function DoctorDashboard({
     { key: 'awaiting',        label: 'Awaiting Tests',  count: awaitingList.length },
     { key: 'prescribed',      label: 'Completed',       count: todayAppointments.filter((a) => a.status === 'prescribed').length },
   ];
+
+  const getTabTone = (key) => {
+    const tones = {
+      today: {
+        active: 'border-[#2D3A74] text-[#2D3A74]',
+        idle: 'text-slate-600 hover:text-[#2D3A74]',
+        badgeActive: 'bg-[#2D3A74]/10 text-[#2D3A74]',
+        badgeIdle: 'bg-slate-100 text-slate-600',
+      },
+      scheduled: {
+        active: 'border-slate-500 text-slate-700',
+        idle: 'text-slate-600 hover:text-slate-700',
+        badgeActive: 'bg-slate-100 text-slate-700',
+        badgeIdle: 'bg-slate-100 text-slate-600',
+      },
+      in_consultation: {
+        active: 'border-violet-500 text-violet-700',
+        idle: 'text-violet-600 hover:text-violet-700',
+        badgeActive: 'bg-violet-100 text-violet-700',
+        badgeIdle: 'bg-violet-50 text-violet-600',
+      },
+      awaiting: {
+        active: 'border-orange-500 text-orange-700',
+        idle: 'text-orange-600 hover:text-orange-700',
+        badgeActive: 'bg-orange-100 text-orange-700',
+        badgeIdle: 'bg-orange-50 text-orange-600',
+      },
+      prescribed: {
+        active: 'border-emerald-500 text-emerald-700',
+        idle: 'text-emerald-600 hover:text-emerald-700',
+        badgeActive: 'bg-emerald-100 text-emerald-700',
+        badgeIdle: 'bg-emerald-50 text-emerald-600',
+      },
+    };
+
+    return tones[key] || tones.today;
+  };
 
   const completedCount = todayAppointments.filter((a) => a.status === 'prescribed').length;
   const heroMetrics = [
@@ -173,90 +251,218 @@ export default function DoctorDashboard({
   ];
 
   const statCardItems = [
-    { label: 'Completed Today', value: completedCount, icon: CheckCircle, variant: 'emerald' },
-    { label: 'Follow Ups Due', value: defaultStats.followUpsDue, icon: Clock, variant: 'amber' },
-    { label: 'Total Patients', value: defaultStats.totalPatients, icon: Users, variant: 'cyan' },
-    { label: 'Prescribed This Month', value: defaultStats.prescribedThisMonth, icon: ClipboardList, variant: 'violet' },
+    { label: 'Completed Today', value: completedCount, icon: CheckCircle, iconBg: 'bg-orange-50', iconColor: 'text-[#FF7C00]', desc: 'Consultations finished today.' },
+    { label: 'Follow Ups Due', value: defaultStats.followUpsDue, icon: Clock, iconBg: 'bg-blue-50', iconColor: 'text-blue-600', desc: 'Patients needing follow-up visits.' },
+    { label: 'Total Patients', value: defaultStats.totalPatients, icon: Users, iconBg: 'bg-emerald-50', iconColor: 'text-emerald-600', desc: 'All registered patients.' },
+    { label: 'Prescribed This Month', value: defaultStats.prescribedThisMonth, icon: ClipboardList, iconBg: 'bg-violet-50', iconColor: 'text-violet-600', desc: 'Prescriptions written this month.' },
   ];
 
+  const statusDefinitions = [
+    { label: 'Scheduled', key: 'scheduled', color: '#3b82f6', match: (a) => a?.status === 'scheduled' },
+    { label: 'In Progress', key: 'in_progress', color: '#6366f1', match: (a) => a?.status === 'in_consultation' },
+    { label: 'Awaiting Tests', key: 'awaiting_tests', color: '#f59e0b', match: (a) => a?.status === 'awaiting_tests' },
+    { label: 'Completed', key: 'completed', color: '#10b981', match: (a) => a?.status === 'prescribed' },
+  ];
+
+  const parseAppointmentDate = (appointment) => {
+    if (!appointment?.appointment_date) return null;
+    const parsed = new Date(appointment.appointment_date);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  };
+
+  const sameDay = (a, b) => (
+    a.getFullYear() === b.getFullYear()
+    && a.getMonth() === b.getMonth()
+    && a.getDate() === b.getDate()
+  );
+
+  const sourceAppointments = Array.isArray(recentAppointments) && recentAppointments.length > 0
+    ? recentAppointments
+    : todayAppointments;
+
+  const rangeAppointmentsRaw = sourceAppointments.filter((appointment) => {
+    const date = parseAppointmentDate(appointment);
+    if (!date) return performanceRange === 'today';
+
+    if (performanceRange === 'today') {
+      return sameDay(date, now);
+    }
+
+    if (performanceRange === '7days') {
+      const rangeStart = new Date(now);
+      rangeStart.setDate(rangeStart.getDate() - 6);
+      rangeStart.setHours(0, 0, 0, 0);
+      return date >= rangeStart && date <= now;
+    }
+
+    if (performanceRange === 'month') {
+      return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
+    }
+
+    if (performanceRange === 'year') {
+      return date.getFullYear() === now.getFullYear();
+    }
+
+    return true;
+  });
+
+  const rangeAppointments = rangeAppointmentsRaw.length > 0 ? rangeAppointmentsRaw : todayAppointments;
+  const rangeTotal = rangeAppointments.length;
+  const statusWithMeta = statusDefinitions.map((status) => {
+    const count = rangeAppointments.filter((appointment) => status.match(appointment)).length;
+    const percent = rangeTotal > 0 ? Math.round((count / rangeTotal) * 100) : 0;
+    return { ...status, count, percent };
+  });
+
+  const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const monthlyAppointments = Array(12).fill(0);
+
+  sourceAppointments.forEach((appointment) => {
+    const date = parseAppointmentDate(appointment);
+    if (!date || date.getFullYear() !== now.getFullYear()) return;
+    const monthIndex = date.getMonth();
+
+    monthlyAppointments[monthIndex] += 1;
+  });
+
+  const monthlyChartWidth = 560;
+  const monthlyChartHeight = 260;
+  const monthlyPadX = 42;
+  const monthlyPadTop = 24;
+  const monthlyPadBottom = 34;
+  const monthlyUsableHeight = monthlyChartHeight - monthlyPadTop - monthlyPadBottom;
+  const monthlyUsableWidth = monthlyChartWidth - monthlyPadX * 2;
+  const monthlyMax = Math.max(1, ...monthlyAppointments);
+  const monthlyBarGap = monthlyUsableWidth / 12;
+  const monthlyBarWidth = Math.max(10, monthlyBarGap * 0.58);
+  const monthlyTicks = [0, 0.25, 0.5, 0.75, 1].map((ratio) => Math.round(monthlyMax * ratio));
+
   return (
-    <DoctorLayout title="Dashboard">
-      <div className="mx-auto max-w-6xl space-y-6">
+    <DoctorLayout title="Dashboard" gradient>
+      <div className="max-w-[1400px] mx-auto space-y-6">
 
-        {/* GREETING BANNER */}
-        <DocCard padding={false} className="doc-banner-root relative overflow-hidden border-[#2f3d69]/20 bg-gradient-to-r from-[#253566] via-[#3a456a] to-[#be7846] text-white shadow-[0_22px_38px_-28px_rgba(37,51,89,0.85)] md:h-[260px]">
-          <div className="pointer-events-none absolute -left-8 -top-10 h-24 w-24 rounded-full bg-white/12" />
-          <div className="pointer-events-none absolute left-8 top-12 h-26 w-26 rounded-full bg-white/10" style={{ width: 110, height: 110 }} />
-          <div className="pointer-events-none absolute -right-14 -top-12 h-32 w-32 rounded-full bg-[#efba92]/14" />
-
-          <div className="absolute inset-0 z-20 flex flex-col justify-end px-5 py-4 md:px-6 md:py-5">
-            <div className="grid w-full gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-end">
-              <div className="space-y-2">
-                <div className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-white/85">
-                  <Clock className="h-3.5 w-3.5" />
-                  Doctor Command Center
-                </div>
-
-                <p className="text-xs font-medium uppercase tracking-wider text-white/70">{todayStr}</p>
-                <h1 className="text-[1.8rem] font-black leading-tight tracking-tight text-white md:text-[2.05rem]">
-                  {greeting}, {doctorDisplayName}
-                </h1>
-                <p className="max-w-xl text-[13px] text-white/80">Patient flow, appointment queue, and prescription output are live.</p>
-
-                <div className="flex flex-wrap items-center gap-2 pt-0.5">
-                  <Link
-                    href="/doctor/schedule"
-                    className="doc-banner-action group inline-flex items-center gap-2 rounded-lg border border-white/25 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white transition active:scale-[0.97]"
-                  >
-                    <CalendarDays className="h-3.5 w-3.5" />
-                    My Schedule
-                    <ArrowRight className="doc-banner-action-arrow h-3.5 w-3.5" />
-                  </Link>
-                  <DocButton onClick={() => setShowCreateModal(true)} className="doc-banner-action group !bg-[#c57945] !px-3 !py-1.5 !text-white hover:!bg-[#ad6639]">
-                    <UserPlus className="h-4 w-4" />
-                    New Appointment
-                    <ArrowRight className="doc-banner-action-arrow h-3.5 w-3.5" />
-                  </DocButton>
-                  <Link
-                    href="/doctor/prescriptions/create"
-                    className="doc-banner-action group inline-flex items-center gap-2 rounded-lg border border-white/25 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white transition active:scale-[0.97]"
-                  >
-                    <FileText className="h-3.5 w-3.5" />
-                    Create Prescription
-                    <ArrowRight className="doc-banner-action-arrow h-3.5 w-3.5" />
-                  </Link>
-                </div>
-
+        {/* HERO BANNER — exact admin hero-panel */}
+        <section className="hero-panel rounded-[28px] p-6 md:p-8 text-white">
+          <div className="relative z-10 flex flex-col xl:flex-row xl:items-end xl:justify-between gap-6">
+            <div className="max-w-3xl">
+              <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-white/80 mb-4">
+                <Clock className="h-[11px] w-[11px]" />
+                Doctor Command Center
               </div>
+              <h1 className="text-3xl md:text-4xl font-semibold tracking-tight mb-3">
+                {greeting}, {doctorDisplayName}
+              </h1>
+              <p className="text-sm md:text-base text-white/80 max-w-2xl">
+                This dashboard surfaces today's patient flow, appointment queue, and prescription output so you can act quickly.
+              </p>
+            </div>
 
-              <div className="grid grid-cols-2 gap-2.5">
-                {heroMetrics.map((metric) => (
-                  <Link key={metric.label} href={metric.href} className={`doc-banner-metric doc-banner-hover-card ${metric.hoverTone} group rounded-xl border px-3.5 py-2.5 ${metric.tone}`}>
-                    <div className="flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-[0.08em]">
-                      <div className="flex items-center gap-1.5">
-                        <span className={`inline-flex h-6 w-6 items-center justify-center rounded-md border ${metric.iconTone}`}>
-                          <metric.icon className="h-4 w-4" />
-                        </span>
-                        <span>{metric.label}</span>
-                      </div>
-                      <ArrowRight className="doc-banner-hover-icon h-3.5 w-3.5" />
-                    </div>
-                    <div className="mt-1.5 text-[1.8rem] font-black leading-none tracking-tight">{metric.value}</div>
-                  </Link>
+            <div className="grid grid-cols-2 gap-3 md:min-w-[360px]">
+              {heroMetrics.slice(0, 2).map((metric) => (
+                <Link key={metric.label} href={metric.href} className="glass-card rounded-2xl p-4 transition hover:bg-white/[0.18]">
+                  <p className="text-xs uppercase tracking-[0.18em] text-white/60 mb-1">{metric.label}</p>
+                  <p className="text-3xl font-semibold">{metric.value}</p>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* STAT CARDS — exact admin surface-card rounded-3xl p-5 */}
+        <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+          {statCardItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <div key={item.label} className="surface-card rounded-3xl p-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-sm text-slate-500 mb-1">{item.label}</p>
+                    <p className="text-3xl font-semibold text-[#2D3A74]">{item.value}</p>
+                  </div>
+                  <div className={`w-11 h-11 rounded-2xl ${item.iconBg} flex items-center justify-center`}>
+                    <Icon className={`h-5 w-5 ${item.iconColor}`} />
+                  </div>
+                </div>
+                <p className="text-xs text-slate-400 mt-4">{item.desc}</p>
+              </div>
+            );
+          })}
+        </section>
+
+        <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+              <h3 className="text-sm font-semibold text-[#2D3A74]">Monthly Appointments</h3>
+              <svg viewBox={`0 0 ${monthlyChartWidth} ${monthlyChartHeight}`} className="mt-3 w-full">
+                {monthlyTicks.map((tick, index) => {
+                  const y = monthlyPadTop + (1 - tick / Math.max(1, monthlyMax)) * monthlyUsableHeight;
+                  return (
+                    <g key={`${tick}-${index}`}>
+                      <line x1={monthlyPadX} y1={y} x2={monthlyChartWidth - monthlyPadX} y2={y} stroke="#e5e7eb" strokeWidth="1" />
+                      <text x={monthlyPadX - 8} y={y + 4} textAnchor="end" className="fill-slate-400 text-[10px]">{tick}</text>
+                    </g>
+                  );
+                })}
+
+                {monthLabels.map((label, index) => {
+                  const x = monthlyPadX + monthlyBarGap * index + (monthlyBarGap - monthlyBarWidth) / 2;
+                  const value = monthlyAppointments[index] || 0;
+                  const barHeight = (value / Math.max(1, monthlyMax)) * monthlyUsableHeight;
+                  const y = monthlyChartHeight - monthlyPadBottom - barHeight;
+                  return (
+                    <g key={label}>
+                      <rect x={x} y={y} width={monthlyBarWidth} height={barHeight} rx="3" fill="#4aa5ec" />
+                      <text x={x + monthlyBarWidth / 2} y={monthlyChartHeight - 12} textAnchor="middle" className="fill-slate-500 text-[10px]">{label}</text>
+                    </g>
+                  );
+                })}
+              </svg>
+              <div className="mt-1 inline-flex items-center gap-1.5 text-xs text-slate-500">
+                <span className="h-2.5 w-2.5 rounded-sm bg-[#4aa5ec]" />
+                Appointments
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+              <h3 className="text-sm font-semibold text-[#2D3A74]">Appointment Status Distribution</h3>
+              <svg viewBox="0 0 360 260" className="mt-2 w-full">
+                {statusWithMeta.map((status, index) => {
+                  const radius = 88 - index * 18;
+                  const circumference = 2 * Math.PI * radius;
+                  const arcLength = (status.percent / 100) * circumference;
+                  return (
+                    <g key={status.key}>
+                      <circle cx="180" cy="118" r={radius} fill="none" stroke="#e5e7eb" strokeWidth="12" />
+                      <circle
+                        cx="180"
+                        cy="118"
+                        r={radius}
+                        fill="none"
+                        stroke={status.color}
+                        strokeWidth="12"
+                        strokeLinecap="round"
+                        strokeDasharray={`${arcLength} ${circumference}`}
+                        transform="rotate(-90 180 118)"
+                      />
+                    </g>
+                  );
+                })}
+
+                <text x="180" y="112" textAnchor="middle" className="fill-[#2D3A74] text-[22px] font-semibold">{rangeTotal}</text>
+                <text x="180" y="132" textAnchor="middle" className="fill-slate-500 text-[11px] font-medium">Total Cases</text>
+              </svg>
+
+              <div className="mt-1 flex flex-wrap gap-x-4 gap-y-2">
+                {statusWithMeta.map((status) => (
+                  <div key={status.key} className="inline-flex items-center gap-1.5 text-xs text-slate-600">
+                    <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: status.color }} />
+                    {status.label} ({status.count})
+                  </div>
                 ))}
               </div>
             </div>
-          </div>
-        </DocCard>
+        </section>
 
-        {/* STAT CARDS */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {statCardItems.map((item) => (
-            <StatCard key={item.label} label={item.label} value={item.value} icon={item.icon} variant={item.variant} />
-          ))}
-        </div>
 
-        {/* Quick actions hidden for now */}
 
         {/* MAIN 2-COLUMN GRID */}
         <div className="grid gap-6 lg:grid-cols-3">
@@ -265,7 +471,7 @@ export default function DoctorDashboard({
           <div className="lg:col-span-2 space-y-6">
 
             {/* ACTIVE PATIENT CARD */}
-            {visitPatient ? (
+            {visitPatient && !hideActiveVisitCard ? (
               <div className="relative overflow-hidden rounded-xl border border-emerald-200 bg-white shadow-sm">
                 <div className="h-1 w-full bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500" />
                 <div className="p-5">
@@ -277,9 +483,19 @@ export default function DoctorDashboard({
                       </span>
                       <span className="text-xs font-semibold uppercase tracking-wider text-emerald-600">In Consultation</span>
                     </div>
-                    <span className="rounded-md bg-slate-100 px-2.5 py-0.5 text-xs font-bold text-slate-600">
-                      #{getSerial(visitPatient, 1)}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="rounded-md bg-slate-100 px-2.5 py-0.5 text-xs font-bold text-slate-600">
+                        #{getSerial(visitPatient, 1)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setHideActiveVisitCard(true)}
+                        className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 hover:text-slate-700"
+                        aria-label="Close card"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
 
                   <div className="flex flex-col sm:flex-row sm:items-start gap-4">
@@ -289,6 +505,10 @@ export default function DoctorDashboard({
                       <p className="text-sm text-slate-500 mt-0.5">
                         {visitPatient.type || 'General Visit'} &middot; {fmt(visitPatient.appointment_date)} at {fmtTime(visitPatient.appointment_time)}
                       </p>
+                      <div className="mt-1.5 flex items-center gap-2 text-xs text-slate-500">
+                        <span className="rounded-full bg-slate-100 px-2 py-0.5">Age: {getAge(visitPatient) || 'N/A'}</span>
+                        <span className="rounded-full bg-slate-100 px-2 py-0.5">Gender: {formatGender(getGender(visitPatient))}</span>
+                      </div>
                       {getPhone(visitPatient) && (
                         <p className="text-xs text-slate-400 flex items-center gap-1 mt-1">
                           <Phone className="h-3 w-3" />{getPhone(visitPatient)}
@@ -324,7 +544,7 @@ export default function DoctorDashboard({
                           href={'/doctor/prescriptions/create?appointment_id=' + visitPatient.id}
                           className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 active:scale-[0.97] transition"
                         >
-                          <FileText className="h-3.5 w-3.5" /> Create Rx
+                          <FileText className="h-3.5 w-3.5" /> Create Prescription
                         </Link>
                       )}
                     </div>
@@ -385,107 +605,124 @@ export default function DoctorDashboard({
               </div>
             ) : null}
 
-            {/* TABBED APPOINTMENTS TABLE */}
-            <DocCard padding={false} className="overflow-hidden border border-[#d5dfef] bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] shadow-[0_18px_34px_-26px_rgba(30,41,59,0.75)]">
-              <div className="border-b border-[#e6edf8] bg-[linear-gradient(180deg,#fbfdff_0%,#f3f7ff_100%)] px-5 pt-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-bold tracking-wide text-slate-900">Appointments</h3>
-                  <Link href="/doctor/appointments" className="inline-flex items-center gap-1 rounded-full border border-[#d8e4f8] bg-white px-2.5 py-1 text-xs font-semibold text-[#365aa6] shadow-sm transition hover:bg-[#f4f8ff]">
-                    View all <ArrowRight className="h-3 w-3" />
-                  </Link>
+            {/* TABBED APPOINTMENTS TABLE — admin table style */}
+            <div className="surface-card rounded-3xl overflow-hidden">
+              <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between gap-4">
+                <div>
+                  <h2 className="flex items-center gap-2 text-xl font-semibold text-[#2D3A74]">
+                    <CalendarDays className="h-5 w-5 text-[#4055A8]" />
+                    <span>Today's appointments</span>
+                  </h2>
+                  <p className="text-sm text-slate-500">Latest patients in the pipeline.</p>
                 </div>
-                <div className="-mb-px flex gap-1 overflow-x-auto scrollbar-hide pb-0.5">
-                  {TABS.map((tab) => (
-                    <button
-                      key={tab.key}
-                      onClick={() => setActiveTab(tab.key)}
-                      className={`flex items-center gap-1.5 whitespace-nowrap rounded-t-lg border-b-2 px-3 py-2.5 text-xs font-semibold transition-colors ${
-                        activeTab === tab.key
-                          ? 'border-sky-500 bg-white text-sky-700'
-                          : 'border-transparent text-slate-400 hover:bg-white/70 hover:text-slate-600'
-                      }`}
-                    >
-                      {tab.label}
-                      {tab.count > 0 && (
-                        <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none ${
-                          activeTab === tab.key ? 'bg-sky-100 text-sky-600' : 'bg-slate-100 text-slate-500'
-                        }`}>
-                          {tab.count}
-                        </span>
-                      )}
-                    </button>
-                  ))}
-                </div>
+                <Link href="/doctor/appointments" className="text-sm font-semibold text-[#4055A8] hover:text-[#2D3A74]">View all</Link>
+              </div>
+
+              {/* Tabs */}
+              <div className="px-6 pt-3 border-b border-slate-100 flex gap-1 overflow-x-auto scrollbar-hide">
+                {TABS.map((tab) => (
+                  (() => {
+                    const tone = getTabTone(tab.key);
+                    const isActive = activeTab === tab.key;
+
+                    return (
+                  <button
+                    key={tab.key}
+                    onClick={() => setActiveTab(tab.key)}
+                    className={`flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-3 text-sm font-semibold transition-colors ${
+                      isActive ? tone.active : `border-transparent ${tone.idle}`
+                    }`}
+                  >
+                    {tab.label}
+                    {tab.count > 0 && (
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-bold leading-none ${
+                        isActive ? tone.badgeActive : tone.badgeIdle
+                      }`}>
+                        {tab.count}
+                      </span>
+                    )}
+                  </button>
+                    );
+                  })()
+                ))}
               </div>
 
               {tabAppointments.length > 0 ? (
-                <div className="doc-table-scroll overflow-x-auto rounded-b-[24px] border-t border-[#e5ecf8] bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)]">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-[#e8eef8] bg-[linear-gradient(180deg,#f8fbff_0%,#eef4ff_100%)]">
-                        <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-[#89a0c4] w-10">#</th>
-                        <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-[#89a0c4]">Patient</th>
-                        <th className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-[#89a0c4] hidden md:table-cell">Time</th>
-                        <th className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-[#89a0c4] hidden lg:table-cell">Type</th>
-                        <th className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-[#89a0c4]">Status</th>
-                        <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-[#89a0c4]">Action</th>
+                <div className="overflow-x-auto border-t border-slate-100">
+                  <table className="min-w-full text-sm">
+                    <thead className="bg-slate-50 text-slate-500 uppercase text-xs tracking-[0.12em]">
+                      <tr>
+                        <th className="px-6 py-4 text-left">#</th>
+                        <th className="px-6 py-4 text-left">Patient</th>
+                        <th className="px-6 py-4 text-left">Contact</th>
+                        <th className="px-6 py-4 text-left hidden md:table-cell">Time</th>
+                        <th className="px-6 py-4 text-left">Status</th>
+                        <th className="px-6 py-4 text-left">Action</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-50">
+                    <tbody className="divide-y divide-slate-100 bg-white">
                       {tabAppointments.map((a, i) => (
-                        <tr key={a.id || i} className="doc-table-row group border-l-2 border-transparent transition-colors even:bg-[#fbfdff] hover:border-[#d6e4fb] hover:bg-[#f8fbff]">
-                          <td className="px-5 py-3.5">
-                            <span className="inline-flex h-9 min-w-[2.25rem] items-center justify-center rounded-xl border border-[#e4ebf7] bg-white px-2.5 text-xs font-semibold text-[#5f7398] shadow-[0_8px_18px_-18px_rgba(37,53,102,0.6)]">{getSerial(a, i + 1)}</span>
+                        <tr key={a.id || i} className="cursor-pointer hover:bg-slate-50/80 transition-colors" onClick={() => setSelectedPatient(a)}>
+                          <td className="px-6 py-4">
+                            <span className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-600">
+                              <Hash className="h-3.5 w-3.5 text-slate-400" />
+                              {getSerial(a, i + 1)}
+                            </span>
                           </td>
-                          <td className="px-5 py-3.5 cursor-pointer" onClick={() => setSelectedPatient(a)}>
+                          <td className="px-6 py-4">
                             <div className="flex items-center gap-3">
-                              <PatientAvatar name={getName(a)} size="sm" />
+                              <span className={`inline-flex h-9 w-9 items-center justify-center rounded-full border ${genderIconTone(getGender(a))}`}>
+                                <User className="h-4 w-4" />
+                              </span>
                               <div className="min-w-0">
-                                <p className="text-sm font-medium text-slate-900 truncate group-hover:text-sky-700 transition-colors">{getName(a)}</p>
-                                {getPhone(a) && (
-                                  <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
-                                    <Phone className="h-2.5 w-2.5" />{getPhone(a)}
-                                  </p>
-                                )}
+                                <div className="font-medium text-slate-900">{getName(a)}</div>
+                                <div className="text-xs text-slate-500">{getAge(a) ? `${getAge(a)}y` : 'Age N/A'} • {formatGender(getGender(a))}</div>
                               </div>
                             </div>
                           </td>
-                          <td className="px-3 py-3.5 hidden md:table-cell">
-                            <span className="rounded-md border border-[#dfe8f8] bg-white px-2 py-1 text-xs font-semibold text-[#4f6591]">{fmtTime(a.appointment_time)}</span>
+                          <td className="px-6 py-4 text-[13px] font-medium text-slate-700 whitespace-nowrap">
+                            <span className="inline-flex items-center gap-1.5">
+                              <Phone className="h-3.5 w-3.5 text-slate-400" />
+                              {getPhone(a) || 'N/A'}
+                            </span>
                           </td>
-                          <td className="px-3 py-3.5 text-xs text-slate-500 hidden lg:table-cell">{a.type || 'Consultation'}</td>
-                          <td className="px-3 py-3.5">
+                          <td className="px-6 py-4 text-[13px] font-medium text-slate-700 hidden md:table-cell">
+                            <span className="inline-flex items-center gap-1.5">
+                              <Clock className="h-3.5 w-3.5 text-slate-400" />
+                              {fmtTime(a.appointment_time)}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
                             <StatusBadge status={a.status} size="xs" />
                           </td>
-                          <td className="px-5 py-3.5">
+                          <td className="px-6 py-4 pr-8" onClick={(e) => e.stopPropagation()}>
                             {(a.status === 'scheduled' || a.status === 'arrived') && (
                               <DocButton
                                 variant="primary"
                                 size="xs"
-                                className="!h-8 !min-w-[92px] !justify-center !rounded-lg !px-3 !text-xs !font-semibold"
                                 onClick={async () => {
                                   setActiveVisitPatient({ ...a, status: 'in_consultation' });
                                   const ok = await updateStatus(a.id, 'in_consultation');
                                   if (!ok) setActiveVisitPatient(null);
                                 }}
                               >
-                                <Stethoscope className="h-2.5 w-2.5" /> Start
+                                <Stethoscope className="h-3 w-3" /> Start
                               </DocButton>
                             )}
                             {a.status === 'in_consultation' && (
                               <Link
                                 href={a.prescription_id ? '/doctor/prescriptions/' + a.prescription_id : '/doctor/prescriptions/create?appointment_id=' + a.id}
-                                className="inline-flex h-8 min-w-[92px] items-center justify-center gap-1 rounded-lg bg-emerald-600 px-3 text-xs font-semibold text-white transition hover:bg-emerald-700 active:scale-[0.97]"
+                                className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 transition"
                               >
-                                <FileText className="h-2.5 w-2.5" /> Prescribe
+                                <FileText className="h-3 w-3" /> Prescribe
                               </Link>
                             )}
                             {a.status === 'awaiting_tests' && a.prescription_id && (
                               <Link
                                 href={'/doctor/prescriptions/' + a.prescription_id + '?from=dashboard'}
-                                className="inline-flex h-8 min-w-[92px] items-center justify-center gap-1 rounded-lg bg-orange-600 px-3 text-xs font-semibold text-white transition hover:bg-orange-700 active:scale-[0.97]"
+                                className="inline-flex items-center gap-1 rounded-lg bg-orange-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-orange-700 transition"
                               >
-                                <FlaskConical className="h-2.5 w-2.5" /> Complete
+                                <FlaskConical className="h-3 w-3" /> Complete
                               </Link>
                             )}
                           </td>
@@ -501,7 +738,7 @@ export default function DoctorDashboard({
                   description="Try selecting a different tab"
                 />
               )}
-            </DocCard>
+            </div>
           </div>
 
           {/* RIGHT SIDEBAR (1/3) */}
@@ -509,17 +746,17 @@ export default function DoctorDashboard({
 
             {/* Awaiting Tests */}
             {awaitingList.length > 0 && (
-              <DocCard padding={false}>
-                <div className="px-4 py-3 bg-orange-50 border-b border-orange-100 flex items-center justify-between">
+              <div className="surface-card rounded-3xl overflow-hidden">
+                <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <FlaskConical className="h-4 w-4 text-orange-500" />
-                    <span className="text-xs font-semibold text-orange-800">Awaiting Tests</span>
+                    <FlaskConical className="h-4 w-4 text-[#FF7C00]" />
+                    <span className="text-sm font-semibold text-[#2D3A74]">Awaiting Tests</span>
                   </div>
-                  <span className="rounded-md bg-orange-500 px-2 py-0.5 text-xs font-bold text-white">{awaitingList.length}</span>
+                  <span className="rounded-full bg-[#FF7C00] px-2.5 py-0.5 text-xs font-bold text-white">{awaitingList.length}</span>
                 </div>
-                <div className="divide-y divide-slate-50">
+                <div className="divide-y divide-slate-100">
                   {awaitingList.map((a, i) => (
-                    <div key={a.id || i} className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors">
+                    <div key={a.id || i} className="flex items-center gap-3 px-5 py-3 hover:bg-slate-50/80 transition-colors">
                       <PatientAvatar name={a.patient_name || ''} size="sm" />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-slate-900 truncate">{a.patient_name || 'Patient'}</p>
@@ -528,7 +765,7 @@ export default function DoctorDashboard({
                       {a.prescription_id && (
                         <Link
                           href={'/doctor/prescriptions/' + a.prescription_id + '?from=dashboard'}
-                          className="rounded-lg bg-orange-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-orange-700 active:scale-[0.97] transition whitespace-nowrap flex-shrink-0"
+                          className="rounded-lg bg-[#FF7C00] px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-[#E56D00] transition whitespace-nowrap flex-shrink-0"
                         >
                           Complete
                         </Link>
@@ -536,43 +773,150 @@ export default function DoctorDashboard({
                     </div>
                   ))}
                 </div>
-              </DocCard>
+              </div>
             )}
 
             {/* Today's Schedule */}
-            <DocCard padding={false} className="overflow-hidden border border-[#d5dfef] bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] shadow-[0_18px_34px_-26px_rgba(30,41,59,0.75)]">
-              <div className="flex items-center justify-between border-b border-[#e6edf8] bg-[linear-gradient(180deg,#fbfdff_0%,#f3f7ff_100%)] px-4 py-3.5">
+            <div className="surface-card rounded-3xl overflow-hidden">
+              <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
                 <div className="flex items-center gap-2">
-                  <CalendarClock className="h-4 w-4 text-slate-400" />
-                  <h3 className="text-xs font-bold tracking-wide text-slate-900">Today's Schedule</h3>
+                  <CalendarClock className="h-4 w-4 text-[#FF7C00]" />
+                  <h3 className="text-sm font-semibold text-[#2D3A74]">Schedule</h3>
                 </div>
-                <Link href="/doctor/appointments" className="inline-flex items-center gap-0.5 rounded-full border border-[#d8e4f8] bg-white px-2 py-1 text-xs font-semibold text-[#365aa6] shadow-sm transition hover:bg-[#f4f8ff]">
-                  All <ArrowRight className="h-3 w-3" />
+                <Link href="/doctor/schedule" className="text-sm font-semibold text-[#4055A8] hover:text-[#2D3A74] transition-colors">
+                  Manage
                 </Link>
               </div>
-              <div className="divide-y divide-[#ecf1f9]">
-                {scheduledToday && scheduledToday.length > 0 ? scheduledToday.slice(0, 5).map((a, i) => (
-                  <div key={i} className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-[#f7faff]">
-                    <PatientAvatar name={getName(a)} size="sm" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-900 truncate">{getName(a)}</p>
-                      <p className="text-xs text-slate-400">{fmt(a.appointment_date)}</p>
-                    </div>
-                    <span className="inline-flex h-7 min-w-[2rem] items-center justify-center rounded-md border border-[#e0e9f8] bg-white px-1.5 text-xs font-bold text-[#6a7fa7]">
-                      #{String(a.serial_no || i + 1).padStart(2, '0')}
-                    </span>
-                  </div>
-                )) : (
-                  <DocEmptyState icon={FileText} title="No schedule yet" />
-                )}
+
+              <div className="border-b border-slate-100 px-5 pt-2">
+                <div className="flex gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setScheduleTab('today')}
+                    className={`rounded-t-lg px-3 py-2 text-xs font-semibold transition-colors ${
+                      scheduleTab === 'today'
+                        ? 'bg-slate-100 text-[#2D3A74]'
+                        : 'text-slate-700 hover:bg-slate-50 hover:text-[#2D3A74]'
+                    }`}
+                  >
+                    Today's Schedule
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setScheduleTab('unavailable')}
+                    className={`rounded-t-lg px-3 py-2 text-xs font-semibold transition-colors ${
+                      scheduleTab === 'unavailable'
+                        ? 'bg-orange-50 text-orange-700'
+                        : 'text-slate-700 hover:bg-slate-50 hover:text-orange-700'
+                    }`}
+                  >
+                    Unavailable Dates
+                  </button>
+                </div>
               </div>
-            </DocCard>
+
+              {scheduleTab === 'today' ? (
+                todayScheduleRows.length > 0 ? (
+                  <div className="overflow-x-auto border-t border-slate-100">
+                    <table className="min-w-full text-sm">
+                      <thead className="bg-slate-50 text-slate-500 uppercase text-[11px] tracking-[0.1em]">
+                        <tr>
+                          <th className="px-5 py-3 text-left">#</th>
+                          <th className="px-5 py-3 text-left">Time Range</th>
+                          <th className="px-5 py-3 text-left">Chamber</th>
+                          <th className="px-5 py-3 text-left">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 bg-white">
+                        {todayScheduleRows.slice(0, 8).map((row) => (
+                          <tr key={row.id} className="hover:bg-slate-50/80 transition-colors">
+                            <td className="px-5 py-3 text-xs font-semibold text-slate-600">
+                              <span className="inline-flex items-center gap-1.5">
+                                <Hash className="h-3.5 w-3.5 text-slate-400" />
+                                {row.serial}
+                              </span>
+                            </td>
+                            <td className="px-5 py-3 text-xs font-medium text-slate-700">
+                              <span className="inline-flex items-center gap-1.5">
+                                <Clock className="h-3.5 w-3.5 text-slate-400" />
+                                {row.range}
+                              </span>
+                            </td>
+                            <td className="px-5 py-3 text-xs text-slate-600">
+                              <span className="inline-flex items-center gap-1.5">
+                                <Building2 className="h-3.5 w-3.5 text-slate-400" />
+                                {row.chamber}
+                              </span>
+                            </td>
+                            <td className="px-5 py-3 text-xs font-semibold text-emerald-700">
+                              <span className="inline-flex items-center gap-1.5">
+                                <CheckCircle className="h-3.5 w-3.5" />
+                                {row.slot}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <DocEmptyState icon={FileText} title={isScheduleClosedToday ? 'Today is marked closed' : 'No weekly schedule for today'} />
+                )
+              ) : (
+                unavailableDateRows.length > 0 ? (
+                  <div className="overflow-x-auto border-t border-slate-100">
+                    <table className="min-w-full text-sm">
+                      <thead className="bg-orange-50/60 text-orange-700 uppercase text-[11px] tracking-[0.1em]">
+                        <tr>
+                          <th className="px-5 py-3 text-left">#</th>
+                          <th className="px-5 py-3 text-left">From</th>
+                          <th className="px-5 py-3 text-left">To</th>
+                          <th className="px-5 py-3 text-left">Note</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-orange-100 bg-white">
+                        {unavailableDateRows.slice(0, 8).map((row) => (
+                          <tr key={row.id} className="hover:bg-orange-50/40 transition-colors">
+                            <td className="px-5 py-3 text-xs font-semibold text-orange-700">
+                              <span className="inline-flex items-center gap-1.5">
+                                <Hash className="h-3.5 w-3.5" />
+                                {row.serial}
+                              </span>
+                            </td>
+                            <td className="px-5 py-3 text-xs font-medium text-slate-700">
+                              <span className="inline-flex items-center gap-1.5">
+                                <CalendarDays className="h-3.5 w-3.5 text-slate-400" />
+                                {row.from}
+                              </span>
+                            </td>
+                            <td className="px-5 py-3 text-xs font-medium text-slate-700">
+                              <span className="inline-flex items-center gap-1.5">
+                                <CalendarDays className="h-3.5 w-3.5 text-slate-400" />
+                                {row.to}
+                              </span>
+                            </td>
+                            <td className="px-5 py-3 text-xs text-orange-700">
+                              <span className="inline-flex items-center gap-1.5">
+                                <FileText className="h-3.5 w-3.5" />
+                                {row.note}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <DocEmptyState icon={CalendarClock} title="No upcoming unavailable dates" />
+                )
+              )}
+            </div>
           </div>
         </div>
       </div>
 
       {/* PATIENT DETAIL MODAL */}
-      <DocModal open={!!selectedPatient} onClose={() => setSelectedPatient(null)} size="md">
+      <DocModal open={!!selectedPatient} onClose={() => setSelectedPatient(null)} size="md" title="Appointment Details" icon={User}>
         {selectedPatient && (
           <>
             <div className="flex items-start gap-4 mb-5">
@@ -586,32 +930,25 @@ export default function DoctorDashboard({
               </div>
             </div>
 
-            <div className="space-y-3">
-              {getPhone(selectedPatient) && (
-                <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 border border-slate-100">
-                  <div className="rounded-lg bg-sky-100 p-2 flex-shrink-0">
-                    <Phone className="h-4 w-4 text-sky-600" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[10px] font-medium uppercase text-slate-400">Phone</p>
-                    <p className="text-sm font-medium text-slate-900">{getPhone(selectedPatient)}</p>
-                  </div>
-                  <a href={'tel:' + getPhone(selectedPatient)} className="rounded-lg bg-sky-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-sky-700 active:scale-[0.97] transition">Call</a>
-                </div>
-              )}
-              {getEmail(selectedPatient) && (
-                <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 border border-slate-100">
-                  <div className="rounded-lg bg-emerald-100 p-2 flex-shrink-0">
-                    <Mail className="h-4 w-4 text-emerald-600" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[10px] font-medium uppercase text-slate-400">Email</p>
-                    <p className="text-sm font-medium text-slate-900 truncate">{getEmail(selectedPatient)}</p>
-                  </div>
-                </div>
-              )}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="rounded-xl border border-slate-200 bg-white p-3">
+                <p className="text-xs uppercase tracking-[0.12em] text-slate-400">Phone</p>
+                <p className="mt-1 text-sm font-semibold text-slate-800">{getPhone(selectedPatient) || 'N/A'}</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-white p-3">
+                <p className="text-xs uppercase tracking-[0.12em] text-slate-400">Email</p>
+                <p className="mt-1 text-sm font-semibold text-slate-800 break-all">{getEmail(selectedPatient) || 'N/A'}</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-white p-3">
+                <p className="text-xs uppercase tracking-[0.12em] text-slate-400">Age</p>
+                <p className="mt-1 text-sm font-semibold text-slate-800">{getAge(selectedPatient) || 'N/A'}</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-white p-3">
+                <p className="text-xs uppercase tracking-[0.12em] text-slate-400">Gender</p>
+                <p className="mt-1 text-sm font-semibold text-slate-800">{formatGender(getGender(selectedPatient))}</p>
+              </div>
               {selectedPatient.symptoms && (
-                <div className="p-3 rounded-lg bg-slate-50 border border-slate-100">
+                <div className="rounded-lg bg-slate-50 border border-slate-100 p-3 sm:col-span-2">
                   <p className="text-[10px] font-medium uppercase text-slate-400 mb-1">Symptoms</p>
                   <p className="text-sm text-slate-700">{selectedPatient.symptoms}</p>
                 </div>
@@ -620,9 +957,6 @@ export default function DoctorDashboard({
 
             <div className="mt-5 flex items-center justify-end gap-2">
               <DocButton variant="secondary" size="sm" onClick={() => setSelectedPatient(null)}>Close</DocButton>
-              <Link href={'/doctor/appointments?id=' + selectedPatient.id} className="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700 active:scale-[0.97] transition">
-                View Appointment
-              </Link>
             </div>
           </>
         )}

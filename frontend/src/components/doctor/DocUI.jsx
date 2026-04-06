@@ -91,13 +91,13 @@ function handleDocCardPointerLeave(e) {
   e.currentTarget.style.setProperty('--my', '50%');
 }
 
-export function DocCard({ children, className = '', padding = true }) {
+export function DocCard({ children, className = '', padding = true, style }) {
   const isBannerCard = className.includes('doc-banner-root');
 
   return (
     <div
-      className={`${isBannerCard ? '' : 'doc-card-hover doc-card-reactive'} doc-panel rounded-xl border shadow-sm ${padding ? 'p-5' : ''} ${className}`}
-      style={isBannerCard ? undefined : { '--mx': '50%', '--my': '50%' }}
+      className={`${isBannerCard ? '' : 'doc-card-hover doc-card-reactive'} doc-panel rounded-3xl border shadow-sm ${padding ? 'p-5' : ''} ${className}`}
+      style={isBannerCard ? style : { '--mx': '50%', '--my': '50%', ...style }}
       onMouseMove={isBannerCard ? undefined : handleDocCardPointerMove}
       onMouseLeave={isBannerCard ? undefined : handleDocCardPointerLeave}
     >

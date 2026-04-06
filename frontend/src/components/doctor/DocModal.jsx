@@ -1,7 +1,20 @@
 import { X } from 'lucide-react';
 import { useEffect } from 'react';
 
-export default function DocModal({ open, onClose, title, icon: Icon, children, size = 'md', footer }) {
+export default function DocModal({
+  open,
+  onClose,
+  title,
+  icon: Icon,
+  children,
+  size = 'md',
+  footer,
+  overlayClassName = '',
+  panelClassName = '',
+  headerClassName = '',
+  bodyClassName = '',
+  footerClassName = '',
+}) {
   useEffect(() => {
     if (open) {
       document.body.style.overflow = 'hidden';
@@ -24,15 +37,15 @@ export default function DocModal({ open, onClose, title, icon: Icon, children, s
   }[size] || 'max-w-lg';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="absolute inset-0 bg-[rgba(24,34,63,0.58)] backdrop-blur-[2px]" />
+    <div className="fixed inset-0 z-[70] flex items-start justify-center p-4 pt-20 sm:items-center sm:pt-4" onClick={onClose}>
+      <div className={`absolute inset-0 bg-[rgba(24,34,63,0.58)] backdrop-blur-[2px] ${overlayClassName}`} />
       <div
-        className={`relative flex max-h-[90vh] w-full flex-col overflow-hidden rounded-xl border border-[var(--doc-border)] bg-white shadow-2xl ${widthClass}`}
+        className={`relative flex max-h-[90vh] w-full flex-col overflow-hidden rounded-xl border border-[var(--doc-border)] bg-white shadow-2xl ${widthClass} ${panelClassName}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         {title && (
-          <div className="flex items-center justify-between border-b border-[var(--doc-border-light)] bg-[var(--doc-primary-light)]/35 px-6 py-4">
+          <div className={`flex items-center justify-between border-b border-[var(--doc-border-light)] bg-[var(--doc-primary-light)]/35 px-6 py-4 ${headerClassName}`}>
             <div className="flex items-center gap-3">
               {Icon && (
                 <div className="rounded-lg bg-white/90 p-2">
@@ -52,13 +65,13 @@ export default function DocModal({ open, onClose, title, icon: Icon, children, s
         )}
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto px-6 py-5">
+        <div className={`flex-1 overflow-y-auto px-6 py-5 ${bodyClassName}`}>
           {children}
         </div>
 
         {/* Footer */}
         {footer && (
-          <div className="flex items-center justify-end gap-2 border-t border-[var(--doc-border-light)] bg-[var(--doc-primary-light)]/25 px-6 py-4">
+          <div className={`flex items-center justify-end gap-2 border-t border-[var(--doc-border-light)] bg-[var(--doc-primary-light)]/25 px-6 py-4 ${footerClassName}`}>
             {footer}
           </div>
         )}

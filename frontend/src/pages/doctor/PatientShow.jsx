@@ -50,55 +50,43 @@ export default function PatientShow({ patient, appointments = [], prescriptions 
     <>
       <Head title={`${patient.name} - Patient Details`} />
       <DoctorLayout>
-        <div className="mx-auto max-w-6xl space-y-6">
-          {/* Hero Banner */}
-          <div className="doc-banner-root relative overflow-hidden rounded-xl bg-gradient-to-r from-[#273664] via-[#3d466b] to-[#be7a4b] p-6 shadow-[0_20px_40px_-28px_rgba(33,45,80,0.85)]">
-            <div className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full bg-white/10" />
-            <div className="pointer-events-none absolute -bottom-10 right-32 h-36 w-36 rounded-full bg-[#efba92]/15" />
-            <div className="relative grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-end">
+        <div className="mx-auto max-w-[1400px] space-y-6">
+          {/* Patient header */}
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <PatientAvatar name={patient.name} size="xl" className="rounded-xl" />
               <div>
                 <Link
                   href="/doctor/patients"
-                  className="mb-3 inline-flex items-center gap-1.5 text-white/70 hover:text-white text-sm font-medium transition-colors"
+                  className="mb-1 inline-flex items-center gap-1.5 text-slate-500 hover:text-slate-700 text-sm font-medium transition-colors"
                 >
-                  <ArrowLeft size={16} />
+                  <ArrowLeft size={14} />
                   Back to Patients
                 </Link>
-                <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-white/80">
-                  <User className="h-3.5 w-3.5" />
-                  Patient Record
-                </div>
-                <div className="flex items-center gap-4">
-                  <PatientAvatar name={patient.name} size="xl" className="rounded-xl ring-2 ring-white/20" />
-                  <div>
-                    <h1 className="text-2xl font-bold text-white md:text-3xl">{patient.name}</h1>
-                    <p className="mt-1 text-sm text-white/75">Patient details, appointment timeline, and prescription history.</p>
-                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-medium text-white/80">
-                      {patient.gender && <span className="rounded-full border border-white/20 bg-white/10 px-2.5 py-1 capitalize">{patient.gender}</span>}
-                      {resolvedAge && <span className="rounded-full border border-white/20 bg-white/10 px-2.5 py-1">{resolvedAge} years</span>}
-                      {patient.phone && <span className="rounded-full border border-white/20 bg-white/10 px-2.5 py-1">{patient.phone}</span>}
-                    </div>
-                  </div>
+                <h1 className="text-xl font-bold text-slate-800 md:text-2xl">{patient.name}</h1>
+                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs font-medium text-slate-500">
+                  {patient.gender && <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 capitalize">{patient.gender}</span>}
+                  {resolvedAge && <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1">{resolvedAge} years</span>}
+                  {patient.phone && <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1">{patient.phone}</span>}
                 </div>
               </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div className="rounded-lg border border-white/20 bg-black/10 px-3 py-2">
-                  <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-white/65">Appointments</div>
-                  <div className="mt-1 text-sm font-bold text-white">{appointmentStats.total}</div>
-                </div>
-                <div className="rounded-lg border border-white/20 bg-black/10 px-3 py-2">
-                  <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-white/65">Prescriptions</div>
-                  <div className="mt-1 text-sm font-bold text-white">{prescriptions.length}</div>
-                </div>
-                <div className="rounded-lg border border-white/20 bg-black/10 px-3 py-2">
-                  <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-white/65">Arrived</div>
-                  <div className="mt-1 text-sm font-bold text-white">{appointmentStats.arrived}</div>
-                </div>
-                <div className="rounded-lg border border-white/20 bg-black/10 px-3 py-2">
-                  <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-white/65">Member Since</div>
-                  <div className="mt-1 text-sm font-bold text-white">{formatDisplayDate(patient.created_at)}</div>
-                </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-center">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500">Appointments</div>
+                <div className="mt-1 text-sm font-bold text-slate-800">{appointmentStats.total}</div>
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-center">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500">Prescriptions</div>
+                <div className="mt-1 text-sm font-bold text-slate-800">{prescriptions.length}</div>
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-center">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500">Arrived</div>
+                <div className="mt-1 text-sm font-bold text-slate-800">{appointmentStats.arrived}</div>
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-center">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500">Member Since</div>
+                <div className="mt-1 text-sm font-bold text-slate-800">{formatDisplayDate(patient.created_at)}</div>
               </div>
             </div>
           </div>
@@ -112,7 +100,7 @@ export default function PatientShow({ patient, appointments = [], prescriptions 
           </div>
 
           {/* Tabs */}
-          <DocCard padding={false}>
+          <div className="surface-card rounded-3xl overflow-hidden">
             <div className="border-b border-slate-100">
               <div className="flex overflow-x-auto">
                 {tabs.map((tab) => {
@@ -123,7 +111,7 @@ export default function PatientShow({ patient, appointments = [], prescriptions 
                       onClick={() => setActiveTab(tab.key)}
                       className={`flex items-center gap-2 whitespace-nowrap px-5 py-3.5 text-sm font-semibold transition-colors border-b-2 ${
                         activeTab === tab.key
-                          ? 'border-[#3556a6] text-[#3556a6]'
+                          ? 'border-[#2D3A74] text-[#2D3A74]'
                           : 'border-transparent text-slate-500 hover:text-slate-800'
                       }`}
                     >
@@ -154,37 +142,46 @@ export default function PatientShow({ patient, appointments = [], prescriptions 
               {activeTab === 'appointments' && (
                 <div>
                   {appointments.length > 0 ? (
-                    <div className="overflow-x-auto rounded-[22px] border border-[#e5ecf8] bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] shadow-[0_16px_34px_rgba(15,23,42,0.05)]">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b border-[#e8eef8] bg-[linear-gradient(180deg,#f8fbff_0%,#eef4ff_100%)]">
-                            <th className="text-left py-2.5 px-3 text-xs font-medium uppercase tracking-wider text-[#89a0c4]">Date</th>
-                            <th className="text-left py-2.5 px-3 text-xs font-medium uppercase tracking-wider text-[#89a0c4]">Time</th>
-                            <th className="text-left py-2.5 px-3 text-xs font-medium uppercase tracking-wider text-[#89a0c4]">Status</th>
-                            <th className="text-left py-2.5 px-3 text-xs font-medium uppercase tracking-wider text-[#89a0c4]">Symptoms</th>
+                    <div className="overflow-x-auto border-t border-slate-100">
+                      <table className="min-w-full text-sm">
+                        <thead className="bg-slate-50 text-slate-500 uppercase text-xs tracking-[0.12em]">
+                          <tr>
+                            <th className="px-6 py-4 text-left">Date</th>
+                            <th className="px-6 py-4 text-left">Time</th>
+                            <th className="px-6 py-4 text-left">Status</th>
+                            <th className="px-6 py-4 text-left">Symptoms</th>
                           </tr>
                         </thead>
-                        <tbody>
+                        <tbody className="divide-y divide-slate-100 bg-white">
                           {appointments.slice(0, 5).map((appointment) => (
-                            <tr key={appointment.id} className="border-b border-slate-50 transition-colors even:bg-[#fbfdff] hover:bg-[#f8fbff]">
-                              <td className="py-2.5 px-3 text-xs font-medium text-slate-800">
-                                {appointment.appointment_date ? formatDisplayDate(appointment.appointment_date) : '-'}
+                            <tr key={appointment.id} className="hover:bg-slate-50/80 transition-colors">
+                              <td className="px-6 py-4 text-[13px] font-semibold text-slate-800">
+                                <span className="inline-flex items-center gap-1.5">
+                                  <Calendar className="h-3.5 w-3.5 text-slate-400" />
+                                  {appointment.appointment_date ? formatDisplayDate(appointment.appointment_date) : '-'}
+                                </span>
                               </td>
-                              <td className="py-2.5 px-3 text-xs font-medium text-slate-800">
-                                {appointment.appointment_time || '-'}
+                              <td className="px-6 py-4 text-[13px] font-medium text-slate-700">
+                                <span className="inline-flex items-center gap-1.5">
+                                  <Clock3 className="h-3.5 w-3.5 text-slate-400" />
+                                  {appointment.appointment_time || '-'}
+                                </span>
                               </td>
-                              <td className="py-2.5 px-3">
+                              <td className="px-6 py-4">
                                 <StatusBadge status={appointment.status} size="xs" />
                               </td>
-                              <td className="py-2.5 px-3 text-xs text-slate-600 max-w-xs truncate">
-                                {appointment.symptoms || '-'}
+                              <td className="px-6 py-4 text-[13px] font-medium text-slate-700 max-w-xs truncate">
+                                <span className="inline-flex items-center gap-1.5">
+                                  <ClipboardList className="h-3.5 w-3.5 text-slate-400" />
+                                  {appointment.symptoms || '-'}
+                                </span>
                               </td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
                       {appointments.length > 5 && (
-                        <p className="text-xs text-slate-400 mt-3 px-3">Showing 5 of {appointments.length} appointments</p>
+                        <p className="text-xs text-slate-400 mt-3 px-6">Showing 5 of {appointments.length} appointments</p>
                       )}
                     </div>
                   ) : (
@@ -199,7 +196,7 @@ export default function PatientShow({ patient, appointments = [], prescriptions 
                   {prescriptions.length > 0 ? (
                     <div className="space-y-2 max-h-96 overflow-y-auto">
                       {prescriptions.map((prescription) => (
-                        <div key={prescription.id} className="border-l-3 border-l-[#c57945] bg-slate-50 rounded-lg p-4 hover:shadow-sm transition-shadow" style={{ borderLeftWidth: '3px' }}>
+                        <div key={prescription.id} className="border-l-3 border-l-[#FF7C00] bg-slate-50 rounded-lg p-4 hover:shadow-sm transition-shadow" style={{ borderLeftWidth: '3px' }}>
                           <div className="flex justify-between items-start mb-2">
                             <div>
                               <p className="text-xs text-slate-400 mb-0.5">Prescription Date</p>
@@ -209,7 +206,7 @@ export default function PatientShow({ patient, appointments = [], prescriptions 
                             </div>
                             <Link
                               href={`/doctor/prescriptions/${prescription.id}`}
-                              className="inline-flex items-center gap-1 bg-[#3556a6] hover:bg-[#2a488f] text-white px-2.5 py-1 rounded-lg text-xs font-medium transition-colors"
+                              className="inline-flex items-center gap-1 bg-[#2D3A74] hover:bg-[#253066] text-white px-2.5 py-1 rounded-lg text-xs font-medium transition-colors"
                             >
                               <Eye size={12} />
                               View
@@ -238,7 +235,7 @@ export default function PatientShow({ patient, appointments = [], prescriptions 
                 </div>
               )}
             </div>
-          </DocCard>
+          </div>
         </div>
       </DoctorLayout>
     </>

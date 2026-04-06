@@ -1,7 +1,6 @@
 import { Head, router, useForm, usePage } from '@inertiajs/react';
 import {
     Award,
-    BadgeCheck,
     Calendar,
     Camera,
     GraduationCap,
@@ -24,7 +23,6 @@ import { toastError, toastSuccess } from '../../utils/toast';
 export default function DoctorProfile({ doctor = {} }) {
     const page = usePage();
     const flash = page?.props?.flash || {};
-    const [showSuccess, setShowSuccess] = useState(false);
     const [photoPreview, setPhotoPreview] = useState(doctor.profile_picture || null);
     const [uploadingPhoto, setUploadingPhoto] = useState(false);
     const [deletingPhoto, setDeletingPhoto] = useState(false);
@@ -57,8 +55,6 @@ export default function DoctorProfile({ doctor = {} }) {
     useEffect(() => {
         if (flash?.success) {
             toastSuccess(flash.success);
-            setShowSuccess(true);
-            setTimeout(() => setShowSuccess(false), 3000);
         }
         if (flash?.error) {
             toastError(flash.error);
@@ -172,6 +168,7 @@ export default function DoctorProfile({ doctor = {} }) {
         {
             key: 'profile',
             label: 'Profile Setup',
+            compactLabel: 'Profile',
             title: data.specialization || 'Personal and professional details',
             summary: photoPreview ? 'Photo ready' : 'Photo pending',
             secondary: data.registration_no ? `BMDC ${data.registration_no}` : 'BMDC pending',
@@ -182,6 +179,7 @@ export default function DoctorProfile({ doctor = {} }) {
         {
             key: 'about',
             label: 'About Content',
+            compactLabel: 'About',
             title: data.about_subtitle || 'Homepage story and stats',
             summary: data.about_highlight_value && data.about_highlight_label
                 ? `${data.about_highlight_value} ${data.about_highlight_label}`
@@ -196,97 +194,7 @@ export default function DoctorProfile({ doctor = {} }) {
     return (
         <DoctorLayout title="My Profile">
       <Head title="My Profile" />
-      <div className="mx-auto max-w-6xl space-y-6">
-
-            <DocCard padding={false} className="doc-banner-root relative overflow-hidden border-[#30416f]/20 bg-gradient-to-r from-[#273664] via-[#3d466b] to-[#be7a4b] text-white shadow-[0_20px_40px_-28px_rgba(33,45,80,0.85)] md:h-[260px]">
-                <div className="pointer-events-none absolute -top-20 left-[-50px] h-48 w-48 rounded-full bg-white/10" />
-                <div className="pointer-events-none absolute -bottom-16 right-[-26px] h-52 w-52 rounded-full bg-[#efba92]/15" />
-
-                <div className="absolute inset-0 z-20 flex flex-col justify-end px-5 py-4 md:px-6 md:py-5">
-                    <div className="grid w-full gap-3 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-end">
-                        <div className="space-y-2">
-                            <div className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-white/85">
-                                <User className="h-3.5 w-3.5" />
-                                Profile Studio
-                            </div>
-                            <p className="text-xs font-medium uppercase tracking-wider text-white/70">Doctor Identity</p>
-                            <h1 className="text-[1.8rem] font-black leading-tight tracking-tight text-white md:text-[2.05rem]">Profile Workspace</h1>
-                            <p className="max-w-xl text-[13px] text-white/80">Manage photo, credentials, and homepage about content from one focused workspace.</p>
-                            <div className="flex flex-wrap items-center gap-2 pt-0.5">
-                                <div className="rounded-lg border border-white/20 bg-black/10 px-2.5 py-1">
-                                    <div className="text-[9px] font-semibold uppercase tracking-[0.1em] text-white/60">Active Section</div>
-                                    <div className="mt-0.5 text-xs font-bold text-white">{activeTab === 'profile' ? 'Profile' : 'About'}</div>
-                                </div>
-                                <div className="rounded-lg border border-white/20 bg-black/10 px-2.5 py-1">
-                                    <div className="text-[9px] font-semibold uppercase tracking-[0.1em] text-white/60">Photo Status</div>
-                                    <div className="mt-0.5 text-xs font-bold text-white">{photoPreview ? 'Uploaded' : 'Pending'}</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-2 lg:self-end">
-                            {bannerTabs.map((item) => {
-                                const Icon = item.icon;
-                                const active = activeTab === item.key;
-
-                                return (
-                                    <button
-                                        key={item.key}
-                                        type="button"
-                                        onClick={() => setActiveTab(item.key)}
-                                        className={`group relative min-h-[128px] overflow-hidden rounded-[22px] border px-3 py-2.5 text-left transition duration-200 ${
-                                            active
-                                                ? 'border-white/70 bg-white/22 ring-1 ring-white/30 shadow-[0_18px_34px_-22px_rgba(13,19,38,0.9)]'
-                                                : 'border-white/14 bg-black/10 hover:border-white/30 hover:bg-white/12'
-                                        }`}
-                                    >
-                                        <div className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${active ? 'opacity-100' : 'opacity-88'} ${item.accent}`} />
-                                        <div className="relative flex h-full flex-col gap-2.5">
-                                            <div className="flex items-start gap-2.5">
-                                                {item.key === 'profile' && photoPreview ? (
-                                                    <div className="h-10 w-10 flex-shrink-0 overflow-hidden rounded-2xl border border-white/35 shadow-sm">
-                                                        <img src={photoPreview} alt={doctorName} className="h-full w-full object-cover" />
-                                                    </div>
-                                                ) : (
-                                                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl border border-white/25 bg-white/16 shadow-sm">
-                                                        <Icon className="h-4 w-4 text-white" />
-                                                    </div>
-                                                )}
-
-                                                <div className="min-w-0 flex-1">
-                                                    <div className="flex items-start justify-between gap-2">
-                                                        <div className="min-w-0 flex-1">
-                                                            <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-white/65">{item.label}</div>
-                                                            <div className="mt-1 truncate text-[13px] font-black leading-tight text-white">{item.title}</div>
-                                                        </div>
-
-                                                        <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-[0.08em] ${active ? 'bg-white text-[#24345d]' : 'bg-black/10 text-white/80'}`}>
-                                                            {active ? <BadgeCheck className="h-3 w-3" /> : null}
-                                                            {active ? 'Active' : 'Open'}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div className="flex items-center justify-between gap-2">
-                                                <span className={`inline-flex max-w-[118px] items-center truncate rounded-full border px-2.5 py-1 text-[10px] font-semibold ${active ? 'border-white/35 bg-white/18 text-white' : 'border-white/18 bg-black/10 text-white/82'}`}>
-                                                    {item.summary}
-                                                </span>
-
-                                                <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${active ? 'bg-[#24345d]/30 text-white ring-1 ring-white/16' : 'bg-black/10 text-white/74'}`}>
-                                                    {item.count}
-                                                </span>
-                                            </div>
-
-                                            <div className="truncate text-[10px] font-medium text-white/72">{item.secondary}</div>
-                                        </div>
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </div>
-                </div>
-            </DocCard>
+      <div className="mx-auto max-w-[1400px] space-y-6">
 
             {/* Photo View Modal */}
             {showPhotoModal && photoPreview && (
@@ -309,24 +217,9 @@ export default function DoctorProfile({ doctor = {} }) {
                     </div>
                 </div>
             )}
-
-                        {/* Success Message */}
-            {showSuccess && (
-                <div className="animate-in slide-in-from-top mb-6 duration-300">
-                    <div className="rounded-2xl border border-[#efc7a9] bg-gradient-to-r from-[#fff6ee] to-[#f8eadc] p-5">
-                        <div className="flex items-center gap-3">
-                            <BadgeCheck className="h-6 w-6 flex-shrink-0 text-[#c57945]" />
-                            <div className="text-sm font-semibold text-[#7a4b2a]">
-                                Profile updated successfully!
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
             {activeTab === 'profile' && (
-                <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-                    <div className="relative bg-gradient-to-br from-[#eef2ff] via-white to-[#fff3ea]/70 p-8">
+                <div className="surface-card overflow-hidden rounded-3xl">
+                    <div className="relative bg-gradient-to-br from-slate-50 via-white to-slate-100/70 p-8">
                         <div className="relative z-10">
                             <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
                                 <div className="flex items-center gap-3">
@@ -421,6 +314,30 @@ export default function DoctorProfile({ doctor = {} }) {
                                     <p className="text-center text-xs text-slate-400">Max: 2MB • JPEG, PNG, GIF, WebP</p>
                                 </div>
                             </div>
+
+                            <div className="mt-5 flex justify-end md:absolute md:bottom-4 md:right-4 md:mt-0">
+                                <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white/95 p-1 shadow-sm">
+                                    {bannerTabs.map((item) => {
+                                        const Icon = item.icon;
+                                        const active = activeTab === item.key;
+                                        return (
+                                            <button
+                                                key={`photo-tab-${item.key}`}
+                                                type="button"
+                                                onClick={() => setActiveTab(item.key)}
+                                                className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-semibold transition ${
+                                                    active
+                                                        ? 'bg-[#3556a6] text-white'
+                                                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-800'
+                                                }`}
+                                            >
+                                                <Icon className="h-3.5 w-3.5" />
+                                                {item.compactLabel}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -430,7 +347,7 @@ export default function DoctorProfile({ doctor = {} }) {
                 {activeTab === 'profile' && (
                 <div className="grid gap-8 lg:grid-cols-2">
                     {/* Personal Information */}
-                    <div className="rounded-xl bg-white border border-slate-200 p-7 shadow-sm">
+                    <div className="surface-card rounded-3xl border border-slate-200 p-7 shadow-sm">
                         <div className="mb-6 flex items-center gap-3">
                             <div className="rounded-xl bg-[#edf1fb] p-3">
                                 <User className="h-6 w-6 text-[#3556a6]" />
@@ -541,7 +458,7 @@ export default function DoctorProfile({ doctor = {} }) {
                     </div>
 
                     {/* Professional Information */}
-                    <div className="rounded-xl bg-white border border-slate-200 p-7 shadow-sm">
+                    <div className="surface-card rounded-3xl border border-slate-200 p-7 shadow-sm">
                         <div className="mb-6 flex items-center gap-3">
                             <div className="rounded-xl bg-[#edf1fb] p-3">
                                 <Stethoscope className="h-6 w-6 text-[#3556a6]" />
@@ -619,8 +536,9 @@ export default function DoctorProfile({ doctor = {} }) {
                 )}
 
                 {activeTab === 'about' && (
-                    <div className="rounded-xl bg-white border border-slate-200 p-7 shadow-sm">
-                        <div className="mb-6 flex items-center gap-3">
+                    <div className="surface-card rounded-3xl border border-slate-200 p-7 shadow-sm">
+                        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+                          <div className="flex items-center gap-3">
                             <div className="rounded-xl bg-[#edf1fb] p-3">
                                 <FileText className="h-6 w-6 text-[#3556a6]" />
                             </div>
@@ -628,6 +546,29 @@ export default function DoctorProfile({ doctor = {} }) {
                                 <h2 className="text-lg font-semibold text-slate-800">About Section Content</h2>
                                 <p className="text-sm text-slate-500">Homepage About section data manage করুন</p>
                             </div>
+                          </div>
+
+                          <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1">
+                            {bannerTabs.map((item) => {
+                                const Icon = item.icon;
+                                const active = activeTab === item.key;
+                                return (
+                                    <button
+                                        key={`about-tab-${item.key}`}
+                                        type="button"
+                                        onClick={() => setActiveTab(item.key)}
+                                        className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-semibold transition ${
+                                            active
+                                                ? 'bg-[#3556a6] text-white'
+                                                : 'text-slate-600 hover:bg-white hover:text-slate-800'
+                                        }`}
+                                    >
+                                        <Icon className="h-3.5 w-3.5" />
+                                        {item.compactLabel}
+                                    </button>
+                                );
+                            })}
+                          </div>
                         </div>
 
                         <div className="grid gap-5 lg:grid-cols-2">

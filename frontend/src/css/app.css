@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 /* ═══════════════════════════════════════════════
    DESIGN SYSTEM TOKENS
@@ -6,7 +7,7 @@
 
 :root {
     /* --- Typography --- */
-    --thm-font: "Inter", "Montserrat", system-ui, sans-serif;
+    --thm-font: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
     --thm-b-font: "Source Code Pro", monospace;
 
     /* --- Brand Colors --- */
@@ -19,21 +20,21 @@
     --thm-secondary-rgb: 0, 89, 99;
 
     /* --- Doctor Dashboard Colors --- */
-    --doc-sidebar: #1f2c52;
-    --doc-sidebar-hover: #2c3a66;
-    --doc-sidebar-active: #b9caee;
-    --doc-surface: #edf1f8;
+    --doc-sidebar: #2D3A74;
+    --doc-sidebar-hover: #4055A8;
+    --doc-sidebar-active: #FF7C00;
+    --doc-surface: #F8FAFC;
     --doc-card: #f8fafe;
     --doc-border: #d7dfec;
     --doc-border-light: #e8edf6;
     --doc-text: #1d2844;
     --doc-text-muted: #63718d;
     --doc-text-light: #8b99b3;
-    --doc-primary: #3657a7;
-    --doc-primary-hover: #2a488f;
+    --doc-primary: #2D3A74;
+    --doc-primary-hover: #4055A8;
     --doc-primary-light: #e4eafb;
-    --doc-accent: #c57945;
-    --doc-accent-hover: #ad6639;
+    --doc-accent: #FF7C00;
+    --doc-accent-hover: #E56D00;
 
     /* --- Semantic Status Colors --- */
     --status-scheduled-bg: #eff6ff;
@@ -64,21 +65,88 @@
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
+    width: 6px;
+    height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-    background: #f1f1f1;
+    background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, #005963 0%, #00acb1 100%);
-    border-radius: 10px;
+    background: #CBD5E1;
+    border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(180deg, #00acb1 0%, #005963 100%);
+    background: #94A3B8;
+}
+
+/* ═══════════════════════════════════════════════
+   ADMIN DASHBOARD CLASSES (from iziibuyonboarding)
+   ═══════════════════════════════════════════════ */
+
+.dashboard-shell {
+    animation: fade-up 0.35s ease-out;
+}
+
+.hero-panel {
+    background:
+        linear-gradient(135deg, rgba(45, 58, 116, 0.98) 0%, rgba(64, 85, 168, 0.94) 62%, rgba(255, 124, 0, 0.92) 100%);
+    position: relative;
+    overflow: hidden;
+}
+
+.hero-panel::before,
+.hero-panel::after {
+    content: '';
+    position: absolute;
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.hero-panel::before {
+    width: 220px;
+    height: 220px;
+    top: -110px;
+    right: -60px;
+}
+
+.hero-panel::after {
+    width: 160px;
+    height: 160px;
+    bottom: -70px;
+    right: 180px;
+}
+
+.glass-card {
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+}
+
+.surface-card {
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.05);
+}
+
+.status-slate { background: #F1F5F9; color: #334155; }
+.status-blue { background: #DBEAFE; color: #1D4ED8; }
+.status-amber { background: #FEF3C7; color: #B45309; }
+.status-emerald { background: #DCFCE7; color: #15803D; }
+.status-indigo { background: #E0E7FF; color: #4338CA; }
+
+@keyframes fade-up {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* Hide scrollbar for horizontal scroll containers */
@@ -335,6 +403,16 @@ html {
     border-radius: 0.9rem;
 }
 
+.doctor-theme .doc-banner-root .doc-banner-metric-card {
+    min-height: 100px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
+.doctor-theme .doc-banner-root .doc-banner-metric-card:hover {
+    transform: translateY(-1px);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 16px 28px -24px rgba(6, 12, 28, 0.72);
+}
+
 .doctor-theme .doc-banner-root .doc-banner-metric > div:first-child,
 .doctor-theme .doc-banner-root .grid.grid-cols-2.gap-2 > .rounded-lg.border > div:first-child {
     font-size: 0.72rem !important;
@@ -549,8 +627,8 @@ html {
 }
 
 .doc-header-shell {
-    box-shadow: 0 10px 24px -18px rgba(31, 44, 82, 0.34);
-    background: linear-gradient(130deg, rgba(255, 255, 255, 0.88) 0%, rgba(241, 245, 252, 0.93) 100%);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    background: #ffffff;
 }
 
 .doc-title-live {
@@ -644,13 +722,11 @@ html {
 .doctor-theme {
     color: var(--doc-text);
     background:
-        radial-gradient(460px 260px at 104% 8%, rgba(197, 121, 69, 0.24), transparent 60%),
-        radial-gradient(360px 240px at 6% 94%, rgba(54, 87, 167, 0.2), transparent 62%),
-        linear-gradient(180deg, #edf1f8 0%, #e8edf6 100%);
+        radial-gradient(circle at top right, rgba(255, 124, 0, 0.08), transparent 24%),
+        linear-gradient(180deg, #F8FAFC 0%, #F7F8FA 100%);
 }
 
 .doctor-theme .doc-panel {
-    background-color: var(--doc-card);
     border-color: var(--doc-border);
 }
 
