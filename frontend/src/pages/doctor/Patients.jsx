@@ -143,7 +143,7 @@ export default function Patients({ patients = [] }) {
 
   const handlePrescriptionClick = (patient) => {
     if (!patient.has_prescription && (patient.prescriptions_count ?? 0) === 0) {
-      router.visit(`/doctor/prescriptions/create?patient=${patient.id}`);
+      router.visit(`/doctor/prescriptions/create?patient_id=${patient.id}`);
       return;
     }
 

@@ -335,7 +335,6 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
         'w-full rounded-md bg-slate-50/50 px-2 py-1 text-xs text-slate-900 doc-input-focus';
     const labelClass = 'mb-2 block text-xs font-semibold text-slate-700';
     const helperClass = 'mt-1 text-xs text-slate-500';
-    const errorClass = 'mt-1 text-xs font-semibold text-rose-700';
     const sectionTitleClass = 'text-base font-bold text-slate-800';
     const sectionSubClass = 'mt-1 text-xs text-slate-500';
 
@@ -531,54 +530,50 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
             <div>
                 <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
                     
-                    {/* Prescription Header - Doctor left, Chamber right */}
-                    <div className="border-b-4 border-[#253566] bg-gradient-to-r from-[#253566] via-[#3d466b] to-[#c57945] p-6 text-white md:p-8">
-                        <div className="grid gap-4 md:grid-cols-2 md:gap-6">
-                            {/* Doctor Info - Left */}
-                            <div className="rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur-sm md:p-5">
-                                <div className="mb-2 text-xs font-bold uppercase tracking-wider text-white/80">Doctor Information</div>
-                                <div className="text-2xl font-black tracking-wide">{authUser?.name || 'Doctor'}</div>
-                                <div className="mt-1 text-sm font-medium text-white/90">{authUser?.specialization || authUser?.degree || 'MBBS, FCPS'}</div>
-                                {authUser?.phone && (
-                                    <div className="mt-3 flex items-center gap-2 text-sm">
-                                        <Phone className="h-4 w-4" />
-                                        <span>{authUser.phone}</span>
-                                    </div>
-                                )}
-                                {authUser?.email && (
-                                    <div className="mt-1 flex items-center gap-2 text-sm">
-                                        <Mail className="h-4 w-4" />
-                                        <span>{authUser.email}</span>
-                                    </div>
-                                )}
+                    {/* Prescription Header - Doctor left, Chamber right (matching PrescriptionShow) */}
+                    <div className="border-b border-slate-200 bg-slate-50 p-5 md:p-6">
+                        <div className="grid gap-4 md:grid-cols-2 md:gap-5">
+                            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
+                                <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-[#2D3A74]/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#2D3A74]">
+                                    <Stethoscope className="h-3.5 w-3.5" />
+                                    Doctor Information
+                                </div>
+                                <div className="text-2xl font-black tracking-tight text-slate-900">{authUser?.name || 'Doctor'}</div>
+                                <div className="mt-1 text-sm font-medium text-slate-600">{authUser?.specialization || authUser?.degree || 'MBBS, FCPS'}</div>
+                                <div className="mt-4 space-y-2">
+                                    {authUser?.phone ? (
+                                        <div className="flex items-center gap-2 text-sm text-slate-700">
+                                            <Phone className="h-4 w-4 text-[#3556a6]" />
+                                            <span>{authUser.phone}</span>
+                                        </div>
+                                    ) : null}
+                                    {authUser?.email ? (
+                                        <div className="flex items-center gap-2 text-sm text-slate-700">
+                                            <Mail className="h-4 w-4 text-[#3556a6]" />
+                                            <span>{authUser.email}</span>
+                                        </div>
+                                    ) : null}
+                                </div>
                             </div>
 
-                            {/* Chamber Info - Right */}
-                            <div className="rounded-2xl border border-white/20 bg-white/10 p-4 text-right backdrop-blur-sm md:p-5">
-                                <div className="mb-2 text-xs font-bold uppercase tracking-wider text-white/80">Chamber Information</div>
-                                <div className="text-lg font-bold">{chamberName || 'Not set'}</div>
-                                
-                                {/* Chamber Address */}
-                                {chamberAddress && (
-                                    <div className="mt-2 border-t border-white/20 pt-1.5">
-                                        <div className="mb-0.5 text-[10px] font-semibold opacity-80">Chamber</div>
-                                        <div className="flex items-start justify-end gap-1 text-[10px] opacity-75">
-                                            <MapPin className="h-2.5 w-2.5 mt-0.5 flex-shrink-0" />
-                                            <span className="max-w-xs leading-tight">{chamberAddress}</span>
-                                        </div>
-                                    </div>
-                                )}
-                                
-                                {/* Contact Information */}
-                                <div className="mt-2 space-y-0.5 border-t border-white/20 pt-1.5">
-                                    {chamberPhone && (
-                                        <div className="flex items-center justify-end gap-1 text-[10px]">
-                                            <Phone className="h-2.5 w-2.5" />
-                                            <span className="font-medium">Call:</span>
-                                            <span className="opacity-90">{chamberPhone}</span>
-                                        </div>
-                                    )}
+                            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
+                                <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-amber-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-amber-800">
+                                    <MapPin className="h-3.5 w-3.5" />
+                                    Chamber Information
                                 </div>
+                                <div className="text-xl font-extrabold tracking-tight text-slate-900">{chamberName || 'Not set'}</div>
+                                {chamberAddress ? (
+                                    <div className="mt-3 flex items-start gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                                        <MapPin className="mt-0.5 h-4 w-4 flex-shrink-0 text-slate-500" />
+                                        <span>{chamberAddress}</span>
+                                    </div>
+                                ) : null}
+                                {chamberPhone ? (
+                                    <div className="mt-2 flex items-center gap-2 text-sm font-medium text-slate-700">
+                                        <Phone className="h-4 w-4 text-amber-700" />
+                                        <span>{chamberPhone}</span>
+                                    </div>
+                                ) : null}
                             </div>
                         </div>
                     </div>

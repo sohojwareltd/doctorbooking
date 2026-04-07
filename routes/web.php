@@ -721,6 +721,9 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
                     'name' => $patient->name,
                     'email' => $patient->email,
                     'phone' => $patient->phone,
+                    'gender' => $patient->gender,
+                    'age' => $patient->age,
+                    'date_of_birth' => $patient->date_of_birth,
                     'created_at' => $patient->created_at,
                     'has_prescription' => $prescriptions->isNotEmpty(),
                     'prescriptions_count' => $prescriptions->count(),
@@ -945,6 +948,7 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
 
         // Get appointment ID from query if provided
         $appointmentId = request()->query('appointment_id');
+        $patientId = request()->query('patient_id') ?? request()->query('patient');
         $selectedPatient = null;
         $appointment = null;
 
@@ -964,6 +968,25 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
                     'gender' => $user->gender,
                     'age' => $user->age,
                     'weight' => $user->weight,
+                ];
+            }
+        } elseif ($patientId) {
+            $patient = User::where('id', $patientId)
+                ->where('role', 'user')
+                ->whereHas('appointments', function ($query) use ($doctor) {
+                    $query->where('doctor_id', $doctor->id);
+                })
+                ->first();
+
+            if ($patient) {
+                $selectedPatient = [
+                    'id' => $patient->id,
+                    'name' => $patient->name,
+                    'phone' => $patient->phone,
+                    'email' => $patient->email,
+                    'gender' => $patient->gender,
+                    'age' => $patient->age,
+                    'weight' => $patient->weight,
                 ];
             }
         }

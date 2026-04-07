@@ -1,32 +1,13 @@
 import { Head, Link } from '@inertiajs/react';
-import { User, Mail, Phone, MapPin, Calendar, Weight, FileText, ArrowLeft, Eye, CheckCircle, XCircle, ClipboardList, Clock3 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { User, Mail, Phone, MapPin, Calendar, Weight, FileText, ArrowLeft, Eye, ClipboardList, Clock3, Hash } from 'lucide-react';
+import { useMemo } from 'react';
 import DoctorLayout from '../../layouts/DoctorLayout';
-import { formatDisplayFromDateLike, formatDisplayDate } from '../../utils/dateFormat';
-import StatCard from '../../components/doctor/StatCard';
+import { formatDisplayDate } from '../../utils/dateFormat';
 import StatusBadge from '../../components/doctor/StatusBadge';
 import PatientAvatar from '../../components/doctor/PatientAvatar';
-import { DocCard, DocEmptyState } from '../../components/doctor/DocUI';
+import { DocEmptyState } from '../../components/doctor/DocUI';
 
 export default function PatientShow({ patient, appointments = [], prescriptions = [] }) {
-  const [activeTab, setActiveTab] = useState('personal');
-
-  const appointmentStats = useMemo(() => {
-    return {
-      total: appointments.length,
-      scheduled: appointments.filter(a => a.status === 'scheduled').length,
-      arrived: appointments.filter(a => a.status === 'arrived').length,
-      prescribed: appointments.filter(a => a.status === 'prescribed').length,
-      cancelled: appointments.filter(a => a.status === 'cancelled').length,
-      upcoming: appointments.filter((appointment) => {
-        if (!appointment.appointment_date) return false;
-        const appointmentMoment = new Date(`${appointment.appointment_date}T${appointment.appointment_time || '00:00'}`);
-        if (Number.isNaN(appointmentMoment.getTime())) return false;
-        return appointmentMoment >= new Date() && !['cancelled', 'prescribed'].includes(appointment.status);
-      }).length,
-    };
-  }, [appointments]);
-
   const calculateAge = (dob) => {
     if (!dob) return null;
     const today = new Date();
@@ -39,219 +20,217 @@ export default function PatientShow({ patient, appointments = [], prescriptions 
     return age;
   };
 
-  const tabs = [
-    { key: 'personal', label: 'Personal Info', icon: User },
-    { key: 'appointments', label: `Appointments (${appointments.length})`, icon: Calendar },
-    { key: 'prescriptions', label: `Prescriptions (${prescriptions.length})`, icon: FileText },
-  ];
   const resolvedAge = patient.age || calculateAge(patient.date_of_birth);
+
+  const appointmentStats = useMemo(() => ({
+    total: appointments.length,
+    prescribed: appointments.filter((a) => a.status === 'prescribed').length,
+    arrived: appointments.filter((a) => a.status === 'arrived').length,
+  }), [appointments]);
 
   return (
     <>
       <Head title={`${patient.name} - Patient Details`} />
       <DoctorLayout>
-        <div className="mx-auto max-w-[1400px] space-y-6">
-          {/* Patient header */}
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <PatientAvatar name={patient.name} size="xl" className="rounded-xl" />
-              <div>
+        <div className="mx-auto max-w-[1320px] space-y-4">
+          <section className="surface-card overflow-hidden rounded-3xl">
+            <div className="relative bg-gradient-to-br from-slate-50 via-white to-slate-100/70 p-4 md:p-5">
+              <div className="mb-3">
                 <Link
                   href="/doctor/patients"
-                  className="mb-1 inline-flex items-center gap-1.5 text-slate-500 hover:text-slate-700 text-sm font-medium transition-colors"
+                  className="inline-flex items-center gap-1 text-xs font-medium text-slate-500 transition-colors hover:text-slate-700"
                 >
-                  <ArrowLeft size={14} />
+                  <ArrowLeft size={12} />
                   Back to Patients
                 </Link>
-                <h1 className="text-xl font-bold text-slate-800 md:text-2xl">{patient.name}</h1>
-                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs font-medium text-slate-500">
-                  {patient.gender && <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 capitalize">{patient.gender}</span>}
-                  {resolvedAge && <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1">{resolvedAge} years</span>}
-                  {patient.phone && <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1">{patient.phone}</span>}
+              </div>
+
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                <div className="flex items-center gap-3">
+                  <PatientAvatar name={patient.name} size="xl" className="rounded-2xl" />
+                  <div>
+                    <h1 className="inline-flex items-center gap-1.5 text-xl font-bold text-slate-800 md:text-2xl">
+                      <User className="h-4.5 w-4.5 text-[#3556a6] md:h-5 md:w-5" />
+                      {patient.name}
+                    </h1>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-1.5 text-[11px] sm:grid-cols-4">
+                  <div className="rounded-lg border border-slate-200 bg-white/95 px-2.5 py-2 text-center shadow-sm">
+                    <p className="text-[9px] font-semibold uppercase tracking-[0.08em] text-slate-500">Appointments</p>
+                    <p className="mt-0.5 text-sm font-bold text-slate-800">{appointmentStats.total}</p>
+                  </div>
+                  <div className="rounded-lg border border-slate-200 bg-white/95 px-2.5 py-2 text-center shadow-sm">
+                    <p className="text-[9px] font-semibold uppercase tracking-[0.08em] text-slate-500">Arrived</p>
+                    <p className="mt-0.5 text-sm font-bold text-slate-800">{appointmentStats.arrived}</p>
+                  </div>
+                  <div className="rounded-lg border border-slate-200 bg-white/95 px-2.5 py-2 text-center shadow-sm">
+                    <p className="text-[9px] font-semibold uppercase tracking-[0.08em] text-slate-500">Prescribed</p>
+                    <p className="mt-0.5 text-sm font-bold text-slate-800">{appointmentStats.prescribed}</p>
+                  </div>
+                  <div className="rounded-lg border border-slate-200 bg-white/95 px-2.5 py-2 text-center shadow-sm">
+                    <p className="text-[9px] font-semibold uppercase tracking-[0.08em] text-slate-500">Prescriptions</p>
+                    <p className="mt-0.5 text-sm font-bold text-slate-800">{prescriptions.length}</p>
+                  </div>
                 </div>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-center">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500">Appointments</div>
-                <div className="mt-1 text-sm font-bold text-slate-800">{appointmentStats.total}</div>
-              </div>
-              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-center">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500">Prescriptions</div>
-                <div className="mt-1 text-sm font-bold text-slate-800">{prescriptions.length}</div>
-              </div>
-              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-center">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500">Arrived</div>
-                <div className="mt-1 text-sm font-bold text-slate-800">{appointmentStats.arrived}</div>
-              </div>
-              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-center">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500">Member Since</div>
-                <div className="mt-1 text-sm font-bold text-slate-800">{formatDisplayDate(patient.created_at)}</div>
-              </div>
-            </div>
-          </div>
+          </section>
 
-          {/* Stats */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard label="Scheduled" value={appointmentStats.scheduled} icon={Calendar} variant="blue" />
-            <StatCard label="Upcoming" value={appointmentStats.upcoming} icon={Clock3} variant="amber" />
-            <StatCard label="Prescribed" value={appointmentStats.prescribed} icon={ClipboardList} variant="cyan" />
-            <StatCard label="Cancelled" value={appointmentStats.cancelled} icon={XCircle} variant="rose" />
-          </div>
-
-          {/* Tabs */}
-          <div className="surface-card rounded-3xl overflow-hidden">
-            <div className="border-b border-slate-100">
-              <div className="flex overflow-x-auto">
-                {tabs.map((tab) => {
-                  const Icon = tab.icon;
-                  return (
-                    <button
-                      key={tab.key}
-                      onClick={() => setActiveTab(tab.key)}
-                      className={`flex items-center gap-2 whitespace-nowrap px-5 py-3.5 text-sm font-semibold transition-colors border-b-2 ${
-                        activeTab === tab.key
-                          ? 'border-[#2D3A74] text-[#2D3A74]'
-                          : 'border-transparent text-slate-500 hover:text-slate-800'
-                      }`}
-                    >
-                      <Icon size={16} />
-                      {tab.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="p-5">
-              {/* Personal Info */}
-              {activeTab === 'personal' && (
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 text-sm">
-                  <InfoField icon={Mail} label="Email" value={patient.email} />
-                  <InfoField icon={Phone} label="Phone" value={patient.phone} />
-                  <InfoField label="Gender" value={patient.gender} capitalize />
-                  <InfoField icon={MapPin} label="Address" value={patient.address} span={3} />
-                  <InfoField label="Age" value={patient.age || calculateAge(patient.date_of_birth) ? `${patient.age || calculateAge(patient.date_of_birth)} years` : null} />
-                  <InfoField icon={Calendar} label="DOB" value={patient.date_of_birth ? formatDisplayDate(patient.date_of_birth) : null} />
-                  <InfoField icon={Weight} label="Weight" value={patient.weight ? `${patient.weight} kg` : null} />
-                  <InfoField label="Member Since" value={formatDisplayDate(patient.created_at)} span={3} />
+          <section className="surface-card rounded-3xl border border-slate-200 p-5 shadow-sm">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-3">
+                <div className="rounded-lg bg-[#edf1fb] p-2.5">
+                  <FileText className="h-5 w-5 text-[#3556a6]" />
                 </div>
-              )}
-
-              {/* Appointments */}
-              {activeTab === 'appointments' && (
                 <div>
+                  <h2 className="text-base font-semibold text-slate-800">Patient Overview</h2>
+                  <p className="text-xs text-slate-500">Complete patient information and treatment timeline</p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-600">
+                  Total Visits: {appointmentStats.total}
+                </span>
+                <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-600">
+                  Prescriptions: {prescriptions.length}
+                </span>
+              </div>
+            </div>
+
+            <div className="grid gap-3 lg:grid-cols-2">
+              <ViewField icon={Mail} label="Email" value={patient.email} />
+              <ViewField icon={Phone} label="Phone" value={patient.phone} />
+              <ViewField icon={User} label="Gender" value={patient.gender} capitalize />
+              <ViewField icon={Calendar} label="Age" value={resolvedAge ? `${resolvedAge} years` : null} />
+              <ViewField icon={Calendar} label="DOB" value={patient.date_of_birth ? formatDisplayDate(patient.date_of_birth) : null} />
+              <ViewField icon={Weight} label="Weight" value={patient.weight ? `${patient.weight} kg` : null} />
+              <ViewField icon={MapPin} label="Address" value={patient.address} span={2} />
+              <ViewField icon={Calendar} label="Member Since" value={formatDisplayDate(patient.created_at)} span={2} />
+
+              <div className="lg:col-span-2">
+                <div className="mb-2 flex items-center gap-1.5">
+                  <Calendar className="h-3.5 w-3.5 text-[#3556a6]" />
+                  <h3 className="text-xs font-semibold text-slate-700">Appointments</h3>
+                </div>
+                <div className="overflow-x-auto rounded-lg border border-slate-200">
                   {appointments.length > 0 ? (
-                    <div className="overflow-x-auto border-t border-slate-100">
-                      <table className="min-w-full text-sm">
-                        <thead className="bg-slate-50 text-slate-500 uppercase text-xs tracking-[0.12em]">
-                          <tr>
-                            <th className="px-6 py-4 text-left">Date</th>
-                            <th className="px-6 py-4 text-left">Time</th>
-                            <th className="px-6 py-4 text-left">Status</th>
-                            <th className="px-6 py-4 text-left">Symptoms</th>
+                    <table className="min-w-full text-xs">
+                      <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] tracking-[0.1em]">
+                        <tr>
+                          <th className="px-4 py-2.5 text-left">#</th>
+                          <th className="px-4 py-2.5 text-left">Date</th>
+                          <th className="px-4 py-2.5 text-left">Time</th>
+                          <th className="px-4 py-2.5 text-left">Status</th>
+                          <th className="px-4 py-2.5 text-left">Symptoms</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 bg-white">
+                        {appointments.slice(0, 8).map((appointment, index) => (
+                          <tr key={appointment.id} className="hover:bg-slate-50/80 transition-colors">
+                            <td className="px-4 py-2.5 text-xs font-semibold text-slate-700">
+                              <span className="inline-flex items-center gap-1.5">
+                                <Hash className="h-3 w-3 text-slate-400" />
+                                {index + 1}
+                              </span>
+                            </td>
+                            <td className="px-4 py-2.5 text-xs font-semibold text-slate-800">
+                              <span className="inline-flex items-center gap-1.5">
+                                <Calendar className="h-3 w-3 text-slate-400" />
+                                {appointment.appointment_date ? formatDisplayDate(appointment.appointment_date) : '-'}
+                              </span>
+                            </td>
+                            <td className="px-4 py-2.5 text-xs font-medium text-slate-700">
+                              <span className="inline-flex items-center gap-1.5">
+                                <Clock3 className="h-3 w-3 text-slate-400" />
+                                {appointment.appointment_time || '-'}
+                              </span>
+                            </td>
+                            <td className="px-4 py-2.5"><StatusBadge status={appointment.status} size="xs" /></td>
+                            <td className="px-4 py-2.5 text-xs font-medium text-slate-700 max-w-xs truncate">
+                              <span className="inline-flex items-center gap-1.5">
+                                <ClipboardList className="h-3 w-3 text-slate-400" />
+                                {appointment.symptoms || '-'}
+                              </span>
+                            </td>
                           </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 bg-white">
-                          {appointments.slice(0, 5).map((appointment) => (
-                            <tr key={appointment.id} className="hover:bg-slate-50/80 transition-colors">
-                              <td className="px-6 py-4 text-[13px] font-semibold text-slate-800">
-                                <span className="inline-flex items-center gap-1.5">
-                                  <Calendar className="h-3.5 w-3.5 text-slate-400" />
-                                  {appointment.appointment_date ? formatDisplayDate(appointment.appointment_date) : '-'}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 text-[13px] font-medium text-slate-700">
-                                <span className="inline-flex items-center gap-1.5">
-                                  <Clock3 className="h-3.5 w-3.5 text-slate-400" />
-                                  {appointment.appointment_time || '-'}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4">
-                                <StatusBadge status={appointment.status} size="xs" />
-                              </td>
-                              <td className="px-6 py-4 text-[13px] font-medium text-slate-700 max-w-xs truncate">
-                                <span className="inline-flex items-center gap-1.5">
-                                  <ClipboardList className="h-3.5 w-3.5 text-slate-400" />
-                                  {appointment.symptoms || '-'}
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                      {appointments.length > 5 && (
-                        <p className="text-xs text-slate-400 mt-3 px-6">Showing 5 of {appointments.length} appointments</p>
-                      )}
-                    </div>
+                        ))}
+                      </tbody>
+                    </table>
                   ) : (
-                    <DocEmptyState icon={Calendar} title="No appointments found" />
+                    <div className="p-5"><DocEmptyState icon={Calendar} title="No appointments found" /></div>
                   )}
                 </div>
-              )}
+              </div>
 
-              {/* Prescriptions */}
-              {activeTab === 'prescriptions' && (
-                <div>
+              <div className="lg:col-span-2">
+                <div className="mb-2 flex items-center gap-1.5">
+                  <FileText className="h-3.5 w-3.5 text-[#3556a6]" />
+                  <h3 className="text-xs font-semibold text-slate-700">Prescriptions</h3>
+                </div>
+                <div className="overflow-x-auto rounded-lg border border-slate-200">
                   {prescriptions.length > 0 ? (
-                    <div className="space-y-2 max-h-96 overflow-y-auto">
-                      {prescriptions.map((prescription) => (
-                        <div key={prescription.id} className="border-l-3 border-l-[#FF7C00] bg-slate-50 rounded-lg p-4 hover:shadow-sm transition-shadow" style={{ borderLeftWidth: '3px' }}>
-                          <div className="flex justify-between items-start mb-2">
-                            <div>
-                              <p className="text-xs text-slate-400 mb-0.5">Prescription Date</p>
-                              <p className="text-xs font-semibold text-slate-800">
+                    <table className="min-w-full text-xs">
+                      <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] tracking-[0.1em]">
+                        <tr>
+                          <th className="px-4 py-2.5 text-left">Date</th>
+                          <th className="px-4 py-2.5 text-left">Diagnosis</th>
+                          <th className="px-4 py-2.5 text-left">Medications</th>
+                          <th className="px-4 py-2.5 text-center">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 bg-white">
+                        {prescriptions.map((prescription) => (
+                          <tr key={prescription.id} className="hover:bg-slate-50/80 transition-colors">
+                            <td className="px-4 py-2.5 text-xs font-semibold text-slate-800 whitespace-nowrap">
+                              <span className="inline-flex items-center gap-1.5">
+                                <Calendar className="h-3 w-3 text-slate-400" />
                                 {formatDisplayDate(prescription.created_at)}
-                              </p>
-                            </div>
-                            <Link
-                              href={`/doctor/prescriptions/${prescription.id}`}
-                              className="inline-flex items-center gap-1 bg-[#2D3A74] hover:bg-[#253066] text-white px-2.5 py-1 rounded-lg text-xs font-medium transition-colors"
-                            >
-                              <Eye size={12} />
-                              View
-                            </Link>
-                          </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2 text-xs">
-                            {prescription.diagnosis && (
-                              <div>
-                                <p className="text-xs text-slate-400 font-medium mb-0.5">DIAGNOSIS</p>
-                                <p className="text-slate-700 line-clamp-1">{prescription.diagnosis}</p>
-                              </div>
-                            )}
-                            {prescription.medications && (
-                              <div>
-                                <p className="text-xs text-slate-400 font-medium mb-0.5">MEDICATIONS</p>
-                                <p className="text-slate-700 line-clamp-1">{prescription.medications}</p>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                              </span>
+                            </td>
+                            <td className="px-4 py-2.5 text-xs font-medium text-slate-700 max-w-[280px] truncate">{prescription.diagnosis || '-'}</td>
+                            <td className="px-4 py-2.5 text-xs font-medium text-slate-700 max-w-[280px] truncate">{prescription.medications || '-'}</td>
+                            <td className="px-4 py-2.5 text-center">
+                              <Link
+                                href={`/doctor/prescriptions/${prescription.id}`}
+                                className="inline-flex items-center gap-1 rounded-md bg-[#2D3A74] px-2 py-1 text-[11px] font-semibold text-white transition hover:bg-[#253066]"
+                              >
+                                <Eye size={11} />
+                                View
+                              </Link>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   ) : (
-                    <DocEmptyState icon={FileText} title="No prescriptions found" />
+                    <div className="p-5"><DocEmptyState icon={FileText} title="No prescriptions found" /></div>
                   )}
                 </div>
-              )}
+              </div>
             </div>
-          </div>
+          </section>
         </div>
       </DoctorLayout>
     </>
   );
 }
 
-function InfoField({ icon: Icon, label, value, span, capitalize }) {
+function ViewField({ icon: Icon, label, value, span, capitalize }) {
   return (
-    <div className={`rounded-lg bg-slate-50 p-3 ${span === 3 ? 'sm:col-span-2 lg:col-span-3' : ''}`}>
-      <div className="flex items-center gap-2 mb-1">
-        {Icon && <Icon size={14} className="text-[#3556a6]" />}
-        <label className="text-xs font-medium text-slate-400">{label}</label>
+    <div className={`${span === 2 ? 'lg:col-span-2' : ''}`}>
+      <div className="mb-1 flex items-center gap-1.5">
+        {Icon ? <Icon size={12} className="text-[#3556a6]" /> : null}
+        <label className="text-xs font-semibold text-slate-700">{label}</label>
       </div>
-      <p className={`text-slate-800 font-medium text-xs ${capitalize ? 'capitalize' : ''}`}>
-        {value || 'Not provided'}
-      </p>
+      <div className={`w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 ${capitalize ? 'capitalize' : ''}`}>
+        <span className="inline-flex items-center gap-1.5">
+          {Icon ? <Icon size={11} className="text-slate-400" /> : null}
+          {value || 'Not provided'}
+        </span>
+      </div>
     </div>
   );
 }

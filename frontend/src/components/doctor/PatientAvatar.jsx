@@ -1,3 +1,5 @@
+import { User } from 'lucide-react';
+
 const AVATAR_COLORS = [
   'bg-violet-100 text-violet-700',
   'bg-sky-100 text-sky-700',
@@ -14,7 +16,6 @@ function getColorClass(name) {
 }
 
 export default function PatientAvatar({ name, size = 'md', className = '' }) {
-  const initial = (name || 'P')[0].toUpperCase();
   const color = getColorClass(name);
   const sizeClasses = {
     xs: 'h-7 w-7 text-xs',
@@ -23,10 +24,17 @@ export default function PatientAvatar({ name, size = 'md', className = '' }) {
     lg: 'h-12 w-12 text-lg',
     xl: 'h-14 w-14 text-xl',
   };
+  const iconSizes = {
+    xs: 12,
+    sm: 14,
+    md: 16,
+    lg: 18,
+    xl: 20,
+  };
 
   return (
     <div className={`rounded-lg flex items-center justify-center font-bold flex-shrink-0 ${sizeClasses[size] || sizeClasses.md} ${color} ${className}`}>
-      {initial}
+      <User size={iconSizes[size] || iconSizes.md} strokeWidth={2.4} />
     </div>
   );
 }
