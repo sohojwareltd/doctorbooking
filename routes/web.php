@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
@@ -24,7 +24,7 @@ Route::get('/about', [PublicController::class, 'about'])->name('about');
 Route::get('/contact', [PublicController::class, 'contact'])->name('contact');
 Route::post('/contact', fn () => redirect()->back())->name('contact.submit');
 
-// Public booking page (Inertia render only — data fetched via /api/public/*)
+// Public booking page (Inertia render only data fetched via /api/public/*)
 Route::get('/book-appointment', [PublicController::class, 'bookAppointment'])->name('public.book-appointment.view');
 
 // Booking profile pre-fill (session auth — for logged-in users on the public booking page)
@@ -62,11 +62,11 @@ Route::middleware(['auth', 'verified', 'role:patient'])
 
 /*
 |--------------------------------------------------------------------------
-| Doctor Routes (role: doctor)
+| Doctor & Compounder Routes
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth', 'verified', 'role:doctor'])
+Route::middleware(['auth', 'verified', 'role:doctor,compounder'])
     ->prefix('doctor')
     ->name('doctor.')
     ->group(function () {
@@ -80,7 +80,7 @@ Route::middleware(['auth', 'verified', 'role:doctor'])
     Route::get('/patients', [PatientController::class, 'index'])->name('patients');
     Route::get('/patients/{patient}', [PatientController::class, 'show'])->whereNumber('patient')->name('patients.show');
 
-    // Prescriptions
+    // Prescriptions (doctor only â€” compounder blocked via frontend; route still needs to exist for doctor)
     Route::get('/prescriptions', [WebPrescriptionController::class, 'doctorIndex'])->name('prescriptions');
     Route::get('/prescriptions/create', [WebPrescriptionController::class, 'doctorCreate'])->name('prescriptions.create');
     Route::post('/prescriptions', [WebPrescriptionController::class, 'doctorStore'])->name('prescriptions.store');
@@ -101,66 +101,6 @@ Route::middleware(['auth', 'verified', 'role:doctor'])
     Route::get('/chambers', [ChamberController::class, 'index'])->name('chambers');
     Route::post('/chambers', [ChamberController::class, 'save'])->name('chambers.save');
     Route::delete('/chambers/{chamber}', [ChamberController::class, 'destroy'])->name('chambers.delete');
-});
-
-/*
-|--------------------------------------------------------------------------
-| Compounder Routes (role: compounder) � replaces old "admin"
-|--------------------------------------------------------------------------
-*/
-
-Route::middleware(['auth', 'verified', 'role:compounder'])
-    ->prefix('compounder')
-    ->name('compounder.')
-    ->group(function () {
-
-    Route::get('/dashboard', [DashboardController::class, 'compounder'])->name('dashboard');
-
-    // Appointments
-    Route::get('/appointments', [WebAppointmentController::class, 'compoundIndex'])->name('appointments');
-    Route::get('/book-appointment', [WebAppointmentController::class, 'compoundBookView'])->name('book-appointment');
-
-    // Users / Patients
-    Route::get('/users', [PatientController::class, 'compoundUsers'])->name('users');
-
-    // Prescriptions
-    Route::get('/prescriptions', [WebPrescriptionController::class, 'compoundIndex'])->name('prescriptions');
-    Route::get('/prescriptions/{prescription}', [WebPrescriptionController::class, 'compoundShow'])->whereNumber('prescription')->name('prescriptions.show');
-
-    // Reports
-    Route::get('/reports', [ReportsController::class, 'index'])->name('reports');
-
-    // Settings (site content)
-    Route::get('/settings', [SiteContentController::class, 'edit'])->name('settings');
-    Route::put('/settings/site-content/home', [SiteContentController::class, 'updateHome'])->name('settings.site-content.home');
-    Route::post('/settings/site-content/upload', [SiteContentController::class, 'uploadImage'])->name('settings.site-content.upload');
-
-    // Doctor management view
-    Route::get('/doctor', fn () => \Inertia\Inertia::render('admin/Doctor'))->name('doctor');
-});
-
-/*
-|--------------------------------------------------------------------------
-| Legacy admin.* aliases ? compounder.* redirects
-| Keeps any existing bookmarked URLs / frontend links working.
-|--------------------------------------------------------------------------
-*/
-
-Route::middleware(['auth', 'verified', 'role:compounder'])
-    ->prefix('admin')
-    ->name('admin.')
-    ->group(function () {
-
-    Route::get('/dashboard', fn () => redirect()->route('compounder.dashboard'))->name('dashboard');
-    Route::get('/appointments', fn () => redirect()->route('compounder.appointments'))->name('appointments');
-    Route::get('/users', fn () => redirect()->route('compounder.users'))->name('users');
-    Route::get('/prescriptions', fn () => redirect()->route('compounder.prescriptions'))->name('prescriptions');
-    Route::get('/reports', fn () => redirect()->route('compounder.reports'))->name('reports');
-    Route::get('/settings', fn () => redirect()->route('compounder.settings'))->name('settings');
-    Route::get('/book-appointment', fn () => redirect()->route('compounder.book-appointment'))->name('book-appointment');
-
-    // Keep old status update routes working (for any in-flight AJAX calls)
-    Route::post('/appointments/{appointment}/status', [WebAppointmentController::class, 'updateStatus'])->name('appointments.status');
 });
 
 /*

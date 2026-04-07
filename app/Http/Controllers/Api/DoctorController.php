@@ -28,27 +28,20 @@ class DoctorController extends Controller
     /** GET /api/doctor/stats */
     public function stats(Request $request): JsonResponse
     {
-        $doctor = $request->user();
-        $today  = now()->toDateString();
+        $doctor   = $request->user();
+        $doctorId = $doctor->doctorId();
+        $today    = now()->toDateString();
+
+        $scope = fn ($q) => $doctorId ? $q->where('doctor_id', $doctorId) : $q;
 
         return response()->json([
-            'today_appointments'   => Appointment::where('doctor_id', $doctor->doctorId())
-                ->whereDate('appointment_date', $today)->count(),
-            'scheduled'            => Appointment::where('doctor_id', $doctor->doctorId())
-                ->where('status', 'scheduled')
-                ->whereDate('appointment_date', '>=', $today)->count(),
-            'waiting_patients'     => Appointment::where('doctor_id', $doctor->doctorId())
-                ->whereDate('appointment_date', $today)
-                ->whereIn('status', ['scheduled', 'arrived'])->count(),
-            'total_patients'       => Appointment::where('doctor_id', $doctor->doctorId())
-                ->distinct('user_id')->count('user_id'),
-            'total_prescriptions'  => Prescription::where('doctor_id', $doctor->doctorId())->count(),
-            'prescribed_this_month'=> Appointment::where('doctor_id', $doctor->doctorId())
-                ->where('status', 'prescribed')
-                ->whereMonth('appointment_date', now()->month)->count(),
-            'in_consultation'      => Appointment::where('doctor_id', $doctor->doctorId())
-                ->where('status', 'in_consultation')
-                ->whereDate('appointment_date', $today)->count(),
+            'today_appointments'   => $scope(Appointment::query())->whereDate('appointment_date', $today)->count(),
+            'scheduled'            => $scope(Appointment::query())->where('status', 'scheduled')->whereDate('appointment_date', '>=', $today)->count(),
+            'waiting_patients'     => $scope(Appointment::query())->whereDate('appointment_date', $today)->whereIn('status', ['scheduled', 'arrived'])->count(),
+            'total_patients'       => $scope(Appointment::query())->distinct('user_id')->count('user_id'),
+            'total_prescriptions'  => $doctorId ? Prescription::where('doctor_id', $doctorId)->count() : Prescription::count(),
+            'prescribed_this_month'=> $scope(Appointment::query())->where('status', 'prescribed')->whereMonth('appointment_date', now()->month)->count(),
+            'in_consultation'      => $scope(Appointment::query())->where('status', 'in_consultation')->whereDate('appointment_date', $today)->count(),
         ]);
     }
 
@@ -58,13 +51,18 @@ class DoctorController extends Controller
     public function appointments(Request $request): JsonResponse
     {
         $doctor     = $request->user();
+        $doctorId   = $doctor->doctorId();
         $today      = now()->toDateString();
         $dateFilter = $request->get('date_filter', 'all');
+        $dateFrom   = $request->get('date_from');
+        $dateTo     = $request->get('date_to');
         $status     = $request->get('status_filter', 'all');
         $search     = $request->get('search', '');
 
-        $query = Appointment::with(['user:id,name,email,phone', 'prescription:id,appointment_id'])
-            ->where('doctor_id', $doctor->doctorId());
+        $query = Appointment::with(['user:id,name,email,phone', 'prescription:id,appointment_id']);
+        if ($doctorId) {
+            $query->where('doctor_id', $doctorId);
+        }
 
         if ($dateFilter === 'today') {
             $query->whereDate('appointment_date', $today);
@@ -73,6 +71,13 @@ class DoctorController extends Controller
         } elseif ($dateFilter === 'month') {
             $query->whereMonth('appointment_date', now()->month)
                   ->whereYear('appointment_date', now()->year);
+        } elseif ($dateFrom || $dateTo) {
+            if ($dateFrom) {
+                $query->whereDate('appointment_date', '>=', $dateFrom);
+            }
+            if ($dateTo) {
+                $query->whereDate('appointment_date', '<=', $dateTo);
+            }
         }
 
         if ($status !== 'all') {
@@ -107,8 +112,11 @@ class DoctorController extends Controller
     /** GET /api/doctor/appointments/{appointment} */
     public function appointmentShow(Request $request, Appointment $appointment): JsonResponse
     {
-        $doctor = $request->user();
-        abort_unless($appointment->doctor_id === $doctor->doctorId(), 403);
+        $doctor   = $request->user();
+        $doctorId = $doctor->doctorId();
+        if ($doctorId) {
+            abort_unless($appointment->doctor_id === $doctorId, 403);
+        }
 
         $appointment->load(['user', 'prescription', 'chamber']);
 
@@ -118,8 +126,11 @@ class DoctorController extends Controller
     /** PUT /api/doctor/appointments/{appointment}/status */
     public function updateAppointmentStatus(Request $request, Appointment $appointment): JsonResponse
     {
-        $doctor = $request->user();
-        abort_unless($appointment->doctor_id === $doctor->doctorId(), 403);
+        $doctor   = $request->user();
+        $doctorId = $doctor->doctorId();
+        if ($doctorId) {
+            abort_unless($appointment->doctor_id === $doctorId, 403);
+        }
 
         $validated = $request->validate([
             'status' => ['required', Rule::in([
@@ -130,14 +141,15 @@ class DoctorController extends Controller
 
         // Only one patient can be in_consultation at a time
         if ($validated['status'] === 'in_consultation') {
-            Appointment::with('prescription')
-                ->where('doctor_id', $doctor->doctorId())
+            $inConsultationQuery = Appointment::with('prescription')
                 ->where('status', 'in_consultation')
-                ->where('id', '!=', $appointment->id)
-                ->get()
-                ->each(function (Appointment $other) {
-                    $other->update(['status' => $other->prescription ? 'awaiting_tests' : 'arrived']);
-                });
+                ->where('id', '!=', $appointment->id);
+            if ($doctorId) {
+                $inConsultationQuery->where('doctor_id', $doctorId);
+            }
+            $inConsultationQuery->get()->each(function (Appointment $other) {
+                $other->update(['status' => $other->prescription ? 'awaiting_tests' : 'arrived']);
+            });
         }
 
         $appointment->update(['status' => $validated['status']]);
@@ -150,13 +162,14 @@ class DoctorController extends Controller
     /** GET /api/doctor/patients */
     public function patients(Request $request): JsonResponse
     {
-        $doctor = $request->user();
+        $doctor   = $request->user();
+        $doctorId = $doctor->doctorId();
 
         $patients = User::whereHas('role', fn ($q) => $q->where('name', 'patient'))
-            ->whereHas('appointments', fn ($q) => $q->where('doctor_id', $doctor->doctorId()))
-            ->with(['patientProfile', 'prescriptions' => fn ($q) => $q->where('doctor_id', $doctor->doctorId())
-                ->select('id', 'user_id', 'diagnosis', 'created_at')
-                ->latest()])
+            ->when($doctorId, fn ($q) => $q->whereHas('appointments', fn ($aq) => $aq->where('doctor_id', $doctorId)))
+            ->with(['patientProfile', 'prescriptions' => fn ($q) => $doctorId
+                ? $q->where('doctor_id', $doctorId)->select('id', 'user_id', 'diagnosis', 'created_at')->latest()
+                : $q->select('id', 'user_id', 'diagnosis', 'created_at')->latest()])
             ->orderByDesc('created_at')
             ->paginate($request->integer('per_page', 15))
             ->withQueryString();
@@ -186,18 +199,21 @@ class DoctorController extends Controller
     /** GET /api/doctor/patients/{user} */
     public function patientShow(Request $request, User $user): JsonResponse
     {
-        $doctor = $request->user();
+        $doctor   = $request->user();
+        $doctorId = $doctor->doctorId();
 
-        abort_unless(
-            $user->appointments()->where('doctor_id', $doctor->doctorId())->exists(),
-            403,
-            'This patient has no appointments with you.'
-        );
+        if ($doctorId) {
+            abort_unless(
+                $user->appointments()->where('doctor_id', $doctorId)->exists(),
+                403,
+                'This patient has no appointments with you.'
+            );
+        }
 
         $user->load([
             'patientProfile',
-            'appointments' => fn ($q) => $q->where('doctor_id', $doctor->doctorId())->latest(),
-            'prescriptions' => fn ($q) => $q->where('doctor_id', $doctor->doctorId())->latest(),
+            'appointments' => fn ($q) => $doctorId ? $q->where('doctor_id', $doctorId)->latest() : $q->latest(),
+            'prescriptions' => fn ($q) => $doctorId ? $q->where('doctor_id', $doctorId)->latest() : $q->latest(),
         ]);
 
         return response()->json([
@@ -247,8 +263,11 @@ class DoctorController extends Controller
     /** GET /api/doctor/prescriptions/{prescription} */
     public function prescriptionShow(Request $request, Prescription $prescription): JsonResponse
     {
-        $doctor = $request->user();
-        abort_unless($prescription->doctor_id === $doctor->doctorId(), 403);
+        $doctor   = $request->user();
+        $doctorId = $doctor->doctorId();
+        if ($doctorId) {
+            abort_unless($prescription->doctor_id === $doctorId, 403);
+        }
 
         $prescription->load([
             'user:id,name,email,phone',

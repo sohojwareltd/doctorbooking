@@ -1,4 +1,4 @@
-import { Link, usePage, router } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import {
   Building2, CalendarDays, ClipboardList, Users, Clock, CheckCircle,
@@ -12,27 +12,45 @@ import DocModal from '../../components/doctor/DocModal';
 import { DocButton, DocInput, DocSelect, DocEmptyState } from '../../components/doctor/DocUI';
 
 export default function DoctorDashboard({
-  stats = {},
-  scheduledToday = [],
   weeklyScheduleToday = [],
   isScheduleClosedToday = false,
   unavailableRanges = [],
-  recentAppointments = [],
-  upcomingAppointment = null,
-  inVisitAppointment = null,
-  inVisitAppointments = [],
-  awaitingTestsAppointments = [],
 }) {
   const { auth } = usePage().props;
   const user = auth?.user;
+  const [apiStats, setApiStats] = useState(null);
+  const [todayAppts, setTodayAppts] = useState([]);
+  const [yearAppts, setYearAppts] = useState([]);
   const [selectedPatient, setSelectedPatient] = useState(null);
-  const [activeVisitPatient, setActiveVisitPatient] = useState(inVisitAppointment || null);
+  const [activeVisitPatient, setActiveVisitPatient] = useState(null);
   const [hideActiveVisitCard, setHideActiveVisitCard] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createForm, setCreateForm] = useState({ name: '', phone: '', age: '', gender: '' });
   const [activeTab, setActiveTab] = useState('today');
   const [scheduleTab, setScheduleTab] = useState('today');
-  const performanceRange = 'today';
+
+  const fetchDashboardData = async () => {
+    const yr = new Date().getFullYear();
+    const opts = { headers: { Accept: 'application/json' }, credentials: 'same-origin' };
+    const [statsRes, todayRes, yearRes] = await Promise.all([
+      fetch('/api/doctor/stats', opts),
+      fetch('/api/doctor/appointments?date_filter=today&per_page=500', opts),
+      fetch(`/api/doctor/appointments?date_from=${yr}-01-01&date_to=${yr}-12-31&per_page=1000`, opts),
+    ]);
+    if (statsRes.ok) setApiStats(await statsRes.json());
+    if (todayRes.ok) {
+      const d = await todayRes.json();
+      const items = Array.isArray(d.appointments) ? d.appointments : (d.appointments?.data ?? []);
+      setTodayAppts(items);
+      setActiveVisitPatient((prev) => prev ?? (items.find((a) => a.status === 'in_consultation') ?? null));
+    }
+    if (yearRes.ok) {
+      const d = await yearRes.json();
+      setYearAppts(Array.isArray(d.appointments) ? d.appointments : (d.appointments?.data ?? []));
+    }
+  };
+
+  useEffect(() => { fetchDashboardData(); }, []);
 
   const handleCreateAppointment = async (e) => {
     e.preventDefault();
@@ -56,7 +74,7 @@ export default function DoctorDashboard({
       toastSuccess('Appointment created!');
       setShowCreateModal(false);
       setCreateForm({ name: '', phone: '', age: '', gender: '' });
-      window.location.reload();
+      fetchDashboardData();
     } else {
       const data = await res.json().catch(() => ({}));
       toastError(data.message || 'Failed to create appointment.');
@@ -66,9 +84,14 @@ export default function DoctorDashboard({
   const getCsrfToken = () => document.querySelector('meta[name="csrf-token"]')?.content || '';
 
   const defaultStats = {
-    todayAppointments: 0, scheduled: 0, totalPatients: 0,
-    totalPrescriptions: 0, prescribedThisMonth: 0, inConsultation: 0,
-    waitingPatients: 0, followUpsDue: 0, ...stats,
+    todayAppointments:   apiStats?.today_appointments ?? 0,
+    scheduled:           apiStats?.scheduled ?? 0,
+    totalPatients:       apiStats?.total_patients ?? 0,
+    totalPrescriptions:  apiStats?.total_prescriptions ?? 0,
+    prescribedThisMonth: apiStats?.prescribed_this_month ?? 0,
+    inConsultation:      apiStats?.in_consultation ?? 0,
+    waitingPatients:     apiStats?.waiting_patients ?? 0,
+    followUpsDue:        todayAppts.filter((a) => a.status === 'awaiting_tests').length,
   };
 
   const fmt = (d) => {
@@ -107,28 +130,29 @@ export default function DoctorDashboard({
         body: JSON.stringify({ status }),
       });
       if (!res.ok) return false;
-      router.reload({
-        only: ['stats', 'recentAppointments', 'upcomingAppointment', 'inVisitAppointment', 'inVisitAppointments', 'awaitingTestsAppointments', 'scheduledToday'],
-        preserveScroll: true,
-      });
+      await fetchDashboardData();
       return true;
     } catch {
       return false;
     }
   };
 
+  const inVisitAppointments = todayAppts.filter((a) => a.status === 'in_consultation');
+  const awaitingTestsAppointments = todayAppts.filter((a) => a.status === 'awaiting_tests');
+  const inVisitAppointment = inVisitAppointments[0] ?? null;
+  const upcomingAppointment = todayAppts.find((a) => a.status === 'scheduled' || a.status === 'arrived') ?? null;
   const visitPatient = activeVisitPatient || inVisitAppointment;
 
   useEffect(() => {
     setHideActiveVisitCard(false);
   }, [activeVisitPatient?.id, inVisitAppointment?.id]);
-  const todayAppointments = [...(recentAppointments || [])].sort((a, b) => {
+  const todayAppointments = [...todayAppts].sort((a, b) => {
     const at = (a.appointment_date || '') + ' ' + (a.appointment_time || '');
     const bt = (b.appointment_date || '') + ' ' + (b.appointment_time || '');
     return new Date(at) - new Date(bt);
   });
-  const awaitingList = awaitingTestsAppointments || [];
-  const activeCount = defaultStats.inConsultation || inVisitAppointments?.length || (visitPatient ? 1 : 0);
+  const awaitingList = awaitingTestsAppointments;
+  const activeCount = defaultStats.inConsultation || inVisitAppointments.length || (visitPatient ? 1 : 0);
 
   const now = new Date();
   const hour = now.getHours();
@@ -256,72 +280,14 @@ export default function DoctorDashboard({
     { label: 'Prescribed This Month', value: defaultStats.prescribedThisMonth, icon: ClipboardList, iconBg: 'bg-violet-50', iconColor: 'text-violet-600', desc: 'Prescriptions written this month.' },
   ];
 
-  const statusDefinitions = [
-    { label: 'Scheduled', key: 'scheduled', color: '#3b82f6', match: (a) => a?.status === 'scheduled' },
-    { label: 'In Progress', key: 'in_progress', color: '#6366f1', match: (a) => a?.status === 'in_consultation' },
-    { label: 'Awaiting Tests', key: 'awaiting_tests', color: '#f59e0b', match: (a) => a?.status === 'awaiting_tests' },
-    { label: 'Completed', key: 'completed', color: '#10b981', match: (a) => a?.status === 'prescribed' },
-  ];
-
-  const parseAppointmentDate = (appointment) => {
-    if (!appointment?.appointment_date) return null;
-    const parsed = new Date(appointment.appointment_date);
-    return Number.isNaN(parsed.getTime()) ? null : parsed;
-  };
-
-  const sameDay = (a, b) => (
-    a.getFullYear() === b.getFullYear()
-    && a.getMonth() === b.getMonth()
-    && a.getDate() === b.getDate()
-  );
-
-  const sourceAppointments = Array.isArray(recentAppointments) && recentAppointments.length > 0
-    ? recentAppointments
-    : todayAppointments;
-
-  const rangeAppointmentsRaw = sourceAppointments.filter((appointment) => {
-    const date = parseAppointmentDate(appointment);
-    if (!date) return performanceRange === 'today';
-
-    if (performanceRange === 'today') {
-      return sameDay(date, now);
-    }
-
-    if (performanceRange === '7days') {
-      const rangeStart = new Date(now);
-      rangeStart.setDate(rangeStart.getDate() - 6);
-      rangeStart.setHours(0, 0, 0, 0);
-      return date >= rangeStart && date <= now;
-    }
-
-    if (performanceRange === 'month') {
-      return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
-    }
-
-    if (performanceRange === 'year') {
-      return date.getFullYear() === now.getFullYear();
-    }
-
-    return true;
-  });
-
-  const rangeAppointments = rangeAppointmentsRaw.length > 0 ? rangeAppointmentsRaw : todayAppointments;
-  const rangeTotal = rangeAppointments.length;
-  const statusWithMeta = statusDefinitions.map((status) => {
-    const count = rangeAppointments.filter((appointment) => status.match(appointment)).length;
-    const percent = rangeTotal > 0 ? Math.round((count / rangeTotal) * 100) : 0;
-    return { ...status, count, percent };
-  });
-
   const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const monthlyAppointments = Array(12).fill(0);
 
-  sourceAppointments.forEach((appointment) => {
-    const date = parseAppointmentDate(appointment);
-    if (!date || date.getFullYear() !== now.getFullYear()) return;
-    const monthIndex = date.getMonth();
-
-    monthlyAppointments[monthIndex] += 1;
+  yearAppts.forEach((appointment) => {
+    if (!appointment?.appointment_date) return;
+    const date = new Date(appointment.appointment_date);
+    if (Number.isNaN(date.getTime()) || date.getFullYear() !== now.getFullYear()) return;
+    monthlyAppointments[date.getMonth()] += 1;
   });
 
   const monthlyChartWidth = 560;
@@ -388,8 +354,8 @@ export default function DoctorDashboard({
           })}
         </section>
 
-        <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+        <section>
+          <div className="rounded-2xl border border-slate-200 bg-white p-4">
               <h3 className="text-sm font-semibold text-[#2D3A74]">Monthly Appointments</h3>
               <svg viewBox={`0 0 ${monthlyChartWidth} ${monthlyChartHeight}`} className="mt-3 w-full">
                 {monthlyTicks.map((tick, index) => {
@@ -419,46 +385,7 @@ export default function DoctorDashboard({
                 <span className="h-2.5 w-2.5 rounded-sm bg-[#4aa5ec]" />
                 Appointments
               </div>
-            </div>
-
-            <div className="rounded-2xl border border-slate-200 bg-white p-4">
-              <h3 className="text-sm font-semibold text-[#2D3A74]">Appointment Status Distribution</h3>
-              <svg viewBox="0 0 360 260" className="mt-2 w-full">
-                {statusWithMeta.map((status, index) => {
-                  const radius = 88 - index * 18;
-                  const circumference = 2 * Math.PI * radius;
-                  const arcLength = (status.percent / 100) * circumference;
-                  return (
-                    <g key={status.key}>
-                      <circle cx="180" cy="118" r={radius} fill="none" stroke="#e5e7eb" strokeWidth="12" />
-                      <circle
-                        cx="180"
-                        cy="118"
-                        r={radius}
-                        fill="none"
-                        stroke={status.color}
-                        strokeWidth="12"
-                        strokeLinecap="round"
-                        strokeDasharray={`${arcLength} ${circumference}`}
-                        transform="rotate(-90 180 118)"
-                      />
-                    </g>
-                  );
-                })}
-
-                <text x="180" y="112" textAnchor="middle" className="fill-[#2D3A74] text-[22px] font-semibold">{rangeTotal}</text>
-                <text x="180" y="132" textAnchor="middle" className="fill-slate-500 text-[11px] font-medium">Total Cases</text>
-              </svg>
-
-              <div className="mt-1 flex flex-wrap gap-x-4 gap-y-2">
-                {statusWithMeta.map((status) => (
-                  <div key={status.key} className="inline-flex items-center gap-1.5 text-xs text-slate-600">
-                    <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: status.color }} />
-                    {status.label} ({status.count})
-                  </div>
-                ))}
-              </div>
-            </div>
+          </div>
         </section>
 
 
@@ -531,7 +458,7 @@ export default function DoctorDashboard({
                       >
                         <CheckCircle className="h-3.5 w-3.5" /> Complete Visit
                       </DocButton>
-                      {visitPatient.prescription_id ? (
+                      {user?.role !== 'compounder' && (visitPatient.prescription_id ? (
                         <Link
                           href={'/doctor/prescriptions/' + visitPatient.prescription_id}
                           className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 active:scale-[0.97] transition"
@@ -545,7 +472,7 @@ export default function DoctorDashboard({
                         >
                           <FileText className="h-3.5 w-3.5" /> Create Prescription
                         </Link>
-                      )}
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -708,7 +635,7 @@ export default function DoctorDashboard({
                                 <Stethoscope className="h-3 w-3" /> Start
                               </DocButton>
                             )}
-                            {a.status === 'in_consultation' && (
+                            {a.status === 'in_consultation' && user?.role !== 'compounder' && (
                               <Link
                                 href={a.prescription_id ? '/doctor/prescriptions/' + a.prescription_id : '/doctor/prescriptions/create?appointment_id=' + a.id}
                                 className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 transition"

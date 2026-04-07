@@ -66,7 +66,7 @@ Route::middleware(['auth:sanctum', 'role:patient'])
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth:sanctum', 'role:doctor'])
+Route::middleware(['auth:sanctum', 'role:doctor,compounder'])
     ->prefix('doctor')
     ->group(function () {
         // Stats

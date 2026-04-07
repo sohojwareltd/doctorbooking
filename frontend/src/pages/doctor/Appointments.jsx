@@ -1,6 +1,6 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
-import { Calendar, CalendarCheck2, Clock3, Eye, FilePlus, FileText, Hash, Mars, Phone, Search, User, Venus } from 'lucide-react';import DoctorLayout from '../../layouts/DoctorLayout';
+import { Calendar, CalendarCheck2, Clock3, Eye, FilePlus, FileText, Hash, Mars, Phone, Search, User, Venus, X } from 'lucide-react';import DoctorLayout from '../../layouts/DoctorLayout';
 import StatusBadge from '../../components/doctor/StatusBadge';
 import DocModal from '../../components/doctor/DocModal';
 import { DocButton, DocEmptyState } from '../../components/doctor/DocUI';
@@ -116,12 +116,30 @@ function GenderIconAvatar({ gender }) {
 }
 
 export default function DoctorAppointments() {
+  const { auth } = usePage().props;
+  const isCompounder = auth?.user?.role === 'compounder';
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState(null);
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [statusFilter, setStatusFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [datePreset, setDatePreset] = useState('all'); // all | today | week | month | custom
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+
+  const buildParams = () => {
+    const params = { per_page: 200 };
+    if (statusFilter !== 'all') params.status_filter = statusFilter;
+    if (searchTerm.trim()) params.search = searchTerm.trim();
+    if (datePreset !== 'all' && datePreset !== 'custom') {
+      params.date_filter = datePreset;
+    } else if (datePreset === 'custom') {
+      if (dateFrom) params.date_from = dateFrom;
+      if (dateTo) params.date_to = dateTo;
+    }
+    return params;
+  };
 
   const fetchAppointments = async (params = {}) => {
     setLoading(true);
@@ -143,8 +161,8 @@ export default function DoctorAppointments() {
   };
 
   useEffect(() => {
-    fetchAppointments();
-  }, []);
+    fetchAppointments(buildParams());
+  }, [statusFilter, datePreset, dateFrom, dateTo]);
 
   const getPatientName = (appointment) => appointment?.patient_name || appointment?.user?.name || `Patient #${appointment?.user_id || ''}`;
   const getPatientPhone = (appointment) => appointment?.patient_phone || appointment?.user?.phone || null;
@@ -267,9 +285,10 @@ export default function DoctorAppointments() {
               </div>
             </div>
 
-            <div className="mt-4 flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,320px)_180px] xl:items-end">
-                <div className="xl:w-[320px]">
+            <div className="mt-4 flex flex-col gap-3">
+              {/* Search + Status + Date pills — single row */}
+              <div className="flex flex-wrap items-end gap-3">
+                <div className="w-[280px] min-w-[180px]">
                   <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Search</label>
                   <div className="relative">
                     <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -283,7 +302,7 @@ export default function DoctorAppointments() {
                   </div>
                 </div>
 
-                <div className="sm:max-w-[190px] xl:w-[180px]">
+                <div className="w-[170px]">
                   <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Status</label>
                   <select
                     value={statusFilter}
@@ -295,7 +314,64 @@ export default function DoctorAppointments() {
                     ))}
                   </select>
                 </div>
+
+                {/* Date preset pills — pushed to right */}
+                <div className="ml-auto flex flex-wrap items-center gap-2">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Date:</span>
+                  {[
+                    { value: 'all', label: 'All time' },
+                    { value: 'today', label: 'Today' },
+                    { value: 'week', label: 'This week' },
+                    { value: 'month', label: 'This month' },
+                    { value: 'custom', label: 'Custom range' },
+                  ].map((p) => (
+                    <button
+                      key={p.value}
+                      onClick={() => { setDatePreset(p.value); if (p.value !== 'custom') { setDateFrom(''); setDateTo(''); } }}
+                      className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
+                        datePreset === p.value
+                          ? 'border-[#2D3A74] bg-[#2D3A74] text-white'
+                          : 'border-slate-200 bg-white text-slate-600 hover:border-[#2D3A74]/40 hover:text-[#2D3A74]'
+                      }`}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
               </div>
+
+              {/* Custom date range */}
+              {datePreset === 'custom' && (
+                <div className="flex flex-wrap items-end justify-end gap-3">
+                  <div>
+                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">From</label>
+                    <input
+                      type="date"
+                      value={dateFrom}
+                      onChange={(e) => setDateFrom(e.target.value)}
+                      className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">To</label>
+                    <input
+                      type="date"
+                      value={dateTo}
+                      min={dateFrom || undefined}
+                      onChange={(e) => setDateTo(e.target.value)}
+                      className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+                    />
+                  </div>
+                  {(dateFrom || dateTo) && (
+                    <button
+                      onClick={() => { setDateFrom(''); setDateTo(''); }}
+                      className="mb-0.5 inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-2.5 text-xs text-slate-500 hover:border-rose-200 hover:text-rose-500 transition"
+                    >
+                      <X className="h-3.5 w-3.5" /> Clear
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -310,7 +386,7 @@ export default function DoctorAppointments() {
                   <th className="px-6 py-4 text-left">Time</th>
                   <th className="px-6 py-4 text-left">Status</th>
                   <th className="px-6 py-4 text-left">Update Status</th>
-                  <th className="px-6 py-4 text-right">Create Rx</th>
+                  {!isCompounder && <th className="px-6 py-4 text-right">Create Rx</th>}
                   <th className="px-6 py-4 text-right">Action</th>
                 </tr>
               </thead>
@@ -372,25 +448,27 @@ export default function DoctorAppointments() {
                           <option value="cancelled">Cancelled</option>
                         </select>
                       </td>
-                      <td className="px-6 py-4 text-right pr-8">
-                        {!appointment.has_prescription || !appointment.prescription_id ? (
-                          <Link
-                            onClick={(e) => e.stopPropagation()}
-                            href={`/doctor/prescriptions/create?appointment_id=${appointment.id}`}
-                            className="group relative inline-flex h-8 w-8 items-center justify-center rounded-md border border-[#d8e2f8] bg-white text-[#3556a6] transition hover:bg-[#f3f7ff]"
-                            aria-label="Create prescription"
-                          >
-                            <FilePlus className="h-4 w-4" />
-                            <span className="pointer-events-none absolute -top-8 right-0 whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-[10px] font-medium text-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
-                              Create Prescription
+                      {!isCompounder && (
+                        <td className="px-6 py-4 text-right pr-8">
+                          {!appointment.has_prescription || !appointment.prescription_id ? (
+                            <Link
+                              onClick={(e) => e.stopPropagation()}
+                              href={`/doctor/prescriptions/create?appointment_id=${appointment.id}`}
+                              className="group relative inline-flex h-8 w-8 items-center justify-center rounded-md border border-[#d8e2f8] bg-white text-[#3556a6] transition hover:bg-[#f3f7ff]"
+                              aria-label="Create prescription"
+                            >
+                              <FilePlus className="h-4 w-4" />
+                              <span className="pointer-events-none absolute -top-8 right-0 whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-[10px] font-medium text-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
+                                Create Prescription
+                              </span>
+                            </Link>
+                          ) : (
+                            <span className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-slate-300">
+                              <FilePlus className="h-4 w-4" />
                             </span>
-                          </Link>
-                        ) : (
-                          <span className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-slate-300">
-                            <FilePlus className="h-4 w-4" />
-                          </span>
-                        )}
-                      </td>
+                          )}
+                        </td>
+                      )}
                       <td className="px-6 py-4 text-right pr-8">
                         <div className="flex items-center justify-end gap-2">
                           <button
@@ -498,7 +576,7 @@ export default function DoctorAppointments() {
               >
                 Open Prescription
               </Link>
-            ) : selectedPatient?.id ? (
+            ) : !isCompounder && selectedPatient?.id ? (
               <Link
                 href={`/doctor/prescriptions/create?appointment_id=${selectedPatient.id}`}
                 className="inline-flex items-center rounded-lg bg-[#2D3A74] px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-[#243063]"

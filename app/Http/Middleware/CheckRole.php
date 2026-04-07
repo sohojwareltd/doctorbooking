@@ -13,7 +13,7 @@ class CheckRole
      *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
-    public function handle(Request $request, Closure $next, string $role): Response
+    public function handle(Request $request, Closure $next, string ...$roles): Response
     {
         $user = $request->user();
         $wantsJson = $request->expectsJson() || $request->is('api/*');
@@ -28,7 +28,7 @@ class CheckRole
 
         $user->loadMissing('role');
 
-        if ($user->role?->name !== $role) {
+        if (!in_array($user->role?->name, $roles, true)) {
             if ($wantsJson) {
                 return response()->json(['message' => 'Forbidden.'], 403);
             }

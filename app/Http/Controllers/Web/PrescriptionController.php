@@ -137,8 +137,11 @@ class PrescriptionController extends Controller
     /** GET /doctor/prescriptions/{prescription} */
     public function doctorShow(Prescription $prescription): Response
     {
-        $doctor = Auth::user();
-        abort_unless($prescription->doctor_id === $doctor->doctorId(), 403);
+        $doctor   = Auth::user();
+        $doctorId = $doctor->doctorId();
+        if ($doctorId) {
+            abort_unless($prescription->doctor_id === $doctorId, 403);
+        }
 
         $prescription->load([
             'user:id,name,email,phone',
@@ -147,7 +150,7 @@ class PrescriptionController extends Controller
 
         $prescription->user?->loadMissing('patientProfile');
 
-        $chamber = Chamber::where('doctor_id', $doctor->doctorId())->where('is_active', true)->first();
+        $chamber = $doctorId ? Chamber::where('doctor_id', $doctorId)->where('is_active', true)->first() : null;
 
         return Inertia::render('doctor/PrescriptionShow', [
             'prescription' => [

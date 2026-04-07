@@ -9,7 +9,9 @@ export default function DoctorSidebar({ currentPath, onClose, collapsed = false,
   const { auth } = usePage().props;
   const user = auth?.user;
 
-  const practiceSettingsItems = [
+  const isCompounder = user?.role === 'compounder';
+
+  const practiceSettingsItems = isCompounder ? [] : [
     { href: '/doctor/chambers', label: 'Chambers', Icon: Stethoscope },
     { href: '/doctor/schedule', label: 'Schedule', Icon: CalendarClock },
     { href: '/doctor/profile', label: 'Profile', Icon: UserCog },
@@ -36,7 +38,7 @@ export default function DoctorSidebar({ currentPath, onClose, collapsed = false,
         { href: '/doctor/dashboard', label: 'Dashboard', Icon: LayoutDashboard },
         { href: '/doctor/appointments', label: 'Appointments', Icon: CalendarDays, badge: null },
         { href: '/doctor/patients', label: 'Patients', Icon: Users },
-        { href: '/doctor/prescriptions', label: 'Prescriptions', Icon: ClipboardList },
+        ...(!isCompounder ? [{ href: '/doctor/prescriptions', label: 'Prescriptions', Icon: ClipboardList }] : []),
       ],
     },
   ];
@@ -99,7 +101,8 @@ export default function DoctorSidebar({ currentPath, onClose, collapsed = false,
               );
             })}
 
-            {/* Practice Settings Dropdown */}
+            {/* Practice Settings Dropdown — doctor only */}
+            {!isCompounder && (
             <li>
               <div className="sidebar-menu-item">
                 <div className={`flex items-center ${practiceSettingsActive && !practiceOpen ? '' : ''}`}
@@ -154,6 +157,7 @@ export default function DoctorSidebar({ currentPath, onClose, collapsed = false,
                 </div>
               </div>
             </li>
+            )}
           </ul>
         </div>
       </nav>
@@ -173,7 +177,7 @@ export default function DoctorSidebar({ currentPath, onClose, collapsed = false,
 
       {/* Doctor Profile + Logout */}
       <div className="flex-shrink-0 border-t border-white/10 p-3">
-        <Link href="/doctor/profile" className={`group flex items-center gap-3 rounded-xl ${collapsed ? 'justify-center p-2.5' : 'p-2.5'} transition hover:bg-white/10`}>
+        <Link href={isCompounder ? '#' : '/doctor/profile'} className={`group flex items-center gap-3 rounded-xl ${collapsed ? 'justify-center p-2.5' : 'p-2.5'} transition hover:bg-white/10`}>
           <div className="relative flex-shrink-0">
             <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-white/20 bg-white/10">
               {user?.profile_picture ? (
