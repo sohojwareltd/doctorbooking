@@ -113,6 +113,8 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
     setUnavailable((prev) => (Array.isArray(prev) ? prev.filter((_, i) => i !== idx) : prev));
   };
 
+  const selectedChamberId = String(current_chamber_id ?? (chambers[0]?.id ?? ''));
+
   const save = async () => {
     setSaving(true);
 
@@ -133,7 +135,7 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
           Accept: 'application/json',
         },
         body: JSON.stringify({
-          chamber_id: current_chamber_id,
+          chamber_id: current_chamber_id ?? null,
           schedule: rows,
           unavailable_ranges: unavailable,
         }),
@@ -167,7 +169,6 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
     return { daysOpen, totalRanges, avgSlot, unavailableDays };
   }, [rows, unavailable]);
 
-  const selectedChamberId = String(current_chamber_id ?? (chambers[0]?.id ?? ''));
   const selectedChamber = useMemo(() => {
     if (!Array.isArray(chambers) || chambers.length === 0) return null;
     return chambers.find((c) => String(c.id) === selectedChamberId) || chambers[0] || null;

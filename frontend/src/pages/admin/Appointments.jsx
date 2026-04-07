@@ -5,17 +5,33 @@ import AdminLayout from '../../layouts/AdminLayout';
 import { formatDisplayDateWithYearFromDateLike, formatDisplayTime12h } from '../../utils/dateFormat';
 import { toastError, toastSuccess } from '../../utils/toast';
 
-export default function AdminAppointments({ appointments = [] }) {
-  const pageRows = useMemo(() => (Array.isArray(appointments) ? appointments : (appointments?.data ?? [])), [appointments]);
-  const pagination = useMemo(() => (Array.isArray(appointments) ? null : appointments), [appointments]);
-
-  const [rows, setRows] = useState(pageRows);
+export default function AdminAppointments() {
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedIds, setSelectedIds] = useState([]);
 
   const todayLabel = useMemo(() => formatDisplayDateWithYearFromDateLike(new Date()), []);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/compounder/appointments?per_page=200', {
+          headers: { Accept: 'application/json' },
+          credentials: 'same-origin',
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const items = Array.isArray(data.appointments) ? data.appointments : (data.appointments?.data ?? []);
+          setRows(items);
+        }
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
 
   const filteredRows = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
@@ -69,10 +85,6 @@ export default function AdminAppointments({ appointments = [] }) {
     );
   }, [filteredRows]);
 
-  useEffect(() => {
-    setRows(pageRows);
-  }, [pageRows]);
-
   const getStatusColor = (status) => {
     const s = (status || '').toLowerCase();
     if (s === 'scheduled') return 'border-blue-200 bg-blue-50 text-blue-800';
@@ -85,14 +97,15 @@ export default function AdminAppointments({ appointments = [] }) {
   };
 
   const updateStatus = async (id, status) => {
-    const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-    const res = await fetch(`/admin/appointments/${id}/status`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': token, 'Accept': 'application/json' },
-      body: JSON.stringify({ status })
+    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
+    const res = await fetch(`/api/compounder/appointments/${id}/status`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': token, Accept: 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ status }),
     });
     if (res.ok) {
-      setRows(prev => prev.map(r => r.id === id ? { ...r, status } : r));
+      setRows((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
       toastSuccess('Appointment status updated.');
     } else {
       const data = await res.json().catch(() => ({}));
@@ -225,6 +238,11 @@ export default function AdminAppointments({ appointments = [] }) {
                 </tr>
               </thead>
               <tbody className="divide-y bg-white">
+                {loading ? (
+                  <tr><td colSpan={8} className="px-4 py-10 text-center text-sm text-gray-500">Loading appointments…</td></tr>
+                ) : filteredRows.length === 0 ? (
+                  <tr><td colSpan={8} className="px-4 py-10 text-center text-sm text-gray-500">No appointments found.</td></tr>
+                ) : null}
                 {filteredRows.map((a) => (
                   <tr key={a.id} className="hover:bg-[#00acb1]/5">
                     <td className="px-4 py-3">

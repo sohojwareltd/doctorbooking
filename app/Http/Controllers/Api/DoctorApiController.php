@@ -18,7 +18,7 @@ class DoctorApiController extends Controller
         $doctor = $request->user();
 
         $appointments = Appointment::with(['user:id,name', 'prescription:id,appointment_id'])
-            ->where('doctor_id', $doctor->id)
+            ->where('doctor_id', $doctor->doctorId())
             ->orderByDesc('appointment_date')
             ->orderByDesc('appointment_time')
             ->get(['id','user_id','appointment_date','appointment_time','status','symptoms','name','phone','email','age','gender','is_guest']);
@@ -49,11 +49,11 @@ class DoctorApiController extends Controller
     {
         $doctor = $request->user();
 
-        $schedules = DoctorSchedule::where('doctor_id', $doctor->id)
+        $schedules = DoctorSchedule::where('doctor_id', $doctor->doctorId())
             ->orderBy('day_of_week')
             ->get(['day_of_week', 'start_time', 'end_time', 'slot_minutes', 'is_closed']);
 
-        $ranges = DoctorScheduleRange::where('doctor_id', $doctor->id)
+        $ranges = DoctorScheduleRange::where('doctor_id', $doctor->doctorId())
             ->orderBy('day_of_week')
             ->orderBy('start_time')
             ->get(['day_of_week', 'start_time', 'end_time'])
@@ -88,7 +88,7 @@ class DoctorApiController extends Controller
             ];
         }
 
-        $unavailableRanges = DoctorUnavailableRange::where('doctor_id', $doctor->id)
+        $unavailableRanges = DoctorUnavailableRange::where('doctor_id', $doctor->doctorId())
             ->orderBy('start_date')
             ->orderBy('end_date')
             ->get(['start_date', 'end_date'])
@@ -109,7 +109,7 @@ class DoctorApiController extends Controller
         $doctor = $request->user();
 
         $rows = Prescription::with('user:id,name')
-            ->where('doctor_id', $doctor->id)
+            ->where('doctor_id', $doctor->doctorId())
             ->orderByDesc('created_at')
             ->get(['id','appointment_id','user_id','diagnosis','medications','instructions','tests','next_visit_date','created_at']);
 
@@ -137,7 +137,7 @@ class DoctorApiController extends Controller
             'user:id,name',
             'appointment:id,appointment_date,appointment_time,status',
         ])
-            ->where('doctor_id', $doctor->id)
+            ->where('doctor_id', $doctor->doctorId())
             ->where('id', $prescription->id)
             ->firstOrFail();
 

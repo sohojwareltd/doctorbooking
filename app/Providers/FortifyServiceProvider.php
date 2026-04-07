@@ -4,8 +4,10 @@ namespace App\Providers;
 
 use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
+use App\Models\User;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
@@ -40,6 +42,21 @@ class FortifyServiceProvider extends ServiceProvider
     {
         Fortify::resetUserPasswordsUsing(ResetUserPassword::class);
         Fortify::createUsersUsing(CreateNewUser::class);
+
+        // Allow login with email, phone, or username.
+        // Fortify sends the field named 'email' from its login form — we treat it as a generic identifier.
+        Fortify::authenticateUsing(function (Request $request) {
+            $identifier = $request->input('email');
+            $user = User::with('role')
+                ->where('username', $identifier)
+                ->orWhere('email', $identifier)
+                ->orWhere('phone', $identifier)
+                ->first();
+
+            if ($user && Hash::check($request->input('password'), $user->password)) {
+                return $user;
+            }
+        });
     }
 
     /**

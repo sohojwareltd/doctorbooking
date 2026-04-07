@@ -1,12 +1,32 @@
 import { Head, Link } from '@inertiajs/react';
 import { CalendarDays } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import UserLayout from '../../layouts/UserLayout';
 import { formatDisplayDateWithYearFromDateLike, formatDisplayTime12h } from '../../utils/dateFormat';
 
-export default function UserAppointments({ appointments = [] }) {
-  const rows = useMemo(() => (Array.isArray(appointments) ? appointments : (appointments?.data ?? [])), [appointments]);
-  const pagination = useMemo(() => (Array.isArray(appointments) ? null : appointments), [appointments]);
+export default function UserAppointments() {
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/patient/appointments?per_page=50', {
+          headers: { Accept: 'application/json' },
+          credentials: 'same-origin',
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const items = Array.isArray(data.appointments) ? data.appointments : (data.appointments?.data ?? []);
+          setRows(items);
+          setPagination(data.meta ?? null);
+        }
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
 
   const statusBadge = (status) => {
     const s = (status || '').toLowerCase();
@@ -23,7 +43,9 @@ export default function UserAppointments({ appointments = [] }) {
     { label: 'Cancelled', value: 'cancelled' },
   ];
   const [activeTab, setActiveTab] = useState(null);
-  const filteredRows = activeTab ? rows.filter((a) => (a.status || '').toLowerCase() === activeTab) : rows;
+  const filteredRows = useMemo(() => (
+    activeTab ? rows.filter((a) => (a.status || '').toLowerCase() === activeTab) : rows
+  ), [rows, activeTab]);
 
   return (
     <>
@@ -74,8 +96,7 @@ export default function UserAppointments({ appointments = [] }) {
           </div>
           <div className="flex items-center gap-2 text-xs text-gray-400">
             <span className="hidden sm:inline">{pagination?.total ?? rows.length} total</span>
-          </div>
-        </div>
+          </div>        </div>
 
         {/* Section header */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
@@ -102,6 +123,9 @@ export default function UserAppointments({ appointments = [] }) {
               </tr>
             </thead>
             <tbody>
+              {loading ? (
+                <tr><td colSpan={7} className="px-5 py-16 text-center text-sm text-gray-400">Loading appointments…</td></tr>
+              ) : null}
               {filteredRows.map((a) => (
                 <tr key={a.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                   <td className="px-5 py-3.5">

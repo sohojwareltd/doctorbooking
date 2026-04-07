@@ -2,122 +2,86 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Sanctum\HasApiTokens;
 
-/**
- * @property int $id
- * @property string $name
- * @property string|null $email
- * @property string $password
- * @property string $role
- * @property string|null $phone
- * @property string|null $address
- * @property \Illuminate\Support\Carbon|null $date_of_birth
- * @property int|null $age
- * @property string|null $gender
- * @property string|int|float|null $weight
- * @property string|null $specialization
- * @property string|null $degree
- * @property string|null $registration_no
- * @property string|null $profile_picture
- * @property string|null $bio
- * @property int|null $experience
- * @property array<string, mixed>|null $about_content
- * @property \Illuminate\Support\Carbon|null $email_verified_at
- * @property \Illuminate\Support\Carbon|null $created_at
- * @property \Illuminate\Support\Carbon|null $updated_at
- */
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasApiTokens, HasFactory, Notifiable, TwoFactorAuthenticatable;
+    use HasApiTokens, HasFactory, Notifiable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
     protected $fillable = [
-        'name',
-        'email',
-        'password',
-        'role',
-        'phone',
-        'address',
-        'date_of_birth',
-        'age',
-        'gender',
-        'weight',
-        'specialization',
-        'degree',
-        'registration_no',
-        'profile_picture',
-        'bio',
-        'experience',
-        'about_content',
+        'name', 'username', 'email', 'phone', 'password', 'role_id', 'email_verified_at',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
-    protected $hidden = [
-        'password',
-        'two_factor_secret',
-        'two_factor_recovery_codes',
-        'remember_token',
-    ];
+    protected $hidden = ['password', 'remember_token'];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
             'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-            'two_factor_confirmed_at' => 'datetime',
-            'date_of_birth' => 'date',
-            'about_content' => 'array',
+            'password'          => 'hashed',
         ];
     }
 
+    public function role(): BelongsTo
+    {
+        return $this->belongsTo(Role::class);
+    }
+
+    public function hasRole(string $roleName): bool
+    {
+        return $this->role?->name === $roleName;
+    }
+
+    public function getRoleNameAttribute(): string
+    {
+        return $this->role?->name ?? '';
+    }
+
+    public function doctorProfile(): HasOne
+    {
+        return $this->hasOne(Doctor::class);
+    }
+
     /**
-     * Get the appointments for the user (as patient).
+     * Returns doctors.id for the authenticated doctor user.
+     * Use this wherever doctor_id is stored/queried (NOT users.id).
      */
+    public function doctorId(): ?int
+    {
+        return $this->loadMissing('doctorProfile')->doctorProfile?->id;
+    }
+
+    public function patientProfile(): HasOne
+    {
+        return $this->hasOne(Patient::class);
+    }
+
+    public function compoundProfile(): HasOne
+    {
+        return $this->hasOne(Compounder::class);
+    }
+
     public function appointments(): HasMany
     {
         return $this->hasMany(Appointment::class);
     }
 
-    /**
-     * Get the appointments for the user (as doctor).
-     */
     public function doctorAppointments(): HasMany
     {
         return $this->hasMany(Appointment::class, 'doctor_id');
     }
 
-    /**
-     * Get the prescriptions for the user (as patient).
-     */
     public function prescriptions(): HasMany
     {
         return $this->hasMany(Prescription::class);
     }
 
-    /**
-     * Get the prescriptions written by the user (as doctor).
-     */
     public function doctorPrescriptions(): HasMany
     {
         return $this->hasMany(Prescription::class, 'doctor_id');

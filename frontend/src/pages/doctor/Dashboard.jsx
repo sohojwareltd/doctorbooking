@@ -41,15 +41,15 @@ export default function DoctorDashboard({
       toastError('Please fill all fields.');
       return;
     }
-    const token = document.cookie.split('; ').find((r) => r.startsWith('XSRF-TOKEN='))?.split('=')[1];
-    const res = await fetch('/doctor/appointments/create', {
+    const token = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
+    const res = await fetch('/api/doctor/appointments', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Accept: 'application/json',
-        'X-XSRF-TOKEN': token ? decodeURIComponent(token) : '',
+        'X-CSRF-TOKEN': token,
       },
-      credentials: 'include',
+      credentials: 'same-origin',
       body: JSON.stringify(createForm),
     });
     if (res.ok) {
@@ -96,15 +96,14 @@ export default function DoctorDashboard({
   const updateStatus = async (id, status) => {
     if (!id) return false;
     try {
-      const res = await fetch('/doctor/appointments/' + id + '/status', {
-        method: 'POST',
+      const res = await fetch(`/api/doctor/appointments/${id}/status`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           Accept: 'application/json',
-          'X-Requested-With': 'XMLHttpRequest',
           'X-CSRF-TOKEN': getCsrfToken(),
         },
-        credentials: 'include',
+        credentials: 'same-origin',
         body: JSON.stringify({ status }),
       });
       if (!res.ok) return false;

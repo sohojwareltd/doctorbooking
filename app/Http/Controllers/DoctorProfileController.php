@@ -13,79 +13,75 @@ class DoctorProfileController extends Controller
 {
     private function currentDoctor(): User
     {
-        return User::query()->findOrFail((int) Auth::id());
+        return User::with('doctorProfile')->findOrFail((int) Auth::id());
     }
 
     /**
-     * Show the doctor's profile.
+     * Show the doctor''s profile.
      */
     public function show()
     {
-        $user = $this->currentDoctor();
-        $about = $user->about_content ?? [];
+        $user   = $this->currentDoctor();
+        $doctor = $user->doctorProfile;
+        $about  = $doctor?->about_content ?? [];
+
         $aboutParagraphs = isset($about['paragraphs']) && is_array($about['paragraphs'])
             ? array_values(array_filter($about['paragraphs'], fn ($item) => filled($item)))
             : [];
 
         return Inertia::render('doctor/Profile', [
             'doctor' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'phone' => $user->phone,
-                'address' => $user->address,
-                'date_of_birth' => $user->date_of_birth?->toDateString(),
-                'gender' => $user->gender,
-                'specialization' => $user->specialization,
-                'degree' => $user->degree,
-                'registration_no' => $user->registration_no,
-                'profile_picture' => $user->profile_picture ? asset('storage/' . $user->profile_picture) : null,
-                'bio' => $user->bio,
-                'about_subtitle' => $about['subtitle'] ?? null,
-                'about_bio_details' => !empty($aboutParagraphs)
+                'id'               => $user->id,
+                'name'             => $user->name,
+                'email'            => $user->email,
+                'phone'            => $user->phone,
+                'specialization'   => $doctor?->specialization,
+                'degree'           => $doctor?->degree,
+                'registration_no'  => $doctor?->registration_no,
+                'profile_picture'  => $doctor?->profile_picture ? asset('storage/' . $doctor->profile_picture) : null,
+                'bio'              => $doctor?->bio,
+                'about_subtitle'              => $about['subtitle'] ?? null,
+                'about_bio_details'           => !empty($aboutParagraphs)
                     ? implode("\n\n", $aboutParagraphs)
-                    : ($user->bio ?? null),
-                'about_credentials_title' => $about['credentialsTitle'] ?? null,
-                'about_credentials_text' => isset($about['credentials']) && is_array($about['credentials'])
+                    : ($doctor?->bio ?? null),
+                'about_credentials_title'     => $about['credentialsTitle'] ?? null,
+                'about_credentials_text'      => isset($about['credentials']) && is_array($about['credentials'])
                     ? implode("\n", $about['credentials'])
                     : null,
-                'about_highlight_value' => $about['highlight']['value'] ?? null,
-                'about_highlight_label' => $about['highlight']['label'] ?? null,
-                'about_stats_patients_treated' => $about['stats'][0]['value'] ?? null,
-                'about_stats_years_experience' => $about['stats'][1]['value'] ?? null,
-                'about_stats_patient_satisfaction' => $about['stats'][2]['value'] ?? null,
-                'about_stats_medical_cases' => $about['stats'][3]['value'] ?? null,
+                'about_highlight_value'              => $about['highlight']['value'] ?? null,
+                'about_highlight_label'              => $about['highlight']['label'] ?? null,
+                'about_stats_patients_treated'       => $about['stats'][0]['value'] ?? null,
+                'about_stats_years_experience'       => $about['stats'][1]['value'] ?? null,
+                'about_stats_patient_satisfaction'   => $about['stats'][2]['value'] ?? null,
+                'about_stats_medical_cases'          => $about['stats'][3]['value'] ?? null,
             ],
         ]);
     }
 
     /**
-     * Update the doctor's profile.
+     * Update the doctor''s profile.
      */
     public function update(Request $request)
     {
         $user = $this->currentDoctor();
 
         $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
-            'phone' => ['nullable', 'string', 'max:20'],
-            'address' => ['nullable', 'string', 'max:500'],
-            'date_of_birth' => ['nullable', 'date'],
-            'gender' => ['nullable', Rule::in(['male', 'female', 'other'])],
-            'specialization' => ['nullable', 'string', 'max:255'],
-            'degree' => ['nullable', 'string', 'max:500'],
-            'registration_no' => ['nullable', 'string', 'max:100'],
-            'about_subtitle' => ['nullable', 'string', 'max:255'],
-            'about_bio_details' => ['nullable', 'string', 'max:6000'],
-            'about_credentials_title' => ['nullable', 'string', 'max:255'],
-            'about_credentials_text' => ['nullable', 'string', 'max:4000'],
-            'about_highlight_value' => ['nullable', 'string', 'max:50'],
-            'about_highlight_label' => ['nullable', 'string', 'max:100'],
-            'about_stats_patients_treated' => ['nullable', 'string', 'max:50'],
-            'about_stats_years_experience' => ['nullable', 'string', 'max:50'],
-            'about_stats_patient_satisfaction' => ['nullable', 'string', 'max:50'],
-            'about_stats_medical_cases' => ['nullable', 'string', 'max:50'],
+            'name'                              => ['required', 'string', 'max:255'],
+            'email'                             => ['nullable', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
+            'phone'                             => ['nullable', 'string', 'max:20'],
+            'specialization'                    => ['nullable', 'string', 'max:255'],
+            'degree'                            => ['nullable', 'string', 'max:500'],
+            'registration_no'                   => ['nullable', 'string', 'max:100'],
+            'about_subtitle'                    => ['nullable', 'string', 'max:255'],
+            'about_bio_details'                 => ['nullable', 'string', 'max:6000'],
+            'about_credentials_title'           => ['nullable', 'string', 'max:255'],
+            'about_credentials_text'            => ['nullable', 'string', 'max:4000'],
+            'about_highlight_value'             => ['nullable', 'string', 'max:50'],
+            'about_highlight_label'             => ['nullable', 'string', 'max:100'],
+            'about_stats_patients_treated'      => ['nullable', 'string', 'max:50'],
+            'about_stats_years_experience'      => ['nullable', 'string', 'max:50'],
+            'about_stats_patient_satisfaction'  => ['nullable', 'string', 'max:50'],
+            'about_stats_medical_cases'         => ['nullable', 'string', 'max:50'],
         ]);
 
         $paragraphs = collect(
@@ -103,35 +99,40 @@ class DoctorProfileController extends Controller
             ->all();
 
         $aboutContent = [
-            'subtitle' => $validated['about_subtitle'] ?? null,
-            'paragraphs' => $paragraphs,
-            'credentialsTitle' => $validated['about_credentials_title'] ?? null,
-            'credentials' => $credentials,
-            'highlight' => [
+            'subtitle'          => $validated['about_subtitle'] ?? null,
+            'paragraphs'        => $paragraphs,
+            'credentialsTitle'  => $validated['about_credentials_title'] ?? null,
+            'credentials'       => $credentials,
+            'highlight'         => [
                 'value' => $validated['about_highlight_value'] ?? null,
                 'label' => $validated['about_highlight_label'] ?? null,
             ],
             'stats' => [
-                ['icon' => 'Users', 'value' => $validated['about_stats_patients_treated'] ?? null, 'label' => 'Patients Treated'],
-                ['icon' => 'Award', 'value' => $validated['about_stats_years_experience'] ?? null, 'label' => 'Years Experience'],
-                ['icon' => 'Heart', 'value' => $validated['about_stats_patient_satisfaction'] ?? null, 'label' => 'Patient Satisfaction'],
-                ['icon' => 'BookOpen', 'value' => $validated['about_stats_medical_cases'] ?? null, 'label' => 'Medical Cases'],
+                ['icon' => 'Users',    'value' => $validated['about_stats_patients_treated']      ?? null, 'label' => 'Patients Treated'],
+                ['icon' => 'Award',    'value' => $validated['about_stats_years_experience']       ?? null, 'label' => 'Years Experience'],
+                ['icon' => 'Heart',    'value' => $validated['about_stats_patient_satisfaction']   ?? null, 'label' => 'Patient Satisfaction'],
+                ['icon' => 'BookOpen', 'value' => $validated['about_stats_medical_cases']          ?? null, 'label' => 'Medical Cases'],
             ],
         ];
 
+        // Update lean user columns
         $user->update([
-            'name' => $validated['name'],
-            'email' => $validated['email'],
+            'name'  => $validated['name'],
+            'email' => $validated['email'] ?? $user->email,
             'phone' => $validated['phone'] ?? null,
-            'address' => $validated['address'] ?? null,
-            'date_of_birth' => $validated['date_of_birth'] ?? null,
-            'gender' => $validated['gender'] ?? null,
-            'specialization' => $validated['specialization'] ?? null,
-            'degree' => $validated['degree'] ?? null,
-            'registration_no' => $validated['registration_no'] ?? null,
-            'bio' => $paragraphs[0] ?? null,
-            'about_content' => $aboutContent,
         ]);
+
+        // Update or create doctor profile
+        $user->doctorProfile()->updateOrCreate(
+            ['user_id' => $user->id],
+            [
+                'specialization' => $validated['specialization'] ?? null,
+                'degree'         => $validated['degree'] ?? null,
+                'registration_no'=> $validated['registration_no'] ?? null,
+                'bio'            => $paragraphs[0] ?? null,
+                'about_content'  => $aboutContent,
+            ]
+        );
 
         return back()->with('success', 'Profile updated successfully.');
     }
@@ -145,16 +146,20 @@ class DoctorProfileController extends Controller
             'photo' => ['required', 'image', 'mimes:jpeg,png,jpg,gif,webp', 'max:2048'],
         ]);
 
-        $user = $this->currentDoctor();
+        $user   = $this->currentDoctor();
+        $doctor = $user->doctorProfile;
 
         // Delete old photo if exists
-        if ($user->profile_picture && Storage::disk('public')->exists($user->profile_picture)) {
-            Storage::disk('public')->delete($user->profile_picture);
+        if ($doctor?->profile_picture && Storage::disk('public')->exists($doctor->profile_picture)) {
+            Storage::disk('public')->delete($doctor->profile_picture);
         }
 
-        // Store new photo
         $path = $request->file('photo')->store('profile-pictures', 'public');
-        $user->update(['profile_picture' => $path]);
+
+        $user->doctorProfile()->updateOrCreate(
+            ['user_id' => $user->id],
+            ['profile_picture' => $path]
+        );
 
         return back()->with('success', 'Profile photo updated successfully.');
     }
@@ -164,13 +169,17 @@ class DoctorProfileController extends Controller
      */
     public function deletePhoto()
     {
-        $user = $this->currentDoctor();
+        $user   = $this->currentDoctor();
+        $doctor = $user->doctorProfile;
 
-        if ($user->profile_picture && Storage::disk('public')->exists($user->profile_picture)) {
-            Storage::disk('public')->delete($user->profile_picture);
+        if ($doctor?->profile_picture && Storage::disk('public')->exists($doctor->profile_picture)) {
+            Storage::disk('public')->delete($doctor->profile_picture);
         }
 
-        $user->update(['profile_picture' => null]);
+        $user->doctorProfile()->updateOrCreate(
+            ['user_id' => $user->id],
+            ['profile_picture' => null]
+        );
 
         return back()->with('success', 'Profile photo removed successfully.');
     }

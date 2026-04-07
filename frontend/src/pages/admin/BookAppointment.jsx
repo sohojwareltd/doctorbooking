@@ -55,7 +55,7 @@ export default function AdminBookAppointment() {
     let mounted = true;
     const run = async () => {
       try {
-        const res = await fetch('/doctor-unavailable-ranges');
+        const res = await fetch('/api/public/unavailable-ranges');
         const data = await res.json().catch(() => ({}));
         if (!mounted) return;
         setUnavailableRanges(Array.isArray(data?.ranges) ? data.ranges : []);
@@ -76,7 +76,7 @@ export default function AdminBookAppointment() {
     const seq = ++slotsRequestSeq.current;
     setLoadingSlots(true);
     try {
-      const res = await fetch(`/available-slots/${date}`);
+      const res = await fetch(`/api/public/slots/${date}`);
       const data = await res.json().catch(() => ({}));
 
       if (seq !== slotsRequestSeq.current) return;
@@ -139,7 +139,7 @@ export default function AdminBookAppointment() {
         return;
       }
 
-      const res = await fetch('/book-appointment', {
+      const res = await fetch('/api/public/book-appointment', {
         method: 'POST',
         credentials: 'same-origin',
         headers: {

@@ -1,25 +1,17 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
-use Laravel\Fortify\Features;
-use App\Http\Controllers\DoctorScheduleController;
-use App\Http\Controllers\DoctorProfileController;
-use App\Http\Controllers\PrescriptionController;
-use App\Http\Controllers\Admin\SiteContentController;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
-use Illuminate\Http\Request;
-use App\Models\Appointment;
-use App\Models\DoctorSchedule;
-use App\Models\DoctorScheduleRange;
-use App\Models\Prescription;
-use App\Models\Medicine;
-use App\Models\DoctorUnavailableRange;
-use App\Models\SiteContent;
-use App\Models\User;
+use App\Http\Controllers\Web\PublicController;
+use App\Http\Controllers\Web\DashboardController;
+use App\Http\Controllers\Web\AppointmentController as WebAppointmentController;
+use App\Http\Controllers\Web\PrescriptionController as WebPrescriptionController;
+use App\Http\Controllers\Web\PatientController;
+use App\Http\Controllers\Web\ReportsController;
+use App\Http\Controllers\Web\ProfileController;
+use App\Http\Controllers\Web\ChamberController;
+use App\Http\Controllers\DoctorScheduleController;
+use App\Http\Controllers\Admin\SiteContentController;
 
 /*
 |--------------------------------------------------------------------------
@@ -27,1241 +19,166 @@ use App\Models\User;
 |--------------------------------------------------------------------------
 */
 
-Route::get('/', function () {
-    $homeContent = null;
-    $chambers = [];
+Route::get('/', [PublicController::class, 'home'])->name('home');
+Route::get('/about', [PublicController::class, 'about'])->name('about');
+Route::get('/contact', [PublicController::class, 'contact'])->name('contact');
+Route::post('/contact', fn () => redirect()->back())->name('contact.submit');
 
-    if (Schema::hasTable('site_contents')) {
-        $homeContent = SiteContent::where('key', 'home')->first()?->value;
-    }
+// Public booking page (Inertia render only — data fetched via /api/public/*)
+Route::get('/book-appointment', [PublicController::class, 'bookAppointment'])->name('public.book-appointment.view');
 
-    $homeContent = SiteContent::normalizeValue($homeContent);
+// Booking profile pre-fill (session auth — for logged-in users on the public booking page)
+Route::middleware('auth')->get('/user/booking-profile', [\App\Http\Controllers\Api\AuthController::class, 'bookingProfile'])->name('user.booking-profile');
 
-    // Fetch doctor profile for hero section
-    $doctor = null;
-    if (Schema::hasTable('users')) {
-        $doctor = User::where('role', 'doctor')->first();
-
-        if ($doctor && Schema::hasTable('chambers')) {
-            $chambers = \App\Models\Chamber::where('doctor_id', $doctor->id)
-                ->where('is_active', true)
-                ->orderBy('name')
-                ->get(['id', 'name', 'location', 'phone', 'google_maps_url'])
-                ->map(fn ($chamber) => [
-                    'id' => $chamber->id,
-                    'name' => $chamber->name,
-                    'location' => $chamber->location,
-                    'phone' => $chamber->phone,
-                    'google_maps_url' => $chamber->google_maps_url,
-                ])
-                ->all();
-        }
-    }
-
-    return Inertia::render('Welcome', [
-        'home' => $homeContent,
-        'doctor' => $doctor,
-        'chambers' => $chambers,
-    ]);
-})->name('home');
-
-Route::get('/about', function () {
-    return Inertia::render('public/About');
-})->name('about');
-
-Route::get('/contact', function () {
-    return Inertia::render('public/Contact');
-})->name('contact');
-
-Route::post('/contact', function () {
-    // Handle contact form submission
-    return redirect()->back();
-})->name('contact.submit');
-
-// Public booking endpoint
-Route::post('/book-appointment', 'App\\Http\\Controllers\\AppointmentController@storePublic')->name('public.book-appointment');
-
-// Public booking preview (serial number + estimated time)
-Route::get(
-    '/booking-preview',
-    'App\\Http\\Controllers\\AppointmentController@previewSerial'
-)->name('public.book-appointment.preview');
-
-// Simple math captcha for public booking form (JSON only)
-Route::get('/booking-captcha', function () {
-    $a = random_int(1, 9);
-    $b = random_int(1, 9);
-    $answer = $a + $b;
-
-    $token = Str::random(32);
-    session(['booking_captcha_' . $token => $answer]);
-
-    return response()->json([
-        'token' => $token,
-        'question' => "What is {$a} + {$b}?",
-    ]);
-})->name('public.booking.captcha');
-
-// Allow GET /book-appointment to redirect or render the appropriate booking UI
-Route::get('/book-appointment', function () {
-    $user = Auth::user();
-
-    if ($user?->role === 'admin') {
-        return redirect()->route('admin.book-appointment');
-    }
-
-    if ($user?->role === 'user') {
-        // Logged-in patient: use the multi-step user booking page
-        return redirect()->route('user.book-appointment');
-    }
-
-    // Guests or other roles: dedicated public booking page (multi-step)
-    return Inertia::render('public/BookAppointment');
-})->name('public.book-appointment.view');
-
-Route::get('/available-slots/{date}', 'App\\Http\\Controllers\\AppointmentController@getAvailableSlots')->name('available-slots');
-Route::get('/doctor-unavailable-ranges', 'App\\Http\\Controllers\\AppointmentController@getDoctorUnavailableRanges')->name('doctor-unavailable-ranges');
-
-// Public list of doctor's active chambers (for multi-step booking UI)
-Route::get('/public-chambers', function () {
-    $doctor = User::where('role', 'doctor')->first();
-    if (!$doctor) {
-        return response()->json(['chambers' => []]);
-    }
-
-    $chambers = \App\Models\Chamber::where('doctor_id', $doctor->id)
-        ->where('is_active', true)
-        ->orderBy('name')
-        ->get(['id', 'name', 'location', 'phone', 'google_maps_url']);
-
-    return response()->json(['chambers' => $chambers]);
-})->name('public.chambers');
+// Captcha + booking submission (must be web routes so session works)
+Route::get('/api/public/captcha', [\App\Http\Controllers\Api\PublicController::class, 'captcha']);
+Route::post('/api/public/book-appointment', [\App\Http\Controllers\Api\PublicController::class, 'bookAppointment']);
 
 /*
 |--------------------------------------------------------------------------
-| Dashboard (Fortify default)
+| Shared Dashboard Redirect
 |--------------------------------------------------------------------------
-|
-| Fortify's default auth scaffolding expects a named "dashboard" route.
-| We keep it as a small role-based redirect.
-|
 */
 
-Route::middleware(['auth', 'verified'])->get('/dashboard', function () {
-    $user = Auth::user();
-
-    if ($user && $user->role === 'admin') {
-        return redirect()->route('admin.dashboard');
-    }
-
-    if ($user && $user->role === 'doctor') {
-        return redirect()->route('doctor.dashboard');
-    }
-
-    if ($user && $user->role === 'user') {
-        return redirect()->route('user.dashboard');
-    }
-
-    return Inertia::render('Dashboard');
-})->name('dashboard');
+Route::middleware(['auth', 'verified'])->get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
 /*
 |--------------------------------------------------------------------------
-| User Routes (Patient)
+| Patient Routes (role: patient)
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth', 'verified', 'role:user'])->prefix('user')->name('user.')->group(function () {
-    Route::get('/dashboard', function () {
-        $user = Auth::user();
-        $upcomingCount = Appointment::where('user_id', $user->id)
-            ->whereDate('appointment_date', '>=', now()->toDateString())
-            ->count();
-        $prescriptionsCount = Prescription::where('user_id', $user->id)->count();
+Route::middleware(['auth', 'verified', 'role:patient'])
+    ->prefix('patient')
+    ->name('patient.')
+    ->group(function () {
 
-        return Inertia::render('Dashboard', [
-            'stats' => [
-                'upcomingAppointments' => $upcomingCount,
-                'prescriptions' => $prescriptionsCount,
-            ],
-        ]);
-    })->name('dashboard');
-
-    Route::get('/appointments', function () {
-        $user = Auth::user();
-        
-        // Get user's appointments + any guest appointments with same email
-        $appointments = Appointment::where(function ($q) use ($user) {
-            $q->where('user_id', $user->id)
-              ->orWhere('email', $user->email);
-        })
-            ->orderByDesc('appointment_date')
-            ->orderByDesc('appointment_time')
-            ->paginate(10)
-            ->withQueryString();
-
-        return Inertia::render('user/Appointments', [
-            'appointments' => $appointments->through(fn ($a) => [
-                'id' => $a->id,
-                'is_guest' => $a->is_guest,
-                'appointment_date' => $a->appointment_date?->toDateString(),
-                'appointment_time' => substr((string) $a->appointment_time, 0, 5),
-                'status' => $a->status,
-                'symptoms' => $a->symptoms,
-            ]),
-        ]);
-    })->name('appointments');
-
-    Route::get('/book-appointment', function () {
-        return Inertia::render('user/BookAppointment');
-    })->name('book-appointment');
-
-    Route::get('/prescriptions', function () {
-        $user = Auth::user();
-        $prescriptions = Prescription::where('user_id', $user->id)
-            ->orderByDesc('created_at')
-            ->paginate(10)
-            ->withQueryString();
-
-        return Inertia::render('user/Prescriptions', [
-            'prescriptions' => $prescriptions->through(fn ($p) => [
-                'id' => $p->id,
-                'diagnosis' => $p->diagnosis,
-                'medications' => $p->medications,
-                'instructions' => $p->instructions,
-                'tests' => $p->tests,
-                'next_visit_date' => $p->next_visit_date,
-                'created_at' => $p->created_at,
-            ]),
-        ]);
-    })->name('prescriptions');
-
-    Route::get('/profile', function () {
-        return Inertia::render('user/Profile');
-    })->name('profile');
+    Route::get('/dashboard', [DashboardController::class, 'patient'])->name('dashboard');
+    Route::get('/appointments', [WebAppointmentController::class, 'patientIndex'])->name('appointments');
+    Route::get('/book-appointment', [WebAppointmentController::class, 'patientBookView'])->name('book-appointment');
+    Route::get('/prescriptions', [WebPrescriptionController::class, 'patientIndex'])->name('prescriptions');
+    Route::get('/profile', [ProfileController::class, 'patientShow'])->name('profile');
 });
 
 /*
 |--------------------------------------------------------------------------
-| Doctor Routes
+| Doctor Routes (role: doctor)
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('doctor.')->group(function () {
-    Route::get('/dashboard', function () {
-        $doctor = Auth::user();
-        $today = now()->toDateString();
-        
-        // Today's appointments count
-        $todayAppointments = Appointment::where('doctor_id', $doctor->id)
-            ->whereDate('appointment_date', $today)->count();
-        
-        // Scheduled appointments count (new status)
-        $scheduled = Appointment::where('doctor_id', $doctor->id)
-            ->where('status', 'scheduled')
-            ->whereDate('appointment_date', '>=', $today)
-            ->count();
+Route::middleware(['auth', 'verified', 'role:doctor'])
+    ->prefix('doctor')
+    ->name('doctor.')
+    ->group(function () {
 
-        // Today's queue count (patients still waiting to be seen)
-        $waitingPatients = Appointment::where('doctor_id', $doctor->id)
-            ->whereDate('appointment_date', $today)
-            ->whereIn('status', ['scheduled', 'arrived'])
-            ->count();
-        
-        // Get total unique patients
-        $totalPatients = Appointment::where('doctor_id', $doctor->id)
-            ->distinct('user_id')
-            ->count('user_id');
-        
-        // Total prescriptions issued
-        $totalPrescriptions = Prescription::where('doctor_id', $doctor->id)->count();
-        
-        // Prescribed appointments this month
-        $prescribedThisMonth = Appointment::where('doctor_id', $doctor->id)
-            ->where('status', 'prescribed')
-            ->whereMonth('appointment_date', now()->month)
-            ->count();
+    Route::get('/dashboard', [DashboardController::class, 'doctor'])->name('dashboard');
 
-        // Current in-visit appointments
-        $inVisitCollection = Appointment::with([
-                'user:id,name,email,phone,address',
-                'prescription:id,appointment_id',
-            ])
-            ->where('doctor_id', $doctor->id)
-            ->where('status', 'in_consultation')
-            ->whereDate('appointment_date', $today)
-            ->orderBy('appointment_time')
-            ->get();
+    // Appointments
+    Route::get('/appointments', [WebAppointmentController::class, 'doctorIndex'])->name('appointments');
 
-        // Auto-heal: if an in_consultation appointment already has a prescription,
-        // it was saved without an action — move it to awaiting_tests automatically.
-        $inVisitCollection->each(function (Appointment $a) {
-            if ($a->prescription) {
-                $a->update(['status' => 'awaiting_tests']);
-            }
-        });
-        // Remove auto-healed ones from the in-visit list
-        $inVisitCollection = $inVisitCollection
-            ->filter(fn (Appointment $a) => $a->getAttribute('status') === 'in_consultation')
-            ->values();
+    // Patients
+    Route::get('/patients', [PatientController::class, 'index'])->name('patients');
+    Route::get('/patients/{patient}', [PatientController::class, 'show'])->whereNumber('patient')->name('patients.show');
 
-        $inVisitAppointments = $inVisitCollection->map(fn ($a) => [
-            'id' => $a->id,
-            'serial_no' => $a->serial_no,
-            'user_id' => $a->user_id,
-            'patient_name' => $a->user?->name ?? $a->name,
-            'patient_phone' => $a->user?->phone ?? $a->phone,
-            'patient_email' => $a->user?->email ?? $a->email,
-            'user' => $a->user ? [
-                'id' => $a->user->id,
-                'name' => $a->user->name,
-                'email' => $a->user->email,
-                'phone' => $a->user->phone,
-                'address' => $a->user->address,
-            ] : null,
-            'appointment_date' => $a->appointment_date?->toDateString(),
-            'appointment_time' => substr((string) $a->appointment_time, 0, 5),
-            'status' => $a->status,
-            'symptoms' => $a->symptoms,
-            'type' => $a->type,
-            'is_video' => $a->is_video ?? false,
-            'prescription_id' => $a->prescription?->id,
-        ])->values();
+    // Prescriptions
+    Route::get('/prescriptions', [WebPrescriptionController::class, 'doctorIndex'])->name('prescriptions');
+    Route::get('/prescriptions/create', [WebPrescriptionController::class, 'doctorCreate'])->name('prescriptions.create');
+    Route::post('/prescriptions', [WebPrescriptionController::class, 'doctorStore'])->name('prescriptions.store');
+    Route::get('/prescriptions/{prescription}', [WebPrescriptionController::class, 'doctorShow'])->whereNumber('prescription')->name('prescriptions.show');
+    Route::put('/prescriptions/{prescription}', [WebPrescriptionController::class, 'doctorUpdate'])->whereNumber('prescription')->name('prescriptions.update');
 
-        $inVisitAppointment = $inVisitAppointments->first();
-
-        // Awaiting test results appointments
-        $awaitingTestsAppointments = Appointment::with([
-                'user:id,name,email,phone,address',
-                'prescription:id,appointment_id',
-            ])
-            ->where('doctor_id', $doctor->id)
-            ->where('status', 'awaiting_tests')
-            ->whereDate('appointment_date', $today)
-            ->orderBy('appointment_time')
-            ->get()
-            ->map(fn ($a) => [
-                'id' => $a->id,
-                'serial_no' => $a->serial_no,
-                'patient_name' => $a->user?->name ?? $a->name,
-                'patient_phone' => $a->user?->phone ?? $a->phone,
-                'appointment_time' => substr((string) $a->appointment_time, 0, 5),
-                'symptoms' => $a->symptoms,
-                'prescription_id' => $a->prescription?->id,
-            ])->values();
-
-            $followUpsDue = $awaitingTestsAppointments->count();
-        
-        // Get scheduled patients for today (ordered by name)
-        $scheduledToday = Appointment::with(['user:id,name,email,phone,address'])
-            ->where('doctor_id', $doctor->id)
-            ->whereDate('appointment_date', $today)
-            ->where('status', 'scheduled')
-            ->leftJoin('users', 'appointments.user_id', '=', 'users.id')
-            ->orderByRaw('COALESCE(users.name, appointments.name)')
-            ->orderBy('appointment_time')
-            ->select('appointments.*')
-            ->get()
-            ->map(fn ($a) => [
-                'id' => $a->id,
-                'serial_no' => $a->serial_no,
-                'user_id' => $a->user_id,
-                'patient_name' => $a->user?->name ?? $a->name,
-                'patient_phone' => $a->user?->phone ?? $a->phone,
-                'patient_email' => $a->user?->email ?? $a->email,
-                'user' => $a->user ? [
-                    'id' => $a->user->id,
-                    'name' => $a->user->name,
-                    'email' => $a->user->email,
-                    'phone' => $a->user->phone,
-                    'address' => $a->user->address,
-                ] : null,
-                'appointment_date' => $a->appointment_date?->toDateString(),
-                'appointment_time' => substr((string) $a->appointment_time, 0, 5),
-                'status' => $a->status,
-                'symptoms' => $a->symptoms,
-            ]);
-
-        // Weekly schedule rows for today (dashboard schedule section)
-        $todayDow = now()->dayOfWeek;
-
-        $weeklyScheduleToday = DoctorScheduleRange::query()
-            ->leftJoin('chambers', 'doctor_schedule_ranges.chamber_id', '=', 'chambers.id')
-            ->where('doctor_schedule_ranges.doctor_id', $doctor->id)
-            ->where('doctor_schedule_ranges.day_of_week', $todayDow)
-            ->orderBy('doctor_schedule_ranges.start_time')
-            ->select([
-                'doctor_schedule_ranges.id',
-                'doctor_schedule_ranges.start_time',
-                'doctor_schedule_ranges.end_time',
-                'doctor_schedule_ranges.chamber_id',
-                'chambers.name as chamber_name',
-            ])
-            ->get()
-            ->map(fn ($range) => [
-                'id' => $range->id,
-                'start_time' => $range->start_time ? substr((string) $range->start_time, 0, 5) : null,
-                'end_time' => $range->end_time ? substr((string) $range->end_time, 0, 5) : null,
-                'chamber_id' => $range->chamber_id,
-                'chamber_name' => $range->chamber_name,
-            ])
-            ->values();
-
-        $isScheduleClosedToday = false;
-        if ($weeklyScheduleToday->isEmpty()) {
-            $legacyTodaySchedule = DoctorSchedule::query()
-                ->where('doctor_id', $doctor->id)
-                ->where('day_of_week', $todayDow)
-                ->first(['start_time', 'end_time', 'slot_minutes', 'is_closed']);
-
-            if ($legacyTodaySchedule?->is_closed) {
-                $isScheduleClosedToday = true;
-            } elseif ($legacyTodaySchedule?->start_time && $legacyTodaySchedule?->end_time) {
-                $weeklyScheduleToday = collect([[
-                    'id' => 'legacy-' . $todayDow,
-                    'start_time' => substr((string) $legacyTodaySchedule->start_time, 0, 5),
-                    'end_time' => substr((string) $legacyTodaySchedule->end_time, 0, 5),
-                    'chamber_id' => null,
-                    'chamber_name' => null,
-                ]]);
-            }
-        }
-
-        // Upcoming unavailable date ranges (today onward)
-        $unavailableRanges = DoctorUnavailableRange::query()
-            ->where('doctor_id', $doctor->id)
-            ->whereDate('end_date', '>=', $today)
-            ->orderBy('start_date')
-            ->limit(12)
-            ->get()
-            ->map(fn ($range) => [
-                'id' => $range->id,
-                'start_date' => $range->start_date?->toDateString(),
-                'end_date' => $range->end_date?->toDateString(),
-            ])
-            ->values();
-        
-        // Get recent appointments (last 7 days)
-        $recentAppointments = Appointment::with(['user:id,name,email,phone,address'])
-            ->where('doctor_id', $doctor->id)
-            ->where('appointment_date', '>=', now()->subDays(7))
-            ->orderByDesc('appointment_date')
-            ->orderByDesc('appointment_time')
-            ->limit(5)
-            ->get()
-            ->map(fn ($a) => [
-                'id' => $a->id,
-                'serial_no' => $a->serial_no,
-                'user_id' => $a->user_id,
-                'patient_name' => $a->user?->name ?? $a->name,
-                'patient_phone' => $a->user?->phone ?? $a->phone,
-                'patient_email' => $a->user?->email ?? $a->email,
-                'user' => $a->user ? [
-                    'id' => $a->user->id,
-                    'name' => $a->user->name,
-                    'email' => $a->user->email,
-                    'phone' => $a->user->phone,
-                    'address' => $a->user->address,
-                ] : null,
-                'appointment_date' => $a->appointment_date?->toDateString(),
-                'appointment_time' => substr((string) $a->appointment_time, 0, 5),
-                'status' => $a->status,
-                'type' => $a->type,
-                'is_video' => $a->is_video ?? false,
-            ]);
-        
-        // Get next upcoming appointment (only scheduled/arrived — not already in-visit or done)
-        $upcomingAppointment = Appointment::with(['user:id,name,email,phone,address'])
-            ->where('doctor_id', $doctor->id)
-            ->where('appointment_date', '>=', $today)
-            ->whereIn('status', ['scheduled', 'arrived'])
-            ->orderBy('appointment_date')
-            ->orderBy('appointment_time')
-            ->first();
-        
-        $upcoming = $upcomingAppointment ? [
-            'id' => $upcomingAppointment->id,
-            'serial_no' => $upcomingAppointment->serial_no,
-            'user_id' => $upcomingAppointment->user_id,
-            'patient_name' => $upcomingAppointment->user?->name ?? $upcomingAppointment->name,
-            'patient_phone' => $upcomingAppointment->user?->phone ?? $upcomingAppointment->phone,
-            'patient_email' => $upcomingAppointment->user?->email ?? $upcomingAppointment->email,
-            'user' => $upcomingAppointment->user ? [
-                'id' => $upcomingAppointment->user->id,
-                'name' => $upcomingAppointment->user->name,
-                'email' => $upcomingAppointment->user->email,
-                'phone' => $upcomingAppointment->user->phone,
-                'address' => $upcomingAppointment->user->address,
-            ] : null,
-            'appointment_date' => $upcomingAppointment->appointment_date?->toDateString(),
-            'appointment_time' => substr((string) $upcomingAppointment->appointment_time, 0, 5),
-            'status' => $upcomingAppointment->status,
-            'type' => $upcomingAppointment->type,
-            'is_video' => $upcomingAppointment->is_video ?? false,
-        ] : null;
-
-        return Inertia::render('doctor/Dashboard', [
-            'stats' => [
-                'todayAppointments' => $todayAppointments,
-                'scheduled' => $scheduled,
-                'waitingPatients' => $waitingPatients,
-                'totalPatients' => $totalPatients,
-                'totalPrescriptions' => $totalPrescriptions,
-                'prescribedThisMonth' => $prescribedThisMonth,
-                'inConsultation' => $inVisitAppointments->count(),
-                'followUpsDue' => $followUpsDue,
-            ],
-            'scheduledToday' => $scheduledToday,
-            'weeklyScheduleToday' => $weeklyScheduleToday,
-            'isScheduleClosedToday' => $isScheduleClosedToday,
-            'recentAppointments' => $recentAppointments,
-            'upcomingAppointment' => $upcoming,
-            'inVisitAppointment' => $inVisitAppointment,
-            'inVisitAppointments' => $inVisitAppointments,
-            'awaitingTestsAppointments' => $awaitingTestsAppointments,
-            'unavailableRanges' => $unavailableRanges,
-        ]);
-    })->name('dashboard');
-
-    Route::get('/appointments', function (Request $request) {
-        $doctor = Auth::user();
-        $today = now()->toDateString();
-        
-        // Get filter parameters
-        $dateFilter = $request->get('date_filter', 'all'); // today, week, month, all
-        $statusFilter = $request->get('status_filter', 'all');
-        $search = $request->get('search', '');
-        
-        $query = Appointment::with(['user:id,name,email,phone,address', 'prescription:id,appointment_id'])
-            ->where('doctor_id', $doctor->id);
-        
-        // Apply date filter
-        if ($dateFilter === 'today') {
-            $query->whereDate('appointment_date', $today);
-        } elseif ($dateFilter === 'week') {
-            $query->where('appointment_date', '>=', now()->startOfWeek()->toDateString());
-        } elseif ($dateFilter === 'month') {
-            $query->whereMonth('appointment_date', now()->month)
-                  ->whereYear('appointment_date', now()->year);
-        }
-        
-        // Apply status filter
-        if ($statusFilter !== 'all') {
-            $query->where('status', $statusFilter);
-        }
-        
-        // Apply search - support both registered users and (optionally) guest appointments
-        if ($search) {
-            $query->where(function ($q) use ($search) {
-                $q->whereHas('user', function ($userQuery) use ($search) {
-                    $userQuery->where('name', 'like', "%{$search}%")
-                        ->orWhere('phone', 'like', "%{$search}%");
-                });
-
-                // Only search guest name column if it exists (on databases where guest fields were migrated)
-                if (Schema::hasColumn('appointments', 'name')) {
-                    $q->orWhere('appointments.name', 'like', "%{$search}%");
-                }
-
-                // Search guest phone when guest phone column exists
-                if (Schema::hasColumn('appointments', 'phone')) {
-                    $q->orWhere('appointments.phone', 'like', "%{$search}%");
-                }
-            });
-        }
-        
-        // Order by booking sequence so table matches patient serial numbers
-        $appointmentsQuery = $query->leftJoin('users', 'appointments.user_id', '=', 'users.id');
-
-        $appointments = $appointmentsQuery
-            ->orderByDesc('appointment_date')
-            ->orderBy('serial_no')
-            ->orderBy('appointment_time')
-            ->select('appointments.*')
-            ->paginate(15)
-            ->withQueryString();
-        
-        // Get statistics
-        $totalAppointments = Appointment::where('doctor_id', $doctor->id)->count();
-        $scheduledAppointments = Appointment::where('doctor_id', $doctor->id)->where('status', 'scheduled')->count();
-        $arrivedAppointments = Appointment::where('doctor_id', $doctor->id)->where('status', 'arrived')->count();
-        $prescribedAppointments = Appointment::where('doctor_id', $doctor->id)->where('status', 'prescribed')->count();
-         $appointments;
-        return Inertia::render('doctor/Appointments', [
-            'appointments' => $appointments->through(fn ($a) => [
-                'id' => $a->id,
-                'serial_no' => $a->serial_no,
-                'user_id' => $a->user_id,
-                'is_guest' => $a->is_guest,
-                // Show user info if registered, otherwise show guest info
-                'patient_name' => $a->user?->name ?? $a->name,
-                'patient_phone' => $a->user?->phone ?? $a->phone,
-                'patient_email' => $a->user?->email ?? $a->email,
-                'patient_age' => $a->age,
-                'patient_gender' => $a->gender,
-                'user' => $a->user ? [
-                    'id' => $a->user->id,
-                    'name' => $a->user->name,
-                    'email' => $a->user->email,
-                    'phone' => $a->user->phone,
-                    'address' => $a->user->address,
-                ] : null,
-                'appointment_date' => $a->appointment_date?->toDateString(),
-                'appointment_time' => substr((string) $a->appointment_time, 0, 5),
-                'status' => $a->status,
-                'symptoms' => $a->symptoms,
-                'has_prescription' => $a->prescription !== null,
-                'prescription_id' => $a->prescription?->id,
-            ]),
-            'filters' => [
-                'date_filter' => $dateFilter,
-                'status_filter' => $statusFilter,
-                'search' => $search,
-            ],
-            'stats' => [
-                'total' => $totalAppointments,
-                'scheduled' => $scheduledAppointments,
-                'arrived' => $arrivedAppointments,
-                'prescribed' => $prescribedAppointments,
-            ],
-        ]);
-    })->name('appointments');
-    Route::post('/appointments/{appointment}/status', 'App\\Http\\Controllers\\AppointmentController@updateStatus')->name('appointments.status');
-    
-    Route::post('/appointments/create', function (Request $request) {
-        $doctor = Auth::user();
-        
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'phone' => 'required|string|max:20',
-            'age' => 'required|integer|min:1|max:150',
-            'gender' => 'required|in:male,female,other',
-        ]);
-        
-        // Calculate date_of_birth from age
-        $dateOfBirth = now()->subYears($validated['age'])->toDateString();
-        
-        // Find or create user with the phone number
-        $user = User::where('phone', $validated['phone'])->first();
-        
-        if (!$user) {
-            // Create new user/patient
-            $user = User::create([
-                'name' => $validated['name'],
-                'phone' => $validated['phone'],
-                'email' => 'patient_' . time() . '@temp.com', // Temporary email
-                'password' => Hash::make(Str::random(16)), // Random password
-                'role' => 'user',
-                'age' => $validated['age'],
-                'gender' => $validated['gender'],
-                'date_of_birth' => $dateOfBirth,
-            ]);
-        } else {
-            // Update existing user information
-            $user->update([
-                'name' => $validated['name'],
-                'age' => $validated['age'],
-                'gender' => $validated['gender'],
-                'date_of_birth' => $dateOfBirth,
-            ]);
-        }
-        
-        // Create appointment with current date and time
-        $appointment = Appointment::create([
-            'user_id' => $user->id,
-            'doctor_id' => $doctor->id,
-            'appointment_date' => now()->toDateString(),
-            'appointment_time' => now()->format('H:i:s'),
-            'status' => 'scheduled',
-        ]);
-        
-        return response()->json([
-            'message' => 'Appointment created successfully',
-            'appointment' => $appointment,
-        ], 201);
-    })->name('appointments.create');
-
-    Route::get('/patients', function () {
-        $doctor = Auth::user();
-        
-        // Limit patients to those who have had appointments with this doctor
-        $patientQuery = User::where('role', 'user')
-            ->whereHas('appointments', function ($query) use ($doctor) {
-                $query->where('doctor_id', $doctor->id);
-            });
-
-        $allPatients = (clone $patientQuery)->get();
-        $hasPhone = $allPatients->filter(fn($p) => $p->phone)->count();
-        $emailOnly = $allPatients->filter(fn($p) => $p->email && !$p->phone)->count();
-        $noContact = $allPatients->filter(fn($p) => !$p->email && !$p->phone)->count();
-        
-        // Get patients with prescription details (paginated)
-        $patients = (clone $patientQuery)
-            ->with(['prescriptions' => function ($query) use ($doctor) {
-                $query->where('doctor_id', $doctor->id)
-                    ->select('id', 'user_id', 'diagnosis', 'created_at')
-                    ->orderByDesc('created_at');
-            }])
-            ->orderByDesc('created_at')
-            ->paginate(10)
-            ->withQueryString();
-
-        return Inertia::render('doctor/Patients', [
-            'patients' => $patients->through(function ($patient) {
-                $prescriptions = $patient->prescriptions->map(function ($p) {
-                    return [
-                        'id' => $p->id,
-                        'diagnosis' => $p->diagnosis,
-                        'created_at' => $p->created_at,
-                    ];
-                });
-                
-                return [
-                    'id' => $patient->id,
-                    'name' => $patient->name,
-                    'email' => $patient->email,
-                    'phone' => $patient->phone,
-                    'gender' => $patient->gender,
-                    'age' => $patient->age,
-                    'date_of_birth' => $patient->date_of_birth,
-                    'created_at' => $patient->created_at,
-                    'has_prescription' => $prescriptions->isNotEmpty(),
-                    'prescriptions_count' => $prescriptions->count(),
-                    'prescriptions' => $prescriptions->toArray(),
-                ];
-            }),
-            'stats' => [
-                'hasPhone' => $hasPhone,
-                'emailOnly' => $emailOnly,
-                'noContact' => $noContact,
-            ]
-        ]);
-    })->name('patients');
-
-    Route::get('/patients/{patient}', function (User $patient) {
-        $doctor = Auth::user();
-        
-        // Verify the patient has had an appointment with this doctor
-        $hasAppointment = $patient->appointments()
-            ->where('doctor_id', $doctor->id)
-            ->exists();
-        
-        if (!$hasAppointment) {
-            abort(403, 'Unauthorized access to patient');
-        }
-
-        // Get patient details with appointments and prescriptions
-        $patientData = $patient->load([
-            'appointments' => function ($query) use ($doctor) {
-                $query->where('doctor_id', $doctor->id)
-                    ->orderByDesc('created_at');
-            },
-            'prescriptions' => function ($query) use ($doctor) {
-                $query->where('doctor_id', $doctor->id)
-                    ->orderByDesc('created_at');
-            }
-        ]);
-
-        return Inertia::render('doctor/PatientShow', [
-            'patient' => [
-                'id' => $patientData->id,
-                'name' => $patientData->name,
-                'email' => $patientData->email,
-                'phone' => $patientData->phone,
-                'address' => $patientData->address,
-                'gender' => $patientData->gender,
-                'age' => $patientData->age,
-                'date_of_birth' => $patientData->date_of_birth,
-                'weight' => $patientData->weight,
-                'created_at' => $patientData->created_at,
-            ],
-            'appointments' => $patientData->appointments->map(function ($a) {
-                return [
-                    'id' => $a->id,
-                    'appointment_date' => $a->appointment_date ? $a->appointment_date->toDateString() : null,
-                    'appointment_time' => $a->appointment_time,
-                    'status' => $a->status,
-                    'symptoms' => $a->symptoms,
-                    'notes' => $a->notes,
-                    'created_at' => $a->created_at,
-                ];
-            }),
-            'prescriptions' => $patientData->prescriptions->map(function ($p) {
-                return [
-                    'id' => $p->id,
-                    'diagnosis' => $p->diagnosis,
-                    'medications' => $p->medications,
-                    'instructions' => $p->instructions,
-                    'tests' => $p->tests,
-                    'next_visit_date' => $p->next_visit_date,
-                    'created_at' => $p->created_at,
-                ];
-            }),
-        ]);
-    })->whereNumber('patient')->name('patients.show');
-
-    Route::get('/prescriptions', function () {
-        $doctor = Auth::user();
-        
-        // Get paginated prescriptions with patient details
-        $prescriptions = Prescription::with([
-                'user:id,name,phone,age,gender,date_of_birth',
-            'appointment:id,name,age,gender,phone,symptoms',
-            ])
-            ->where('doctor_id', $doctor->id)
-            ->orderByDesc('id')
-            ->paginate(10)
-            ->through(function ($p) {
-                $calculatedAge = null;
-
-                if (!is_null($p->user?->age)) {
-                    $calculatedAge = $p->user->age;
-                } elseif (!empty($p->user?->date_of_birth)) {
-                    try {
-                        $calculatedAge = \Carbon\Carbon::parse($p->user->date_of_birth)->age;
-                    } catch (\Throwable $e) {
-                        $calculatedAge = null;
-                    }
-                }
-
-                return [
-                    'id' => $p->id,
-                    'user_id' => $p->user_id,
-                    'user' => $p->user ? [
-                        'id' => $p->user->id,
-                        'name' => $p->user->name,
-                        'phone' => $p->user->phone,
-                        'age' => $calculatedAge,
-                        'gender' => $p->user->gender,
-                        'date_of_birth' => $p->user->date_of_birth?->toDateString(),
-                    ] : null,
-                    'patient_name' => $p->patient_name ?? $p->user?->name ?? $p->appointment?->name,
-                    'patient_age' => $calculatedAge ?? $p->appointment?->age,
-                    'patient_gender' => $p->user?->gender ?? $p->appointment?->gender,
-                    'patient_contact' => $p->user?->phone ?? $p->appointment?->phone,
-                    'symptoms' => $p->appointment?->symptoms,
-                    'diagnosis' => $p->diagnosis,
-                    'medications' => $p->medications,
-                    'instructions' => $p->instructions,
-                    'tests' => $p->tests,
-                    'next_visit_date' => $p->next_visit_date?->toDateString(),
-                    'created_at' => $p->created_at,
-                ];
-            })
-            ->withQueryString();
-        
-        // Get statistics from all prescriptions (not just current page)
-        $allPrescriptions = Prescription::where('doctor_id', $doctor->id)->get();
-        $withFollowUp = $allPrescriptions->filter(fn($p) => $p->next_visit_date)->count();
-        $withoutFollowUp = $allPrescriptions->filter(fn($p) => !$p->next_visit_date)->count();
-        $upcomingFollowUps = $allPrescriptions->filter(function($p) {
-            if (!$p->next_visit_date) return false;
-            return \Carbon\Carbon::parse($p->next_visit_date)->gte(now()->startOfDay());
-        })->count();
-        
-        return Inertia::render('doctor/Prescriptions', [
-            'prescriptions' => $prescriptions,
-            'stats' => [
-                'withFollowUp' => $withFollowUp,
-                'withoutFollowUp' => $withoutFollowUp,
-                'upcomingFollowUps' => $upcomingFollowUps,
-            ]
-        ]);
-    })->name('prescriptions');
-
-    Route::get('/prescriptions/{prescription}', function (Prescription $prescription) {
-        $doctor = Auth::user();
-
-        $prescription = Prescription::with([
-            'user:id,name,email,phone,address,age,gender,weight,date_of_birth',
-            'appointment:id,appointment_date,appointment_time,status',
-        ])
-            ->where('doctor_id', $doctor->id)
-            ->where('id', $prescription->id)
-            ->firstOrFail();
-
-        // Get chamber info (doctor's active chamber)
-        $chamber = \App\Models\Chamber::where('doctor_id', $doctor->id)
-            ->where('is_active', true)
-            ->first();
-        $chamberInfo = $chamber ? [
-            'name'     => $chamber->name,
-            'location' => $chamber->location,
-            'phone'    => $chamber->phone,
-        ] : null;
-
-        // Load medicines list for search/suggestions
-        $medicines = Medicine::orderBy('name')
-            ->get(['id', 'name', 'strength']);
-
-        return Inertia::render('doctor/PrescriptionShow', [
-            'prescription' => [
-                'id'               => $prescription->id,
-                'appointment_id'   => $prescription->appointment_id,
-                'created_at'       => $prescription->created_at?->toDateTimeString(),
-                'diagnosis'        => $prescription->diagnosis,
-                'medications'      => $prescription->medications,
-                'instructions'     => $prescription->instructions,
-                'tests'            => $prescription->tests,
-                'next_visit_date'  => $prescription->next_visit_date ? $prescription->next_visit_date->format('Y-m-d') : null,
-                'visit_type'       => $prescription->visit_type,
-                'patient_name'     => $prescription->patient_name ?? $prescription->user?->name,
-                'patient_contact'  => $prescription->patient_contact ?? $prescription->user?->phone,
-                'patient_age'      => $prescription->patient_age ?? $prescription->user?->age,
-                'patient_age_unit' => $prescription->patient_age_unit ?? 'years',
-                'patient_gender'   => $prescription->patient_gender ?? $prescription->user?->gender,
-                'patient_weight'   => $prescription->patient_weight ?? $prescription->user?->weight,
-                'user' => $prescription->user ? [
-                    'id'           => $prescription->user->id,
-                    'name'         => $prescription->user->name,
-                    'email'        => $prescription->user->email,
-                    'phone'        => $prescription->user->phone,
-                    'address'      => $prescription->user->address,
-                    'age'          => $prescription->user->age,
-                    'gender'       => $prescription->user->gender,
-                    'weight'       => $prescription->user->weight,
-                    'date_of_birth'=> $prescription->user->date_of_birth?->toDateString(),
-                ] : null,
-                'appointment' => $prescription->appointment ? [
-                    'appointment_date' => (string) $prescription->appointment->appointment_date,
-                    'appointment_time' => substr((string) $prescription->appointment->appointment_time, 0, 5),
-                    'status'           => $prescription->appointment->status,
-                ] : null,
-            ],
-            'chamberInfo' => $chamberInfo,
-            'medicines'   => $medicines,
-        ]);
-    })->whereNumber('prescription')->name('prescriptions.show');
-
-    Route::put('/prescriptions/{prescription}', [PrescriptionController::class, 'update'])
-        ->whereNumber('prescription')
-        ->name('prescriptions.update');
-
+    // Schedule
     Route::get('/schedule', [DoctorScheduleController::class, 'show'])->name('schedule');
     Route::post('/schedule', [DoctorScheduleController::class, 'update'])->name('schedule.update');
-    Route::get('/profile', [DoctorProfileController::class, 'show'])->name('profile');
-    Route::put('/profile', [DoctorProfileController::class, 'update'])->name('profile.update');
-    Route::post('/profile/photo', [DoctorProfileController::class, 'uploadPhoto'])->name('profile.photo.upload');
-    Route::delete('/profile/photo', [DoctorProfileController::class, 'deletePhoto'])->name('profile.photo.delete');
-    Route::get('/prescriptions/create', function () {
-        $doctor = Auth::user();
 
-        // Get appointment ID from query if provided
-        $appointmentId = request()->query('appointment_id');
-        $patientId = request()->query('patient_id') ?? request()->query('patient');
-        $selectedPatient = null;
-        $appointment = null;
+    // Profile
+    Route::get('/profile', [ProfileController::class, 'doctorShow'])->name('profile');
+    Route::put('/profile', [ProfileController::class, 'doctorUpdate'])->name('profile.update');
+    Route::post('/profile/photo', [ProfileController::class, 'doctorPhotoUpload'])->name('profile.photo.upload');
+    Route::delete('/profile/photo', [ProfileController::class, 'doctorPhotoDelete'])->name('profile.photo.delete');
 
-        if ($appointmentId) {
-            $appointment = Appointment::with('user:id,name,phone,email,gender,age,date_of_birth,weight')
-                ->where('doctor_id', $doctor->id)
-                ->where('id', $appointmentId)
-                ->first();
-            
-            if ($appointment && $appointment->user) {
-                $user = $appointment->user;
-                $selectedPatient = [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'phone' => $user->phone,
-                    'email' => $user->email,
-                    'gender' => $user->gender,
-                    'age' => $user->age,
-                    'weight' => $user->weight,
-                ];
-            }
-        } elseif ($patientId) {
-            $patient = User::where('id', $patientId)
-                ->where('role', 'user')
-                ->whereHas('appointments', function ($query) use ($doctor) {
-                    $query->where('doctor_id', $doctor->id);
-                })
-                ->first();
-
-            if ($patient) {
-                $selectedPatient = [
-                    'id' => $patient->id,
-                    'name' => $patient->name,
-                    'phone' => $patient->phone,
-                    'email' => $patient->email,
-                    'gender' => $patient->gender,
-                    'age' => $patient->age,
-                    'weight' => $patient->weight,
-                ];
-            }
-        }
-
-        $chamber = null;
-        if ($appointment?->chamber_id) {
-            $chamber = \App\Models\Chamber::where('doctor_id', $doctor->id)
-                ->where('id', $appointment->chamber_id)
-                ->first();
-        }
-
-        if (! $chamber) {
-            $chamber = \App\Models\Chamber::where('doctor_id', $doctor->id)
-                ->where('is_active', true)
-                ->orderBy('name')
-                ->first()
-                ?? \App\Models\Chamber::where('doctor_id', $doctor->id)
-                    ->orderBy('name')
-                    ->first();
-        }
-
-        $chamberInfo = $chamber ? [
-            'id' => $chamber->id,
-            'name' => $chamber->name,
-            'location' => $chamber->location,
-            'phone' => $chamber->phone,
-            'google_maps_url' => $chamber->google_maps_url,
-        ] : null;
-
-        // Load medicines list for search/suggestions
-        $medicines = Medicine::orderBy('name')
-            ->get(['id', 'name', 'strength']);
-
-        return Inertia::render('doctor/CreatePrescription', [
-            'appointmentId' => $appointmentId ? (int) $appointmentId : null,
-            'selectedPatient' => $selectedPatient,
-            'chamberInfo' => $chamberInfo,
-            'medicines' => $medicines,
-        ]);
-    })->name('prescriptions.create');
-
-    Route::post('/prescriptions', [PrescriptionController::class, 'store'])->name('prescriptions.store');
-
-    // Doctor Chambers management (add/edit simple chambers for public booking)
-    Route::get('/chambers', function () {
-        $doctor = Auth::user();
-
-        $chambers = \App\Models\Chamber::where('doctor_id', $doctor->id)
-            ->orderBy('name')
-            ->get()
-            ->map(fn ($c) => [
-                'id' => $c->id,
-                'name' => $c->name,
-                'location' => $c->location,
-                'phone' => $c->phone,
-                'google_maps_url' => $c->google_maps_url,
-                'is_active' => (bool) $c->is_active,
-            ]);
-
-        return Inertia::render('doctor/Chambers', [
-            'chambers' => $chambers,
-        ]);
-    })->name('chambers');
-
-    Route::post('/chambers', function (Request $request) {
-        $doctor = Auth::user();
-
-        $validated = $request->validate([
-            'id' => ['nullable', 'integer'],
-            'name' => ['required', 'string', 'max:255'],
-            'location' => ['nullable', 'string', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:50'],
-            'google_maps_url' => ['nullable', 'string', 'max:2048'],
-            'is_active' => ['sometimes', 'boolean'],
-        ]);
-
-        $data = [
-            'doctor_id' => $doctor->id,
-            'name' => $validated['name'],
-            'location' => $validated['location'] ?? null,
-            'phone' => $validated['phone'] ?? null,
-            'google_maps_url' => $validated['google_maps_url'] ?? null,
-            'is_active' => $validated['is_active'] ?? true,
-        ];
-
-        if (!empty($validated['id'])) {
-            $chamber = \App\Models\Chamber::where('doctor_id', $doctor->id)
-                ->where('id', $validated['id'])
-                ->firstOrFail();
-            $chamber->update($data);
-        } else {
-            \App\Models\Chamber::create($data);
-        }
-
-        return redirect()->back()->with('success', 'Chamber saved successfully.');
-    })->name('chambers.save');
-
-    Route::delete('/chambers/{chamber}', function (\App\Models\Chamber $chamber) {
-        $doctor = Auth::user();
-
-        abort_unless($chamber->doctor_id === $doctor->id, 403);
-
-        $chamber->delete();
-
-        return redirect()->back()->with('success', 'Chamber deleted successfully.');
-    })->name('chambers.delete');
+    // Chambers
+    Route::get('/chambers', [ChamberController::class, 'index'])->name('chambers');
+    Route::post('/chambers', [ChamberController::class, 'save'])->name('chambers.save');
+    Route::delete('/chambers/{chamber}', [ChamberController::class, 'destroy'])->name('chambers.delete');
 });
 
 /*
 |--------------------------------------------------------------------------
-| Admin Routes
+| Compounder Routes (role: compounder) � replaces old "admin"
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
-    Route::get('/dashboard', function () {
-        $users = User::count();
-        $patients = User::where('role', 'user')->count();
-        $doctors = User::where('role', 'doctor')->count();
-        $appointmentsToday = Appointment::whereDate('appointment_date', now()->toDateString())->count();
-        $scheduled = Appointment::where('status','scheduled')->count();
-        $totalAppointments = Appointment::count();
-        $totalPrescriptions = Prescription::count();
+Route::middleware(['auth', 'verified', 'role:compounder'])
+    ->prefix('compounder')
+    ->name('compounder.')
+    ->group(function () {
 
-        return Inertia::render('admin/Dashboard', [
-            'stats' => [
-                'users' => $users,
-                'patients' => $patients,
-                'doctors' => $doctors,
-                'appointmentsToday' => $appointmentsToday,
-                'scheduledAppointments' => $scheduled,
-                'totalAppointments' => $totalAppointments,
-                'totalPrescriptions' => $totalPrescriptions,
-            ],
-        ]);
-    })->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'compounder'])->name('dashboard');
 
-    Route::get('/users', function () {
-        $users = User::withCount(['prescriptions'])
-            ->with(['prescriptions:id,user_id,created_at'])
-            ->orderByDesc('created_at')
-            ->paginate(10)
-            ->withQueryString();
+    // Appointments
+    Route::get('/appointments', [WebAppointmentController::class, 'compoundIndex'])->name('appointments');
+    Route::get('/book-appointment', [WebAppointmentController::class, 'compoundBookView'])->name('book-appointment');
 
-        return Inertia::render('admin/Users', [
-            'users' => $users->through(function ($user) {
-                return [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'phone' => $user->phone,
-                    'role' => $user->role,
-                    'created_at' => $user->created_at,
-                    'has_prescription' => $user->prescriptions_count > 0,
-                    'prescriptions_count' => $user->prescriptions_count,
-                    'prescriptions' => $user->prescriptions->map(fn($p) => [
-                        'id' => $p->id,
-                        'created_at' => $p->created_at,
-                    ]),
-                ];
-            }),
-        ]);
-    })->name('users');
+    // Users / Patients
+    Route::get('/users', [PatientController::class, 'compoundUsers'])->name('users');
 
-    Route::get('/appointments', function () {
-        $appointments = Appointment::with(['user:id,name','doctor:id,name'])
-            ->orderByDesc('appointment_date')
-            ->orderBy('serial_no')
-            ->orderBy('appointment_time')
-            ->paginate(10)
-            ->withQueryString();
+    // Prescriptions
+    Route::get('/prescriptions', [WebPrescriptionController::class, 'compoundIndex'])->name('prescriptions');
+    Route::get('/prescriptions/{prescription}', [WebPrescriptionController::class, 'compoundShow'])->whereNumber('prescription')->name('prescriptions.show');
 
-        $stats = [
-            'total' => Appointment::count(),
-            'scheduled' => Appointment::where('status','scheduled')->count(),
-            'arrived' => Appointment::where('status','arrived')->count(),
-            'in_consultation' => Appointment::where('status','in_consultation')->count(),
-            'awaiting_tests' => Appointment::where('status','awaiting_tests')->count(),
-            'prescribed' => Appointment::where('status','prescribed')->count(),
-            'cancelled' => Appointment::where('status','cancelled')->count(),
-        ];
+    // Reports
+    Route::get('/reports', [ReportsController::class, 'index'])->name('reports');
 
-        return Inertia::render('admin/Appointments', [
-            'appointments' => $appointments->through(fn ($a) => [
-                'id' => $a->id,
-                'serial_no' => $a->serial_no,
-                'user_id' => $a->user_id,
-                'doctor_id' => $a->doctor_id,
-                'is_guest' => $a->is_guest,
-                // Show user info if registered, otherwise show guest info
-                'patient_name' => $a->user?->name ?? $a->name,
-                'patient_phone' => $a->user?->phone ?? $a->phone,
-                'patient_email' => $a->user?->email ?? $a->email,
-                'patient_age' => $a->age,
-                'patient_gender' => $a->gender,
-                'user' => $a->user ? ['id' => $a->user->id, 'name' => $a->user->name] : null,
-                'doctor' => $a->doctor ? ['id' => $a->doctor->id, 'name' => $a->doctor->name] : null,
-                'appointment_date' => $a->appointment_date?->toDateString(),
-                'appointment_time' => substr((string) $a->appointment_time, 0, 5),
-                'status' => $a->status,
-            ]),
-            'stats' => $stats,
-        ]);
-    })->name('appointments');
-
-    Route::get('/book-appointment', fn () => Inertia::render('admin/BookAppointment'))
-        ->name('book-appointment');
-    Route::post('/appointments/{appointment}/status', 'App\\Http\\Controllers\\AppointmentController@updateStatus')->name('appointments.status');
-
-    Route::get('/doctor', fn () => Inertia::render('admin/Doctor'))->name('doctor');
-    
-    Route::get('/reports', function () {
-        $stats = [
-            'total_users' => User::count(),
-            'total_appointments' => Appointment::count(),
-            'total_prescriptions' => Prescription::count(),
-            'scheduled_appointments' => Appointment::where('status', 'scheduled')->count(),
-            'arrived_appointments' => Appointment::where('status', 'arrived')->count(),
-            'in_consultation_appointments' => Appointment::where('status', 'in_consultation')->count(),
-            'awaiting_tests_appointments' => Appointment::where('status', 'awaiting_tests')->count(),
-            'prescribed_appointments' => Appointment::where('status', 'prescribed')->count(),
-            'cancelled_appointments' => Appointment::where('status', 'cancelled')->count(),
-            'total_patients' => User::where('role', 'user')->count(),
-            'total_doctors' => User::where('role', 'doctor')->count(),
-        ];
-        
-        $recent_appointments = Appointment::with(['user:id,name', 'doctor:id,name'])
-            ->orderByDesc('appointment_date')
-            ->orderBy('serial_no')
-            ->orderBy('appointment_time')
-            ->take(10)
-            ->get()
-            ->map(fn ($a) => [
-                'id' => $a->id,
-                'serial_no' => $a->serial_no,
-                'patient_name' => $a->user?->name ?? $a->name,
-                'doctor_name' => $a->doctor?->name,
-                'appointment_date' => $a->appointment_date?->toDateString(),
-                'appointment_time' => $a->appointment_time,
-                'status' => $a->status,
-            ]);
-            
-        return Inertia::render('admin/Reports', [
-            'stats' => $stats,
-            'recent_appointments' => $recent_appointments,
-        ]);
-    })->name('reports');
-    
-    Route::get('/prescriptions', function () {
-        $prescriptions = Prescription::with(['user:id,name,email', 'doctor:id,name'])
-            ->latest()
-            ->paginate(10)
-            ->withQueryString();
-        return Inertia::render('admin/Prescriptions', [
-            'prescriptions' => $prescriptions,
-        ]);
-    })->name('prescriptions');
-    
-    Route::get('/prescriptions/{prescription}', function (Prescription $prescription) {
-        $prescription->load([
-            'user:id,name,email,phone',
-            'doctor:id,name,email,specialization'
-        ]);
-
-        $contactInfo = SiteContent::where('key', 'contact')->first();
-
-        return Inertia::render('admin/PrescriptionShow', [
-            'prescription' => $prescription,
-            'contactInfo' => $contactInfo,
-        ]);
-    })->whereNumber('prescription')->name('prescriptions.show');
-    
+    // Settings (site content)
     Route::get('/settings', [SiteContentController::class, 'edit'])->name('settings');
     Route::put('/settings/site-content/home', [SiteContentController::class, 'updateHome'])->name('settings.site-content.home');
     Route::post('/settings/site-content/upload', [SiteContentController::class, 'uploadImage'])->name('settings.site-content.upload');
+
+    // Doctor management view
+    Route::get('/doctor', fn () => \Inertia\Inertia::render('admin/Doctor'))->name('doctor');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Legacy admin.* aliases ? compounder.* redirects
+| Keeps any existing bookmarked URLs / frontend links working.
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware(['auth', 'verified', 'role:compounder'])
+    ->prefix('admin')
+    ->name('admin.')
+    ->group(function () {
+
+    Route::get('/dashboard', fn () => redirect()->route('compounder.dashboard'))->name('dashboard');
+    Route::get('/appointments', fn () => redirect()->route('compounder.appointments'))->name('appointments');
+    Route::get('/users', fn () => redirect()->route('compounder.users'))->name('users');
+    Route::get('/prescriptions', fn () => redirect()->route('compounder.prescriptions'))->name('prescriptions');
+    Route::get('/reports', fn () => redirect()->route('compounder.reports'))->name('reports');
+    Route::get('/settings', fn () => redirect()->route('compounder.settings'))->name('settings');
+    Route::get('/book-appointment', fn () => redirect()->route('compounder.book-appointment'))->name('book-appointment');
+
+    // Keep old status update routes working (for any in-flight AJAX calls)
+    Route::post('/appointments/{appointment}/status', [WebAppointmentController::class, 'updateStatus'])->name('appointments.status');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Legacy user.* aliases ? patient.* redirects
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware(['auth', 'verified', 'role:patient'])
+    ->prefix('user')
+    ->name('user.')
+    ->group(function () {
+
+    Route::get('/dashboard', fn () => redirect()->route('patient.dashboard'))->name('dashboard');
+    Route::get('/appointments', fn () => redirect()->route('patient.appointments'))->name('appointments');
+    Route::get('/book-appointment', fn () => redirect()->route('patient.book-appointment'))->name('book-appointment');
+    Route::get('/prescriptions', fn () => redirect()->route('patient.prescriptions'))->name('prescriptions');
+    Route::get('/profile', fn () => redirect()->route('patient.profile'))->name('profile');
 });
 
 require __DIR__.'/settings.php';

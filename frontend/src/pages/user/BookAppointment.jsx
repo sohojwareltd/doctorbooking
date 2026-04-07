@@ -69,7 +69,7 @@ export default function UserBookAppointment() {
     let mounted = true;
     const run = async () => {
       try {
-        const res = await fetch('/doctor-unavailable-ranges');
+        const res = await fetch('/api/public/unavailable-ranges');
         const data = await res.json().catch(() => ({}));
         if (!mounted) return;
         setUnavailableRanges(Array.isArray(data?.ranges) ? data.ranges : []);
@@ -90,7 +90,7 @@ export default function UserBookAppointment() {
     const run = async () => {
       try {
         setLoadingChambers(true);
-        const res = await fetch('/public-chambers');
+        const res = await fetch('/api/public/chambers');
         const data = await res.json().catch(() => ({}));
         if (!mounted) return;
         const list = Array.isArray(data?.chambers) ? data.chambers : [];
@@ -128,7 +128,7 @@ export default function UserBookAppointment() {
           date,
           chamber_id: String(chamberId),
         });
-        const res = await fetch(`/booking-preview?${params.toString()}`);
+        const res = await fetch(`/api/public/booking-preview?${params.toString()}`);
         const data = await res.json().catch(() => ({}));
         if (cancelled) return;
         setPreviewSerial(data?.serial_no ?? null);
@@ -220,7 +220,7 @@ export default function UserBookAppointment() {
         toastError(message);
         return;
       }
-      const res = await fetch('/book-appointment', {
+      const res = await fetch('/api/public/book-appointment', {
         method: 'POST',
         credentials: 'same-origin',
         headers: {

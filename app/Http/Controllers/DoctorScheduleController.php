@@ -19,7 +19,7 @@ class DoctorScheduleController extends Controller
     {
         $doctor = Auth::user();
 
-        $chambers = Chamber::where('doctor_id', $doctor->id)
+        $chambers = Chamber::where('doctor_id', $doctor->doctorId())
             ->orderBy('name')
             ->get(['id', 'name']);
 
@@ -33,14 +33,19 @@ class DoctorScheduleController extends Controller
             $selectedChamberId = null;
         }
 
-        $rangeQuery = DoctorScheduleRange::where('doctor_id', $doctor->id);
+        // Default to first chamber when no URL param given
+        if ($selectedChamberId === null && $chambers->isNotEmpty()) {
+            $selectedChamberId = $chambers->first()->id;
+        }
+
+        $rangeQuery = DoctorScheduleRange::where('doctor_id', $doctor->doctorId());
         if ($selectedChamberId) {
             $rangeQuery->where('chamber_id', $selectedChamberId);
         } else {
             $rangeQuery->whereNull('chamber_id');
         }
 
-        $schedules = DoctorSchedule::where('doctor_id', $doctor->id)
+        $schedules = DoctorSchedule::where('doctor_id', $doctor->doctorId())
             ->orderBy('day_of_week')
             ->get(['day_of_week', 'start_time', 'end_time', 'slot_minutes', 'is_closed']);
 
@@ -81,7 +86,7 @@ class DoctorScheduleController extends Controller
             ];
         }
 
-        $unavailableRanges = DoctorUnavailableRange::where('doctor_id', $doctor->id)
+        $unavailableRanges = DoctorUnavailableRange::where('doctor_id', $doctor->doctorId())
             ->orderBy('start_date')
             ->orderBy('end_date')
             ->get(['start_date', 'end_date'])
@@ -120,7 +125,7 @@ class DoctorScheduleController extends Controller
 
         $chamberId = $validated['chamber_id'] ?? null;
         if ($chamberId) {
-            $ownsChamber = Chamber::where('doctor_id', $doctor->id)
+            $ownsChamber = Chamber::where('doctor_id', $doctor->doctorId())
                 ->where('id', $chamberId)
                 ->exists();
             if (!$ownsChamber) {
@@ -157,10 +162,11 @@ class DoctorScheduleController extends Controller
 
             DoctorSchedule::updateOrCreate(
                 [
-                    'doctor_id' => $doctor->id,
+                    'doctor_id' => $doctor->doctorId(),
                     'day_of_week' => $dow,
                 ],
                 [
+                    'chamber_id' => $chamberId,
                     'is_closed' => $isClosed,
                     'start_time' => $firstStart,
                     'end_time' => $firstEnd,
@@ -169,7 +175,7 @@ class DoctorScheduleController extends Controller
             );
 
             // Replace ranges for this day and chamber (or default).
-            DoctorScheduleRange::where('doctor_id', $doctor->id)
+            DoctorScheduleRange::where('doctor_id', $doctor->doctorId())
                 ->where('day_of_week', $dow)
                 ->where(function ($q) use ($chamberId) {
                     if ($chamberId) {
@@ -183,7 +189,7 @@ class DoctorScheduleController extends Controller
             if (!$isClosed) {
                 foreach ($ranges as $range) {
                     DoctorScheduleRange::create([
-                        'doctor_id' => $doctor->id,
+                        'doctor_id' => $doctor->doctorId(),
                         'day_of_week' => $dow,
                         'chamber_id' => $chamberId,
                         'start_time' => $range['start_time'] . ':00',
@@ -211,7 +217,7 @@ class DoctorScheduleController extends Controller
         }
 
         if (count($incomingUnavailable) > 0) {
-            $existingCount = Appointment::where('doctor_id', $doctor->id)
+            $existingCount = Appointment::where('doctor_id', $doctor->doctorId())
                 ->where('status', '!=', 'cancelled')
                 ->whereDate('appointment_date', '>=', now()->toDateString())
                 ->where(function ($q) use ($incomingUnavailable) {
@@ -226,11 +232,11 @@ class DoctorScheduleController extends Controller
             }
         }
 
-        DoctorUnavailableRange::where('doctor_id', $doctor->id)->delete();
+        DoctorUnavailableRange::where('doctor_id', $doctor->doctorId())->delete();
 
         foreach ($incomingUnavailable as $range) {
             DoctorUnavailableRange::create([
-                'doctor_id' => $doctor->id,
+                'doctor_id' => $doctor->doctorId(),
                 'start_date' => $range['start_date'],
                 'end_date' => $range['end_date'],
             ]);

@@ -1,7 +1,6 @@
 import { Link } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
-import { Calendar, CalendarCheck2, Clock3, Eye, FilePlus, FileText, Hash, Mars, Phone, Search, User, Venus } from 'lucide-react';
-import DoctorLayout from '../../layouts/DoctorLayout';
+import { Calendar, CalendarCheck2, Clock3, Eye, FilePlus, FileText, Hash, Mars, Phone, Search, User, Venus } from 'lucide-react';import DoctorLayout from '../../layouts/DoctorLayout';
 import StatusBadge from '../../components/doctor/StatusBadge';
 import DocModal from '../../components/doctor/DocModal';
 import { DocButton, DocEmptyState } from '../../components/doctor/DocUI';
@@ -116,18 +115,36 @@ function GenderIconAvatar({ gender }) {
   );
 }
 
-export default function DoctorAppointments({ appointments = [], filters = {} }) {
-  const pageRows = useMemo(() => (Array.isArray(appointments) ? appointments : (appointments?.data ?? [])), [appointments]);
-  const pagination = useMemo(() => (Array.isArray(appointments) ? null : appointments), [appointments]);
-
-  const [rows, setRows] = useState(pageRows);
+export default function DoctorAppointments() {
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState(null);
   const [selectedPatient, setSelectedPatient] = useState(null);
-  const [statusFilter, setStatusFilter] = useState(filters.status_filter || 'all');
-  const [searchTerm, setSearchTerm] = useState(filters.search || '');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const fetchAppointments = async (params = {}) => {
+    setLoading(true);
+    const query = new URLSearchParams({ per_page: 200, ...params }).toString();
+    try {
+      const res = await fetch(`/api/doctor/appointments?${query}`, {
+        headers: { Accept: 'application/json' },
+        credentials: 'same-origin',
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const items = Array.isArray(data.appointments) ? data.appointments : (data.appointments?.data ?? []);
+        setRows(items);
+        setPagination(data.meta ?? null);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    setRows(pageRows);
-  }, [pageRows]);
+    fetchAppointments();
+  }, []);
 
   const getPatientName = (appointment) => appointment?.patient_name || appointment?.user?.name || `Patient #${appointment?.user_id || ''}`;
   const getPatientPhone = (appointment) => appointment?.patient_phone || appointment?.user?.phone || null;
@@ -156,19 +173,14 @@ export default function DoctorAppointments({ appointments = [], filters = {} }) 
   };
 
   const updateStatus = async (id, status) => {
-    const token = document.cookie
-      .split('; ')
-      .find((row) => row.startsWith('XSRF-TOKEN='))
-      ?.split('=')[1];
-
-    const response = await fetch(`/doctor/appointments/${id}/status`, {
-      method: 'POST',
+    const response = await fetch(`/api/doctor/appointments/${id}/status`, {
+      method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
         Accept: 'application/json',
-        'X-XSRF-TOKEN': token ? decodeURIComponent(token) : '',
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
       },
-      credentials: 'include',
+      credentials: 'same-origin',
       body: JSON.stringify({ status }),
     });
 
@@ -417,7 +429,9 @@ export default function DoctorAppointments({ appointments = [], filters = {} }) 
             </table>
           </div>
 
-          {filteredRows.length === 0 ? (
+          {loading ? (
+            <div className="p-10 text-center text-sm text-slate-500">Loading appointments…</div>
+          ) : filteredRows.length === 0 ? (
             <div className="p-5">
               <DocEmptyState
                 icon={CalendarCheck2}

@@ -26,7 +26,9 @@ class CheckRole
             return redirect('/login');
         }
 
-        if ($user->role !== $role) {
+        $user->loadMissing('role');
+
+        if ($user->role?->name !== $role) {
             if ($wantsJson) {
                 return response()->json(['message' => 'Forbidden.'], 403);
             }

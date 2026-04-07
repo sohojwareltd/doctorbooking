@@ -28,7 +28,7 @@ class AppointmentController extends Controller
             return response()->json(['ranges' => [], 'closed_weekdays' => [0, 1, 2, 3, 4, 5, 6]]);
         }
 
-        $ranges = DoctorUnavailableRange::where('doctor_id', $doctor->id)
+        $ranges = DoctorUnavailableRange::where('doctor_id', $doctor->doctorId())
             ->orderBy('start_date')
             ->orderBy('end_date')
             ->get(['start_date', 'end_date'])
@@ -39,7 +39,7 @@ class AppointmentController extends Controller
             ->values()
             ->toArray();
 
-        $schedules = DoctorSchedule::where('doctor_id', $doctor->id)
+        $schedules = DoctorSchedule::where('doctor_id', $doctor->doctorId())
             ->get(['day_of_week', 'is_closed']);
 
         $closedWeekdays = [];
@@ -98,7 +98,7 @@ class AppointmentController extends Controller
         $chamber = null;
         if (!empty($validated['chamber_id'])) {
             $chamber = Chamber::where('id', $validated['chamber_id'])
-                ->where('doctor_id', $doctor->id)
+                ->where('doctor_id', $doctor->doctorId())
                 ->where('is_active', true)
                 ->first();
 
@@ -135,7 +135,7 @@ class AppointmentController extends Controller
         }
 
         $dateString = now()->parse($validated['date'])->toDateString();
-        $isUnavailable = DoctorUnavailableRange::where('doctor_id', $doctor->id)
+        $isUnavailable = DoctorUnavailableRange::where('doctor_id', $doctor->doctorId())
             ->whereDate('start_date', '<=', $dateString)
             ->whereDate('end_date', '>=', $dateString)
             ->exists();
@@ -159,7 +159,7 @@ class AppointmentController extends Controller
 
         // Determine serial number and estimated start time for this date.
         // When a chamber is selected, serials are per doctor + chamber + date.
-        $existingQuery = Appointment::where('doctor_id', $doctor->id)
+        $existingQuery = Appointment::where('doctor_id', $doctor->doctorId())
             ->whereDate('appointment_date', $dateString);
 
         if ($chamber) {
@@ -181,9 +181,9 @@ class AppointmentController extends Controller
             $dow = $carbon->dayOfWeek; // 0=Sun..6=Sat
 
             // Prefer chamber-specific schedule if available, otherwise use default (no chamber).
-            $scheduleQuery = DoctorSchedule::where('doctor_id', $doctor->id)
+            $scheduleQuery = DoctorSchedule::where('doctor_id', $doctor->doctorId())
                 ->where('day_of_week', $dow);
-            $rangeQuery = DoctorScheduleRange::where('doctor_id', $doctor->id)
+            $rangeQuery = DoctorScheduleRange::where('doctor_id', $doctor->doctorId())
                 ->where('day_of_week', $dow);
 
             if ($chamber) {
@@ -282,7 +282,7 @@ class AppointmentController extends Controller
 
         $chamberId = $validated['chamber_id'] ?? null;
 
-        $existingQuery = Appointment::where('doctor_id', $doctor->id)
+        $existingQuery = Appointment::where('doctor_id', $doctor->doctorId())
             ->whereDate('appointment_date', $dateString);
 
         if ($chamberId) {
@@ -300,9 +300,9 @@ class AppointmentController extends Controller
             $carbon = now()->parse($dateString);
             $dow = $carbon->dayOfWeek;
 
-            $scheduleQuery = DoctorSchedule::where('doctor_id', $doctor->id)
+            $scheduleQuery = DoctorSchedule::where('doctor_id', $doctor->doctorId())
                 ->where('day_of_week', $dow);
-            $rangeQuery = DoctorScheduleRange::where('doctor_id', $doctor->id)
+            $rangeQuery = DoctorScheduleRange::where('doctor_id', $doctor->doctorId())
                 ->where('day_of_week', $dow);
 
             if ($chamberId) {
@@ -381,7 +381,7 @@ class AppointmentController extends Controller
             ]);
         }
 
-        $isUnavailable = DoctorUnavailableRange::where('doctor_id', $doctor->id)
+        $isUnavailable = DoctorUnavailableRange::where('doctor_id', $doctor->doctorId())
             ->whereDate('start_date', '<=', $carbon->toDateString())
             ->whereDate('end_date', '>=', $carbon->toDateString())
             ->exists();
@@ -400,9 +400,9 @@ class AppointmentController extends Controller
 
         $chamberId = $request->query('chamber_id');
 
-        $scheduleQuery = DoctorSchedule::where('doctor_id', $doctor->id)
+        $scheduleQuery = DoctorSchedule::where('doctor_id', $doctor->doctorId())
             ->where('day_of_week', $dow);
-        $rangeQuery = DoctorScheduleRange::where('doctor_id', $doctor->id)
+        $rangeQuery = DoctorScheduleRange::where('doctor_id', $doctor->doctorId())
             ->where('day_of_week', $dow);
 
         if ($chamberId) {
@@ -480,7 +480,7 @@ class AppointmentController extends Controller
         $allSlots = array_keys($slotMap);
         sort($allSlots);
 
-        $bookedSlots = Appointment::where('doctor_id', $doctor->id)
+        $bookedSlots = Appointment::where('doctor_id', $doctor->doctorId())
             ->whereDate('appointment_date', $date)
             ->pluck('appointment_time')
             ->map(fn ($time) => substr((string) $time, 0, 5))

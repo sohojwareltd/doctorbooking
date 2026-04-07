@@ -48,6 +48,7 @@ class Appointment extends Model
         'age',
         'gender',
         'is_guest',
+        'address',
     ];
 
     protected $casts = [
@@ -61,11 +62,24 @@ class Appointment extends Model
 
     public function doctor(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'doctor_id');
+        return $this->belongsTo(Doctor::class, 'doctor_id');
+    }
+
+    public function chamber(): BelongsTo
+    {
+        return $this->belongsTo(Chamber::class);
     }
 
     public function prescription(): HasOne
     {
         return $this->hasOne(Prescription::class);
+    }
+
+    /**
+     * Convenience: returns the patient display name regardless of guest/registered.
+     */
+    public function getPatientNameAttribute(): string
+    {
+        return $this->user?->name ?? $this->name ?? '';
     }
 }

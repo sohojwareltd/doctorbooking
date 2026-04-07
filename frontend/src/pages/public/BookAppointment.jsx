@@ -17,6 +17,7 @@ import {
 export default function PublicBookAppointment() {
   const page = usePage();
   const contactPhone = page?.props?.site?.contactPhone || '';
+  const authUser = page?.props?.auth?.user || null;
 
   const initial = useMemo(
     () => ({
@@ -24,6 +25,11 @@ export default function PublicBookAppointment() {
       phone: '',
       date: '',
       time: '',
+      age: '',
+      gender: '',
+      symptoms: '',
+      notes: '',
+      address: '',
       captcha_answer: '',
     }),
     []
@@ -75,12 +81,39 @@ export default function PublicBookAppointment() {
     return `${year}-${month}-${day}`;
   };
 
+  // Pre-fill form from API if logged in
+  useEffect(() => {
+    if (!authUser) return;
+    let mounted = true;
+    const run = async () => {
+      try {
+        const res = await fetch('/user/booking-profile', {
+          credentials: 'same-origin',
+          headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        });
+        if (!res.ok || !mounted) return;
+        const data = await res.json().catch(() => ({}));
+        setFormData((prev) => ({
+          ...prev,
+          name: data.name || prev.name,
+          phone: data.phone || prev.phone,
+          age: data.age != null ? String(data.age) : prev.age,
+          gender: data.gender || prev.gender,
+          address: data.address || prev.address,
+        }));
+      } catch { /* silently ignore */ }
+    };
+    run();
+    return () => { mounted = false; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Load doctor's unavailable ranges for calendar
   useEffect(() => {
     let mounted = true;
     const run = async () => {
       try {
-        const res = await fetch('/doctor-unavailable-ranges');
+        const res = await fetch('/api/public/unavailable-ranges');
         const data = await res.json().catch(() => ({}));
         if (!mounted) return;
         setUnavailableRanges(Array.isArray(data?.ranges) ? data.ranges : []);
@@ -103,7 +136,7 @@ export default function PublicBookAppointment() {
     const run = async () => {
       try {
         setLoadingChambers(true);
-        const res = await fetch('/public-chambers');
+        const res = await fetch('/api/public/chambers');
         const data = await res.json().catch(() => ({}));
         if (!mounted) return;
         const list = Array.isArray(data?.chambers) ? data.chambers : [];
@@ -129,7 +162,7 @@ export default function PublicBookAppointment() {
   const loadCaptcha = async () => {
     setLoadingCaptcha(true);
     try {
-      const res = await fetch('/booking-captcha');
+      const res = await fetch('/api/public/captcha');
       const data = await res.json().catch(() => ({}));
       setCaptchaQuestion(data?.question || '');
       setCaptchaToken(data?.token || '');
@@ -165,7 +198,7 @@ export default function PublicBookAppointment() {
           date,
           chamber_id: String(chamberId),
         });
-        const res = await fetch(`/booking-preview?${params.toString()}`);
+        const res = await fetch(`/api/public/booking-preview?${params.toString()}`);
         const data = await res.json().catch(() => ({}));
         if (cancelled) return;
         setPreviewSerial(data?.serial_no ?? null);
@@ -256,7 +289,7 @@ export default function PublicBookAppointment() {
         toastError(message);
         return;
       }
-      const res = await fetch('/book-appointment', {
+      const res = await fetch('/api/public/book-appointment', {
         method: 'POST',
         credentials: 'same-origin',
         headers: {
@@ -270,6 +303,11 @@ export default function PublicBookAppointment() {
           phone: formData.phone,
           date: selectedDateRef.current || formData.date,
           chamber_id: selectedChamberId,
+          age: formData.age !== '' ? Number(formData.age) : undefined,
+          gender: formData.gender || undefined,
+          symptoms: formData.symptoms || undefined,
+          notes: formData.notes || undefined,
+          address: formData.address || undefined,
           captcha_token: captchaToken,
           captcha_answer: formData.captcha_answer,
         }),
@@ -598,7 +636,7 @@ export default function PublicBookAppointment() {
 
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <label className="mb-2 block text-sm font-semibold text-[#005963]">Full Name</label>
+                <label className="mb-2 block text-sm font-semibold text-[#005963]">Full Name <span className="text-rose-500">*</span></label>
                 <div className="relative">
                   <User className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#005963]" />
                   <input
@@ -616,7 +654,7 @@ export default function PublicBookAppointment() {
 
               <div>
                 <label className="mb-2 block text-sm font-semibold text-[#005963]">
-                  Phone Number
+                  Phone Number <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
                   <Phone className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#005963]" />
@@ -632,6 +670,79 @@ export default function PublicBookAppointment() {
                   />
                 </div>
               </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-[#005963]">Age</label>
+                <input
+                  type="number"
+                  name="age"
+                  placeholder="Age (optional)"
+                  min={1}
+                  max={150}
+                  value={formData.age}
+                  onChange={(e) => setFormData((p) => ({ ...p, age: e.target.value }))}
+                  className={inputClass}
+                  disabled={submitting}
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-[#005963]">Gender</label>
+                <select
+                  name="gender"
+                  value={formData.gender}
+                  onChange={(e) => setFormData((p) => ({ ...p, gender: e.target.value }))}
+                  className={inputClass}
+                  disabled={submitting}
+                >
+                  <option value="">Select gender (optional)</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-semibold text-[#005963]">Address</label>
+              <div className="relative">
+                <MapPin className="absolute left-4 top-3.5 h-5 w-5 text-[#005963]" />
+                <input
+                  type="text"
+                  name="address"
+                  placeholder="Address (optional)"
+                  value={formData.address}
+                  onChange={(e) => setFormData((p) => ({ ...p, address: e.target.value }))}
+                  className={`${inputClass} pl-11`}
+                  disabled={submitting}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-semibold text-[#005963]">Symptoms / Chief Complaint</label>
+              <textarea
+                name="symptoms"
+                placeholder="Describe your symptoms (optional)"
+                rows={3}
+                value={formData.symptoms}
+                onChange={(e) => setFormData((p) => ({ ...p, symptoms: e.target.value }))}
+                className={`${inputClass} resize-none`}
+                disabled={submitting}
+              />
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-semibold text-[#005963]">Additional Notes</label>
+              <textarea
+                name="notes"
+                placeholder="Any additional notes (optional)"
+                rows={2}
+                value={formData.notes}
+                onChange={(e) => setFormData((p) => ({ ...p, notes: e.target.value }))}
+                className={`${inputClass} resize-none`}
+                disabled={submitting}
+              />
             </div>
 
             {/* Summary card */}
