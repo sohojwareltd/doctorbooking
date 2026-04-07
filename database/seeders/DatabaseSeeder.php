@@ -15,13 +15,13 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         // Seed dynamic data
-        $medicines = DB::connection('mysql2')->table('products')->select('name', 'strength')->get()->toArray();
-        foreach($medicines as $medicine){
-            Medicine::create([
-                'name'=>$medicine->name,
-                'strength'=>$medicine->strength,
-            ]);
-        }
+        // $medicines = DB::connection('mysql2')->table('products')->select('name', 'strength')->get()->toArray();
+        // foreach($medicines as $medicine){
+        //     Medicine::create([
+        //         'name'=>$medicine->name,
+        //         'strength'=>$medicine->strength,
+        //     ]);
+        // }
         $this->call([
             AdminSeeder::class,
             DoctorSeeder::class,

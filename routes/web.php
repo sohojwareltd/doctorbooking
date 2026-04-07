@@ -586,7 +586,7 @@ Route::middleware(['auth', 'verified', 'role:doctor'])->prefix('doctor')->name('
         $scheduledAppointments = Appointment::where('doctor_id', $doctor->id)->where('status', 'scheduled')->count();
         $arrivedAppointments = Appointment::where('doctor_id', $doctor->id)->where('status', 'arrived')->count();
         $prescribedAppointments = Appointment::where('doctor_id', $doctor->id)->where('status', 'prescribed')->count();
-
+         $appointments;
         return Inertia::render('doctor/Appointments', [
             'appointments' => $appointments->through(fn ($a) => [
                 'id' => $a->id,

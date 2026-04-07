@@ -304,7 +304,7 @@ export default function DoctorAppointments({ appointments = [], filters = {} }) 
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white">
                 {filteredRows.map((appointment, index) => {
-                  const serial = appointment.serial_no || ((pagination?.current_page - 1) * (pagination?.per_page || 15) + index + 1);
+                  const serial = appointment.id;
                   const patientPhone = getPatientPhone(appointment);
 
                   return (
