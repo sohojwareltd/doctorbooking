@@ -45,9 +45,16 @@ class DoctorScheduleController extends Controller
             $rangeQuery->whereNull('chamber_id');
         }
 
-        $schedules = DoctorSchedule::where('doctor_id', $doctor->doctorId())
+        $scheduleQuery = DoctorSchedule::where('doctor_id', $doctor->doctorId());
+        if ($selectedChamberId) {
+            $scheduleQuery->where('chamber_id', $selectedChamberId);
+        } else {
+            $scheduleQuery->whereNull('chamber_id');
+        }
+
+        $schedules = $scheduleQuery
             ->orderBy('day_of_week')
-            ->get(['day_of_week', 'start_time', 'end_time', 'slot_minutes', 'is_closed']);
+            ->get(['day_of_week', 'start_time', 'end_time', 'slot_minutes', 'is_closed', 'chamber_id']);
 
         $ranges = $rangeQuery
             ->orderBy('day_of_week')
@@ -163,10 +170,10 @@ class DoctorScheduleController extends Controller
             DoctorSchedule::updateOrCreate(
                 [
                     'doctor_id' => $doctor->doctorId(),
+                    'chamber_id' => $chamberId,
                     'day_of_week' => $dow,
                 ],
                 [
-                    'chamber_id' => $chamberId,
                     'is_closed' => $isClosed,
                     'start_time' => $firstStart,
                     'end_time' => $firstEnd,

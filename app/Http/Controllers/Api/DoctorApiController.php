@@ -17,10 +17,17 @@ class DoctorApiController extends Controller
     {
         $doctor = $request->user();
 
+        $today = now()->toDateString();
+
         $appointments = Appointment::with(['user:id,name', 'prescription:id,appointment_id'])
             ->where('doctor_id', $doctor->doctorId())
-            ->orderByDesc('appointment_date')
-            ->orderByDesc('appointment_time')
+            ->orderByRaw("CASE
+                WHEN appointment_date = ? THEN 0
+                WHEN appointment_date > ? THEN 1
+                ELSE 2
+            END", [$today, $today])
+            ->orderBy('appointment_date')
+            ->orderBy('appointment_time')
             ->get(['id','user_id','appointment_date','appointment_time','status','symptoms','name','phone','email','age','gender','is_guest']);
 
         return response()->json([

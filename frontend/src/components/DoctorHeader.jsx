@@ -1,8 +1,8 @@
 import { Link, usePage } from '@inertiajs/react';
-import { Bell, ChevronDown, LogOut, Menu, User, UserCog } from 'lucide-react';
+import { Bell, ChevronDown, ChevronLeft, ChevronRight, LogOut, Menu, User, UserCog } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
-export default function DoctorHeader({ title = '', onMenuClick }) {
+export default function DoctorHeader({ title = '', onMenuClick, collapsed = false, onToggleCollapse }) {
   const { auth } = usePage().props;
   const user = auth?.user;
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -23,6 +23,15 @@ export default function DoctorHeader({ title = '', onMenuClick }) {
         <button onClick={onMenuClick} className="lg:hidden text-[#2D3A74]" aria-label="Open menu">
           <Menu className="h-5 w-5" />
         </button>
+        {onToggleCollapse && (
+          <button
+            onClick={onToggleCollapse}
+            className="hidden lg:flex items-center justify-center rounded-lg p-1.5 text-[#2D3A74]/60 transition hover:bg-[#2D3A74]/8 hover:text-[#2D3A74]"
+            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {collapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
+          </button>
+        )}
         {title && (
           <span className="text-[#2D3A74] font-medium">{title}</span>
         )}

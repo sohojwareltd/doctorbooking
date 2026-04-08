@@ -58,7 +58,7 @@ export default function DoctorLayout({ children, title = '', gradient = false })
                   #doc-header { left: ${sidebarWidth}px; }
                 }
               `}</style>
-              <DoctorHeader title={title} onMenuClick={() => setSidebarOpen(true)} />
+              <DoctorHeader title={title} onMenuClick={() => setSidebarOpen(true)} collapsed={collapsed} onToggleCollapse={() => setCollapsed((c) => !c)} />
               <div className="relative flex-1 pt-16 min-h-screen">
 
                 <AnimatePresence mode="wait" initial={false}>

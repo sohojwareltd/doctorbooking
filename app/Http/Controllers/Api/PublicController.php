@@ -61,8 +61,8 @@ class PublicController extends Controller
         return response()->json(['chambers' => $chambers]);
     }
 
-    /** GET /api/public/unavailable-ranges */
-    public function unavailableRanges(): JsonResponse
+    /** GET /api/public/unavailable-ranges?chamber_id= */
+    public function unavailableRanges(Request $request): JsonResponse
     {
         $doctor = User::whereHas('role', fn ($q) => $q->where('name', 'doctor'))->first();
         if (! $doctor) {
@@ -78,7 +78,13 @@ class PublicController extends Controller
             ])
             ->values();
 
-        $schedules      = DoctorSchedule::where('doctor_id', $doctor->doctorId())->get(['day_of_week', 'is_closed']);
+        $chamberId      = $request->integer('chamber_id') ?: null;
+        $scheduleQuery  = DoctorSchedule::where('doctor_id', $doctor->doctorId());
+        if ($chamberId) {
+            $scheduleQuery->where('chamber_id', $chamberId);
+        }
+        $schedules      = $scheduleQuery->get(['day_of_week', 'is_closed']);
+
         $closedWeekdays = [];
         for ($d = 0; $d <= 6; $d++) {
             $dayRows = $schedules->where('day_of_week', $d);

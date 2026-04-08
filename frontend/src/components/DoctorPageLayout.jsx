@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Head, Link, usePage } from '@inertiajs/react';
 import ParticlesBackground from './ParticlesBackground';
 import DoctorLogo from './DoctorLogo';
@@ -6,6 +7,7 @@ import Breadcrumb from './Breadcrumb';
 
 export default function DoctorPageLayout({ title, children }) {
   const { url } = usePage();
+  const [collapsed, setCollapsed] = useState(false);
 
   return (
     <div className="min-h-screen relative bg-gray-50">
@@ -44,8 +46,15 @@ export default function DoctorPageLayout({ title, children }) {
         {/* Main Grid Layout */}
         <div className="flex flex-1 overflow-hidden gap-0 w-full">
           {/* Left Sidebar - Doctor Profile Card */}
-          <div className="flex-shrink-0 overflow-hidden w-80">
-            <CollapsibleSidebar currentPath={url} />
+          <div
+            className="flex-shrink-0 overflow-hidden transition-all duration-300"
+            style={{ width: collapsed ? 68 : 260 }}
+          >
+            <CollapsibleSidebar
+              currentPath={url}
+              collapsed={collapsed}
+              onToggleCollapse={() => setCollapsed((c) => !c)}
+            />
           </div>
 
           {/* Main Content Area */}

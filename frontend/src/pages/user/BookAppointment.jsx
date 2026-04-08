@@ -99,12 +99,13 @@ export default function UserBookAppointment() {
     return () => { mounted = false; };
   }, []);
 
-  // Load doctor's unavailable ranges for calendar
+  // Load doctor's unavailable ranges for calendar — reloads when chamber changes
   useEffect(() => {
     let mounted = true;
     const run = async () => {
       try {
-        const res = await fetch('/api/public/unavailable-ranges');
+        const params = selectedChamberId ? `?chamber_id=${selectedChamberId}` : '';
+        const res = await fetch(`/api/public/unavailable-ranges${params}`);
         const data = await res.json().catch(() => ({}));
         if (!mounted) return;
         setUnavailableRanges(Array.isArray(data?.ranges) ? data.ranges : []);
@@ -117,7 +118,7 @@ export default function UserBookAppointment() {
     };
     run();
     return () => { mounted = false; };
-  }, []);
+  }, [selectedChamberId]);
 
   // Load active chambers once (for step 2)
   useEffect(() => {
@@ -330,10 +331,11 @@ export default function UserBookAppointment() {
 
   const calendarRenderKey = useMemo(
     () => [
+      selectedChamberId ?? 'none',
       closedWeekdays.join(','),
       unavailableRanges.map((r) => `${r?.start_date || ''}-${r?.end_date || ''}`).join(','),
     ].join('|'),
-    [closedWeekdays, unavailableRanges]
+    [selectedChamberId, closedWeekdays, unavailableRanges]
   );
 
   // Inject coloured dots directly into FullCalendar cells using data-date attributes
@@ -522,8 +524,12 @@ export default function UserBookAppointment() {
                       type="button"
                       onClick={() => {
                         setSelectedChamberId(ch.id);
-                        setSelectedChamber(ch);
-                      }}
+                        setSelectedChamber(ch);                        // Clear the selected date — it may be closed at this chamber
+                        setSelectedDate(null);
+                        selectedDateRef.current = null;
+                        setFormData((p) => ({ ...p, date: '' }));
+                        setPreviewSerial(null);
+                        setPreviewTime(null);                      }}
                       className={`rounded-xl border px-3 py-2 text-xs font-semibold transition ${
                         selectedChamberId === ch.id
                           ? 'border-[#005963] bg-[#005963] text-white'

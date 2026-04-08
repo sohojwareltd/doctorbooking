@@ -1,367 +1,531 @@
-import { Link, router } from '@inertiajs/react';
-import { useEffect, useMemo, useState } from 'react';
-import { Calendar, Eye, FileText, Hash, Mail, Mars, Phone, Search, User, Users, Venus } from 'lucide-react';
+﻿import { router } from '@inertiajs/react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Calendar, ChevronDown, Eye, FileText,
+  Hash, Mail, Mars, Phone, RotateCcw,
+  Search, SlidersHorizontal, User, Users, Venus, X,
+} from 'lucide-react';
 import DoctorLayout from '../../layouts/DoctorLayout';
 import DocModal from '../../components/doctor/DocModal';
-import StatusBadge from '../../components/doctor/StatusBadge';
 import { DocButton, DocEmptyState } from '../../components/doctor/DocUI';
 import { formatDisplayDateWithYearFromDateLike } from '../../utils/dateFormat';
+
+// ── helpers ───────────────────────────────────────────────────────────────────
 
 function renderHighlighted(value, query) {
   const text = String(value ?? '');
   const needle = query.trim();
-
-  if (!needle) {
-    return text;
-  }
-
-  const lowerText = text.toLowerCase();
-  const lowerNeedle = needle.toLowerCase();
-  const start = lowerText.indexOf(lowerNeedle);
-
-  if (start === -1) {
-    return text;
-  }
-
-  const end = start + needle.length;
-
+  if (!needle) return text;
+  const idx = text.toLowerCase().indexOf(needle.toLowerCase());
+  if (idx === -1) return text;
   return (
     <>
-      {text.slice(0, start)}
-      <span className="font-semibold text-slate-900">{text.slice(start, end)}</span>
-      {text.slice(end)}
+      {text.slice(0, idx)}
+      <mark className="rounded bg-yellow-100 font-semibold text-slate-900 not-italic">{text.slice(idx, idx + needle.length)}</mark>
+      {text.slice(idx + needle.length)}
     </>
   );
 }
 
-function GenderIconAvatar({ gender }) {
-  const value = String(gender || '').toLowerCase();
-
-  if (value === 'female') {
+function GenderAvatar({ gender }) {
+  const g = String(gender || '').toLowerCase();
+  if (g === 'female') {
     return (
-      <span className="relative inline-flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-pink-400 to-rose-500 text-white shadow-[0_6px_14px_-8px_rgba(244,63,94,0.9)]" title="Female">
+      <span className="relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-pink-400 to-rose-500 text-white shadow-[0_6px_14px_-8px_rgba(244,63,94,0.9)]" title="Female">
         <User className="h-4 w-4" />
-        <span className="absolute -bottom-1 -right-1 inline-flex h-4.5 w-4.5 items-center justify-center rounded-full border border-white bg-pink-100 text-pink-600 shadow-sm">
+        <span className="absolute -bottom-1 -right-1 inline-flex h-[18px] w-[18px] items-center justify-center rounded-full border border-white bg-pink-100 text-pink-600 shadow-sm">
           <Venus className="h-2.5 w-2.5" />
         </span>
       </span>
     );
   }
-
-  if (value === 'male') {
+  if (g === 'male') {
     return (
-      <span className="relative inline-flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-sky-400 to-indigo-500 text-white shadow-[0_6px_14px_-8px_rgba(59,130,246,0.95)]" title="Male">
+      <span className="relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sky-400 to-indigo-500 text-white shadow-[0_6px_14px_-8px_rgba(59,130,246,0.95)]" title="Male">
         <User className="h-4 w-4" />
-        <span className="absolute -bottom-1 -right-1 inline-flex h-4.5 w-4.5 items-center justify-center rounded-full border border-white bg-sky-100 text-sky-600 shadow-sm">
+        <span className="absolute -bottom-1 -right-1 inline-flex h-[18px] w-[18px] items-center justify-center rounded-full border border-white bg-sky-100 text-sky-600 shadow-sm">
           <Mars className="h-2.5 w-2.5" />
         </span>
       </span>
     );
   }
-
   return (
-    <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-500">
+    <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-500">
       <User className="h-4 w-4" />
     </span>
   );
 }
 
-export default function Patients({ patients = [] }) {
-  const pageRows = useMemo(() => (Array.isArray(patients) ? patients : (patients?.data ?? [])), [patients]);
-  const pagination = useMemo(() => (Array.isArray(patients) ? null : patients), [patients]);
+function resolveAge(patient) {
+  if (patient?.age != null && patient.age !== '') return patient.age;
+  if (patient?.date_of_birth) {
+    const birth = new Date(patient.date_of_birth);
+    if (!Number.isNaN(birth.getTime())) {
+      const today = new Date();
+      let age = today.getFullYear() - birth.getFullYear();
+      const m = today.getMonth() - birth.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age -= 1;
+      if (age >= 0) return age;
+    }
+  }
+  return null;
+}
 
-  const [rows, setRows] = useState(pageRows);
-  const [searchTerm, setSearchTerm] = useState('');
+function fmtGender(g) {
+  const v = String(g || '').trim().toLowerCase();
+  return v ? v.charAt(0).toUpperCase() + v.slice(1) : 'N/A';
+}
+
+function getGender(p) { return p?.gender || p?.patient_gender || 'N/A'; }
+
+function ageGenderLabel(p) {
+  const age = resolveAge(p);
+  return `${age ? `${age}y` : 'Age N/A'} · ${fmtGender(getGender(p))}`;
+}
+
+// ── sort options ──────────────────────────────────────────────────────────────
+
+const SORT_OPTIONS = [
+  { value: 'newest',        label: 'Newest First' },
+  { value: 'oldest',        label: 'Oldest First' },
+  { value: 'name_asc',      label: 'Name A → Z' },
+  { value: 'name_desc',     label: 'Name Z → A' },
+  { value: 'prescriptions', label: 'Most Prescriptions' },
+];
+
+// ── component ─────────────────────────────────────────────────────────────────
+
+export default function Patients() {
+  // data
+  const [rows, setRows]   = useState([]);
+  const [meta, setMeta]   = useState({ current_page: 1, last_page: 1, total: 0 });
+  const [loading, setLoading] = useState(false);
+
+  // ui
   const [prescriptionModal, setPrescriptionModal] = useState(null);
+  const [filterOpen, setFilterOpen] = useState(false);
 
-  useEffect(() => {
-    setRows(pageRows);
-  }, [pageRows]);
+  // filters
+  const [search, setSearch]                       = useState('');
+  const [gender, setGender]                       = useState('all');
+  const [ageMin, setAgeMin]                       = useState('');
+  const [ageMax, setAgeMax]                       = useState('');
+  const [hasPrescription, setHasPrescription]     = useState('all');
+  const [sortBy, setSortBy]                       = useState('newest');
+  const [page, setPage]                           = useState(1);
 
-  const resolvePatientAge = (patient) => {
-    if (patient?.age !== undefined && patient?.age !== null && patient?.age !== '') {
-      return patient.age;
+  const debounceTimer = useRef(null);
+
+  const activeFilterCount = useMemo(() => {
+    let n = 0;
+    if (gender !== 'all') n++;
+    if (ageMin !== '') n++;
+    if (ageMax !== '') n++;
+    if (hasPrescription !== 'all') n++;
+    if (sortBy !== 'newest') n++;
+    return n;
+  }, [gender, ageMin, ageMax, hasPrescription, sortBy]);
+
+  // ── fetch ────────────────────────────────────────────────────────────────────
+
+  const fetchPatients = useCallback(async (overrides = {}) => {
+    const p = {
+      search,
+      gender,
+      age_min: ageMin,
+      age_max: ageMax,
+      has_prescription: hasPrescription,
+      sort_by: sortBy,
+      page,
+      per_page: 15,
+      ...overrides,
+    };
+    const params = new URLSearchParams();
+    Object.entries(p).forEach(([k, v]) => { if (v !== '' && v !== 'all') params.set(k, v); });
+    params.set('page', String(p.page));
+    params.set('per_page', '15');
+
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/doctor/patients?${params}`, {
+        credentials: 'same-origin',
+        headers: { Accept: 'application/json' },
+      });
+      const data = await res.json();
+      setRows(data?.patients?.data ?? []);
+      setMeta(data?.meta ?? { current_page: 1, last_page: 1, total: 0 });
+    } catch {
+      setRows([]);
+    } finally {
+      setLoading(false);
     }
+  }, [search, gender, ageMin, ageMax, hasPrescription, sortBy, page]);
 
-    if (patient?.date_of_birth) {
-      const birthDate = new Date(patient.date_of_birth);
-      if (!Number.isNaN(birthDate.getTime())) {
-        const todayDate = new Date();
-        let age = todayDate.getFullYear() - birthDate.getFullYear();
-        const monthDiff = todayDate.getMonth() - birthDate.getMonth();
+  useEffect(() => { fetchPatients(); }, [fetchPatients]);
 
-        if (monthDiff < 0 || (monthDiff === 0 && todayDate.getDate() < birthDate.getDate())) {
-          age -= 1;
-        }
-
-        if (age >= 0) {
-          return age;
-        }
-      }
-    }
-
-    return null;
+  // debounce search
+  const handleSearchChange = (val) => {
+    setSearch(val);
+    clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => { setPage(1); }, 350);
   };
 
-  const formatGender = (gender) => {
-    const value = String(gender || '').trim().toLowerCase();
-    if (!value) return 'N/A';
-    return value.charAt(0).toUpperCase() + value.slice(1);
+  // ── filter actions ────────────────────────────────────────────────────────────
+
+  const handleReset = () => {
+    setSearch(''); setGender('all'); setAgeMin(''); setAgeMax('');
+    setHasPrescription('all'); setSortBy('newest'); setPage(1);
+    setFilterOpen(false);
   };
 
-  const getPatientGender = (patient) => patient?.gender || patient?.patient_gender || patient?.user?.gender || 'N/A';
+  // ── prescription click ────────────────────────────────────────────────────────
 
-  const formatAgeGender = (patient) => {
-    const age = resolvePatientAge(patient);
-    const ageLabel = age ? `${age}y` : 'Age N/A';
-    return `${ageLabel} • ${formatGender(getPatientGender(patient))}`;
-  };
-
-  const filteredRows = useMemo(() => {
-    const needle = searchTerm.trim().toLowerCase();
-
-    return rows.filter((p) => {
-      if (!needle) {
-        return true;
-      }
-
-      const haystack = `${p.id || ''} ${p.name || ''} ${p.email || ''} ${p.phone || ''}`.toLowerCase();
-      return haystack.includes(needle);
-    });
-  }, [rows, searchTerm]);
-
-  const stats = useMemo(() => ({
-    visible: filteredRows.length,
-  }), [filteredRows.length]);
-
-  const hasStatusColumn = useMemo(() => (
-    rows.some((item) => {
-      const status = String(item?.status ?? '').trim();
-      return status.length > 0;
-    })
-  ), [rows]);
-
-  const handlePrescriptionClick = (patient) => {
-    if (!patient.has_prescription && (patient.prescriptions_count ?? 0) === 0) {
-      router.visit(`/doctor/prescriptions/create?patient_id=${patient.id}`);
+  const handlePrescriptionClick = (p) => {
+    if (!p.has_prescription && (p.prescriptions_count ?? 0) === 0) {
+      router.visit(`/doctor/prescriptions/create?patient_id=${p.id}`);
       return;
     }
-
-    if ((patient.prescriptions_count ?? 0) <= 1 && patient.prescriptions?.[0]?.id) {
-      router.visit(`/doctor/prescriptions/${patient.prescriptions[0].id}`);
+    if ((p.prescriptions_count ?? 0) <= 1 && p.prescriptions?.[0]?.id) {
+      router.visit(`/doctor/prescriptions/${p.prescriptions[0].id}`);
       return;
     }
-
-    setPrescriptionModal(patient);
+    setPrescriptionModal(p);
   };
 
-  const handleEmailPatient = (email) => {
-    if (email) {
-      window.location.href = `mailto:${email}`;
-    }
-  };
-
-  const handleCallPatient = (phone) => {
-    if (phone) {
-      window.location.href = `tel:${phone}`;
-    }
-  };
+  // ── render ────────────────────────────────────────────────────────────────────
 
   return (
     <DoctorLayout title="Patients" gradient={false}>
       <div className="mx-auto max-w-[1400px]">
         <section className="surface-card rounded-3xl overflow-hidden">
+
+          {/* ── Header ── */}
           <div className="px-6 py-5 border-b border-slate-100">
-            <div className="flex flex-col justify-between gap-3 md:flex-row md:items-center">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              {/* title + count */}
               <div className="flex items-center gap-3">
                 <h2 className="text-xl font-semibold text-[#2D3A74]">Patients</h2>
                 <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-                  {stats.visible}
+                  {meta.total}
                 </span>
               </div>
+
+              {/* sort + filter toggle + reset */}
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="relative">
+                  <select
+                    value={sortBy}
+                    onChange={(e) => { setSortBy(e.target.value); setPage(1); }}
+                    className="appearance-none rounded-xl border border-slate-200 bg-white py-2 pl-3 pr-8 text-sm text-slate-700 focus:border-[#2D3A74] focus:outline-none focus:ring-2 focus:ring-[#2D3A74]/20"
+                  >
+                    {SORT_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+                </div>
+
+                <button
+                  onClick={() => setFilterOpen((v) => !v)}
+                  className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium transition ${
+                    filterOpen || activeFilterCount > 0
+                      ? 'border-[#2D3A74] bg-[#2D3A74] text-white'
+                      : 'border-slate-200 bg-white text-slate-700 hover:border-[#2D3A74] hover:text-[#2D3A74]'
+                  }`}
+                >
+                  <SlidersHorizontal className="h-4 w-4" />
+                  Filters
+                  {activeFilterCount > 0 && (
+                    <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${filterOpen ? 'bg-white text-[#2D3A74]' : 'bg-[#2D3A74] text-white'}`}>
+                      {activeFilterCount}
+                    </span>
+                  )}
+                </button>
+
+                {activeFilterCount > 0 && (
+                  <button
+                    onClick={handleReset}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-500 transition hover:border-rose-300 hover:text-rose-600"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" />
+                    Reset
+                  </button>
+                )}
+              </div>
             </div>
 
-            <div className="mt-4">
-              <div className="max-w-[420px]">
-                <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Search</label>
-                <div className="relative">
-                  <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <input
-                    type="text"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Name, email, phone or id"
-                    className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-900 placeholder-slate-400 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
-                  />
+            {/* search bar */}
+            <div className="mt-4 max-w-[480px]">
+              <div className="relative">
+                <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  placeholder="Search by name, email or phone…"
+                  className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-10 text-sm text-slate-900 placeholder-slate-400 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+                />
+                {search && (
+                  <button
+                    onClick={() => { setSearch(''); setPage(1); }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* ── Filter Panel ── */}
+            {filterOpen && (
+              <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  {/* Gender */}
+                  <div>
+                    <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500">Gender</p>
+                    <div className="flex gap-1.5">
+                      {[['all', 'All'], ['male', 'Male'], ['female', 'Female']].map(([val, lbl]) => (
+                        <button
+                          key={val}
+                          onClick={() => setGender(val)}
+                          className={`flex-1 rounded-lg border px-2 py-1.5 text-xs font-semibold transition ${
+                            gender === val
+                              ? 'border-[#2D3A74] bg-[#2D3A74] text-white'
+                              : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                          }`}
+                        >
+                          {lbl}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Age Range */}
+                  <div>
+                    <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500">Age Range</p>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number" min="0" max="120"
+                        value={ageMin}
+                        onChange={(e) => setAgeMin(e.target.value)}
+                        placeholder="Min"
+                        className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-900 focus:border-[#2D3A74] focus:outline-none focus:ring-1 focus:ring-[#2D3A74]/20"
+                      />
+                      <span className="text-xs text-slate-400">–</span>
+                      <input
+                        type="number" min="0" max="120"
+                        value={ageMax}
+                        onChange={(e) => setAgeMax(e.target.value)}
+                        placeholder="Max"
+                        className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-900 focus:border-[#2D3A74] focus:outline-none focus:ring-1 focus:ring-[#2D3A74]/20"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Has Prescription */}
+                  <div>
+                    <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500">Prescription</p>
+                    <div className="flex gap-1.5">
+                      {[['all', 'All'], ['yes', 'Has Rx'], ['no', 'No Rx']].map(([val, lbl]) => (
+                        <button
+                          key={val}
+                          onClick={() => setHasPrescription(val)}
+                          className={`flex-1 rounded-lg border px-2 py-1.5 text-xs font-semibold transition ${
+                            hasPrescription === val
+                              ? 'border-[#2D3A74] bg-[#2D3A74] text-white'
+                              : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                          }`}
+                        >
+                          {lbl}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Apply */}
+                  <div className="flex items-end">
+                    <button
+                      onClick={() => { setPage(1); setFilterOpen(false); }}
+                      className="w-full rounded-xl bg-[#2D3A74] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#243063]"
+                    >
+                      Apply Filters
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
 
+          {/* ── Table ── */}
           <div className="overflow-x-auto border-t border-slate-100">
-            <table className="min-w-full text-sm">
-              <thead className="bg-slate-50 text-slate-500 uppercase text-xs tracking-[0.12em]">
-                <tr>
-                  <th className="px-6 py-4 text-left">#</th>
-                  <th className="px-6 py-4 text-left">Patient</th>
-                  <th className="px-6 py-4 text-left">Email</th>
-                  <th className="px-6 py-4 text-left">Phone</th>
-                  {hasStatusColumn ? <th className="px-6 py-4 text-left">Status</th> : null}
-                  <th className="px-6 py-4 text-left">Joined</th>
-                  <th className="px-6 py-4 text-center">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 bg-white">
-                {filteredRows.map((p, index) => {
-                  const serial = p.serial_no || (((pagination?.current_page || 1) - 1) * (pagination?.per_page || 15) + index + 1);
-
-                  return (
-                    <tr
-                      key={p.id || index}
-                      className="cursor-pointer hover:bg-slate-50/80 transition-colors"
-                      onClick={() => router.visit(`/doctor/patients/${p.id}`)}
-                    >
-                      <td className="px-6 py-4 font-medium text-slate-600">
-                        <span className="inline-flex items-center gap-1.5">
-                          <Hash className="h-3.5 w-3.5 text-slate-400" />
-                          {renderHighlighted(serial, searchTerm)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2.5 text-left">
-                          <GenderIconAvatar gender={getPatientGender(p)} />
-                          <div>
-                            <div className="font-semibold text-slate-900">{renderHighlighted(p.name || p.id, searchTerm)}</div>
-                            <div className="mt-0.5 text-xs font-medium text-slate-500">{formatAgeGender(p)}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-[13px] font-medium text-slate-700">
-                        <span className="inline-flex items-center gap-1.5">
-                          <Mail className="h-3.5 w-3.5 text-slate-400" />
-                          {renderHighlighted(p.email || 'N/A', searchTerm)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-[13px] font-medium text-slate-700 whitespace-nowrap">
-                        <span className="inline-flex items-center gap-1.5">
-                          <Phone className="h-3.5 w-3.5 text-slate-400" />
-                          {renderHighlighted(p.phone || 'N/A', searchTerm)}
-                        </span>
-                      </td>
-                      {hasStatusColumn ? (
-                        <td className="px-6 py-4">
-                          {p.status ? <StatusBadge status={p.status} size="xs" /> : <span className="text-xs font-medium text-slate-400">N/A</span>}
+            {loading ? (
+              <div className="flex items-center justify-center py-16 text-sm text-slate-400">Loading…</div>
+            ) : (
+              <table className="min-w-full text-sm">
+                <thead className="bg-slate-50 text-slate-500 uppercase text-xs tracking-[0.12em]">
+                  <tr>
+                    <th className="px-6 py-4 text-left">#</th>
+                    <th className="px-6 py-4 text-left">Patient</th>
+                    <th className="px-6 py-4 text-left">Contact</th>
+                    <th className="px-6 py-4 text-left">Address</th>
+                    <th className="px-6 py-4 text-center">Prescriptions</th>
+                    <th className="px-6 py-4 text-left">Joined</th>
+                    <th className="px-6 py-4 text-center">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 bg-white">
+                  {rows.map((p, idx) => {
+                    const serial = (meta.current_page - 1) * 15 + idx + 1;
+                    return (
+                      <tr
+                        key={p.id ?? idx}
+                        className="cursor-pointer transition-colors hover:bg-slate-50/80"
+                        onClick={() => router.visit(`/doctor/patients/${p.id}`)}
+                      >
+                        {/* # */}
+                        <td className="px-6 py-4 font-medium text-slate-600">
+                          <span className="inline-flex items-center gap-1.5">
+                            <Hash className="h-3.5 w-3.5 text-slate-400" />
+                            {serial}
+                          </span>
                         </td>
-                      ) : null}
-                      <td className="px-6 py-4 text-[13px] font-medium text-slate-700 whitespace-nowrap">
-                        <span className="inline-flex items-center gap-1.5">
-                          <Calendar className="h-3.5 w-3.5 text-slate-400" />
-                          {p.created_at ? (formatDisplayDateWithYearFromDateLike(p.created_at) || p.created_at) : 'N/A'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-center" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => router.visit(`/doctor/patients/${p.id}`)}
-                            className="group relative inline-flex h-8 w-8 items-center justify-center rounded-md border border-sky-200 bg-sky-50 text-sky-700 transition hover:border-sky-300 hover:bg-sky-100 hover:text-sky-800"
-                            aria-label="View patient"
-                          >
-                            <Eye className="h-4 w-4" />
-                            <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-[10px] font-medium text-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
-                              View Patient
-                            </span>
-                          </button>
 
-                          <button
-                            type="button"
-                            onClick={() => handlePrescriptionClick(p)}
-                            className="group relative inline-flex h-8 w-8 items-center justify-center rounded-md border border-violet-300 bg-violet-100 text-violet-800 transition hover:border-violet-400 hover:bg-violet-200 hover:text-violet-900"
-                            aria-label="Prescriptions"
-                          >
-                            <FileText className="h-4 w-4" />
-                            <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-[10px] font-medium text-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
-                              Prescriptions
-                            </span>
-                          </button>
+                        {/* Patient */}
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2.5">
+                            <GenderAvatar gender={getGender(p)} />
+                            <div>
+                              <div className="font-semibold text-slate-900">{renderHighlighted(p.name, search)}</div>
+                              <div className="mt-0.5 text-xs text-slate-500">{ageGenderLabel(p)}</div>
+                            </div>
+                          </div>
+                        </td>
 
-                          {p.email ? (
-                            <button
-                              type="button"
-                              onClick={() => handleEmailPatient(p.email)}
-                              className="group relative inline-flex h-8 w-8 items-center justify-center rounded-md border border-rose-200 bg-rose-50 text-rose-700 transition hover:border-rose-300 hover:bg-rose-100 hover:text-rose-800"
-                              aria-label="Send email"
-                            >
-                              <Mail className="h-4 w-4" />
-                              <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-[10px] font-medium text-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
-                                Send Email
+                        {/* Contact */}
+                        <td className="px-6 py-4 text-[13px] text-slate-700">
+                          <div className="flex flex-col gap-0.5">
+                            {p.phone && (
+                              <span className="inline-flex items-center gap-1.5">
+                                <Phone className="h-3 w-3 text-slate-400" />
+                                {renderHighlighted(p.phone, search)}
                               </span>
-                            </button>
-                          ) : null}
-
-                          {p.phone ? (
-                            <button
-                              type="button"
-                              onClick={() => handleCallPatient(p.phone)}
-                              className="group relative inline-flex h-8 w-8 items-center justify-center rounded-md border border-emerald-200 bg-emerald-50 text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100 hover:text-emerald-800"
-                              aria-label="Call patient"
-                            >
-                              <Phone className="h-4 w-4" />
-                              <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-[10px] font-medium text-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
-                                Call Patient
+                            )}
+                            {p.email && (
+                              <span className="inline-flex items-center gap-1.5 text-xs text-slate-500">
+                                <Mail className="h-3 w-3 text-slate-400" />
+                                {renderHighlighted(p.email, search)}
                               </span>
-                            </button>
-                          ) : null}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Address */}
+                        <td className="max-w-[180px] truncate px-6 py-4 text-xs text-slate-500" title={p.address ?? ''}>
+                          {p.address || <span className="text-slate-300">—</span>}
+                        </td>
+
+                        {/* Prescriptions count */}
+                        <td className="px-6 py-4 text-center">
+                          <span className={`inline-flex items-center justify-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                            (p.prescriptions_count ?? 0) > 0 ? 'bg-violet-100 text-violet-700' : 'bg-slate-100 text-slate-400'
+                          }`}>
+                            {p.prescriptions_count ?? 0}
+                          </span>
+                        </td>
+
+                        {/* Joined */}
+                        <td className="whitespace-nowrap px-6 py-4 text-[13px] text-slate-700">
+                          <span className="inline-flex items-center gap-1.5">
+                            <Calendar className="h-3.5 w-3.5 text-slate-400" />
+                            {p.created_at
+                              ? formatDisplayDateWithYearFromDateLike(p.created_at) || p.created_at
+                              : 'N/A'}
+                          </span>
+                        </td>
+
+                        {/* Actions */}
+                        <td className="px-6 py-4 text-center" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-center gap-2">
+                            <ActionBtn
+                              label="View"
+                              className="border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100"
+                              onClick={() => router.visit(`/doctor/patients/${p.id}`)}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </ActionBtn>
+                            <ActionBtn
+                              label="Prescriptions"
+                              className="border-violet-300 bg-violet-100 text-violet-800 hover:bg-violet-200"
+                              onClick={() => handlePrescriptionClick(p)}
+                            >
+                              <FileText className="h-4 w-4" />
+                            </ActionBtn>
+                            {p.email && (
+                              <ActionBtn
+                                label="Email"
+                                className="border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
+                                onClick={() => { window.location.href = `mailto:${p.email}`; }}
+                              >
+                                <Mail className="h-4 w-4" />
+                              </ActionBtn>
+                            )}
+                            {p.phone && (
+                              <ActionBtn
+                                label="Call"
+                                className="border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                                onClick={() => { window.location.href = `tel:${p.phone}`; }}
+                              >
+                                <Phone className="h-4 w-4" />
+                              </ActionBtn>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
           </div>
 
-          {filteredRows.length === 0 ? (
+          {/* Empty state */}
+          {!loading && rows.length === 0 && (
             <div className="p-5">
-              <DocEmptyState
-                icon={Users}
-                title="No patients found"
-                description="Try another contact filter or keyword."
-              />
+              <DocEmptyState icon={Users} title="No patients found" description="Try adjusting your search or filters." />
             </div>
-          ) : null}
+          )}
 
-          {pagination?.data && typeof pagination.current_page === 'number' ? (
+          {/* ── Pagination ── */}
+          {meta.last_page > 1 && (
             <div className="flex flex-col gap-3 border-t border-slate-100 bg-slate-50 px-6 py-3.5 md:flex-row md:items-center md:justify-between">
               <p className="text-xs text-slate-500">
-                Showing <span className="font-semibold text-slate-700">{filteredRows.length}</span> row(s) on this page
+                Page <span className="font-semibold text-slate-700">{meta.current_page}</span> of{' '}
+                <span className="font-semibold text-slate-700">{meta.last_page}</span>
+                {' · '}
+                <span className="font-semibold text-slate-700">{meta.total}</span> total
               </p>
               <div className="flex items-center gap-2">
-                {(() => {
-                  const prev = (pagination.links || []).find((item) => String(item.label).toLowerCase().includes('previous'));
-                  const next = (pagination.links || []).find((item) => String(item.label).toLowerCase().includes('next'));
-
-                  return (
-                    <>
-                      {prev?.url ? (
-                        <Link href={prev.url} className="rounded-lg bg-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-300">Previous</Link>
-                      ) : (
-                        <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-400">Previous</span>
-                      )}
-                      {next?.url ? (
-                        <Link href={next.url} className="rounded-lg bg-[#2D3A74] px-3 py-1.5 text-sm font-medium text-white transition hover:bg-[#243063]">Next</Link>
-                      ) : (
-                        <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-400">Next</span>
-                      )}
-                    </>
-                  );
-                })()}
+                <button
+                  disabled={meta.current_page <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  className="rounded-lg bg-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-300 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Previous
+                </button>
+                <button
+                  disabled={meta.current_page >= meta.last_page}
+                  onClick={() => setPage((p) => Math.min(meta.last_page, p + 1))}
+                  className="rounded-lg bg-[#2D3A74] px-3 py-1.5 text-sm font-medium text-white transition hover:bg-[#243063] disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Next
+                </button>
               </div>
             </div>
-          ) : null}
+          )}
         </section>
       </div>
 
+      {/* ── Prescription Modal ── */}
       <DocModal
         open={!!prescriptionModal}
         onClose={() => setPrescriptionModal(null)}
@@ -369,36 +533,35 @@ export default function Patients({ patients = [] }) {
         icon={FileText}
         size="md"
         footer={
-          <DocButton variant="secondary" size="sm" onClick={() => setPrescriptionModal(null)}>Close</DocButton>
+          <DocButton variant="secondary" size="sm" onClick={() => setPrescriptionModal(null)}>
+            Close
+          </DocButton>
         }
       >
-        {prescriptionModal ? (
+        {prescriptionModal && (
           <div>
             <p className="mb-4 text-sm text-slate-500">
               {prescriptionModal.name} has {prescriptionModal.prescriptions_count} prescriptions
             </p>
             <div className="space-y-2">
-              {(prescriptionModal.prescriptions || []).map((prescription, index) => (
+              {(prescriptionModal.prescriptions || []).map((rx, idx) => (
                 <button
-                  key={prescription.id}
-                  onClick={() => {
-                    router.visit(`/doctor/prescriptions/${prescription.id}`);
-                    setPrescriptionModal(null);
-                  }}
-                  className="w-full text-left rounded-xl border border-slate-200 p-4 transition-all hover:border-sky-300 hover:bg-sky-50/50"
+                  key={rx.id}
+                  onClick={() => { router.visit(`/doctor/prescriptions/${rx.id}`); setPrescriptionModal(null); }}
+                  className="w-full rounded-xl border border-slate-200 p-4 text-left transition-all hover:border-sky-300 hover:bg-sky-50/50"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1">
                       <div className="mb-1.5 flex items-center gap-3">
-                        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-xs font-bold text-slate-600">
-                          {index + 1}
-                        </div>
-                        <div className="text-sm font-semibold text-slate-800">
-                          {prescription.diagnosis || 'No diagnosis provided'}
-                        </div>
+                        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-xs font-bold text-slate-600">
+                          {idx + 1}
+                        </span>
+                        <span className="text-sm font-semibold text-slate-800">
+                          {rx.diagnosis || 'No diagnosis provided'}
+                        </span>
                       </div>
                       <div className="ml-10 text-xs text-slate-400">
-                        {formatDisplayDateWithYearFromDateLike(prescription.created_at) || prescription.created_at}
+                        {formatDisplayDateWithYearFromDateLike(rx.created_at) || rx.created_at}
                       </div>
                     </div>
                     <FileText className="mt-1 h-4 w-4 text-slate-400" />
@@ -407,8 +570,26 @@ export default function Patients({ patients = [] }) {
               ))}
             </div>
           </div>
-        ) : null}
+        )}
       </DocModal>
     </DoctorLayout>
+  );
+}
+
+// ── tiny action button ─────────────────────────────────────────────────────────
+
+function ActionBtn({ children, label, className, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      className={`group relative inline-flex h-8 w-8 items-center justify-center rounded-md border transition ${className}`}
+    >
+      {children}
+      <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-[10px] font-medium text-white opacity-0 transition-opacity group-hover:opacity-100">
+        {label}
+      </span>
+    </button>
   );
 }

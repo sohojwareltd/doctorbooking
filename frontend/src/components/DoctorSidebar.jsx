@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Link, usePage } from '@inertiajs/react';
 import {
   CalendarDays, ClipboardList, LayoutDashboard, Users, User, UserCog, X,
-  Stethoscope, Globe, CalendarClock, LogOut, ChevronLeft, Activity, ChevronDown, Settings
+  Stethoscope, Globe, CalendarClock, LogOut, ChevronLeft, ChevronRight, Activity, ChevronDown, Settings
 } from 'lucide-react';
 
 export default function DoctorSidebar({ currentPath, onClose, collapsed = false, onToggleCollapse }) {
@@ -163,7 +163,7 @@ export default function DoctorSidebar({ currentPath, onClose, collapsed = false,
       </nav>
 
       {/* Collapse toggle (desktop only) */}
-      {onToggleCollapse && (
+      {/* {onToggleCollapse && (
         <div className="hidden lg:block px-3 pb-2">
           <button
             onClick={onToggleCollapse}
@@ -173,7 +173,7 @@ export default function DoctorSidebar({ currentPath, onClose, collapsed = false,
             {!collapsed && <span>Collapse</span>}
           </button>
         </div>
-      )}
+      )} */}
 
       {/* Doctor Profile + Logout */}
       <div className="flex-shrink-0 border-t border-white/10 p-3">

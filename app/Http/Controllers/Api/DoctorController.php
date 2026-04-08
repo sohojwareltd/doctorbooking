@@ -94,7 +94,12 @@ class DoctorController extends Controller
         }
 
         $appointments = $query
-            ->orderByDesc('appointment_date')
+            ->orderByRaw("CASE
+                WHEN appointment_date = ? THEN 0
+                WHEN appointment_date > ? THEN 1
+                ELSE 2
+            END", [$today, $today])
+            ->orderBy('appointment_date')
             ->orderBy('serial_no')
             ->paginate($request->integer('per_page', 15))
             ->withQueryString();
@@ -165,14 +170,59 @@ class DoctorController extends Controller
         $doctor   = $request->user();
         $doctorId = $doctor->doctorId();
 
-        $patients = User::whereHas('role', fn ($q) => $q->where('name', 'patient'))
+        $search       = trim($request->get('search', ''));
+        $gender       = $request->get('gender', 'all');
+        $ageMin       = $request->integer('age_min') ?: null;
+        $ageMax       = $request->integer('age_max') ?: null;
+        $hasPrescription = $request->get('has_prescription', 'all'); // all | yes | no
+        $sortBy       = $request->get('sort_by', 'newest'); // newest | oldest | name_asc | name_desc | prescriptions
+
+        $query = User::whereHas('role', fn ($q) => $q->where('name', 'patient'))
             ->when($doctorId, fn ($q) => $q->whereHas('appointments', fn ($aq) => $aq->where('doctor_id', $doctorId)))
             ->with(['patientProfile', 'prescriptions' => fn ($q) => $doctorId
                 ? $q->where('doctor_id', $doctorId)->select('id', 'user_id', 'diagnosis', 'created_at')->latest()
-                : $q->select('id', 'user_id', 'diagnosis', 'created_at')->latest()])
-            ->orderByDesc('created_at')
-            ->paginate($request->integer('per_page', 15))
-            ->withQueryString();
+                : $q->select('id', 'user_id', 'diagnosis', 'created_at')->latest()]);
+
+        // Search
+        if ($search) {
+            $query->where(fn ($q) => $q
+                ->where('name', 'like', "%{$search}%")
+                ->orWhere('email', 'like', "%{$search}%")
+                ->orWhere('phone', 'like', "%{$search}%")
+            );
+        }
+
+        // Gender filter (via patientProfile)
+        if ($gender !== 'all') {
+            $query->whereHas('patientProfile', fn ($q) => $q->where('gender', $gender));
+        }
+
+        // Age range filter (via patientProfile)
+        if ($ageMin !== null) {
+            $query->whereHas('patientProfile', fn ($q) => $q->where('age', '>=', $ageMin));
+        }
+        if ($ageMax !== null) {
+            $query->whereHas('patientProfile', fn ($q) => $q->where('age', '<=', $ageMax));
+        }
+
+        // Prescription filter
+        if ($hasPrescription === 'yes') {
+            $query->whereHas('prescriptions', fn ($q) => $doctorId ? $q->where('doctor_id', $doctorId) : $q);
+        } elseif ($hasPrescription === 'no') {
+            $query->whereDoesntHave('prescriptions', fn ($q) => $doctorId ? $q->where('doctor_id', $doctorId) : $q);
+        }
+
+        // Sort
+        match ($sortBy) {
+            'oldest'        => $query->orderBy('created_at'),
+            'name_asc'      => $query->orderBy('name'),
+            'name_desc'     => $query->orderByDesc('name'),
+            'prescriptions' => $query->withCount(['prescriptions' => fn ($q) => $doctorId ? $q->where('doctor_id', $doctorId) : $q])
+                                     ->orderByDesc('prescriptions_count'),
+            default         => $query->orderByDesc('created_at'),
+        };
+
+        $patients = $query->paginate($request->integer('per_page', 15))->withQueryString();
 
         return response()->json([
             'patients' => $patients->through(fn ($p) => [

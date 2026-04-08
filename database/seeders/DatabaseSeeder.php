@@ -26,7 +26,7 @@ class DatabaseSeeder extends Seeder
             RoleSeeder::class,
             AdminSeeder::class,
             DoctorSeeder::class,
-            SampleDataSeeder::class,
+            BangladeshiDemoSeeder::class,
             SiteContentSeeder::class,
         ]);
     }

@@ -3,7 +3,9 @@
 namespace Database\Seeders;
 
 use App\Models\Appointment;
+use App\Models\Patient;
 use App\Models\Prescription;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -12,12 +14,22 @@ class SampleDataSeeder extends Seeder
 {
     public function run(): void
     {
-        $doctor = User::where('email', 'doctor@example.com')->first();
-        
-        if (!$doctor) {
+        $doctorUser = User::where('email', 'doctor@example.com')->first();
+
+        if (! $doctorUser) {
             $this->command->error('Doctor not found. Please run DoctorSeeder first.');
             return;
         }
+
+        // Use doctors.id (not users.id) as the FK for all doctor_id columns
+        $doctorId = $doctorUser->doctorId();
+
+        if (! $doctorId) {
+            $this->command->error('Doctor profile (doctors table) not found. Please run DoctorSeeder first.');
+            return;
+        }
+
+        $patientRole = Role::where('name', 'patient')->firstOrFail();
 
         // Create 15 patients with diverse Bangladesh names and realistic data
         $patientsData = [
@@ -160,14 +172,28 @@ class SampleDataSeeder extends Seeder
 
         $patients = [];
         foreach ($patientsData as $patientData) {
-            $patients[] = User::firstOrCreate(
+            $user = User::firstOrCreate(
                 ['email' => $patientData['email']],
-                array_merge($patientData, [
-                    'password' => Hash::make('password'),
-                    'role' => 'user',
+                [
+                    'name'              => $patientData['name'],
+                    'username'          => $patientData['email'],
+                    'phone'             => $patientData['phone'],
+                    'password'          => Hash::make('password'),
+                    'role_id'           => $patientRole->id,
                     'email_verified_at' => now(),
-                ])
+                ]
             );
+            // Create patient profile row
+            $user->patientProfile()->firstOrCreate(
+                ['user_id' => $user->id],
+                [
+                    'date_of_birth' => $patientData['date_of_birth'],
+                    'gender'        => $patientData['gender'],
+                    'weight'        => (float) $patientData['weight'],
+                    'address'       => $patientData['address'],
+                ]
+            );
+            $patients[] = $user;
         }
 
         // Realistic symptoms and diagnoses in Bangladesh context
@@ -292,28 +318,28 @@ class SampleDataSeeder extends Seeder
                 $status = $statusPool[array_rand($statusPool)];
 
                 $appointment = Appointment::create([
-                    'user_id' => $patient->id,
-                    'doctor_id' => $doctor->id,
+                    'user_id'          => $patient->id,
+                    'doctor_id'        => $doctorId,
                     'appointment_date' => $date,
                     'appointment_time' => $time,
-                    'status' => $status,
-                    'symptoms' => $symptomsData[array_rand($symptomsData)],
-                    'notes' => null,
+                    'status'           => $status,
+                    'symptoms'         => $symptomsData[array_rand($symptomsData)],
+                    'notes'            => null,
                 ]);
 
                 // Create prescription for 80% of prescribed appointments
                 if ($appointment->status === 'prescribed' && random_int(1, 100) <= 80) {
                     $hasNextVisit = random_int(1, 100) <= 60;
-                    
+
                     Prescription::create([
                         'appointment_id' => $appointment->id,
-                        'user_id' => $patient->id,
-                        'doctor_id' => $doctor->id,
-                        'diagnosis' => $diagnosisData[array_rand($diagnosisData)],
-                        'medications' => $medicationsData[array_rand($medicationsData)],
-                        'instructions' => $instructionsData[array_rand($instructionsData)],
-                        'tests' => $testsData[array_rand($testsData)],
-                        'next_visit_date' => $hasNextVisit ? now()->addDays(random_int(7, 30))->toDateString() : null,
+                        'user_id'        => $patient->id,
+                        'doctor_id'      => $doctorId,
+                        'diagnosis'      => $diagnosisData[array_rand($diagnosisData)],
+                        'medications'    => $medicationsData[array_rand($medicationsData)],
+                        'instructions'   => $instructionsData[array_rand($instructionsData)],
+                        'tests'          => $testsData[array_rand($testsData)],
+                        'next_visit_date'=> $hasNextVisit ? now()->addDays(random_int(7, 30))->toDateString() : null,
                     ]);
                 }
             }

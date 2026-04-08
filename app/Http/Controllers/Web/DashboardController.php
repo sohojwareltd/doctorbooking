@@ -240,10 +240,16 @@ class DashboardController extends Controller
                 ])->values()
             : collect();
 
-        // Recent appointments (last 7 days)
+        // Recent appointments (last 7 days + today + upcoming)
         $recentAppointments = $scope(Appointment::with(['user:id,name,email,phone']))
             ->where('appointment_date', '>=', now()->subDays(7))
-            ->orderByDesc('appointment_date')
+            ->orderByRaw("CASE
+                WHEN appointment_date = ? THEN 0
+                WHEN appointment_date > ? THEN 1
+                ELSE 2
+            END", [$today, $today])
+            ->orderBy('appointment_date')
+            ->orderBy('appointment_time')
             ->limit(5)
             ->get()
             ->map(fn ($a) => $this->mapAppointment($a));
