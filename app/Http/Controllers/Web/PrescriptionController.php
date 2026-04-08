@@ -210,22 +210,120 @@ class PrescriptionController extends Controller
     /** GET /patient/prescriptions */
     public function patientIndex(): Response
     {
-        $user          = Auth::user();
-        $prescriptions = Prescription::where('user_id', $user->id)
+        $user = Auth::user();
+
+        $apptIds = Appointment::where(fn ($q) => $q
+            ->where('user_id', $user->id)
+            ->orWhere('email', $user->email)
+        )->pluck('id');
+
+        $prescriptions = Prescription::with([
+                'user:id,name,phone',
+                'appointment:id,name,age,gender,phone,symptoms',
+            ])
+            ->where(fn ($q) => $q
+                ->where('user_id', $user->id)
+                ->orWhereIn('appointment_id', $apptIds)
+            )
             ->orderByDesc('created_at')
-            ->paginate(10)
+            ->paginate(15)
             ->withQueryString();
+
+        $all = Prescription::where(fn ($q) => $q
+            ->where('user_id', $user->id)
+            ->orWhereIn('appointment_id', $apptIds)
+        )->get(['next_visit_date']);
+
+        $withFollowUp      = $all->filter(fn ($p) => $p->next_visit_date)->count();
+        $upcomingFollowUps = $all->filter(fn ($p) => $p->next_visit_date
+            && \Carbon\Carbon::parse($p->next_visit_date)->gte(now()->startOfDay())
+        )->count();
 
         return Inertia::render('user/Prescriptions', [
             'prescriptions' => $prescriptions->through(fn ($p) => [
                 'id'              => $p->id,
+                'user_id'         => $p->user_id,
+                'patient_name'    => $p->patient_name ?? $p->user?->name ?? $p->appointment?->name,
+                'patient_age'     => $p->patient_age ?? $p->appointment?->age,
+                'patient_gender'  => $p->patient_gender ?? $p->user?->patientProfile?->gender ?? $p->appointment?->gender,
+                'patient_contact' => $p->patient_contact ?? $p->user?->phone ?? $p->appointment?->phone,
+                'symptoms'        => $p->appointment?->symptoms,
                 'diagnosis'       => $p->diagnosis,
                 'medications'     => $p->medications,
                 'instructions'    => $p->instructions,
                 'tests'           => $p->tests,
-                'next_visit_date' => $p->next_visit_date,
+                'follow_up_date'  => $p->next_visit_date?->toDateString(),
                 'created_at'      => $p->created_at,
+                'user'            => $p->user ? ['name' => $p->user->name, 'phone' => $p->user->phone] : null,
             ]),
+            'stats' => [
+                'withFollowUp'      => $withFollowUp,
+                'withoutFollowUp'   => $all->count() - $withFollowUp,
+                'upcomingFollowUps' => $upcomingFollowUps,
+            ],
+        ]);
+    }
+
+    /** GET /patient/prescriptions/{prescription} */
+    public function patientShow(Prescription $prescription): Response
+    {
+        $user    = Auth::user();
+        $apptIds = Appointment::where(fn ($q) => $q
+            ->where('user_id', $user->id)
+            ->orWhere('email', $user->email)
+        )->pluck('id');
+
+        // Allow access only if this prescription belongs to the patient
+        $allowed = $prescription->user_id === $user->id
+            || ($prescription->appointment_id && $apptIds->contains($prescription->appointment_id));
+
+        abort_unless($allowed, 403);
+
+        $prescription->load([
+            'appointment:id,appointment_date,appointment_time,status',
+            'doctor:id,user_id,specialization,degree',
+            'doctor.user:id,name,email,phone',
+        ]);
+
+        $chamber = $prescription->doctor_id
+            ? Chamber::where('doctor_id', $prescription->doctor_id)->where('is_active', true)->first()
+              ?? Chamber::where('doctor_id', $prescription->doctor_id)->first()
+            : null;
+
+        return Inertia::render('user/PrescriptionShow', [
+            'prescription' => [
+                'id'               => $prescription->id,
+                'created_at'       => $prescription->created_at?->toDateTimeString(),
+                'diagnosis'        => $prescription->diagnosis,
+                'medications'      => $prescription->medications,
+                'instructions'     => $prescription->instructions,
+                'tests'            => $prescription->tests,
+                'next_visit_date'  => $prescription->next_visit_date?->format('Y-m-d'),
+                'visit_type'       => $prescription->visit_type,
+                'patient_name'     => $prescription->patient_name ?? $user->name,
+                'patient_contact'  => $prescription->patient_contact ?? $user->phone,
+                'patient_age'      => $prescription->patient_age,
+                'patient_age_unit' => $prescription->patient_age_unit ?? 'years',
+                'patient_gender'   => $prescription->patient_gender,
+                'patient_weight'   => $prescription->patient_weight,
+                'appointment' => $prescription->appointment ? [
+                    'appointment_date' => $prescription->appointment->appointment_date?->toDateString(),
+                    'appointment_time' => substr((string) $prescription->appointment->appointment_time, 0, 5),
+                    'status'           => $prescription->appointment->status,
+                ] : null,
+            ],
+            'doctorInfo' => [
+                'name'           => $prescription->doctor?->user?->name,
+                'email'          => $prescription->doctor?->user?->email,
+                'phone'          => $prescription->doctor?->user?->phone,
+                'specialization' => $prescription->doctor?->specialization,
+                'degree'         => $prescription->doctor?->degree,
+            ],
+            'chamberInfo' => $chamber ? [
+                'name'     => $chamber->name,
+                'location' => $chamber->location,
+                'phone'    => $chamber->phone,
+            ] : null,
         ]);
     }
 

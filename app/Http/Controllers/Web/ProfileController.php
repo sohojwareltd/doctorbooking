@@ -41,6 +41,25 @@ class ProfileController extends Controller
     /** GET /patient/profile */
     public function patientShow(): Response
     {
-        return Inertia::render('user/Profile');
+        $user = Auth::user();
+        $user->loadMissing('patientProfile');
+
+        return Inertia::render('user/Profile', [
+            'userData' => [
+                'id'       => $user->id,
+                'name'     => $user->name,
+                'username' => $user->username,
+                'email'    => $user->email,
+                'phone'    => $user->phone,
+            ],
+            'profile' => $user->patientProfile ? [
+                'date_of_birth' => $user->patientProfile->date_of_birth?->toDateString(),
+                'age'           => $user->patientProfile->age,
+                'gender'        => $user->patientProfile->gender,
+                'weight'        => $user->patientProfile->weight,
+                'address'       => $user->patientProfile->address,
+            ] : null,
+            'isSetup' => session('setup', false),
+        ]);
     }
 }

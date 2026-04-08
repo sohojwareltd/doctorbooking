@@ -1,6 +1,6 @@
 import { Head, usePage } from '@inertiajs/react';
 import { Calendar, Clock, Mail, Phone, User } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
@@ -40,6 +40,8 @@ export default function UserBookAppointment() {
   const [previewSerial, setPreviewSerial] = useState(null);
   const [previewTime, setPreviewTime] = useState(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
+  const [existingAppointments, setExistingAppointments] = useState([]);
+  const calendarContainerRef = useRef(null);
 
   const isClosedByWeekday = (dateStr) => {
     if (!dateStr || !Array.isArray(closedWeekdays) || closedWeekdays.length === 0) return false;
@@ -63,6 +65,39 @@ export default function UserBookAppointment() {
     const day = String(d.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
   };
+
+  // Status → colour mapping for calendar events
+  const statusColor = (status) => {
+    switch (status) {
+      case 'scheduled':       return '#2D3A74';
+      case 'arrived':         return '#f59e0b';
+      case 'in_consultation': return '#8b5cf6';
+      case 'awaiting_tests':  return '#06b6d4';
+      case 'prescribed':      return '#10b981';
+      case 'cancelled':       return '#ef4444';
+      default:                return '#6b7280';
+    }
+  };
+
+  // Load patient's existing appointments for calendar highlights
+  useEffect(() => {
+    let mounted = true;
+    const run = async () => {
+      try {
+        const res = await fetch('/api/patient/appointments?per_page=200', {
+          credentials: 'same-origin',
+          headers: { Accept: 'application/json' },
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!mounted) return;
+        setExistingAppointments(Array.isArray(data?.appointments?.data) ? data.appointments.data : []);
+      } catch {
+        // non-critical — calendar still usable without highlights
+      }
+    };
+    run();
+    return () => { mounted = false; };
+  }, []);
 
   // Load doctor's unavailable ranges for calendar
   useEffect(() => {
@@ -172,37 +207,55 @@ export default function UserBookAppointment() {
     const cell = arg?.el;
     if (!cell) return;
 
-    const existing = cell.querySelector('.fc-unavailable-icon');
-    const dayStr = normalizeCalendarDate(arg);
-    const unavailable = isUnavailableDate(dayStr);
-
-    if (!unavailable) {
-      if (existing) existing.remove();
-      return;
-    }
-
-    if (existing) return;
-
     const frame = cell.querySelector('.fc-daygrid-day-frame') || cell;
     frame.style.position = 'relative';
 
-    const icon = document.createElement('span');
-    icon.className = 'fc-unavailable-icon';
-    icon.textContent = '🚫';
-    icon.setAttribute('aria-label', 'Unavailable date');
-    icon.title = 'Unavailable date';
-    icon.style.position = 'absolute';
-    icon.style.top = '3px';
-    icon.style.right = '4px';
-    icon.style.fontSize = '15px';
-    icon.style.lineHeight = '1';
-    icon.style.pointerEvents = 'none';
-    icon.style.zIndex = '2';
-    icon.style.background = 'rgba(255,255,255,0.95)';
-    icon.style.borderRadius = '999px';
-    icon.style.padding = '1px';
+    const dayStr = normalizeCalendarDate(arg);
 
-    frame.appendChild(icon);
+    // ── Unavailable 🚫 icon ──────────────────────────────────────────────────
+    const unavailable = isUnavailableDate(dayStr);
+    const existingIcon = cell.querySelector('.fc-unavailable-icon');
+    if (unavailable && !existingIcon) {
+      const icon = document.createElement('span');
+      icon.className = 'fc-unavailable-icon';
+      icon.textContent = '🚫';
+      icon.setAttribute('aria-label', 'Unavailable date');
+      icon.title = 'Unavailable date';
+      icon.style.cssText = 'position:absolute;top:3px;right:4px;font-size:15px;line-height:1;pointer-events:none;z-index:2;background:rgba(255,255,255,0.95);border-radius:999px;padding:1px';
+      frame.appendChild(icon);
+    } else if (!unavailable && existingIcon) {
+      existingIcon.remove();
+    }
+
+    // ── Appointment dots ─────────────────────────────────────────────────────
+    const existingDots = cell.querySelector('.fc-appt-dots');
+    if (existingDots) existingDots.remove();
+
+    const dayAppts = existingAppointments.filter((a) => a.appointment_date === dayStr);
+    if (dayAppts.length === 0) return;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'fc-appt-dots';
+    wrap.style.cssText = 'position:absolute;bottom:3px;left:0;right:0;display:flex;justify-content:center;gap:3px;pointer-events:none;z-index:3';
+
+    // Show up to 4 dots; if more, last dot shows a "+"
+    const shown = dayAppts.slice(0, 4);
+    shown.forEach((a, i) => {
+      const dot = document.createElement('span');
+      const isExtra = i === 3 && dayAppts.length > 4;
+      dot.style.cssText = `display:inline-flex;align-items:center;justify-content:center;width:8px;height:8px;border-radius:50%;background:${statusColor(a.status)};font-size:6px;color:#fff;font-weight:700;flex-shrink:0`;
+      if (isExtra) {
+        dot.textContent = '+';
+        dot.style.width = '10px';
+        dot.style.height = '10px';
+      }
+      dot.title = isExtra
+        ? `+${dayAppts.length - 3} more appointments`
+        : (a.status?.replace(/_/g, ' ') ?? 'appointment');
+      wrap.appendChild(dot);
+    });
+
+    frame.appendChild(wrap);
   };
 
   const handleSubmit = async (e) => {
@@ -276,9 +329,69 @@ export default function UserBookAppointment() {
   const inputClass = 'w-full rounded-2xl border border-[#00acb1]/30 bg-white px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-4 focus:ring-[#00acb1]/20';
 
   const calendarRenderKey = useMemo(
-    () => `${closedWeekdays.join(',')}|${unavailableRanges.map((r) => `${r?.start_date || ''}-${r?.end_date || ''}`).join(',')}`,
+    () => [
+      closedWeekdays.join(','),
+      unavailableRanges.map((r) => `${r?.start_date || ''}-${r?.end_date || ''}`).join(','),
+    ].join('|'),
     [closedWeekdays, unavailableRanges]
   );
+
+  // Inject coloured dots directly into FullCalendar cells using data-date attributes
+  const injectAppointmentDots = useCallback(() => {
+    const container = calendarContainerRef.current;
+    if (!container) return;
+
+    // Clear any previously injected dots
+    container.querySelectorAll('.fc-appt-dots').forEach((el) => el.remove());
+    if (existingAppointments.length === 0) return;
+
+    // Group appointments by date
+    const byDate = {};
+    existingAppointments.forEach((a) => {
+      if (!a.appointment_date) return;
+      if (!byDate[a.appointment_date]) byDate[a.appointment_date] = [];
+      byDate[a.appointment_date].push(a);
+    });
+
+    Object.entries(byDate).forEach(([date, appts]) => {
+      // FullCalendar adds data-date="YYYY-MM-DD" to every day cell
+      const cell = container.querySelector(`[data-date="${date}"]`);
+      if (!cell) return;
+
+      const frame = cell.querySelector('.fc-daygrid-day-frame') || cell;
+      frame.style.position = 'relative';
+
+      const wrap = document.createElement('div');
+      wrap.className = 'fc-appt-dots';
+      wrap.style.cssText =
+        'position:absolute;bottom:3px;left:0;right:0;display:flex;justify-content:center;gap:3px;pointer-events:none;z-index:3';
+
+      appts.slice(0, 4).forEach((a, i) => {
+        const isExtra = i === 3 && appts.length > 4;
+        const dot = document.createElement('span');
+        dot.style.cssText =
+          `display:inline-flex;align-items:center;justify-content:center;` +
+          `width:${isExtra ? 10 : 8}px;height:${isExtra ? 10 : 8}px;` +
+          `border-radius:50%;background:${statusColor(a.status)};` +
+          `font-size:6px;color:#fff;font-weight:700;flex-shrink:0`;
+        if (isExtra) dot.textContent = '+';
+        dot.title = isExtra
+          ? `+${appts.length - 3} more appointments`
+          : (a.status?.replace(/_/g, ' ') ?? 'appointment');
+        wrap.appendChild(dot);
+      });
+
+      frame.appendChild(wrap);
+    });
+  }, [existingAppointments]);
+
+  // Re-inject whenever appointments load or calendar remounts
+  useEffect(() => {
+    const timer = setTimeout(injectAppointmentDots, 80);
+    return () => clearTimeout(timer);
+  }, [injectAppointmentDots, calendarRenderKey]);
+
+
 
   return (
     <>
@@ -346,13 +459,14 @@ export default function UserBookAppointment() {
           <GlassCard variant="solid" className="p-5">
             <h3 className="mb-1 text-xs font-semibold uppercase tracking-wider text-[#005963]/80">Step 1</h3>
             <h3 className="mb-3 text-lg font-extrabold text-[#005963]">Choose Date</h3>
-            <div className="rounded-2xl border border-[#00acb1]/20 bg-white p-3">
+            <div ref={calendarContainerRef} className="rounded-2xl border border-[#00acb1]/20 bg-white p-3">
               <FullCalendar
                 key={calendarRenderKey}
                 plugins={[dayGridPlugin, interactionPlugin]}
                 initialView="dayGridMonth"
                 dateClick={handleDateClick}
                 dayCellDidMount={handleDayCellDidMount}
+                datesSet={() => setTimeout(injectAppointmentDots, 80)}
                 selectable
                 showNonCurrentDates={false}
                 fixedWeekCount={false}
@@ -367,6 +481,25 @@ export default function UserBookAppointment() {
                 }}
               />
             </div>
+            {/* Legend */}
+            {existingAppointments.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {[
+                  { status: 'scheduled',       label: 'Scheduled' },
+                  { status: 'arrived',         label: 'Arrived' },
+                  { status: 'in_consultation', label: 'In Consultation' },
+                  { status: 'awaiting_tests',  label: 'Awaiting Tests' },
+                  { status: 'prescribed',      label: 'Prescribed' },
+                  { status: 'cancelled',       label: 'Cancelled' },
+                ]
+                  .filter(({ status }) => existingAppointments.some((a) => a.status === status))
+                  .map(({ status, label }) => (
+                    <span key={status} className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold text-white" style={{ backgroundColor: statusColor(status) }}>
+                      {label}
+                    </span>
+                  ))}
+              </div>
+            )}
           </GlassCard>
 
           {/* Step 2 – Chamber & Time frame */}
@@ -519,6 +652,8 @@ export default function UserBookAppointment() {
             </div>
           </GlassCard>
         </div>
+
+
       </div>
     </>
   );

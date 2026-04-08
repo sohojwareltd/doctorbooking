@@ -1,5 +1,6 @@
 import { Head, Link, useForm } from '@inertiajs/react';
-import { Mail, Lock, User } from 'lucide-react';
+import { Mail, Lock, User, Phone, AtSign } from 'lucide-react';
+import { useState } from 'react';
 import GlassCard from '../../components/GlassCard';
 import ParticlesBackground from '../../components/ParticlesBackground';
 import PrimaryButton from '../../components/PrimaryButton';
@@ -7,9 +8,12 @@ import DoctorLogo from '../../components/DoctorLogo';
 import PublicLayout from '../../layouts/PublicLayout';
 
 export default function Register() {
+    const [identifierType, setIdentifierType] = useState('email'); // 'email' | 'phone'
+
     const { data, setData, post, processing, errors } = useForm({
         name: '',
         email: '',
+        phone: '',
         password: '',
         password_confirmation: '',
     });
@@ -18,6 +22,11 @@ export default function Register() {
         e.preventDefault();
         post('/register');
     };
+
+    // Show any validation error
+    const anyError = errors.name || errors.email || errors.phone || errors.password || errors.password_confirmation;
+
+    const inputClass = "w-full rounded-2xl border-2 border-[#00acb1]/30 bg-white px-4 py-3 pl-12 text-gray-900 shadow-sm focus:border-[#00acb1] focus:outline-none focus:ring-4 focus:ring-[#00acb1]/30";
 
     return (
         <>
@@ -29,6 +38,7 @@ export default function Register() {
 
                 <div className="relative mx-auto flex max-w-7xl items-center justify-center px-4 py-14">
                     <GlassCard variant="solid" hover={false} className="w-full max-w-md p-8">
+                        {/* Header */}
                         <div className="mb-6 flex flex-col items-center gap-3 text-center">
                             <div className="rounded-2xl bg-[#005963] p-2">
                                 <DoctorLogo className="h-10 w-10" />
@@ -39,16 +49,17 @@ export default function Register() {
                             </div>
                         </div>
 
-                        {(errors.name || errors.email || errors.password || errors.password_confirmation) && (
+                        {anyError && (
                             <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
-                                {errors.name || errors.email || errors.password || errors.password_confirmation}
+                                {anyError}
                             </div>
                         )}
 
                         <form onSubmit={submit} className="space-y-5">
+                            {/* Full Name */}
                             <div>
                                 <label htmlFor="name" className="mb-2 block text-sm font-semibold text-[#005963]">
-                                    Name
+                                    Full Name
                                 </label>
                                 <div className="relative">
                                     <User className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#005963]" />
@@ -56,33 +67,72 @@ export default function Register() {
                                         id="name"
                                         name="name"
                                         value={data.name}
-                                        className="w-full rounded-2xl border-2 border-[#00acb1]/30 bg-white px-4 py-3 pl-12 text-gray-900 shadow-sm focus:border-[#00acb1] focus:outline-none focus:ring-4 focus:ring-[#00acb1]/30"
+                                        className={inputClass}
                                         autoComplete="name"
+                                        placeholder="Your full name"
                                         onChange={(e) => setData('name', e.target.value)}
                                         required
                                     />
                                 </div>
                             </div>
 
+                            {/* Email / Phone toggle */}
                             <div>
-                                <label htmlFor="email" className="mb-2 block text-sm font-semibold text-[#005963]">
-                                    Email
-                                </label>
-                                <div className="relative">
-                                    <Mail className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#005963]" />
-                                    <input
-                                        id="email"
-                                        type="email"
-                                        name="email"
-                                        value={data.email}
-                                        className="w-full rounded-2xl border-2 border-[#00acb1]/30 bg-white px-4 py-3 pl-12 text-gray-900 shadow-sm focus:border-[#00acb1] focus:outline-none focus:ring-4 focus:ring-[#00acb1]/30"
-                                        autoComplete="username"
-                                        onChange={(e) => setData('email', e.target.value)}
-                                        required
-                                    />
+                                <div className="mb-2 flex items-center justify-between">
+                                    <label className="text-sm font-semibold text-[#005963]">
+                                        {identifierType === 'email' ? 'Email Address' : 'Phone Number'}
+                                    </label>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setIdentifierType((t) => t === 'email' ? 'phone' : 'email');
+                                            setData('email', '');
+                                            setData('phone', '');
+                                        }}
+                                        className="text-xs font-semibold text-[#005963] underline hover:text-[#00acb1] transition-colors"
+                                    >
+                                        Use {identifierType === 'email' ? 'phone' : 'email'} instead
+                                    </button>
                                 </div>
+
+                                {identifierType === 'email' ? (
+                                    <div className="relative">
+                                        <Mail className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#005963]" />
+                                        <input
+                                            id="email"
+                                            type="email"
+                                            name="email"
+                                            value={data.email}
+                                            className={inputClass}
+                                            autoComplete="email"
+                                            placeholder="you@example.com"
+                                            onChange={(e) => setData('email', e.target.value)}
+                                            required
+                                        />
+                                    </div>
+                                ) : (
+                                    <div className="relative">
+                                        <Phone className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#005963]" />
+                                        <input
+                                            id="phone"
+                                            type="tel"
+                                            name="phone"
+                                            value={data.phone}
+                                            className={inputClass}
+                                            autoComplete="tel"
+                                            placeholder="+8801..."
+                                            onChange={(e) => setData('phone', e.target.value)}
+                                            required
+                                        />
+                                    </div>
+                                )}
+
+                                <p className="mt-1.5 text-xs text-gray-400">
+                                    This will be used as your login identifier.
+                                </p>
                             </div>
 
+                            {/* Password */}
                             <div>
                                 <label htmlFor="password" className="mb-2 block text-sm font-semibold text-[#005963]">
                                     Password
@@ -94,14 +144,16 @@ export default function Register() {
                                         type="password"
                                         name="password"
                                         value={data.password}
-                                        className="w-full rounded-2xl border-2 border-[#00acb1]/30 bg-white px-4 py-3 pl-12 text-gray-900 shadow-sm focus:border-[#00acb1] focus:outline-none focus:ring-4 focus:ring-[#00acb1]/30"
+                                        className={inputClass}
                                         autoComplete="new-password"
+                                        placeholder="Min. 8 characters"
                                         onChange={(e) => setData('password', e.target.value)}
                                         required
                                     />
                                 </div>
                             </div>
 
+                            {/* Confirm Password */}
                             <div>
                                 <label htmlFor="password_confirmation" className="mb-2 block text-sm font-semibold text-[#005963]">
                                     Confirm Password
@@ -113,8 +165,9 @@ export default function Register() {
                                         type="password"
                                         name="password_confirmation"
                                         value={data.password_confirmation}
-                                        className="w-full rounded-2xl border-2 border-[#00acb1]/30 bg-white px-4 py-3 pl-12 text-gray-900 shadow-sm focus:border-[#00acb1] focus:outline-none focus:ring-4 focus:ring-[#00acb1]/30"
+                                        className={inputClass}
                                         autoComplete="new-password"
+                                        placeholder="Repeat password"
                                         onChange={(e) => setData('password_confirmation', e.target.value)}
                                         required
                                     />
@@ -122,7 +175,7 @@ export default function Register() {
                             </div>
 
                             <PrimaryButton type="submit" className="w-full" disabled={processing}>
-                                {processing ? 'Creating…' : 'Register'}
+                                {processing ? 'Creating account…' : 'Create Account'}
                             </PrimaryButton>
 
                             <div className="text-center text-sm text-gray-600">
@@ -140,3 +193,4 @@ export default function Register() {
 }
 
 Register.layout = (page) => <PublicLayout>{page}</PublicLayout>;
+

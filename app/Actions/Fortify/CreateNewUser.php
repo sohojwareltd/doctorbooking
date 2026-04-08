@@ -2,6 +2,7 @@
 
 namespace App\Actions\Fortify;
 
+use App\Models\Patient;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Support\Facades\Validator;
@@ -13,13 +14,13 @@ class CreateNewUser implements CreatesNewUsers
 
     /**
      * Validate and create a new patient (default role) user.
-     * Accepts email OR phone — stores whichever is provided as username.
+     * Accepts email OR phone ï¿½ stores whichever is provided as username.
      */
     public function create(array $input): User
     {
         Validator::make($input, [
             'name'     => ['required', 'string', 'max:255'],
-            // Accept email or phone — at least one required
+            // Accept email or phone ï¿½ at least one required
             'email'    => ['nullable', 'email', 'max:255'],
             'phone'    => ['nullable', 'string', 'max:50'],
             'password' => $this->passwordRules(),
@@ -39,13 +40,22 @@ class CreateNewUser implements CreatesNewUsers
 
         $patientRole = Role::where('name', 'patient')->first();
 
-        return User::create([
-            'name'     => $input['name'],
-            'username' => $username,
-            'email'    => ! empty($input['email']) ? $input['email'] : null,
-            'phone'    => ! empty($input['phone']) ? $input['phone'] : null,
-            'password' => $input['password'],
-            'role_id'  => $patientRole?->id,
+        $isPhoneOnly = empty($input['email']) && ! empty($input['phone']);
+
+        $user = User::create([
+            'name'             => $input['name'],
+            'username'         => $username,
+            'email'            => ! empty($input['email']) ? $input['email'] : null,
+            'phone'            => ! empty($input['phone']) ? $input['phone'] : null,
+            'password'         => $input['password'],
+            'role_id'          => $patientRole?->id,
+            // Phone-only accounts have no email to verify â€” mark as verified immediately
+            'email_verified_at' => $isPhoneOnly ? now() : null,
         ]);
+
+        // Create an empty patient profile so the profile page is reachable immediately
+        Patient::create(['user_id' => $user->id]);
+
+        return $user;
     }
 }

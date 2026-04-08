@@ -57,6 +57,14 @@ Route::middleware(['auth', 'verified', 'role:patient'])
     Route::get('/appointments', [WebAppointmentController::class, 'patientIndex'])->name('appointments');
     Route::get('/book-appointment', [WebAppointmentController::class, 'patientBookView'])->name('book-appointment');
     Route::get('/prescriptions', [WebPrescriptionController::class, 'patientIndex'])->name('prescriptions');
+    Route::get('/prescriptions/{prescription}', [WebPrescriptionController::class, 'patientShow'])->whereNumber('prescription')->name('prescriptions.show');
+});
+
+// Profile accessible without email-verification (supports phone-only accounts)
+Route::middleware(['auth', 'role:patient'])
+    ->prefix('patient')
+    ->name('patient.')
+    ->group(function () {
     Route::get('/profile', [ProfileController::class, 'patientShow'])->name('profile');
 });
 
@@ -118,6 +126,7 @@ Route::middleware(['auth', 'verified', 'role:patient'])
     Route::get('/appointments', fn () => redirect()->route('patient.appointments'))->name('appointments');
     Route::get('/book-appointment', fn () => redirect()->route('patient.book-appointment'))->name('book-appointment');
     Route::get('/prescriptions', fn () => redirect()->route('patient.prescriptions'))->name('prescriptions');
+    Route::get('/prescriptions/{id}', fn ($id) => redirect()->route('patient.prescriptions.show', $id))->name('prescriptions.show');
     Route::get('/profile', fn () => redirect()->route('patient.profile'))->name('profile');
 });
 

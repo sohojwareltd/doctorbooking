@@ -8,7 +8,6 @@ use App\Models\DoctorSchedule;
 use App\Models\DoctorScheduleRange;
 use App\Models\DoctorUnavailableRange;
 use App\Models\Prescription;
-use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -28,6 +27,17 @@ class DashboardController extends Controller
             return redirect()->route('doctor.dashboard');
         }
         if ($user?->hasRole('patient')) {
+            // Redirect to profile setup if the patient profile has no details yet
+            $user->loadMissing('patientProfile');
+            if (
+                $user->patientProfile &&
+                is_null($user->patientProfile->gender) &&
+                is_null($user->patientProfile->date_of_birth) &&
+                is_null($user->patientProfile->age)
+            ) {
+                return redirect()->route('patient.profile')->with('setup', true);
+            }
+
             return redirect()->route('patient.dashboard');
         }
 
@@ -37,18 +47,67 @@ class DashboardController extends Controller
     /** /patient/dashboard */
     public function patient(): Response
     {
-        $user = Auth::user();
+        $user  = Auth::user();
+        $today = now()->toDateString();
 
-        $upcomingCount      = Appointment::where('user_id', $user->id)
-            ->whereDate('appointment_date', '>=', now()->toDateString())
+        $base = fn () => Appointment::where(fn ($q) => $q
+            ->where('user_id', $user->id)
+            ->orWhere('email', $user->email)
+        );
+
+        $upcomingCount = $base()->whereDate('appointment_date', '>=', $today)->count();
+
+        // Count prescriptions via appointment_ids belonging to this patient
+        // (guest appointments have user_id=null on prescription, so we match by appointment_id too)
+        $patientAppointmentIds = $base()->pluck('id');
+        $prescriptionsCount = Prescription::where('user_id', $user->id)
+            ->orWhereIn('appointment_id', $patientAppointmentIds)
             ->count();
-        $prescriptionsCount = Prescription::where('user_id', $user->id)->count();
+
+        $completedCount     = $base()->where('status', 'prescribed')->count();
+        $cancelledCount     = $base()->where('status', 'cancelled')->count();
+
+        $recentAppointments = $base()
+            ->with(['prescription:id,appointment_id'])
+            ->orderByDesc('appointment_date')
+            ->orderByDesc('appointment_time')
+            ->limit(5)
+            ->get()
+            ->map(fn ($a) => [
+                'id'               => $a->id,
+                'appointment_date' => $a->appointment_date?->toDateString(),
+                'appointment_time' => substr((string) $a->appointment_time, 0, 5),
+                'status'           => $a->status,
+                'symptoms'         => $a->symptoms,
+                'prescription_id'  => $a->prescription?->id ?? null,
+            ])->values();
+
+        $upcomingRaw = $base()
+            ->whereDate('appointment_date', '>=', $today)
+            ->whereIn('status', ['scheduled', 'arrived'])
+            ->orderBy('appointment_date')
+            ->orderBy('appointment_time')
+            ->with(['prescription:id,appointment_id'])
+            ->first();
+
+        $upcoming = $upcomingRaw ? [
+            'id'               => $upcomingRaw->id,
+            'appointment_date' => $upcomingRaw->appointment_date?->toDateString(),
+            'appointment_time' => substr((string) $upcomingRaw->appointment_time, 0, 5),
+            'status'           => $upcomingRaw->status,
+            'symptoms'         => $upcomingRaw->symptoms,
+            'prescription_id'  => $upcomingRaw->prescription?->id ?? null,
+        ] : null;
 
         return Inertia::render('Dashboard', [
             'stats' => [
                 'upcomingAppointments' => $upcomingCount,
                 'prescriptions'        => $prescriptionsCount,
+                'completedAppointments'=> $completedCount,
+                'cancelledAppointments'=> $cancelledCount,
             ],
+            'recentAppointments' => $recentAppointments,
+            'upcomingAppointment'=> $upcoming,
         ]);
     }
 

@@ -29,7 +29,7 @@ export default function UserLayout({ children, title = "" }) {
         {sidebarOpen && (
           <div className="lg:hidden fixed inset-0 bg-black/30 z-30" onClick={() => setSidebarOpen(false)} />
         )}
-        <aside className={`fixed top-0 left-0 h-screen w-56 bg-white border-r border-gray-200 z-40 transform transition-transform duration-300 lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}>
+        <aside className={`fixed top-0 left-0 h-screen w-56 z-40 transform transition-transform duration-300 lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}>
           <UserSidebar currentPath={currentUrl} />
         </aside>
         <div className="flex-1 lg:ml-56 flex flex-col min-h-screen">
