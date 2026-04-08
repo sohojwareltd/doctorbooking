@@ -291,7 +291,7 @@ export default function DoctorDashboard({
   });
 
   const monthlyChartWidth = 560;
-  const monthlyChartHeight = 260;
+  const monthlyChartHeight = 200;
   const monthlyPadX = 42;
   const monthlyPadTop = 24;
   const monthlyPadBottom = 34;
@@ -355,7 +355,7 @@ export default function DoctorDashboard({
         </section>
 
         <section>
-          <div className="rounded-2xl border border-slate-200 bg-white p-4">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 max-w-xl">
               <h3 className="text-sm font-semibold text-[#2D3A74]">Monthly Appointments</h3>
               <svg viewBox={`0 0 ${monthlyChartWidth} ${monthlyChartHeight}`} className="mt-3 w-full">
                 {monthlyTicks.map((tick, index) => {
