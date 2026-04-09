@@ -108,12 +108,18 @@ export default function PublicBookAppointment() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Load doctor's unavailable ranges for calendar
+  // Load unavailable ranges for the selected chamber's schedule
   useEffect(() => {
+    if (!selectedChamberId) {
+      setUnavailableRanges([]);
+      setClosedWeekdays([]);
+      return;
+    }
     let mounted = true;
     const run = async () => {
       try {
-        const res = await fetch('/api/public/unavailable-ranges');
+        const params = new URLSearchParams({ chamber_id: String(selectedChamberId) });
+        const res = await fetch(`/api/public/unavailable-ranges?${params}`);
         const data = await res.json().catch(() => ({}));
         if (!mounted) return;
         setUnavailableRanges(Array.isArray(data?.ranges) ? data.ranges : []);
@@ -128,7 +134,7 @@ export default function PublicBookAppointment() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [selectedChamberId]);
 
   // Load active chambers once (for step 2)
   useEffect(() => {
@@ -350,8 +356,8 @@ export default function PublicBookAppointment() {
   const inputClass =
     'w-full rounded-2xl border border-[#00acb1]/30 bg-white px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-4 focus:ring-[#00acb1]/20';
 
-  const isStep1Complete = Boolean(formData.date);
-  const isStep2Complete = Boolean(formData.date && selectedChamberId);
+  const isStep1Complete = Boolean(selectedChamberId);
+  const isStep2Complete = Boolean(selectedChamberId && formData.date);
   const isStep3Complete =
     Boolean(formData.name && formData.phone) &&
     Boolean(formData.date && selectedChamberId) &&
@@ -396,7 +402,7 @@ export default function PublicBookAppointment() {
                       active || done ? 'text-[#005963]' : 'text-gray-400'
                     }`}
                   >
-                    {s === 1 ? 'Date' : s === 2 ? 'Chamber' : 'Patient Info'}
+                    {s === 1 ? 'Chamber' : s === 2 ? 'Date' : 'Patient Info'}
                   </span>
                 </div>
               );
@@ -410,66 +416,12 @@ export default function PublicBookAppointment() {
           </GlassCard>
         )}
 
-        {/* Step 1 – Date */}
+        {/* Step 1 – Chamber */}
         {step === 1 && (
           <GlassCard variant="solid" className="p-6">
-            <h3 className="text-base font-semibold text-[#005963] mb-1">Pick a Date</h3>
-            <p className="mb-4 text-xs text-gray-600">
-              Choose your preferred appointment date
-            </p>
-            <div className="rounded-2xl border border-[#00acb1]/20 bg-white p-3">
-              <FullCalendar
-                key={calendarRenderKey}
-                plugins={[dayGridPlugin, interactionPlugin]}
-                initialView="dayGridMonth"
-                dateClick={handleDateClick}
-                dayCellDidMount={handleDayCellDidMount}
-                selectable
-                showNonCurrentDates={false}
-                fixedWeekCount={false}
-                headerToolbar={{ left: 'prev', center: 'title', right: 'next' }}
-                height="auto"
-                validRange={{ start: new Date().toISOString().split('T')[0] }}
-                dayCellClassNames={(arg) => {
-                  const dayStr = normalizeCalendarDate(arg);
-                  if (isUnavailableDate(dayStr)) return 'fc-unavailable';
-                  if (dayStr === selectedDate) return 'fc-day-selected';
-                  return '';
-                }}
-              />
-            </div>
-            <div className="mt-6 flex justify-end">
-              <PrimaryButton
-                type="button"
-                disabled={!isStep1Complete}
-                className={!isStep1Complete ? 'opacity-60' : ''}
-                onClick={() => setStep(2)}
-              >
-                Continue
-              </PrimaryButton>
-            </div>
-          </GlassCard>
-        )}
-
-        {/* Step 2 – Chamber & preview serial (no manual time selection) */}
-        {step === 2 && (
-          <GlassCard variant="solid" className="p-6">
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <h3 className="text-base font-semibold text-[#005963]">Choose Chamber</h3>
-                <p className="text-xs text-gray-600">
-                  {formData.date
-                    ? formatDisplayDateWithYear(formData.date) || formData.date
-                    : 'Select a date first'}
-                </p>
-              </div>
-              <button
-                type="button"
-                className="text-xs text-[#005963] hover:underline"
-                onClick={() => setStep(1)}
-              >
-                &larr; Back
-              </button>
+            <div className="mb-4">
+              <h3 className="text-base font-semibold text-[#005963]">Choose Chamber</h3>
+              <p className="text-xs text-gray-600">Select where you&apos;d like to see the doctor</p>
             </div>
 
             {loadingChambers ? (
@@ -493,8 +445,11 @@ export default function PublicBookAppointment() {
                       key={ch.id}
                       type="button"
                       onClick={() => {
-                          setSelectedChamberId(ch.id);
-                          setSelectedChamber(ch);
+                        setSelectedChamberId(ch.id);
+                        setSelectedChamber(ch);
+                        setFormData((p) => ({ ...p, date: '' }));
+                        setSelectedDate(null);
+                        selectedDateRef.current = null;
                       }}
                       className={`w-full text-left rounded-2xl border px-4 py-3 text-sm transition ${
                         isActive
@@ -502,96 +457,105 @@ export default function PublicBookAppointment() {
                           : 'border-gray-200 bg-white hover:border-[#00acb1]'
                       }`}
                     >
-                      <div className="flex items-center justify-between gap-4">
-                        <div>
-                          <div className="font-semibold text-[#005963] flex items-center gap-2">
-                            {ch.name}
-                          </div>
-                          {ch.location && (
-                            <div className="mt-0.5 flex items-center gap-1 text-[11px] text-gray-600">
-                              <MapPin className="h-3 w-3" />
-                              <span className="truncate">{ch.location}</span>
-                              {mapsUrl && (
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    window.open(mapsUrl, '_blank', 'noopener,noreferrer');
-                                  }}
-                                  className="ml-1 text-[10px] font-semibold text-[#005963] underline underline-offset-2"
-                                >
-                                  Directions
-                                </button>
-                              )}
-                            </div>
-                          )}
-                          {formData.date && (
-                            <div className="mt-1 text-xs text-gray-500">
-                              {formatDisplayDateWithYear(formData.date) || formData.date}
-                            </div>
+                      <div className="font-semibold text-[#005963]">{ch.name}</div>
+                      {ch.location && (
+                        <div className="mt-0.5 flex items-center gap-1 text-[11px] text-gray-600">
+                          <MapPin className="h-3 w-3" />
+                          <span className="truncate">{ch.location}</span>
+                          {mapsUrl && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                window.open(mapsUrl, '_blank', 'noopener,noreferrer');
+                              }}
+                              className="ml-1 text-[10px] font-semibold text-[#005963] underline underline-offset-2"
+                            >
+                              Directions
+                            </button>
                           )}
                         </div>
-                        {previewSerial && isActive && (
-                          <div className="rounded-xl bg-[#00acb1]/10 px-3 py-2 text-xs text-right text-[#005963]">
-                            <div className="font-semibold">Your Serial</div>
-                            <div className="text-lg font-extrabold">#{previewSerial}</div>
-                            {previewTime && (
-                              <div className="text-[11px]">
-                                {formatDisplayTime12h(previewTime) || previewTime}
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
+                      )}
                     </button>
                   );
                 })}
               </div>
             )}
 
-            <div className="mt-4 border-t border-gray-100 pt-4">
-              <div className="mb-2 text-xs font-semibold text-[#005963]">
-                Estimated visit time
+            <div className="mt-6 flex justify-end">
+              <PrimaryButton
+                type="button"
+                disabled={!isStep1Complete}
+                className={!isStep1Complete ? 'opacity-60' : ''}
+                onClick={() => setStep(2)}
+              >
+                Continue
+              </PrimaryButton>
+            </div>
+          </GlassCard>
+        )}
+
+        {/* Step 2 – Date */}
+        {step === 2 && (
+          <GlassCard variant="solid" className="p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-semibold text-[#005963]">Pick a Date</h3>
+                <p className="text-xs text-gray-600">
+                  {selectedChamber?.name || 'Choose your preferred appointment date'}
+                </p>
               </div>
-              {!selectedChamberId || !formData.date ? (
-                <div className="text-xs text-gray-500">
-                  Select a date and chamber to see your estimated time.
-                </div>
-              ) : loadingPreview ? (
-                <div className="flex items-center gap-2 text-xs text-gray-600">
-                  <Clock className="h-4 w-4 animate-spin" />
-                  Calculating estimated time…
-                </div>
-              ) : previewTime ? (
-                <div className="text-xs text-gray-700">
-                  You will be seen around{' '}
-                  <span className="font-semibold">
-                    {formatDisplayTime12h(previewTime) || previewTime}
-                  </span>{' '}
-                  as serial{' '}
-                  <span className="font-semibold">
-                    #{previewSerial}
-                  </span>
-                  .
-                </div>
-              ) : (
-                <div className="text-xs text-gray-500">
-                  Unable to calculate estimated time. You can still continue.
-                </div>
-              )}
+              <button
+                type="button"
+                className="text-xs text-[#005963] hover:underline"
+                onClick={() => setStep(1)}
+              >
+                &larr; Back
+              </button>
             </div>
 
-            {formData.date && previewTime && previewSerial && (
-              <div className="mt-4 rounded-2xl border border-[#00acb1]/30 bg-[#005963]/5 px-4 py-3 text-xs text-[#005963]">
-                <div className="font-semibold">
-                  {formatDisplayDateWithYear(formData.date) || formData.date}
-                </div>
-                <div className="mt-1">
-                  Serial <span className="font-bold">#{previewSerial}</span> • Est. time:{' '}
-                  <span className="font-bold">
-                    {formatDisplayTime12h(previewTime) || previewTime}
-                  </span>
-                </div>
+            <div className="rounded-2xl border border-[#00acb1]/20 bg-white p-3">
+              <FullCalendar
+                key={calendarRenderKey}
+                plugins={[dayGridPlugin, interactionPlugin]}
+                initialView="dayGridMonth"
+                dateClick={handleDateClick}
+                dayCellDidMount={handleDayCellDidMount}
+                selectable
+                showNonCurrentDates={false}
+                fixedWeekCount={false}
+                headerToolbar={{ left: 'prev', center: 'title', right: 'next' }}
+                height="auto"
+                validRange={{ start: new Date().toISOString().split('T')[0] }}
+                dayCellClassNames={(arg) => {
+                  const dayStr = normalizeCalendarDate(arg);
+                  if (isUnavailableDate(dayStr)) return 'fc-unavailable';
+                  if (dayStr === selectedDate) return 'fc-day-selected';
+                  return '';
+                }}
+              />
+            </div>
+
+            {formData.date && (
+              <div className="mt-4 border-t border-gray-100 pt-4">
+                {loadingPreview ? (
+                  <div className="flex items-center gap-2 text-xs text-gray-600">
+                    <Clock className="h-4 w-4 animate-spin" />
+                    Calculating estimated time…
+                  </div>
+                ) : previewSerial && previewTime ? (
+                  <div className="rounded-2xl border border-[#00acb1]/30 bg-[#005963]/5 px-4 py-3 text-xs text-[#005963]">
+                    <div className="font-semibold">
+                      {formatDisplayDateWithYear(formData.date) || formData.date}
+                    </div>
+                    <div className="mt-1">
+                      Serial <span className="font-bold">#{previewSerial}</span> • Est. time:{' '}
+                      <span className="font-bold">
+                        {formatDisplayTime12h(previewTime) || previewTime}
+                      </span>
+                    </div>
+                  </div>
+                ) : null}
               </div>
             )}
 
@@ -605,8 +569,8 @@ export default function PublicBookAppointment() {
               </button>
               <PrimaryButton
                 type="button"
-                disabled={!isStep2Complete || loadingPreview}
-                className={!isStep2Complete || loadingPreview ? 'opacity-60' : ''}
+                disabled={!isStep2Complete}
+                className={!isStep2Complete ? 'opacity-60' : ''}
                 onClick={() => setStep(3)}
               >
                 Continue

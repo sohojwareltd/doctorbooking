@@ -61,6 +61,60 @@ class PublicController extends Controller
         return response()->json(['chambers' => $chambers]);
     }
 
+    /** GET /api/public/schedule?chamber_id= */
+    public function schedule(Request $request): JsonResponse
+    {
+        $doctor = User::whereHas('role', fn ($q) => $q->where('name', 'doctor'))->first();
+        if (! $doctor) {
+            return response()->json(['schedule' => []]);
+        }
+
+        $chamberId = $request->integer('chamber_id') ?: null;
+        dd($chamberId);
+        $docId     = $doctor->doctorId();
+
+        $scheduleQuery = DoctorSchedule::where('doctor_id', $docId);
+        $rangeQuery    = DoctorScheduleRange::where('doctor_id', $docId);
+
+        if ($chamberId) {
+            $schedules = (clone $scheduleQuery)->where('chamber_id', $chamberId)->get();
+            if ($schedules->isEmpty()) {
+                $schedules = (clone $scheduleQuery)->whereNull('chamber_id')->get();
+            }  
+            $ranges = (clone $rangeQuery)->where('chamber_id', $chamberId)->orderBy('day_of_week')->orderBy('start_time')->get();
+            if ($ranges->isEmpty()) {
+                $ranges = (clone $rangeQuery)->whereNull('chamber_id')->orderBy('day_of_week')->orderBy('start_time')->get();
+            }
+        } else {
+            $schedules = (clone $scheduleQuery)->whereNull('chamber_id')->get();
+            $ranges    = (clone $rangeQuery)->whereNull('chamber_id')->orderBy('day_of_week')->orderBy('start_time')->get();
+        }
+
+        $byDay       = $schedules->keyBy('day_of_week');
+        $rangesByDay = $ranges->groupBy('day_of_week');
+        $payload     = [];
+
+        for ($dow = 0; $dow <= 6; $dow++) {
+            $row       = $byDay->get($dow);
+            $dayRanges = ($rangesByDay->get($dow, collect()))
+                ->map(fn ($r) => [
+                    'start_time' => $r->start_time ? substr((string) $r->start_time, 0, 5) : null,
+                    'end_time'   => $r->end_time   ? substr((string) $r->end_time, 0, 5)   : null,
+                ])
+                ->values();
+
+            $payload[] = [
+                'day_of_week'  => $dow,
+                'day_name'     => ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][$dow],
+                'is_closed'    => (bool) ($row?->is_closed ?? true),
+                'slot_minutes' => $row?->slot_minutes ?? 30,
+                'ranges'       => $dayRanges,
+            ];
+        }
+
+        return response()->json(['schedule' => $payload]);
+    }
+
     /** GET /api/public/unavailable-ranges?chamber_id= */
     public function unavailableRanges(Request $request): JsonResponse
     {
@@ -78,12 +132,17 @@ class PublicController extends Controller
             ])
             ->values();
 
-        $chamberId      = $request->integer('chamber_id') ?: null;
-        $scheduleQuery  = DoctorSchedule::where('doctor_id', $doctor->doctorId());
+        $chamberId = $request->integer('chamber_id') ?: null;
+        $baseQuery = DoctorSchedule::where('doctor_id', $doctor->doctorId());
+
         if ($chamberId) {
-            $scheduleQuery->where('chamber_id', $chamberId);
+            $schedules = (clone $baseQuery)->where('chamber_id', $chamberId)->get(['day_of_week', 'is_closed']);
+            if ($schedules->isEmpty()) {
+                $schedules = (clone $baseQuery)->whereNull('chamber_id')->get(['day_of_week', 'is_closed']);
+            }
+        } else {
+            $schedules = $baseQuery->whereNull('chamber_id')->get(['day_of_week', 'is_closed']);
         }
-        $schedules      = $scheduleQuery->get(['day_of_week', 'is_closed']);
 
         $closedWeekdays = [];
         for ($d = 0; $d <= 6; $d++) {

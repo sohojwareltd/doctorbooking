@@ -35,6 +35,7 @@ Route::prefix('auth')->group(function () {
 Route::prefix('public')->group(function () {
     Route::get('/doctor', [PublicController::class, 'doctor']);
     Route::get('/chambers', [PublicController::class, 'chambers']);
+    Route::get('/schedule', [PublicController::class, 'schedule']);
     Route::get('/unavailable-ranges', [PublicController::class, 'unavailableRanges']);
     Route::get('/slots/{date}', [PublicController::class, 'availableSlots']);
     Route::get('/booking-preview', [PublicController::class, 'bookingPreview']);
