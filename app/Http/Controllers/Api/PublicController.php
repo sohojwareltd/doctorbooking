@@ -70,7 +70,6 @@ class PublicController extends Controller
         }
 
         $chamberId = $request->integer('chamber_id') ?: null;
-        dd($chamberId);
         $docId     = $doctor->doctorId();
 
         $scheduleQuery = DoctorSchedule::where('doctor_id', $docId);
@@ -123,7 +122,10 @@ class PublicController extends Controller
             return response()->json(['ranges' => [], 'closed_weekdays' => range(0, 6)]);
         }
 
+        $chamberId = $request->integer('chamber_id') ?: null;
+
         $ranges = DoctorUnavailableRange::where('doctor_id', $doctor->doctorId())
+            ->where('chamber_id', $chamberId)
             ->orderBy('start_date')
             ->get(['start_date', 'end_date'])
             ->map(fn ($r) => [
@@ -132,16 +134,16 @@ class PublicController extends Controller
             ])
             ->values();
 
-        $chamberId = $request->integer('chamber_id') ?: null;
-        $baseQuery = DoctorSchedule::where('doctor_id', $doctor->doctorId());
+        $schedules = DoctorSchedule::where('doctor_id', $doctor->doctorId())
+            ->where('chamber_id', $chamberId)
+            ->where('is_closed', 0)
+            ->get(['day_of_week', 'is_closed']);
 
-        if ($chamberId) {
-            $schedules = (clone $baseQuery)->where('chamber_id', $chamberId)->get(['day_of_week', 'is_closed']);
-            if ($schedules->isEmpty()) {
-                $schedules = (clone $baseQuery)->whereNull('chamber_id')->get(['day_of_week', 'is_closed']);
-            }
-        } else {
-            $schedules = $baseQuery->whereNull('chamber_id')->get(['day_of_week', 'is_closed']);
+        if ($schedules->isEmpty()) {
+            $schedules = DoctorSchedule::where('doctor_id', $doctor->doctorId())
+                ->whereNull('chamber_id')
+                ->where('is_closed', 0)
+                ->get(['day_of_week', 'is_closed']);
         }
 
         $closedWeekdays = [];
