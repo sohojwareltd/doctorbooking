@@ -166,10 +166,9 @@ class BangladeshiDemoSeeder extends Seeder
 
                 // updateOrCreate uses [doctor_id, day_of_week] as unique key
                 // So we update existing schedules from DoctorSeeder if they exist
-                $schedule = DoctorSchedule::updateOrCreate(
-                    ['doctor_id' => $doctorId, 'day_of_week' => $dow],
+                DoctorSchedule::updateOrCreate(
+                    ['doctor_id' => $doctorId, 'chamber_id' => $chamber->id, 'day_of_week' => $dow],
                     [
-                        'chamber_id'   => $chamber->id,
                         'is_closed'    => $isClosed,
                         'start_time'   => $isOpen ? $startTime : null,
                         'end_time'     => $isOpen ? $endTime : null,

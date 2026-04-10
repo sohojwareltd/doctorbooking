@@ -58,10 +58,9 @@ class DoctorSeeder extends Seeder
         for ($dow = 0; $dow <= 6; $dow++) {
             $isClosed = ($dow === 5); // Friday closed
 
-            $schedule = DoctorSchedule::updateOrCreate(
-                ['doctor_id' => $doctorId, 'day_of_week' => $dow],
+            DoctorSchedule::updateOrCreate(
+                ['doctor_id' => $doctorId, 'chamber_id' => $mainChamber->id, 'day_of_week' => $dow],
                 [
-                    'chamber_id'   => $mainChamber->id,
                     'is_closed'    => $isClosed,
                     'start_time'   => $isClosed ? null : '09:00:00',
                     'end_time'     => $isClosed ? null : '17:00:00',
@@ -69,11 +68,12 @@ class DoctorSeeder extends Seeder
                 ]
             );
 
-            if (! $isClosed) {
-                DoctorScheduleRange::where('doctor_id', $doctorId)
-                    ->where('day_of_week', $dow)
-                    ->delete();
+            DoctorScheduleRange::where('doctor_id', $doctorId)
+                ->where('chamber_id', $mainChamber->id)
+                ->where('day_of_week', $dow)
+                ->delete();
 
+            if (! $isClosed) {
                 DoctorScheduleRange::create([
                     'doctor_id'  => $doctorId,
                     'chamber_id' => $mainChamber->id,
@@ -81,10 +81,6 @@ class DoctorSeeder extends Seeder
                     'start_time' => '09:00:00',
                     'end_time'   => '17:00:00',
                 ]);
-            } else {
-                DoctorScheduleRange::where('doctor_id', $doctorId)
-                    ->where('day_of_week', $dow)
-                    ->delete();
             }
         }
     }

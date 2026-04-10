@@ -105,7 +105,7 @@ class PublicController extends Controller
             $payload[] = [
                 'day_of_week'  => $dow,
                 'day_name'     => ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][$dow],
-                'is_closed'    => (bool) ($row?->is_closed ?? true),
+                'is_closed'    => $row ? (bool) $row->is_closed : ($dayRanges->isEmpty() || $dow === 0),
                 'slot_minutes' => $row?->slot_minutes ?? 30,
                 'ranges'       => $dayRanges,
             ];
@@ -125,7 +125,6 @@ class PublicController extends Controller
         $chamberId = $request->integer('chamber_id') ?: null;
 
         $ranges = DoctorUnavailableRange::where('doctor_id', $doctor->doctorId())
-            ->where('chamber_id', $chamberId)
             ->orderBy('start_date')
             ->get(['start_date', 'end_date'])
             ->map(fn ($r) => [
@@ -144,6 +143,31 @@ class PublicController extends Controller
                 ->whereNull('chamber_id')
                 ->where('is_closed', 0)
                 ->get(['day_of_week', 'is_closed']);
+        }
+
+        // If still no schedule rows, fall back to ranges to determine open days.
+        // Days with ranges are treated as open; Sunday is closed by default.
+        if ($schedules->isEmpty()) {
+            $openDaysFromRanges = DoctorScheduleRange::where('doctor_id', $doctor->doctorId())
+                ->where('chamber_id', $chamberId)
+                ->distinct()
+                ->pluck('day_of_week');
+
+            if ($openDaysFromRanges->isEmpty()) {
+                $openDaysFromRanges = DoctorScheduleRange::where('doctor_id', $doctor->doctorId())
+                    ->whereNull('chamber_id')
+                    ->distinct()
+                    ->pluck('day_of_week');
+            }
+
+            $closedWeekdays = [];
+            for ($d = 0; $d <= 6; $d++) {
+                if ($d === 0 || ! $openDaysFromRanges->contains($d)) {
+                    $closedWeekdays[] = $d;
+                }
+            }
+
+            return response()->json(['ranges' => $ranges, 'closed_weekdays' => $closedWeekdays]);
         }
 
         $closedWeekdays = [];
