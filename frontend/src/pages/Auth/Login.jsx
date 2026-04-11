@@ -53,7 +53,7 @@ export default function Login({ status, canResetPassword }) {
                         <form onSubmit={submit} className="space-y-5">
                             <div>
                                 <label htmlFor="email" className="mb-2 block text-sm font-semibold text-[#005963]">
-                                    Email / Phone / Username
+                                    Email or Phone
                                 </label>
                                 <div className="relative">
                                     <Mail className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#005963]" />
@@ -65,7 +65,7 @@ export default function Login({ status, canResetPassword }) {
                                         className="w-full rounded-2xl border-2 border-[#00acb1]/30 bg-white px-4 py-3 pl-12 text-gray-900 shadow-sm focus:border-[#00acb1] focus:outline-none focus:ring-4 focus:ring-[#00acb1]/30"
                                         autoComplete="username"
                                         onChange={(e) => setData('email', e.target.value)}
-                                        placeholder="Enter email, phone, or username"
+                                        placeholder="Enter email or phone"
                                         required
                                     />
                                 </div>
