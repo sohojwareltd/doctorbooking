@@ -301,6 +301,13 @@ export default function DoctorDashboard({
   const monthlyBarGap = monthlyUsableWidth / 12;
   const monthlyBarWidth = Math.max(10, monthlyBarGap * 0.58);
   const monthlyTicks = [0, 0.25, 0.5, 0.75, 1].map((ratio) => Math.round(monthlyMax * ratio));
+  const statusGraphItems = [
+    { key: 'scheduled', label: 'Scheduled', color: '#64748b', value: todayAppointments.filter((a) => a.status === 'scheduled').length },
+    { key: 'in_consultation', label: 'In Progress', color: '#7c3aed', value: todayAppointments.filter((a) => a.status === 'in_consultation').length },
+    { key: 'awaiting_tests', label: 'Awaiting Tests', color: '#ea580c', value: todayAppointments.filter((a) => a.status === 'awaiting_tests').length },
+    { key: 'prescribed', label: 'Completed', color: '#059669', value: todayAppointments.filter((a) => a.status === 'prescribed').length },
+  ];
+  const statusGraphMax = Math.max(1, ...statusGraphItems.map((item) => item.value));
 
   return (
     <DoctorLayout title="Dashboard" gradient>
@@ -354,8 +361,8 @@ export default function DoctorDashboard({
           })}
         </section>
 
-        <section className="grid grid-cols-3 gap-4">
-          <div className="col-span-2 rounded-2xl border border-slate-200 bg-white p-4">
+        <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 lg:col-span-2">
               <h3 className="text-sm font-semibold text-[#2D3A74]">Monthly Appointments</h3>
               <svg viewBox={`0 0 ${monthlyChartWidth} ${monthlyChartHeight}`} className="mt-3 w-full">
                 {monthlyTicks.map((tick, index) => {
@@ -385,6 +392,33 @@ export default function DoctorDashboard({
                 <span className="h-2.5 w-2.5 rounded-sm bg-[#4aa5ec]" />
                 Appointments
               </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-[#2D3A74]">Today Status Mix</h3>
+              <span className="text-xs text-slate-500">{todayAppointments.length} total</span>
+            </div>
+            <div className="space-y-3">
+              {statusGraphItems.map((item) => {
+                const pct = Math.round((item.value / Math.max(1, todayAppointments.length)) * 100);
+                const width = (item.value / statusGraphMax) * 100;
+                return (
+                  <div key={item.key}>
+                    <div className="mb-1 flex items-center justify-between text-xs">
+                      <span className="font-medium text-slate-600">{item.label}</span>
+                      <span className="text-slate-500">{item.value} ({pct}%)</span>
+                    </div>
+                    <div className="h-2.5 overflow-hidden rounded-full bg-slate-100">
+                      <div
+                        className="h-full rounded-full transition-all duration-500"
+                        style={{ width: `${width}%`, backgroundColor: item.color }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </section>
 
@@ -478,57 +512,58 @@ export default function DoctorDashboard({
                 </div>
               </div>
             ) : upcomingAppointment ? (
-              <div className="relative overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-                <div className="h-1 w-full bg-gradient-to-r from-sky-500 via-blue-500 to-indigo-500" />
-                <div className="p-5">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-3.5 w-3.5 text-slate-400" />
-                      <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Next Appointment</span>
-                    </div>
-                    <StatusBadge status={upcomingAppointment.status} size="xs" />
-                  </div>
+              ''
+              // <div className="relative overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+              //   <div className="h-1 w-full bg-gradient-to-r from-sky-500 via-blue-500 to-indigo-500" />
+              //   <div className="p-5">
+              //     <div className="flex items-center justify-between mb-4">
+              //       <div className="flex items-center gap-2">
+              //         <Clock className="h-3.5 w-3.5 text-slate-400" />
+              //         <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Next Appointment</span>
+              //       </div>
+              //       <StatusBadge status={upcomingAppointment.status} size="xs" />
+              //     </div>
 
-                  <div className="flex flex-col sm:flex-row sm:items-start gap-4">
-                    <div className="cursor-pointer" onClick={() => setSelectedPatient(upcomingAppointment)}>
-                      <PatientAvatar name={getName(upcomingAppointment)} size="lg" />
-                    </div>
-                    <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setSelectedPatient(upcomingAppointment)}>
-                      <h3 className="text-lg font-semibold text-slate-900">{getName(upcomingAppointment)}</h3>
-                      <p className="text-sm text-slate-500 mt-0.5">
-                        {upcomingAppointment.type || 'General Visit'} &middot; {fmt(upcomingAppointment.appointment_date)} at {fmtTime(upcomingAppointment.appointment_time)}
-                      </p>
-                      {getPhone(upcomingAppointment) && (
-                        <p className="text-xs text-slate-400 flex items-center gap-1 mt-1">
-                          <Phone className="h-3 w-3" />{getPhone(upcomingAppointment)}
-                        </p>
-                      )}
-                    </div>
+              //     <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+              //       <div className="cursor-pointer" onClick={() => setSelectedPatient(upcomingAppointment)}>
+              //         <PatientAvatar name={getName(upcomingAppointment)} size="lg" />
+              //       </div>
+              //       <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setSelectedPatient(upcomingAppointment)}>
+              //         <h3 className="text-lg font-semibold text-slate-900">{getName(upcomingAppointment)}</h3>
+              //         <p className="text-sm text-slate-500 mt-0.5">
+              //           {upcomingAppointment.type || 'General Visit'} &middot; {fmt(upcomingAppointment.appointment_date)} at {fmtTime(upcomingAppointment.appointment_time)}
+              //         </p>
+              //         {getPhone(upcomingAppointment) && (
+              //           <p className="text-xs text-slate-400 flex items-center gap-1 mt-1">
+              //             <Phone className="h-3 w-3" />{getPhone(upcomingAppointment)}
+              //           </p>
+              //         )}
+              //       </div>
 
-                    <div className="flex flex-col gap-2 flex-shrink-0 sm:min-w-[140px]">
-                      <DocButton
-                        variant="primary"
-                        size="sm"
-                        onClick={async () => {
-                          setActiveVisitPatient({ ...upcomingAppointment, status: 'in_consultation' });
-                          const ok = await updateStatus(upcomingAppointment.id, 'in_consultation');
-                          if (!ok) setActiveVisitPatient(null);
-                        }}
-                      >
-                        <Stethoscope className="h-3.5 w-3.5" /> Start Visit
-                      </DocButton>
-                      {getPhone(upcomingAppointment) && (
-                        <a
-                          href={'tel:' + getPhone(upcomingAppointment)}
-                          className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 active:scale-[0.97] transition"
-                        >
-                          <Phone className="h-3.5 w-3.5" /> Call
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
+              //       <div className="flex flex-col gap-2 flex-shrink-0 sm:min-w-[140px]">
+              //         <DocButton
+              //           variant="primary"
+              //           size="sm"
+              //           onClick={async () => {
+              //             setActiveVisitPatient({ ...upcomingAppointment, status: 'in_consultation' });
+              //             const ok = await updateStatus(upcomingAppointment.id, 'in_consultation');
+              //             if (!ok) setActiveVisitPatient(null);
+              //           }}
+              //         >
+              //           <Stethoscope className="h-3.5 w-3.5" /> Start Visit
+              //         </DocButton>
+              //         {getPhone(upcomingAppointment) && (
+              //           <a
+              //             href={'tel:' + getPhone(upcomingAppointment)}
+              //             className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 active:scale-[0.97] transition"
+              //           >
+              //             <Phone className="h-3.5 w-3.5" /> Call
+              //           </a>
+              //         )}
+              //       </div>
+              //     </div>
+              //   </div>
+              // </div>
             ) : null}
 
             {/* TABBED APPOINTMENTS TABLE — admin table style */}

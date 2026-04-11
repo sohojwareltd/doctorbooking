@@ -12,6 +12,7 @@ use App\Http\Controllers\Web\ProfileController;
 use App\Http\Controllers\Web\ChamberController;
 use App\Http\Controllers\DoctorScheduleController;
 use App\Http\Controllers\Admin\SiteContentController;
+use App\Http\Controllers\Web\CompoundUserController;
 
 /*
 |--------------------------------------------------------------------------
@@ -113,7 +114,22 @@ Route::middleware(['auth', 'verified', 'role:doctor,compounder'])
 
 /*
 |--------------------------------------------------------------------------
-| Legacy user.* aliases ? patient.* redirects
+| Doctor-only routes (not accessible to compounder)
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware(['auth', 'verified', 'role:doctor'])
+    ->prefix('doctor')
+    ->name('doctor.')
+    ->group(function () {
+    Route::get('/compounders', [CompoundUserController::class, 'index'])->name('compounders.index');
+    Route::get('/compounder/create', [CompoundUserController::class, 'create'])->name('compounder.create');
+    Route::post('/compounder', [CompoundUserController::class, 'store'])->name('compounder.store');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Legacy user.* aliases → patient.* redirects
 |--------------------------------------------------------------------------
 */
 

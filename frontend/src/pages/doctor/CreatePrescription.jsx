@@ -586,7 +586,7 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                 <div className="pl-8 flex flex-col items-end">
                                     <div className="mb-1.5 flex items-center justify-end gap-1.5">
                                         <span className="text-[10px] font-bold uppercase tracking-widest text-blue-300">Chamber</span>
-                                        <MapPin className="h-3.5 w-3.5 text-blue-300" />
+                                        {/* <MapPin className="h-3.5 w-3.5 text-blue-300" /> */}
                                     </div>
                                     <p className="text-2xl font-black tracking-tight text-white">
                                         {chamberName || 'Not set'}
@@ -594,13 +594,13 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                     {chamberAddress ? (
                                         <div className="mt-2.5 flex items-start justify-end gap-1.5 text-sm text-slate-200">
                                             <span>{chamberAddress}</span>
-                                            <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-blue-300" />
+                                            {/* <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-blue-300" /> */}
                                         </div>
                                     ) : null}
                                     {chamberPhone ? (
                                         <div className="mt-1.5 flex items-center justify-end gap-1.5 text-sm text-slate-200">
                                             <span>{chamberPhone}</span>
-                                            <Phone className="h-3.5 w-3.5 shrink-0 text-blue-300" />
+                                            {/* <Phone className="h-3.5 w-3.5 shrink-0 text-blue-300" /> */}
                                         </div>
                                     ) : null}
                                 </div>
