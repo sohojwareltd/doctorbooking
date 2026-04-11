@@ -1,6 +1,7 @@
 import { Link, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
-import { Calendar, CalendarCheck2, Clock3, Eye, FilePlus, FileText, Hash, Mars, Phone, Search, User, Venus, X } from 'lucide-react';import DoctorLayout from '../../layouts/DoctorLayout';
+import { Calendar, CalendarCheck2, Clock3, Eye, FilePlus, FileText, Hash, Mars, Phone, Search, SlidersHorizontal, User, Venus, X } from 'lucide-react';
+import DoctorLayout from '../../layouts/DoctorLayout';
 import StatusBadge from '../../components/doctor/StatusBadge';
 import DocModal from '../../components/doctor/DocModal';
 import { DocButton, DocEmptyState } from '../../components/doctor/DocUI';
@@ -118,28 +119,22 @@ function GenderIconAvatar({ gender }) {
 export default function DoctorAppointments() {
   const { auth } = usePage().props;
   const isCompounder = auth?.user?.role === 'compounder';
+  const ROWS_PER_PAGE = 10;
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [pagination, setPagination] = useState(null);
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [statusFilter, setStatusFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [datePreset, setDatePreset] = useState('all'); // all | today | week | month | custom
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [genderFilter, setGenderFilter] = useState('all');
+  const [ageMin, setAgeMin] = useState('');
+  const [ageMax, setAgeMax] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
-  const buildParams = () => {
-    const params = { per_page: 200 };
-    if (statusFilter !== 'all') params.status_filter = statusFilter;
-    if (searchTerm.trim()) params.search = searchTerm.trim();
-    if (datePreset !== 'all' && datePreset !== 'custom') {
-      params.date_filter = datePreset;
-    } else if (datePreset === 'custom') {
-      if (dateFrom) params.date_from = dateFrom;
-      if (dateTo) params.date_to = dateTo;
-    }
-    return params;
-  };
+  const buildParams = () => ({ per_page: 200 });
 
   const fetchAppointments = async (params = {}) => {
     setLoading(true);
@@ -153,7 +148,6 @@ export default function DoctorAppointments() {
         const data = await res.json();
         const items = Array.isArray(data.appointments) ? data.appointments : (data.appointments?.data ?? []);
         setRows(items);
-        setPagination(data.meta ?? null);
       }
     } finally {
       setLoading(false);
@@ -162,7 +156,7 @@ export default function DoctorAppointments() {
 
   useEffect(() => {
     fetchAppointments(buildParams());
-  }, [statusFilter, datePreset, dateFrom, dateTo]);
+  }, []);
 
   const getPatientName = (appointment) => appointment?.patient_name || appointment?.user?.name || `Patient #${appointment?.user_id || ''}`;
   const getPatientPhone = (appointment) => appointment?.patient_phone || appointment?.user?.phone || null;
@@ -214,10 +208,70 @@ export default function DoctorAppointments() {
 
   const filteredRows = useMemo(() => {
     const needle = searchTerm.trim().toLowerCase();
+    const now = new Date();
+
+    const inDateRange = (appointmentDate) => {
+      if (!appointmentDate) return false;
+      const dateOnly = String(appointmentDate).slice(0, 10);
+
+      if (datePreset === 'all') return true;
+      if (datePreset === 'custom') {
+        if (dateFrom && dateOnly < dateFrom) return false;
+        if (dateTo && dateOnly > dateTo) return false;
+        return true;
+      }
+
+      if (datePreset === 'today') {
+        return dateOnly === now.toISOString().slice(0, 10);
+      }
+
+      const targetDate = new Date(dateOnly);
+      if (Number.isNaN(targetDate.getTime())) return false;
+
+      if (datePreset === 'week') {
+        const startOfWeek = new Date(now);
+        const day = startOfWeek.getDay();
+        startOfWeek.setDate(startOfWeek.getDate() - day);
+        startOfWeek.setHours(0, 0, 0, 0);
+
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(startOfWeek.getDate() + 6);
+        endOfWeek.setHours(23, 59, 59, 999);
+
+        return targetDate >= startOfWeek && targetDate <= endOfWeek;
+      }
+
+      if (datePreset === 'month') {
+        return targetDate.getFullYear() === now.getFullYear() && targetDate.getMonth() === now.getMonth();
+      }
+
+      return true;
+    };
 
     return rows.filter((appointment) => {
       const statusOk = statusFilter === 'all' || appointment.status === statusFilter;
       if (!statusOk) {
+        return false;
+      }
+
+      if (!inDateRange(appointment.appointment_date)) {
+        return false;
+      }
+
+      const genderValue = String(getPatientGender(appointment) || '').trim().toLowerCase();
+      const genderOk = genderFilter === 'all' || genderValue === genderFilter;
+      if (!genderOk) {
+        return false;
+      }
+
+      const ageRaw = Number(getPatientAge(appointment));
+      const hasAge = Number.isFinite(ageRaw) && ageRaw > 0;
+
+      if (ageMin !== '' && (!hasAge || ageRaw < Number(ageMin))) {
+        return false;
+      }
+
+      if (ageMax !== '' && (!hasAge || ageRaw > Number(ageMax))) {
         return false;
       }
 
@@ -237,7 +291,32 @@ export default function DoctorAppointments() {
         || serial.includes(needle)
       );
     });
-  }, [rows, statusFilter, searchTerm]);
+  }, [rows, statusFilter, searchTerm, datePreset, dateFrom, dateTo, genderFilter, ageMin, ageMax]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter, searchTerm, datePreset, dateFrom, dateTo, genderFilter, ageMin, ageMax]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / ROWS_PER_PAGE));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedRows = useMemo(() => {
+    const start = (safeCurrentPage - 1) * ROWS_PER_PAGE;
+    const end = start + ROWS_PER_PAGE;
+    return filteredRows.slice(start, end);
+  }, [filteredRows, safeCurrentPage, ROWS_PER_PAGE]);
+
+  const visiblePageNumbers = useMemo(() => {
+    const windowSize = 5;
+    const half = Math.floor(windowSize / 2);
+    let start = Math.max(1, safeCurrentPage - half);
+    let end = Math.min(totalPages, start + windowSize - 1);
+
+    if ((end - start + 1) < windowSize) {
+      start = Math.max(1, end - windowSize + 1);
+    }
+
+    return Array.from({ length: end - start + 1 }, (_, i) => start + i);
+  }, [safeCurrentPage, totalPages]);
 
   const today = new Date().toISOString().split('T')[0];
   const stats = useMemo(() => ({
@@ -286,9 +365,8 @@ export default function DoctorAppointments() {
             </div>
 
             <div className="mt-4 flex flex-col gap-3">
-              {/* Search + Status + Date pills — single row */}
-              <div className="flex flex-wrap items-end gap-3">
-                <div className="w-[280px] min-w-[180px]">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+                <div className="w-full lg:max-w-[360px]">
                   <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Search</label>
                   <div className="relative">
                     <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -302,73 +380,141 @@ export default function DoctorAppointments() {
                   </div>
                 </div>
 
-                <div className="w-[170px]">
-                  <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Status</label>
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-700 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+                <div className="flex items-center justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setShowFilters((prev) => !prev)}
+                    className="inline-flex items-center gap-2 rounded-xl bg-[#2D3A74] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#243063]"
                   >
-                    {STATUS_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>{option.label}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Date preset pills — pushed to right */}
-                <div className="ml-auto flex flex-wrap items-center gap-2">
-                  <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Date:</span>
-                  {[
-                    { value: 'all', label: 'All time' },
-                    { value: 'today', label: 'Today' },
-                    { value: 'week', label: 'This week' },
-                    { value: 'month', label: 'This month' },
-                    { value: 'custom', label: 'Custom range' },
-                  ].map((p) => (
-                    <button
-                      key={p.value}
-                      onClick={() => { setDatePreset(p.value); if (p.value !== 'custom') { setDateFrom(''); setDateTo(''); } }}
-                      className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
-                        datePreset === p.value
-                          ? 'border-[#2D3A74] bg-[#2D3A74] text-white'
-                          : 'border-slate-200 bg-white text-slate-600 hover:border-[#2D3A74]/40 hover:text-[#2D3A74]'
-                      }`}
-                    >
-                      {p.label}
-                    </button>
-                  ))}
+                    <SlidersHorizontal className="h-4 w-4" />
+                    {showFilters ? 'Hide Filters' : 'Filters'}
+                  </button>
                 </div>
               </div>
 
-              {/* Custom date range */}
-              {datePreset === 'custom' && (
-                <div className="flex flex-wrap items-end justify-end gap-3">
-                  <div>
-                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">From</label>
-                    <input
-                      type="date"
-                      value={dateFrom}
-                      onChange={(e) => setDateFrom(e.target.value)}
-                      className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">To</label>
-                    <input
-                      type="date"
-                      value={dateTo}
-                      min={dateFrom || undefined}
-                      onChange={(e) => setDateTo(e.target.value)}
-                      className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
-                    />
-                  </div>
-                  {(dateFrom || dateTo) && (
+              {showFilters && (
+                <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+                  <div className="grid gap-4 lg:grid-cols-[1.1fr_1fr_1.3fr_auto] lg:items-end">
+                    <div>
+                      <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Gender</p>
+                      <div className="flex flex-wrap gap-2">
+                        {[
+                          { value: 'all', label: 'All' },
+                          { value: 'male', label: 'Male' },
+                          { value: 'female', label: 'Female' },
+                        ].map((option) => (
+                          <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => setGenderFilter(option.value)}
+                            className={`min-w-20 rounded-lg border px-3 py-2 text-sm font-semibold transition ${
+                              genderFilter === option.value
+                                ? 'border-[#2D3A74] bg-[#2D3A74] text-white'
+                                : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                            }`}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Age Range</p>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min="0"
+                          value={ageMin}
+                          onChange={(e) => setAgeMin(e.target.value)}
+                          placeholder="Min"
+                          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                        />
+                        <span className="text-slate-400">-</span>
+                        <input
+                          type="number"
+                          min="0"
+                          value={ageMax}
+                          onChange={(e) => setAgeMax(e.target.value)}
+                          placeholder="Max"
+                          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Status & Date</p>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <select
+                          value={statusFilter}
+                          onChange={(e) => setStatusFilter(e.target.value)}
+                          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                        >
+                          {STATUS_OPTIONS.map((option) => (
+                            <option key={option.value} value={option.value}>{option.label}</option>
+                          ))}
+                        </select>
+                        <select
+                          value={datePreset}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            setDatePreset(value);
+                            if (value !== 'custom') {
+                              setDateFrom('');
+                              setDateTo('');
+                            }
+                          }}
+                          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                        >
+                          <option value="all">All time</option>
+                          <option value="today">Today</option>
+                          <option value="week">This week</option>
+                          <option value="month">This month</option>
+                          <option value="custom">Custom range</option>
+                        </select>
+                      </div>
+                    </div>
+
                     <button
-                      onClick={() => { setDateFrom(''); setDateTo(''); }}
-                      className="mb-0.5 inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-2.5 text-xs text-slate-500 hover:border-rose-200 hover:text-rose-500 transition"
+                      type="button"
+                      onClick={() => setShowFilters(false)}
+                      className="rounded-xl bg-[#2D3A74] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#243063]"
                     >
-                      <X className="h-3.5 w-3.5" /> Clear
+                      Apply Filters
                     </button>
+                  </div>
+
+                  {datePreset === 'custom' && (
+                    <div className="mt-3 flex flex-wrap items-end gap-3">
+                      <div>
+                        <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">From</label>
+                        <input
+                          type="date"
+                          value={dateFrom}
+                          onChange={(e) => setDateFrom(e.target.value)}
+                          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">To</label>
+                        <input
+                          type="date"
+                          value={dateTo}
+                          min={dateFrom || undefined}
+                          onChange={(e) => setDateTo(e.target.value)}
+                          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                        />
+                      </div>
+                      {(dateFrom || dateTo) && (
+                        <button
+                          type="button"
+                          onClick={() => { setDateFrom(''); setDateTo(''); }}
+                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs text-slate-500 hover:border-rose-200 hover:text-rose-500 transition"
+                        >
+                          <X className="h-3.5 w-3.5" /> Clear
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
               )}
@@ -379,61 +525,55 @@ export default function DoctorAppointments() {
             <table className="min-w-full text-sm">
               <thead className="bg-slate-50 text-slate-500 uppercase text-xs tracking-[0.12em]">
                 <tr>
-                  <th className="px-6 py-4 text-left">#</th>
-                  <th className="px-6 py-4 text-left">Patient</th>
-                  <th className="px-6 py-4 text-left">Contact</th>
-                  <th className="px-6 py-4 text-left">Date</th>
-                  <th className="px-6 py-4 text-left">Time</th>
-                  <th className="px-6 py-4 text-left">Status</th>
-                  <th className="px-6 py-4 text-left">Update Status</th>
-                  {!isCompounder && <th className="px-6 py-4 text-right">Create Rx</th>}
-                  <th className="px-6 py-4 text-right">Action</th>
+                  <th className="px-6 py-4 text-center">#</th>
+                  <th className="px-6 py-4 text-center">Patient</th>
+                  <th className="px-6 py-4 text-center">Date</th>
+                  <th className="px-6 py-4 text-center">Time</th>
+                  <th className="px-6 py-4 text-center">Update Status</th>
+                  <th className="px-6 py-4 text-center">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white">
-                {filteredRows.map((appointment, index) => {
+                {paginatedRows.map((appointment, index) => {
                   const serial = appointment.id;
                   const patientPhone = getPatientPhone(appointment);
 
                   return (
                     <tr key={appointment.id} className="cursor-pointer hover:bg-slate-50/80" onClick={() => setSelectedPatient(appointment)}>
-                      <td className="px-6 py-4 font-medium text-slate-600">
-                        <span className="inline-flex items-center gap-1.5">
+                      <td className="px-6 py-4 font-medium text-slate-600 text-center">
+                        <span className="inline-flex items-center justify-center gap-1.5">
                           <Hash className="h-3.5 w-3.5 text-slate-400" />
                           {renderHighlighted(serial, searchTerm)}
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="flex items-center gap-2.5 text-left">
+                        <div className="flex items-center justify-center gap-2.5 text-center">
                           <GenderIconAvatar gender={getPatientGender(appointment)} />
                           <div>
                             <div className="font-semibold text-slate-900">{renderHighlighted(getPatientName(appointment), searchTerm)}</div>
                             <div className="mt-0.5 text-xs font-medium text-slate-500">{formatAgeGender(appointment)}</div>
+                            <div className="mt-1 text-[12px] font-medium text-slate-500">
+                              <span className="inline-flex items-center justify-center gap-1.5">
+                                <Phone className="h-3.5 w-3.5 text-slate-400" />
+                                {renderHighlighted(patientPhone || 'N/A', searchTerm)}
+                              </span>
+                            </div>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-[13px] font-medium text-slate-600">
-                        <span className="inline-flex items-center gap-1.5">
-                          <Phone className="h-3.5 w-3.5 text-slate-400" />
-                          {renderHighlighted(patientPhone || 'N/A', searchTerm)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-[13px] font-medium text-slate-700">
-                        <span className="inline-flex items-center gap-1.5">
+                      <td className="px-6 py-4 text-[13px] font-medium text-slate-700 text-center">
+                        <span className="inline-flex items-center justify-center gap-1.5">
                           <Calendar className="h-[18px] w-[18px] text-slate-600" />
                           {formatDisplayDateWithYearFromDateLike(appointment.appointment_date) || appointment.appointment_date}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-[13px] font-medium text-slate-700">
-                        <span className="inline-flex items-center gap-1.5">
+                      <td className="px-6 py-4 text-[13px] font-medium text-slate-700 text-center">
+                        <span className="inline-flex items-center justify-center gap-1.5">
                           <Clock3 className="h-4 w-4 text-slate-500" />
                           {formatDisplayTime12h(appointment.appointment_time) || appointment.appointment_time}
                         </span>
                       </td>
-                      <td className="px-6 py-4">
-                        <StatusBadge status={appointment.status} />
-                      </td>
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-4 text-center">
                         <select
                           value={appointment.status}
                           onClick={(e) => e.stopPropagation()}
@@ -448,39 +588,37 @@ export default function DoctorAppointments() {
                           <option value="cancelled">Cancelled</option>
                         </select>
                       </td>
-                      {!isCompounder && (
-                        <td className="px-6 py-4 text-right pr-8">
-                          {!appointment.has_prescription || !appointment.prescription_id ? (
-                            <Link
-                              onClick={(e) => e.stopPropagation()}
-                              href={`/doctor/prescriptions/create?appointment_id=${appointment.id}`}
-                              className="group relative inline-flex h-8 w-8 items-center justify-center rounded-md border border-[#d8e2f8] bg-white text-[#3556a6] transition hover:bg-[#f3f7ff]"
-                              aria-label="Create prescription"
-                            >
-                              <FilePlus className="h-4 w-4" />
-                              <span className="pointer-events-none absolute -top-8 right-0 whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-[10px] font-medium text-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
-                                Create Prescription
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex items-center justify-center gap-1.5">
+                          {!isCompounder && (
+                            !appointment.has_prescription || !appointment.prescription_id ? (
+                              <Link
+                                onClick={(e) => e.stopPropagation()}
+                                href={`/doctor/prescriptions/create?appointment_id=${appointment.id}`}
+                                className="group relative inline-flex h-7 w-7 items-center justify-center rounded-md border border-[#d8e2f8] bg-white text-[#3556a6] transition hover:bg-[#f3f7ff]"
+                                aria-label="Create prescription"
+                              >
+                                <FilePlus className="h-3.5 w-3.5" />
+                                <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-[10px] font-medium text-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
+                                  Create Prescription
+                                </span>
+                              </Link>
+                            ) : (
+                              <span className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-slate-300">
+                                <FilePlus className="h-3.5 w-3.5" />
                               </span>
-                            </Link>
-                          ) : (
-                            <span className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-slate-300">
-                              <FilePlus className="h-4 w-4" />
-                            </span>
+                            )
                           )}
-                        </td>
-                      )}
-                      <td className="px-6 py-4 text-right pr-8">
-                        <div className="flex items-center justify-end gap-2">
                           <button
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
                               setSelectedPatient(appointment);
                             }}
-                            className="group relative inline-flex h-8 w-8 items-center justify-center rounded-md border border-sky-200 bg-sky-50 text-sky-700 transition hover:border-sky-300 hover:bg-sky-100 hover:text-sky-800"
+                            className="group relative inline-flex h-7 w-7 items-center justify-center rounded-md border border-sky-200 bg-sky-50 text-sky-700 transition hover:border-sky-300 hover:bg-sky-100 hover:text-sky-800"
                             aria-label="View details"
                           >
-                            <Eye className="h-4 w-4" />
+                            <Eye className="h-3.5 w-3.5" />
                             <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-[10px] font-medium text-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
                               View Details
                             </span>
@@ -489,11 +627,11 @@ export default function DoctorAppointments() {
                             <Link
                               onClick={(e) => e.stopPropagation()}
                               href={`/doctor/prescriptions/${appointment.prescription_id}`}
-                              className="group relative inline-flex h-8 w-8 items-center justify-center rounded-md border border-emerald-200 bg-emerald-50 text-emerald-700 transition hover:border-emerald-300 hover:text-emerald-800"
+                              className="group relative inline-flex h-7 w-7 items-center justify-center rounded-md border border-emerald-200 bg-emerald-50 text-emerald-700 transition hover:border-emerald-300 hover:text-emerald-800"
                               aria-label="View prescription"
                             >
-                              <FileText className="h-4 w-4" />
-                              <span className="pointer-events-none absolute -top-8 right-0 whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-[10px] font-medium text-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
+                              <FileText className="h-3.5 w-3.5" />
+                              <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-[10px] font-medium text-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
                                 View Prescription
                               </span>
                             </Link>
@@ -519,31 +657,56 @@ export default function DoctorAppointments() {
             </div>
           ) : null}
 
-          {pagination?.data && typeof pagination.current_page === 'number' ? (
+          {!loading && filteredRows.length > 0 ? (
             <div className="flex flex-col gap-3 border-t border-slate-100 bg-slate-50 px-6 py-3.5 md:flex-row md:items-center md:justify-between">
               <p className="text-xs text-slate-500">
-                Showing <span className="font-semibold text-slate-700">{filteredRows.length}</span> row(s) on this page
+                Showing
+                {' '}
+                <span className="font-semibold text-slate-700">{(safeCurrentPage - 1) * ROWS_PER_PAGE + 1}</span>
+                {' '}
+                to
+                {' '}
+                <span className="font-semibold text-slate-700">{Math.min(safeCurrentPage * ROWS_PER_PAGE, filteredRows.length)}</span>
+                {' '}
+                of
+                {' '}
+                <span className="font-semibold text-slate-700">{filteredRows.length}</span>
+                {' '}
+                appointments
               </p>
-              <div className="flex items-center gap-2">
-                {(() => {
-                  const prev = (pagination.links || []).find((item) => String(item.label).toLowerCase().includes('previous'));
-                  const next = (pagination.links || []).find((item) => String(item.label).toLowerCase().includes('next'));
+              <div className="flex flex-wrap items-center justify-end gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  disabled={safeCurrentPage === 1}
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-45"
+                >
+                  Previous
+                </button>
 
-                  return (
-                    <>
-                      {prev?.url ? (
-                        <Link href={prev.url} className="rounded-lg bg-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-300">Previous</Link>
-                      ) : (
-                        <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-400">Previous</span>
-                      )}
-                      {next?.url ? (
-                        <Link href={next.url} className="rounded-lg bg-[#2D3A74] px-3 py-1.5 text-sm font-medium text-white transition hover:bg-[#243063]">Next</Link>
-                      ) : (
-                        <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-400">Next</span>
-                      )}
-                    </>
-                  );
-                })()}
+                {visiblePageNumbers.map((page) => (
+                  <button
+                    key={page}
+                    type="button"
+                    onClick={() => setCurrentPage(page)}
+                    className={`min-w-8 rounded-lg px-2.5 py-1.5 text-sm font-semibold transition ${
+                      page === safeCurrentPage
+                        ? 'bg-[#2D3A74] text-white shadow-sm'
+                        : 'border border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-100'
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ))}
+
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                  disabled={safeCurrentPage === totalPages}
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-45"
+                >
+                  Next
+                </button>
               </div>
             </div>
           ) : null}

@@ -1,6 +1,6 @@
 import { Link, router } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
-import { Calendar, ClipboardList, Eye, FileText, Hash, Mars, Phone, Printer, Search, Share2, Stethoscope, User, Venus } from 'lucide-react';
+import { Calendar, ClipboardList, Eye, FileText, Hash, Mars, Phone, Printer, Search, SlidersHorizontal, Stethoscope, User, Venus } from 'lucide-react';
 import DoctorLayout from '../../layouts/DoctorLayout';
 import { DocEmptyState } from '../../components/doctor/DocUI';
 import { formatDisplayDateWithYearFromDateLike } from '../../utils/dateFormat';
@@ -83,6 +83,9 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
   const [rows, setRows] = useState(pageRows);
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState('all');
+  const [genderFilter, setGenderFilter] = useState('all');
+  const [followUpFilter, setFollowUpFilter] = useState('all');
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     setRows(pageRows);
@@ -144,6 +147,20 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
         return false;
       }
 
+      const genderValue = String(getPatientGender(p) || '').trim().toLowerCase();
+      const genderOk = genderFilter === 'all' || genderValue === genderFilter;
+      if (!genderOk) {
+        return false;
+      }
+
+      if (followUpFilter === 'with' && !p.follow_up_date) {
+        return false;
+      }
+
+      if (followUpFilter === 'without' && p.follow_up_date) {
+        return false;
+      }
+
       if (!needle) {
         return true;
       }
@@ -151,7 +168,7 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
       const haystack = `${p.id || ''} ${getPatientName(p)} ${getPatientPhone(p) || ''} ${p.diagnosis || ''} ${p.instructions || ''} ${p.symptoms || ''} ${p.patient_gender || p.user?.gender || ''}`.toLowerCase();
       return haystack.includes(needle);
     });
-  }, [rows, searchTerm, dateFilter, todayIso]);
+  }, [rows, searchTerm, dateFilter, todayIso, genderFilter, followUpFilter]);
 
   const statsView = useMemo(() => ({
     visible: filteredRows.length,
@@ -173,31 +190,6 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
     }
 
     toastError('Unable to open the print view right now.');
-  };
-
-  const handleSharePrescription = async (prescription) => {
-    const shareUrl = `${window.location.origin}/doctor/prescriptions/${prescription.id}`;
-
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title: `Prescription for ${getPatientName(prescription)}`,
-          text: `Prescription ID: #${prescription.id}`,
-          url: shareUrl,
-        });
-        return;
-      }
-
-      if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(shareUrl);
-        toastSuccess('Prescription link copied to clipboard');
-        return;
-      }
-
-      throw new Error('Clipboard unavailable');
-    } catch {
-      toastError('Unable to share prescription right now.');
-    }
   };
 
   return (
@@ -228,9 +220,9 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
               </div>
             </div>
 
-            <div className="mt-4 flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,320px)_180px] xl:items-end">
-                <div className="xl:w-[320px]">
+            <div className="mt-4 flex flex-col gap-3">
+              <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+                <div className="w-full xl:max-w-[360px]">
                   <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Search</label>
                   <div className="relative">
                     <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -244,18 +236,94 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
                   </div>
                 </div>
 
-                <div className="sm:max-w-[190px] xl:w-[180px]">
-                  <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Created date</label>
-                  <select
-                    value={dateFilter}
-                    onChange={(e) => setDateFilter(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-700 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+                <div className="flex items-center justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setShowFilters((prev) => !prev)}
+                    className="inline-flex items-center gap-2 rounded-xl bg-[#2D3A74] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#243063]"
                   >
-                    <option value="all">All dates</option>
-                    <option value="today">Today</option>
-                  </select>
+                    <SlidersHorizontal className="h-4 w-4" />
+                    {showFilters ? 'Hide Filters' : 'Filters'}
+                  </button>
                 </div>
               </div>
+
+              {showFilters && (
+                <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+                  <div className="grid gap-4 lg:grid-cols-[1fr_1.8fr_auto] lg:items-end">
+                    <div>
+                      <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Gender</p>
+                      <div className="flex flex-wrap gap-2">
+                        {[
+                          { value: 'all', label: 'All' },
+                          { value: 'male', label: 'Male' },
+                          { value: 'female', label: 'Female' },
+                        ].map((option) => (
+                          <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => setGenderFilter(option.value)}
+                            className={`min-w-20 rounded-lg border px-3 py-2 text-sm font-semibold transition ${
+                              genderFilter === option.value
+                                ? 'border-[#2D3A74] bg-[#2D3A74] text-white'
+                                : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                            }`}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="grid gap-3 sm:grid-cols-[minmax(0,180px)_minmax(0,1fr)] sm:items-end">
+                        <div>
+                        <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Created Date</p>
+                        <select
+                          value={dateFilter}
+                          onChange={(e) => setDateFilter(e.target.value)}
+                          className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700"
+                        >
+                          <option value="all">All dates</option>
+                          <option value="today">Today</option>
+                        </select>
+                        </div>
+                        <div>
+                          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Follow-up</p>
+                          <div className="flex flex-wrap gap-2">
+                            {[
+                              { value: 'all', label: 'All' },
+                              { value: 'with', label: 'With Follow-up' },
+                              { value: 'without', label: 'No Follow-up' },
+                            ].map((option) => (
+                              <button
+                                key={option.value}
+                                type="button"
+                                onClick={() => setFollowUpFilter(option.value)}
+                                className={`inline-flex h-10 items-center rounded-lg border px-3 text-sm font-semibold transition ${
+                                  followUpFilter === option.value
+                                    ? 'border-[#2D3A74] bg-[#2D3A74] text-white'
+                                    : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                                }`}
+                              >
+                                {option.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setShowFilters(false)}
+                      className="inline-flex h-10 items-center rounded-xl bg-[#2D3A74] px-4 text-sm font-semibold text-white transition hover:bg-[#243063]"
+                    >
+                      Apply Filters
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -265,7 +333,6 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
                 <tr>
                   <th className="px-4 py-3.5 text-left">#</th>
                   <th className="px-4 py-3.5 text-left">Patient</th>
-                  <th className="px-4 py-3.5 text-left">Contact</th>
                   <th className="px-4 py-3.5 text-left">Symptoms</th>
                   <th className="px-4 py-3.5 text-left">Diagnosis / Advice</th>
                   <th className="px-4 py-3.5 text-left">Created</th>
@@ -295,14 +362,14 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
                             <div className="font-semibold text-slate-900">{renderHighlighted(getPatientName(p), searchTerm)}</div>
                             <div className="mt-0.5 text-xs font-medium text-slate-500">Prescription #{p.id}</div>
                             <div className="text-xs font-medium text-slate-500">{formatAgeLabel(p)}</div>
+                            <div className="mt-1 text-xs font-medium text-slate-500 whitespace-nowrap">
+                              <span className="inline-flex items-center gap-1.5">
+                                <Phone className="h-3.5 w-3.5 text-slate-400" />
+                                {renderHighlighted(getPatientPhone(p) || 'N/A', searchTerm)}
+                              </span>
+                            </div>
                           </div>
                         </div>
-                      </td>
-                      <td className="px-4 py-3.5 text-[13px] font-medium text-slate-700 whitespace-nowrap">
-                        <span className="inline-flex items-center gap-1.5">
-                          <Phone className="h-3.5 w-3.5 text-slate-400" />
-                          {renderHighlighted(getPatientPhone(p) || 'N/A', searchTerm)}
-                        </span>
                       </td>
                       <td className="px-4 py-3.5 text-[13px] font-medium text-slate-700">
                         <div className="max-w-[180px] truncate inline-flex items-center gap-1.5" title={p.symptoms || 'N/A'}>
@@ -345,18 +412,6 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
                             <Printer className="h-4 w-4" />
                             <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-[10px] font-medium text-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
                               Print
-                            </span>
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => handleSharePrescription(p)}
-                            className="group relative inline-flex h-8 w-8 items-center justify-center rounded-md border border-emerald-200 bg-emerald-50 text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100 hover:text-emerald-800"
-                            aria-label="Share prescription"
-                          >
-                            <Share2 className="h-4 w-4" />
-                            <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-[10px] font-medium text-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
-                              Share
                             </span>
                           </button>
                         </div>

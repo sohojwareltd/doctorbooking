@@ -1,5 +1,5 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { Calendar, ClipboardList, Heart, Phone, Mail, User, Stethoscope, Pill, FlaskConical, FileText, MapPin, Printer, ArrowLeft, MessageCircle, Download, Share2, Save, X, Plus, Trash2 } from 'lucide-react';
+import { Calendar, ClipboardList, Heart, Phone, Mail, User, Stethoscope, Pill, FlaskConical, FileText, MapPin, Printer, ArrowLeft, Download, Save, X, Plus, Trash2 } from 'lucide-react';
 import { useMemo, useRef, useState, useEffect } from 'react';
 import DoctorLayout from '../../layouts/DoctorLayout';
 import { formatDisplayDate, formatDisplayFromDateLike, formatTime12hFromDateTime } from '../../utils/dateFormat';
@@ -217,7 +217,6 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
   const patientContact = editMode ? form?.patient_contact : data?.patient_contact || data?.user?.phone || prescription?.user?.phone;
   const visitType = editMode ? form?.visit_type : data?.visit_type || prescription?.visit_type;
   const prescriptionRef = useRef(null);
-  const [sharing, setSharing] = useState(false);
   const [downloadingPDF, setDownloadingPDF] = useState(false);
 
   // Auto-print if action=print in URL
@@ -312,66 +311,6 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
     }
   };
 
-  const handleShareEmail = () => {
-    const subject = encodeURIComponent(`Prescription for ${patientName}`);
-    const body = encodeURIComponent(
-      `Please find the prescription details below:\n\n` +
-      `Patient: ${patientName}\n` +
-      `Date: ${visitDateLabel || createdAtDateLabel}\n` +
-      `Prescription ID: #${data?.id || prescription?.id}\n\n` +
-      `View full prescription: ${window.location.href}\n\n` +
-      `Thank you for choosing our clinic.`
-    );
-    const email = data?.user?.email || prescription?.user?.email || '';
-    if (email) {
-      window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
-    } else {
-      window.location.href = `mailto:?subject=${subject}&body=${body}`;
-    }
-  };
-
-  const handleShareWhatsApp = () => {
-    const message = encodeURIComponent(
-      `*Prescription for ${patientName}*\n\n` +
-      `Date: ${visitDateLabel || createdAtDateLabel}\n` +
-      `Prescription ID: #${data?.id || prescription?.id}\n\n` +
-      `View full prescription:\n${window.location.href}\n\n` +
-      `Thank you for choosing our clinic.`
-    );
-    const phone = data?.user?.phone || prescription?.user?.phone || patientContact || '';
-    const whatsappUrl = phone 
-      ? `https://wa.me/${phone.replace(/[^0-9]/g, '')}?text=${message}`
-      : `https://wa.me/?text=${message}`;
-    window.open(whatsappUrl, '_blank');
-  };
-
-  const handleShareLink = async () => {
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title: `Prescription for ${patientName}`,
-          text: `Prescription ID: #${data?.id || prescription?.id}`,
-          url: window.location.href,
-        });
-        toastSuccess('Prescription shared successfully');
-      } else {
-        // Fallback: Copy to clipboard
-        await navigator.clipboard.writeText(window.location.href);
-        toastSuccess('Prescription link copied to clipboard');
-      }
-    } catch (error) {
-      if (error.name !== 'AbortError') {
-        // Fallback: Copy to clipboard
-        try {
-          await navigator.clipboard.writeText(window.location.href);
-          toastSuccess('Prescription link copied to clipboard');
-        } catch (clipboardError) {
-          toastError('Failed to share prescription');
-        }
-      }
-    }
-  };
-
   return (
     <DoctorLayout title="Prescription Details">
       <div className="mx-auto max-w-[1400px] space-y-6">
@@ -404,32 +343,6 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
             <ArrowLeft className="h-4 w-4" />
             Back
           </Link>
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setSharing(!sharing)}
-              className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300"
-            >
-              <Share2 className="h-4 w-4" />
-              Share
-            </button>
-            {sharing && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setSharing(false)} />
-                <div className="absolute right-0 top-full z-50 mt-2 w-48 rounded-xl border border-slate-200 bg-white shadow-lg">
-                  <button onClick={() => { handleShareEmail(); setSharing(false); }} className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-medium text-slate-700 hover:bg-slate-50 transition first:rounded-t-xl">
-                    <Mail className="h-4 w-4 text-[#3556a6]" /> Share via Email
-                  </button>
-                  <button onClick={() => { handleShareWhatsApp(); setSharing(false); }} className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-medium text-slate-700 hover:bg-slate-50 transition">
-                    <MessageCircle className="h-4 w-4 text-green-600" /> Share via WhatsApp
-                  </button>
-                  <button onClick={() => { handleShareLink(); setSharing(false); }} className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-medium text-slate-700 hover:bg-slate-50 transition last:rounded-b-xl">
-                    <Share2 className="h-4 w-4 text-slate-500" /> Copy Link
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
           <button
             type="button"
             onClick={handleDownloadPDF}
@@ -451,11 +364,11 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
       </div>
 
       {/* Prescription Layout - Matches CreatePrescription */}
-      <div ref={prescriptionRef}>
+      <div ref={prescriptionRef} className="prescription-print-area">
         <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm print:border-0 print:shadow-none">
 
           {/* Header - Updated Card Style */}
-          <div className="border-b border-slate-200 bg-slate-50 p-5 md:p-6">
+          <div className="prescription-header-section border-b border-slate-200 bg-slate-50 p-5 md:p-6">
             <div className="grid gap-4 md:grid-cols-2 md:gap-5">
               <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
                 <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-[#2D3A74]/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#2D3A74]">
@@ -503,7 +416,7 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
           </div>
 
           {/* Patient Info Section - Editable Grid (same as CreatePrescription) */}
-          <div className="border-b-2 border-dashed border-slate-200 bg-slate-50 px-8 py-5">
+          <div className="patient-info-section border-b-2 border-dashed border-slate-200 bg-slate-50 px-8 py-5">
             <div className="mb-4 flex items-center gap-2 border-b border-slate-200 pb-2">
               <User className="h-5 w-5 text-[#3556a6]" />
               <span className="text-sm font-semibold text-slate-800">Patient Information</span>
@@ -585,7 +498,7 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
           </div>
 
           {/* Prescription Content - Matches CreatePrescription column layout */}
-          <div className="min-h-[500px] bg-white p-8 pb-12">
+          <div className="prescription-content-section min-h-[500px] bg-white p-8 pb-12">
             <div className="grid grid-cols-12 gap-8">
 
               {/* Left Column - Tests + Diagnosis */}
@@ -630,11 +543,11 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
                     <div className="flex-1 pt-2">
                       <div className="space-y-2">
                         {medicines.map((m, idx) => (
-                          <div key={idx} className="group/med flex items-start gap-2 rounded border border-slate-200 bg-white p-2 hover:border-[#b9caee] hover:bg-slate-50">
+                          <div key={idx} className="medicine-row group/med flex items-start gap-2 rounded border border-slate-200 bg-white p-2 hover:border-[#b9caee] hover:bg-slate-50">
                             <span className="mt-2 text-xs font-bold text-slate-400 flex-shrink-0">{idx + 1}.</span>
-                            <div className="flex-1 grid grid-cols-6 gap-2">
+                            <div className="medicine-fields flex-1 grid grid-cols-6 gap-2">
                               <input
-                                className="col-span-2 rounded border border-slate-200 bg-slate-50/50 px-3 py-1.5 text-sm text-slate-900 doc-input-focus"
+                                className="col-span-3 min-w-0 rounded border border-slate-200 bg-slate-50/50 px-3 py-1.5 text-sm text-slate-900 doc-input-focus"
                                 value={m.name}
                                 onChange={(e) => {
                                   const val = e.target.value;
@@ -664,7 +577,7 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
                                 placeholder="Duration"
                               />
                             </div>
-                            <div className="flex flex-col gap-1 text-xs text-slate-600 flex-shrink-0">
+                            <div className="medicine-timing flex flex-col gap-1 text-xs text-slate-600 flex-shrink-0">
                               <span className="font-semibold text-[10px]">Timing</span>
                               <div className="flex items-center gap-3">
                                 <label className="inline-flex items-center gap-1 cursor-pointer">
@@ -754,7 +667,7 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
             </div>
 
             {/* Bottom Action Bar - same style as CreatePrescription */}
-            <div className="mt-10 rounded-xl border border-slate-200 bg-slate-50 p-6">
+            <div className="mt-10 rounded-xl border border-slate-200 bg-slate-50 p-6 print:hidden">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="text-xs text-slate-400">
                   Created: {createdAtDateLabel} {createdAtTimeLabel} Â· ID #{data?.id}
@@ -817,11 +730,128 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
       {/* Print Styles */}
       <style>{`
         @media print {
-          @page { size: A4; margin: 10mm; }
-          body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          @page { size: A4; margin: 8mm; }
+          html, body {
+            background: #ffffff !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+
+          .prescription-print-area {
+            font-size: 12px !important;
+            line-height: 1.3 !important;
+          }
+
+          .prescription-print-area .text-2xl,
+          .prescription-print-area .text-xl {
+            font-size: 26px !important;
+            line-height: 1.15 !important;
+          }
+
+          .prescription-print-area .text-sm {
+            font-size: 12px !important;
+            line-height: 1.3 !important;
+          }
+
+          .prescription-print-area .text-xs {
+            font-size: 10px !important;
+            line-height: 1.25 !important;
+          }
+
+          /* Show only prescription block in print */
+          body * { visibility: hidden !important; }
+          .prescription-print-area,
+          .prescription-print-area * { visibility: visible !important; }
+          .prescription-print-area {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            margin: 0 !important;
+          }
+
           .print\\:hidden { display: none !important; }
           .print\\:border-0 { border: 0 !important; }
           .print\\:shadow-none { box-shadow: none !important; }
+
+          .prescription-header-section .grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            gap: 10px !important;
+          }
+
+          /* Keep design same, only compact patient info typography */
+          .patient-info-section label {
+            font-size: 10px !important;
+            line-height: 1.2 !important;
+          }
+          .patient-info-section .grid {
+            grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+            gap: 6px 10px !important;
+          }
+          .patient-info-section input,
+          .patient-info-section select {
+            font-size: 11px !important;
+            line-height: 1.25 !important;
+          }
+
+          .prescription-content-section textarea,
+          .prescription-content-section input,
+          .prescription-content-section select {
+            font-size: 11px !important;
+            line-height: 1.25 !important;
+          }
+
+          .medicine-row {
+            padding: 4px 6px !important;
+            gap: 6px !important;
+            display: block !important;
+          }
+
+          .medicine-fields {
+            display: grid !important;
+            grid-template-columns: minmax(0, 2fr) repeat(3, minmax(42px, 56px)) !important;
+            gap: 4px !important;
+            width: 100% !important;
+          }
+
+          .medicine-fields .col-span-3 {
+            grid-column: 1 / 2 !important;
+          }
+
+          .medicine-row input {
+            font-size: 10px !important;
+            line-height: 1.15 !important;
+            padding: 2px 6px !important;
+            min-height: 22px !important;
+          }
+
+          .medicine-timing {
+            font-size: 9px !important;
+            line-height: 1.1 !important;
+            margin-top: 4px !important;
+            display: flex !important;
+            flex-direction: row !important;
+            align-items: center !important;
+            gap: 6px !important;
+            flex-wrap: wrap !important;
+          }
+
+          .medicine-timing .text-\[10px\] {
+            font-size: 9px !important;
+          }
+
+          .medicine-timing input[type="radio"] {
+            width: 10px !important;
+            height: 10px !important;
+          }
+
+          .prescription-content-section .text-5xl {
+            font-size: 52px !important;
+            line-height: 1 !important;
+          }
+
+          /* Hide edit controls in print */
+          .prescription-print-area button { display: none !important; }
         }
       `}</style>
       </div>
