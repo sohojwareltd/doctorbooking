@@ -17,8 +17,11 @@ class PatientController extends Controller
     {
         $doctor = Auth::user();
 
-        $patientQuery = User::whereHas('role', fn ($q) => $q->where('name', 'patient'))
-            ->whereHas('appointments', fn ($q) => $q->where('doctor_id', $doctor->doctorId()));
+        $patientQuery = User::whereHas('role', fn ($q) => $q->where('name', 'patient'));
+
+        if (! $doctor?->hasRole('compounder')) {
+            $patientQuery->whereHas('appointments', fn ($q) => $q->where('doctor_id', $doctor->doctorId()));
+        }
 
         $allPatients = (clone $patientQuery)->with('patientProfile')->get();
         $hasPhone    = $allPatients->filter(fn ($p) => $p->phone)->count();
@@ -28,9 +31,11 @@ class PatientController extends Controller
         $patients = (clone $patientQuery)
             ->with([
                 'patientProfile',
-                'prescriptions' => fn ($q) => $q->where('doctor_id', $doctor->doctorId())
-                    ->select('id', 'user_id', 'diagnosis', 'created_at')
-                    ->latest(),
+                'prescriptions' => fn ($q) => $doctor?->hasRole('compounder')
+                    ? $q->select('id', 'user_id', 'diagnosis', 'created_at')->latest()
+                    : $q->where('doctor_id', $doctor->doctorId())
+                        ->select('id', 'user_id', 'diagnosis', 'created_at')
+                        ->latest(),
             ])
             ->orderByDesc('created_at')
             ->paginate(10)
@@ -67,15 +72,21 @@ class PatientController extends Controller
     {
         $doctor = Auth::user();
 
-        abort_unless(
-            $patient->appointments()->where('doctor_id', $doctor->doctorId())->exists(),
-            403
-        );
+        if (! $doctor?->hasRole('compounder')) {
+            abort_unless(
+                $patient->appointments()->where('doctor_id', $doctor->doctorId())->exists(),
+                403
+            );
+        }
 
         $patient->load([
             'patientProfile',
-            'appointments' => fn ($q) => $q->where('doctor_id', $doctor->doctorId())->latest(),
-            'prescriptions' => fn ($q) => $q->where('doctor_id', $doctor->doctorId())->latest(),
+            'appointments' => fn ($q) => $doctor?->hasRole('compounder')
+                ? $q->latest()
+                : $q->where('doctor_id', $doctor->doctorId())->latest(),
+            'prescriptions' => fn ($q) => $doctor?->hasRole('compounder')
+                ? $q->latest()
+                : $q->where('doctor_id', $doctor->doctorId())->latest(),
         ]);
 
         return Inertia::render('doctor/PatientShow', [
