@@ -222,17 +222,31 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
 
             <div className="mt-4 flex flex-col gap-3">
               <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
-                <div className="w-full xl:max-w-[360px]">
-                  <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Search</label>
-                  <div className="relative">
-                    <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                    <input
-                      type="text"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      placeholder="Patient, phone, diagnosis or id"
-                      className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-900 placeholder-slate-400 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
-                    />
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,360px)_180px] xl:items-end">
+                  <div>
+                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Search</label>
+                    <div className="relative">
+                      <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                      <input
+                        type="text"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        placeholder="Patient, phone, diagnosis or id"
+                        className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-900 placeholder-slate-400 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="sm:max-w-[190px] xl:w-[180px]">
+                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Created date</label>
+                    <select
+                      value={dateFilter}
+                      onChange={(e) => setDateFilter(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-700 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+                    >
+                      <option value="all">All dates</option>
+                      <option value="today">Today</option>
+                    </select>
                   </div>
                 </div>
 
@@ -250,7 +264,7 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
 
               {showFilters && (
                 <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
-                  <div className="grid gap-4 lg:grid-cols-[1fr_1.8fr_auto] lg:items-end">
+                  <div className="grid gap-4 lg:grid-cols-[1fr_1.5fr_auto] lg:items-end">
                     <div>
                       <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Gender</p>
                       <div className="flex flex-wrap gap-2">
@@ -276,41 +290,26 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
                     </div>
 
                     <div>
-                      <div className="grid gap-3 sm:grid-cols-[minmax(0,180px)_minmax(0,1fr)] sm:items-end">
-                        <div>
-                        <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Created Date</p>
-                        <select
-                          value={dateFilter}
-                          onChange={(e) => setDateFilter(e.target.value)}
-                          className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700"
-                        >
-                          <option value="all">All dates</option>
-                          <option value="today">Today</option>
-                        </select>
-                        </div>
-                        <div>
-                          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Follow-up</p>
-                          <div className="flex flex-wrap gap-2">
-                            {[
-                              { value: 'all', label: 'All' },
-                              { value: 'with', label: 'With Follow-up' },
-                              { value: 'without', label: 'No Follow-up' },
-                            ].map((option) => (
-                              <button
-                                key={option.value}
-                                type="button"
-                                onClick={() => setFollowUpFilter(option.value)}
-                                className={`inline-flex h-10 items-center rounded-lg border px-3 text-sm font-semibold transition ${
-                                  followUpFilter === option.value
-                                    ? 'border-[#2D3A74] bg-[#2D3A74] text-white'
-                                    : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
-                                }`}
-                              >
-                                {option.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
+                      <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Follow-up</p>
+                      <div className="flex flex-wrap gap-2">
+                        {[
+                          { value: 'all', label: 'All' },
+                          { value: 'with', label: 'With Follow-up' },
+                          { value: 'without', label: 'No Follow-up' },
+                        ].map((option) => (
+                          <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => setFollowUpFilter(option.value)}
+                            className={`inline-flex h-10 items-center rounded-lg border px-3 text-sm font-semibold transition ${
+                              followUpFilter === option.value
+                                ? 'border-[#2D3A74] bg-[#2D3A74] text-white'
+                                : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                            }`}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
                       </div>
                     </div>
 
