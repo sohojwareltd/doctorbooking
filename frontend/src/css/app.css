@@ -966,11 +966,30 @@ html {
     z-index: 1;
 }
 
-/* Focus ring for inputs */
+/* doc-input-focus: ghost by default (Patient Info fields) */
+.doc-input-focus {
+    background-color: transparent;
+    border-color: transparent;
+    transition: border-color 0.15s, box-shadow 0.15s, background-color 0.15s;
+}
+.doc-input-focus:hover {
+    background-color: rgba(255, 255, 255, 0.6);
+    border-color: #cbd5e1;
+}
 .doc-input-focus:focus {
     border-color: var(--doc-primary);
     box-shadow: 0 0 0 3px rgba(54, 87, 167, 0.14);
     outline: none;
+}
+
+/* Prescription pad inputs: always show bg + border */
+.rx-pad-inputs .doc-input-focus {
+    background-color: rgb(248 250 252);
+    border-color: #e2e8f0;
+}
+.rx-pad-inputs .doc-input-focus:hover {
+    background-color: #ffffff;
+    border-color: #b9caee;
 }
 
 /* Table row hover */

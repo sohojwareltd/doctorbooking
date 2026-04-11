@@ -447,6 +447,13 @@ class DoctorController extends Controller
         return response()->json(['chambers' => $chambers]);
     }
 
+    public function medicines(Request $request): JsonResponse
+    {
+        return response()->json(
+            \App\Models\Medicine::orderBy('name')->get(['id', 'name', 'strength'])
+        );
+    }
+
     // ── Walk-in appointment ───────────────────────────────────────────────────
 
     /** POST /api/doctor/appointments */
