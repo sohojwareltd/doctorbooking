@@ -1,6 +1,6 @@
 import { Link, usePage } from '@inertiajs/react';
-import { useEffect, useMemo, useState } from 'react';
-import { Calendar, CalendarCheck2, Clock3, Eye, FilePlus, FileText, Hash, Mars, Phone, Search, SlidersHorizontal, User, Venus, X } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Calendar, CalendarCheck2, Clock3, Eye, FilePlus, FileText, Hash, Loader2, Mars, Phone, Plus, Search, SlidersHorizontal, User, UserCheck, UserPlus, Venus, X } from 'lucide-react';
 import DoctorLayout from '../../layouts/DoctorLayout';
 import StatusBadge from '../../components/doctor/StatusBadge';
 import DocModal from '../../components/doctor/DocModal';
@@ -131,8 +131,35 @@ export default function DoctorAppointments() {
   const [genderFilter, setGenderFilter] = useState('all');
   const [ageMin, setAgeMin] = useState('');
   const [ageMax, setAgeMax] = useState('');
+  const [chamberFilter, setChamberFilter] = useState('all');
+  const [chambers, setChambers] = useState([]);
   const [showFilters, setShowFilters] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+
+  // Create appointment modal states
+  const defaultApptForm = () => ({
+    patient_name: '',
+    patient_phone: '',
+    patient_address: '',
+    patient_age: '',
+    patient_gender: '',
+    chamber_id: '',
+    appointment_date: new Date().toISOString().split('T')[0],
+    appointment_time: new Date().toTimeString().slice(0, 5),
+    symptoms: '',
+    status: 'scheduled',
+  });
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [apptMode, setApptMode] = useState('select'); // select | walkin | new
+  const [patientSearch, setPatientSearch] = useState('');
+  const [patientResults, setPatientResults] = useState([]);
+  const [patientSearching, setPatientSearching] = useState(false);
+  const [showPatientDrop, setShowPatientDrop] = useState(false);
+  const [chosenPatient, setChosenPatient] = useState(null);
+  const [apptForm, setApptForm] = useState(defaultApptForm);
+  const [apptErrors, setApptErrors] = useState({});
+  const [apptSubmitting, setApptSubmitting] = useState(false);
+  const patientDropRef = useRef(null);
 
   const buildParams = () => ({ per_page: 200 });
 
@@ -156,6 +183,49 @@ export default function DoctorAppointments() {
 
   useEffect(() => {
     fetchAppointments(buildParams());
+    // Fetch doctor's chambers once
+    fetch('/api/doctor/chambers', { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
+      .then((r) => r.ok ? r.json() : { chambers: [] })
+      .then((data) => setChambers(Array.isArray(data.chambers) ? data.chambers : []));
+  }, []);
+
+  // Patient search for create modal
+  useEffect(() => {
+    if (apptMode !== 'select' || !patientSearch.trim()) {
+      setPatientResults([]);
+      return;
+    }
+    setPatientSearching(true);
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/doctor/patients?search=${encodeURIComponent(patientSearch)}&per_page=10`, {
+          headers: { Accept: 'application/json' },
+          credentials: 'same-origin',
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const items = data.patients?.data ?? (Array.isArray(data.patients) ? data.patients : []);
+          setPatientResults(items);
+          setShowPatientDrop(true);
+        }
+      } catch {
+        // silent
+      } finally {
+        setPatientSearching(false);
+      }
+    }, 320);
+    return () => clearTimeout(timer);
+  }, [patientSearch, apptMode]);
+
+  // Close patient dropdown when clicking outside
+  useEffect(() => {
+    const handler = (e) => {
+      if (patientDropRef.current && !patientDropRef.current.contains(e.target)) {
+        setShowPatientDrop(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
   }, []);
 
   const getPatientName = (appointment) => appointment?.patient_name || appointment?.user?.name || `Patient #${appointment?.user_id || ''}`;
@@ -204,6 +274,88 @@ export default function DoctorAppointments() {
 
     const data = await response.json().catch(() => ({}));
     toastError(data?.message || 'Failed to update status.');
+  };
+
+  const resetAndClose = () => {
+    setShowCreateModal(false);
+    setApptMode('select');
+    setPatientSearch('');
+    setPatientResults([]);
+    setShowPatientDrop(false);
+    setChosenPatient(null);
+    setApptForm(defaultApptForm());
+    setApptErrors({});
+  };
+
+  const handleCreateAppointment = async () => {
+    setApptErrors({});
+    const errors = {};
+
+    if (apptMode === 'select' && !chosenPatient) {
+      errors.patient = 'Please select a patient.';
+    }
+    if ((apptMode === 'walkin' || apptMode === 'new') && !apptForm.patient_name.trim()) {
+      errors.patient_name = 'Patient name is required.';
+    }
+    if (!apptForm.appointment_date) errors.appointment_date = 'Date is required.';
+    if (!apptForm.appointment_time) errors.appointment_time = 'Time is required.';
+
+    if (Object.keys(errors).length > 0) {
+      setApptErrors(errors);
+      return;
+    }
+
+    setApptSubmitting(true);
+    try {
+      const modeMap = { select: 'select_patient', walkin: 'walkin', new: 'new_patient' };
+      const payload = {
+        mode:             modeMap[apptMode],
+        user_id:          apptMode === 'select' ? chosenPatient.id : undefined,
+        name:             apptMode === 'select' ? chosenPatient?.name : apptForm.patient_name,
+        phone:            apptMode === 'select' ? chosenPatient?.phone || undefined : apptForm.patient_phone || undefined,
+        address:          apptForm.patient_address || undefined,
+        age:              apptMode !== 'select' && apptForm.patient_age ? Number(apptForm.patient_age) : undefined,
+        gender:           apptMode !== 'select' && apptForm.patient_gender ? apptForm.patient_gender : undefined,
+        chamber_id:       apptForm.chamber_id ? Number(apptForm.chamber_id) : undefined,
+        appointment_date: apptForm.appointment_date,
+        appointment_time: apptForm.appointment_time,
+        symptoms:         apptForm.symptoms || undefined,
+        status:           apptForm.status,
+      };
+
+      const res = await fetch('/api/doctor/appointments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok) {
+        toastSuccess('Appointment created successfully.');
+        fetchAppointments(buildParams());
+        resetAndClose();
+      } else {
+        if (data?.errors) {
+          const mapped = {};
+          Object.entries(data.errors).forEach(([key, msgs]) => {
+            mapped[key] = Array.isArray(msgs) ? msgs[0] : msgs;
+          });
+          setApptErrors(mapped);
+        } else {
+          toastError(data?.message || 'Failed to create appointment.');
+        }
+      }
+    } catch {
+      toastError('Something went wrong. Please try again.');
+    } finally {
+      setApptSubmitting(false);
+    }
   };
 
   const filteredRows = useMemo(() => {
@@ -275,6 +427,11 @@ export default function DoctorAppointments() {
         return false;
       }
 
+      if (chamberFilter !== 'all') {
+        const apptChamberId = appointment.chamber?.id ? String(appointment.chamber.id) : null;
+        if (apptChamberId !== chamberFilter) return false;
+      }
+
       if (!needle) {
         return true;
       }
@@ -291,11 +448,11 @@ export default function DoctorAppointments() {
         || serial.includes(needle)
       );
     });
-  }, [rows, statusFilter, searchTerm, datePreset, dateFrom, dateTo, genderFilter, ageMin, ageMax]);
+  }, [rows, statusFilter, searchTerm, datePreset, dateFrom, dateTo, genderFilter, ageMin, ageMax, chamberFilter]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [statusFilter, searchTerm, datePreset, dateFrom, dateTo, genderFilter, ageMin, ageMax]);
+  }, [statusFilter, searchTerm, datePreset, dateFrom, dateTo, genderFilter, ageMin, ageMax, chamberFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / ROWS_PER_PAGE));
   const safeCurrentPage = Math.min(currentPage, totalPages);
@@ -366,7 +523,7 @@ export default function DoctorAppointments() {
 
             <div className="mt-4 flex flex-col gap-3">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,360px)_180px] lg:items-end">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,360px)_180px_180px] lg:items-end">
                   <div>
                     <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Search</label>
                     <div className="relative">
@@ -402,9 +559,33 @@ export default function DoctorAppointments() {
                       <option value="custom">Custom range</option>
                     </select>
                   </div>
+
+                  {chambers.length > 0 && (
+                    <div className="sm:max-w-[190px] lg:w-[180px]">
+                      <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Chamber</label>
+                      <select
+                        value={chamberFilter}
+                        onChange={(e) => setChamberFilter(e.target.value)}
+                        className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-700 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+                      >
+                        <option value="all">All chambers</option>
+                        {chambers.map((c) => (
+                          <option key={c.id} value={String(c.id)}>{c.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                 </div>
 
-                <div className="flex items-center justify-end">
+                <div className="flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateModal(true)}
+                    className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100"
+                  >
+                    <Plus className="h-4 w-4" />
+                    New Appointment
+                  </button>
                   <button
                     type="button"
                     onClick={() => setShowFilters((prev) => !prev)}
@@ -802,6 +983,297 @@ export default function DoctorAppointments() {
             ) : null}
           </div>
         ) : null}
+      </DocModal>
+      {/* Create Appointment Modal */}
+      <DocModal
+        open={showCreateModal}
+        onClose={resetAndClose}
+        title="New Appointment"
+        icon={CalendarCheck2}
+        size="lg"
+        footer={
+          <>
+            <DocButton variant="secondary" size="sm" onClick={resetAndClose}>Cancel</DocButton>
+            <DocButton size="sm" onClick={handleCreateAppointment} disabled={apptSubmitting}>
+              {apptSubmitting
+                ? <span className="inline-flex items-center gap-1.5"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Creating…</span>
+                : 'Create Appointment'}
+            </DocButton>
+          </>
+        }
+      >
+        <div className="space-y-5">
+          {/* Patient type tabs */}
+          <div>
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Patient Type</p>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { value: 'select', label: 'Select Patient', icon: UserCheck },
+                { value: 'walkin', label: 'Walk-in', icon: User },
+                { value: 'new', label: 'New Patient', icon: UserPlus },
+              ].map(({ value, label, icon: ModeIcon }) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => {
+                    setApptMode(value);
+                    setChosenPatient(null);
+                    setPatientSearch('');
+                    setPatientResults([]);
+                    setApptErrors({});
+                    setApptForm((prev) => ({ ...prev, patient_name: '', patient_phone: '', patient_age: '', patient_gender: '' }));
+                  }}
+                  className={`flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2.5 text-xs font-semibold transition ${
+                    apptMode === value
+                      ? 'border-[#2D3A74] bg-[#2D3A74] text-white'
+                      : 'border-slate-200 bg-white text-slate-600 hover:border-[#2D3A74]/30 hover:bg-slate-50'
+                  }`}
+                >
+                  <ModeIcon className="h-3.5 w-3.5" />
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Select Patient: searchable dropdown */}
+          {apptMode === 'select' && (
+            <div>
+              <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Search Patient</label>
+              <div className="relative" ref={patientDropRef}>
+                <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  value={patientSearch}
+                  onChange={(e) => {
+                    setPatientSearch(e.target.value);
+                    if (chosenPatient) setChosenPatient(null);
+                    setShowPatientDrop(true);
+                  }}
+                  onFocus={() => { if (patientSearch) setShowPatientDrop(true); }}
+                  placeholder="Search by name or phone…"
+                  className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-10 text-sm text-slate-900 placeholder-slate-400 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+                />
+                {patientSearching && (
+                  <Loader2 className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-slate-400" />
+                )}
+
+                {showPatientDrop && !patientSearching && patientSearch.trim() && patientResults.length === 0 && (
+                  <div className="absolute left-0 right-0 top-full z-50 mt-1 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500 shadow-lg">
+                    No patients found
+                  </div>
+                )}
+
+                {showPatientDrop && patientResults.length > 0 && (
+                  <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-52 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg">
+                    {patientResults.map((patient) => (
+                      <button
+                        key={patient.id}
+                        type="button"
+                        onClick={() => {
+                          setChosenPatient(patient);
+                          setPatientSearch(patient.name);
+                          setShowPatientDrop(false);
+                        }}
+                        className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm transition hover:bg-slate-50"
+                      >
+                        <GenderIconAvatar gender={patient.gender} />
+                        <div>
+                          <p className="font-semibold text-slate-800">{patient.name}</p>
+                          <p className="text-xs text-slate-400">
+                            {patient.phone || 'No phone'}
+                            {patient.age ? ` • ${patient.age}y` : ''}
+                            {patient.gender ? ` • ${formatGender(patient.gender)}` : ''}
+                          </p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {apptErrors.patient && <p className="mt-1 text-xs text-rose-500">{apptErrors.patient}</p>}
+
+              {/* Address for select mode */}
+              <div className="mt-3">
+                <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Address</label>
+                <input
+                  type="text"
+                  value={apptForm.patient_address}
+                  onChange={(e) => setApptForm((prev) => ({ ...prev, patient_address: e.target.value }))}
+                  placeholder="Patient's home address"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+                />
+              </div>
+
+              {/* Selected patient info card */}
+              {chosenPatient && (
+                <div className="mt-3 rounded-xl border border-[#2D3A74]/20 bg-[#2D3A74]/5 p-3">
+                  <div className="flex items-center gap-3">
+                    <GenderIconAvatar gender={chosenPatient.gender} />
+                    <div className="grid flex-1 grid-cols-3 gap-x-4 gap-y-1">
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">Name</p>
+                        <p className="text-[13px] font-semibold text-slate-800">{chosenPatient.name}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">Phone</p>
+                        <p className="text-[13px] font-semibold text-slate-800">{chosenPatient.phone || '—'}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">Age / Gender</p>
+                        <p className="text-[13px] font-semibold text-slate-800">
+                          {chosenPatient.age ? `${chosenPatient.age}y` : '—'}
+                          {chosenPatient.gender ? ` • ${formatGender(chosenPatient.gender)}` : ''}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Walk-in / New Patient: manual fields */}
+          {(apptMode === 'walkin' || apptMode === 'new') && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="col-span-2 sm:col-span-1">
+                <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                  Patient Name <span className="text-rose-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={apptForm.patient_name}
+                  onChange={(e) => setApptForm((prev) => ({ ...prev, patient_name: e.target.value }))}
+                  placeholder="Full name"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+                />
+                {apptErrors.patient_name && <p className="mt-1 text-xs text-rose-500">{apptErrors.patient_name}</p>}
+              </div>
+              <div className="col-span-2 sm:col-span-1">
+                <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Phone</label>
+                <input
+                  type="text"
+                  value={apptForm.patient_phone}
+                  onChange={(e) => setApptForm((prev) => ({ ...prev, patient_phone: e.target.value }))}
+                  placeholder="Phone number"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+                />
+              </div>
+              {apptMode === 'new' && apptForm.patient_phone.trim() && (
+                <div className="col-span-2 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs text-blue-700">
+                  <p className="mb-1 font-semibold">Auto-generated login credentials:</p>
+                  <p>Username: <span className="font-mono font-bold">{apptForm.patient_phone.trim()}</span></p>
+                  <p>Password: <span className="font-mono font-bold">{apptForm.patient_phone.trim()}</span></p>
+                </div>
+              )}
+              <div className="col-span-2">
+                <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Address</label>
+                <input
+                  type="text"
+                  value={apptForm.patient_address}
+                  onChange={(e) => setApptForm((prev) => ({ ...prev, patient_address: e.target.value }))}
+                  placeholder="Home address"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Age</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="150"
+                  value={apptForm.patient_age}
+                  onChange={(e) => setApptForm((prev) => ({ ...prev, patient_age: e.target.value }))}
+                  placeholder="e.g. 30"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Gender</label>
+                <select
+                  value={apptForm.patient_gender}
+                  onChange={(e) => setApptForm((prev) => ({ ...prev, patient_gender: e.target.value }))}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-700 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+                >
+                  <option value="">Select gender</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+            </div>
+          )}
+
+          <div className="border-t border-slate-100" />
+
+          {/* Appointment fields */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                Date <span className="text-rose-400">*</span>
+              </label>
+              <input
+                type="date"
+                value={apptForm.appointment_date}
+                onChange={(e) => setApptForm((prev) => ({ ...prev, appointment_date: e.target.value }))}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-700 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+              />
+              {apptErrors.appointment_date && <p className="mt-1 text-xs text-rose-500">{apptErrors.appointment_date}</p>}
+            </div>
+            <div>
+              <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                Time <span className="text-rose-400">*</span>
+              </label>
+              <input
+                type="time"
+                value={apptForm.appointment_time}
+                onChange={(e) => setApptForm((prev) => ({ ...prev, appointment_time: e.target.value }))}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-700 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+              />
+              {apptErrors.appointment_time && <p className="mt-1 text-xs text-rose-500">{apptErrors.appointment_time}</p>}
+            </div>
+            <div>
+              <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Status</label>
+              <select
+                value={apptForm.status}
+                onChange={(e) => setApptForm((prev) => ({ ...prev, status: e.target.value }))}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-700 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+              >
+                <option value="scheduled">Scheduled</option>
+                <option value="arrived">Arrived</option>
+                <option value="in_consultation">In consultation</option>
+                <option value="awaiting_tests">Awaiting tests</option>
+                <option value="prescribed">Prescribed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
+            <div>
+              <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Symptoms</label>
+              <input
+                type="text"
+                value={apptForm.symptoms}
+                onChange={(e) => setApptForm((prev) => ({ ...prev, symptoms: e.target.value }))}
+                placeholder="Chief complaints…"
+                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+              />
+            </div>
+            {chambers.length > 0 && (
+              <div className="col-span-2 sm:col-span-1">
+                <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Chamber</label>
+                <select
+                  value={apptForm.chamber_id}
+                  onChange={(e) => setApptForm((prev) => ({ ...prev, chamber_id: e.target.value }))}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-700 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+                >
+                  <option value="">No specific chamber</option>
+                  {chambers.map((c) => (
+                    <option key={c.id} value={String(c.id)}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+        </div>
       </DocModal>
     </DoctorLayout>
   );

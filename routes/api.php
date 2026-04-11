@@ -93,6 +93,9 @@ Route::middleware(['auth:sanctum', 'role:doctor,compounder'])
         Route::get('/schedule', [DoctorController::class, 'schedule']);
         Route::post('/schedule', [DoctorScheduleController::class, 'update']);
 
+        // Chambers
+        Route::get('/chambers', [DoctorController::class, 'chambers']);
+
         // Profile
         Route::get('/profile', [DoctorController::class, 'profile']);
         Route::put('/profile', [DoctorController::class, 'updateProfile']);

@@ -15,6 +15,7 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 /**
@@ -59,7 +60,7 @@ class DoctorController extends Controller
         $status     = $request->get('status_filter', 'all');
         $search     = $request->get('search', '');
 
-        $query = Appointment::with(['user:id,name,email,phone', 'prescription:id,appointment_id']);
+        $query = Appointment::with(['user:id,name,email,phone', 'prescription:id,appointment_id', 'chamber:id,name']);
         if ($doctorId) {
             $query->where('doctor_id', $doctorId);
         }
@@ -431,61 +432,111 @@ class DoctorController extends Controller
         return response()->json(['message' => 'Profile updated.']);
     }
 
+    // ── Chambers ─────────────────────────────────────────────────────────────
+
+    public function chambers(Request $request): JsonResponse
+    {
+        $doctor = $request->user();
+        $doctorId = $doctor->doctorId();
+
+        $chambers = \App\Models\Chamber::where('doctor_id', $doctorId)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name', 'location']);
+
+        return response()->json(['chambers' => $chambers]);
+    }
+
     // ── Walk-in appointment ───────────────────────────────────────────────────
 
     /** POST /api/doctor/appointments */
     public function createWalkinAppointment(Request $request): JsonResponse
     {
-        $doctor    = $request->user();
+        $doctor = $request->user();
+
         $validated = $request->validate([
-            'name'   => ['required', 'string', 'max:255'],
-            'phone'  => ['required', 'string', 'max:20'],
-            'age'    => ['required', 'integer', 'min:1', 'max:150'],
-            'gender' => ['required', 'in:male,female,other'],
+            'mode'             => ['sometimes', 'in:select_patient,walkin,new_patient'],
+            'user_id'          => ['required_if:mode,select_patient', 'nullable', 'integer', 'exists:users,id'],
+            'name'             => ['nullable', 'string', 'max:255'],
+            'phone'            => ['nullable', 'string', 'max:20'],
+            'address'          => ['nullable', 'string', 'max:500'],
+            'age'              => ['nullable', 'integer', 'min:1', 'max:150'],
+            'gender'           => ['nullable', 'in:male,female,other'],
+            'chamber_id'       => ['nullable', 'integer', 'exists:chambers,id'],
+            'appointment_date' => ['required', 'date'],
+            'appointment_time' => ['required', 'string'],
+            'symptoms'         => ['nullable', 'string', 'max:2000'],
+            'status'           => ['nullable', 'in:scheduled,arrived,in_consultation,awaiting_tests,prescribed,cancelled'],
         ]);
 
-        $patientRole = Role::where('name', 'patient')->firstOrFail();
+        $mode            = $validated['mode'] ?? 'walkin';
+        $appointmentDate = $validated['appointment_date'];
 
-        $user = User::where('phone', $validated['phone'])
-            ->orWhere('username', $validated['phone'])
-            ->first();
-
-        if (! $user) {
-            $user = User::create([
-                'name'     => $validated['name'],
-                'username' => $validated['phone'],
-                'phone'    => $validated['phone'],
-                'email'    => null,
-                'password' => Hash::make($validated['phone']),
-                'role_id'  => $patientRole->id,
-            ]);
-            $user->patientProfile()->create([
-                'age'    => $validated['age'],
-                'gender' => $validated['gender'],
-            ]);
-        } else {
-            $user->patientProfile()->updateOrCreate(
-                ['user_id' => $user->id],
-                ['age' => $validated['age'], 'gender' => $validated['gender']]
-            );
-        }
-
-        $today  = now()->toDateString();
         $serial = Appointment::where('doctor_id', $doctor->doctorId())
-            ->whereDate('appointment_date', $today)
+            ->whereDate('appointment_date', $appointmentDate)
             ->count() + 1;
 
-        $appointment = Appointment::create([
-            'user_id'          => $user->id,
+        $appointmentData = [
             'doctor_id'        => $doctor->doctorId(),
-            'appointment_date' => $today,
-            'appointment_time' => now()->format('H:i:s'),
+            'chamber_id'       => $validated['chamber_id'] ?? null,
+            'appointment_date' => $appointmentDate,
+            'appointment_time' => $validated['appointment_time'],
             'serial_no'        => $serial,
-            'status'           => 'scheduled',
-        ]);
+            'status'           => $validated['status'] ?? 'scheduled',
+            'symptoms'         => $validated['symptoms'] ?? null,
+            'name'             => $validated['name'] ?? null,
+            'phone'            => $validated['phone'] ?? null,
+            'address'          => $validated['address'] ?? null,
+            'age'              => $validated['age'] ?? null,
+            'gender'           => $validated['gender'] ?? null,
+        ];
+
+        if ($mode === 'select_patient') {
+            // Use existing registered patient
+            $appointmentData['user_id']  = $validated['user_id'];
+            $appointmentData['is_guest'] = false;
+
+        } elseif ($mode === 'new_patient') {
+            // Create or find patient account by phone
+            $patientRole = Role::where('name', 'patient')->firstOrFail();
+            $phone       = $validated['phone'] ?? null;
+
+            $user = $phone
+                ? User::where('phone', $phone)->orWhere('username', $phone)->first()
+                : null;
+
+            if (! $user) {
+                $user = User::create([
+                    'name'     => $validated['name'] ?? 'Patient',
+                    'username' => $phone ?? Str::random(10),
+                    'phone'    => $phone,
+                    'email'    => null,
+                    'password' => Hash::make($phone ?? Str::random(16)),
+                    'role_id'  => $patientRole->id,
+                ]);
+            }
+
+            $user->patientProfile()->updateOrCreate(
+                ['user_id' => $user->id],
+                array_filter([
+                    'age'    => $validated['age'] ?? null,
+                    'gender' => $validated['gender'] ?? null,
+                ], fn ($v) => $v !== null)
+            );
+
+            $appointmentData['user_id']  = $user->id;
+            $appointmentData['is_guest'] = false;
+
+        } else {
+            // Walk-in guest — no user account
+            $appointmentData['user_id']  = null;
+            $appointmentData['is_guest'] = true;
+        }
+
+        $appointment = Appointment::create($appointmentData);
 
         return response()->json([
-            'message'     => 'Walk-in appointment created.',
+            'message'     => 'Appointment created.',
             'appointment' => new AppointmentResource($appointment->load('user')),
         ], 201);
     }
