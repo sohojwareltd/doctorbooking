@@ -229,6 +229,38 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
     }
   }, []);
 
+  useEffect(() => {
+    const area = prescriptionRef.current;
+    if (!area) return undefined;
+
+    const handleBeforePrint = () => {
+      const textareas = area.querySelectorAll('textarea');
+      textareas.forEach((el) => {
+        el.dataset.prevHeight = el.style.height || '';
+        el.dataset.prevOverflow = el.style.overflow || '';
+        el.style.height = 'auto';
+        el.style.overflow = 'hidden';
+        el.style.height = `${el.scrollHeight}px`;
+      });
+    };
+
+    const handleAfterPrint = () => {
+      const textareas = area.querySelectorAll('textarea');
+      textareas.forEach((el) => {
+        el.style.height = el.dataset.prevHeight || '';
+        el.style.overflow = el.dataset.prevOverflow || '';
+      });
+    };
+
+    window.addEventListener('beforeprint', handleBeforePrint);
+    window.addEventListener('afterprint', handleAfterPrint);
+
+    return () => {
+      window.removeEventListener('beforeprint', handleBeforePrint);
+      window.removeEventListener('afterprint', handleAfterPrint);
+    };
+  }, []);
+
   const handlePrint = () => {
     window.print();
   };
@@ -848,6 +880,14 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
           .prescription-content-section .text-5xl {
             font-size: 52px !important;
             line-height: 1 !important;
+          }
+
+          .prescription-content-section textarea {
+            overflow: visible !important;
+            max-height: none !important;
+            white-space: pre-wrap !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
           }
 
           /* Hide edit controls in print */
