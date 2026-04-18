@@ -59,6 +59,10 @@ class DoctorController extends Controller
         $dateTo     = $request->get('date_to');
         $status     = $request->get('status_filter', 'all');
         $search     = $request->get('search', '');
+        $gender     = $request->get('gender', 'all');
+        $ageMin     = $request->integer('age_min');
+        $ageMax     = $request->integer('age_max');
+        $chamberId  = $request->get('chamber_id');
 
         $query = Appointment::with(['user:id,name,email,phone', 'prescription:id,appointment_id', 'chamber:id,name']);
         if ($doctorId) {
@@ -83,6 +87,22 @@ class DoctorController extends Controller
 
         if ($status !== 'all') {
             $query->where('status', $status);
+        }
+
+        if ($gender !== 'all') {
+            $query->where('gender', $gender);
+        }
+
+        if ($ageMin) {
+            $query->where('age', '>=', $ageMin);
+        }
+
+        if ($ageMax) {
+            $query->where('age', '<=', $ageMax);
+        }
+
+        if ($chamberId && $chamberId !== 'all') {
+            $query->where('chamber_id', $chamberId);
         }
 
         if ($search) {
@@ -245,6 +265,50 @@ class DoctorController extends Controller
                 'total'        => $patients->total(),
             ],
         ]);
+    }
+
+    /** POST /api/doctor/patients */
+    public function createPatient(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'phone' => ['required', 'string', 'max:20', 'unique:users,phone', 'unique:users,username'],
+            'age' => ['nullable', 'integer', 'min:1', 'max:150'],
+            'gender' => ['nullable', Rule::in(['male', 'female', 'other'])],
+            'address' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $patientRole = Role::where('name', 'patient')->firstOrFail();
+
+        $user = User::create([
+            'name' => $validated['name'],
+            'username' => $validated['phone'],
+            'phone' => $validated['phone'],
+            'email' => null,
+            'password' => Hash::make($validated['phone']),
+            'role_id' => $patientRole->id,
+        ]);
+
+        $profile = $user->patientProfile()->create([
+            'age' => $validated['age'] ?? null,
+            'gender' => $validated['gender'] ?? null,
+            'address' => $validated['address'] ?? null,
+        ]);
+
+        return response()->json([
+            'message' => 'Patient created successfully.',
+            'patient' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'phone' => $user->phone,
+                'gender' => $profile?->gender,
+                'age' => $profile?->age,
+                'address' => $profile?->address,
+                'prescriptions_count' => 0,
+                'created_at' => $user->created_at?->toDateTimeString(),
+            ],
+        ], 201);
     }
 
     /** GET /api/doctor/patients/{user} */

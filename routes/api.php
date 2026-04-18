@@ -81,6 +81,7 @@ Route::middleware(['auth:sanctum', 'role:doctor,compounder'])
 
         // Patients
         Route::get('/patients', [DoctorController::class, 'patients']);
+        Route::post('/patients', [DoctorController::class, 'createPatient']);
         Route::get('/patients/{user}', [DoctorController::class, 'patientShow']);
 
         // Prescriptions

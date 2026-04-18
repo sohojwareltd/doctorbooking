@@ -1,6 +1,9 @@
 import { Link, usePage } from '@inertiajs/react';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Calendar, CalendarCheck2, Clock3, Eye, FilePlus, FileText, Hash, Loader2, Mars, Phone, Plus, Search, SlidersHorizontal, User, UserCheck, UserPlus, Venus, X } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Calendar, CalendarCheck2, Clock3, Eye, FilePlus, FileText, Hash, Loader2, Mars, Phone, Plus, Search, SlidersHorizontal, User, UserCheck, Venus, X } from 'lucide-react';
+import FullCalendar from '@fullcalendar/react';
+import dayGridPlugin from '@fullcalendar/daygrid';
+import interactionPlugin from '@fullcalendar/interaction';
 import DoctorLayout from '../../layouts/DoctorLayout';
 import StatusBadge from '../../components/doctor/StatusBadge';
 import DocModal from '../../components/doctor/DocModal';
@@ -121,6 +124,7 @@ export default function DoctorAppointments() {
   const isCompounder = auth?.user?.role === 'compounder';
   const ROWS_PER_PAGE = 10;
   const [rows, setRows] = useState([]);
+  const [pageMeta, setPageMeta] = useState({ currentPage: 1, lastPage: 1, total: 0 });
   const [loading, setLoading] = useState(true);
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [statusFilter, setStatusFilter] = useState('all');
@@ -144,13 +148,19 @@ export default function DoctorAppointments() {
     patient_age: '',
     patient_gender: '',
     chamber_id: '',
-    appointment_date: new Date().toISOString().split('T')[0],
-    appointment_time: new Date().toTimeString().slice(0, 5),
-    symptoms: '',
-    status: 'scheduled',
+    appointment_date: '',
+    appointment_time: '',
+  });
+  const defaultPatientForm = () => ({
+    name: '',
+    phone: '',
+    age: '',
+    gender: '',
+    address: '',
   });
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [apptMode, setApptMode] = useState('select'); // select | walkin | new
+  const [showCreatePatientModal, setShowCreatePatientModal] = useState(false);
+  const [apptMode, setApptMode] = useState('select'); // select | walkin
   const [patientSearch, setPatientSearch] = useState('');
   const [patientResults, setPatientResults] = useState([]);
   const [patientSearching, setPatientSearching] = useState(false);
@@ -159,13 +169,63 @@ export default function DoctorAppointments() {
   const [apptForm, setApptForm] = useState(defaultApptForm);
   const [apptErrors, setApptErrors] = useState({});
   const [apptSubmitting, setApptSubmitting] = useState(false);
+  const [patientForm, setPatientForm] = useState(defaultPatientForm);
+  const [patientFormErrors, setPatientFormErrors] = useState({});
+  const [patientSubmitting, setPatientSubmitting] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [previewSerial, setPreviewSerial] = useState(null);
+  const [previewTime, setPreviewTime] = useState(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
+  const [unavailableRanges, setUnavailableRanges] = useState([]);
+  const [closedWeekdays, setClosedWeekdays] = useState([]);
+  const [loadingCalendar, setLoadingCalendar] = useState(false);
   const patientDropRef = useRef(null);
 
-  const buildParams = () => ({ per_page: 200 });
+  const buildParams = (page = currentPage) => {
+    const params = {
+      page,
+      per_page: ROWS_PER_PAGE,
+    };
+
+    if (searchTerm.trim()) {
+      params.search = searchTerm.trim();
+    }
+
+    if (statusFilter !== 'all') {
+      params.status_filter = statusFilter;
+    }
+
+    if (datePreset === 'today' || datePreset === 'week' || datePreset === 'month') {
+      params.date_filter = datePreset;
+    }
+
+    if (datePreset === 'custom') {
+      if (dateFrom) params.date_from = dateFrom;
+      if (dateTo) params.date_to = dateTo;
+    }
+
+    if (genderFilter !== 'all') {
+      params.gender = genderFilter;
+    }
+
+    if (ageMin !== '') {
+      params.age_min = ageMin;
+    }
+
+    if (ageMax !== '') {
+      params.age_max = ageMax;
+    }
+
+    if (chamberFilter !== 'all') {
+      params.chamber_id = chamberFilter;
+    }
+
+    return params;
+  };
 
   const fetchAppointments = async (params = {}) => {
     setLoading(true);
-    const query = new URLSearchParams({ per_page: 200, ...params }).toString();
+    const query = new URLSearchParams(params).toString();
     try {
       const res = await fetch(`/api/doctor/appointments?${query}`, {
         headers: { Accept: 'application/json' },
@@ -175,6 +235,11 @@ export default function DoctorAppointments() {
         const data = await res.json();
         const items = Array.isArray(data.appointments) ? data.appointments : (data.appointments?.data ?? []);
         setRows(items);
+        setPageMeta({
+          currentPage: data.meta?.current_page ?? 1,
+          lastPage: data.meta?.last_page ?? 1,
+          total: data.meta?.total ?? items.length,
+        });
       }
     } finally {
       setLoading(false);
@@ -182,12 +247,15 @@ export default function DoctorAppointments() {
   };
 
   useEffect(() => {
-    fetchAppointments(buildParams());
     // Fetch doctor's chambers once
     fetch('/api/doctor/chambers', { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
       .then((r) => r.ok ? r.json() : { chambers: [] })
       .then((data) => setChambers(Array.isArray(data.chambers) ? data.chambers : []));
   }, []);
+
+  useEffect(() => {
+    fetchAppointments(buildParams(currentPage));
+  }, [currentPage, searchTerm, statusFilter, datePreset, dateFrom, dateTo, genderFilter, ageMin, ageMax, chamberFilter]);
 
   // Patient search for create modal
   useEffect(() => {
@@ -228,9 +296,10 @@ export default function DoctorAppointments() {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  const getPatientName = (appointment) => appointment?.patient_name || appointment?.user?.name || `Patient #${appointment?.user_id || ''}`;
+  const getPatientName = (appointment) => appointment?.patient_name || appointment?.user?.name || appointment?.name || `Patient #${appointment?.user_id || ''}`;
   const getPatientPhone = (appointment) => appointment?.patient_phone || appointment?.user?.phone || null;
   const getPatientAge = (appointment) => appointment?.patient_age || appointment?.user?.age || '';
+  const getPatientAddress = (appointment) => appointment?.address || appointment?.patient_address || '';
   const getPatientGender = (appointment) => {
     return appointment?.patient_gender || appointment?.user?.gender || '';
   };
@@ -285,7 +354,162 @@ export default function DoctorAppointments() {
     setChosenPatient(null);
     setApptForm(defaultApptForm());
     setApptErrors({});
+    setSelectedDate(null);
+    setPreviewSerial(null);
+    setPreviewTime(null);
+    setUnavailableRanges([]);
+    setClosedWeekdays([]);
   };
+
+  const resetCreatePatientModal = () => {
+    setShowCreatePatientModal(false);
+    setPatientForm(defaultPatientForm());
+    setPatientFormErrors({});
+  };
+
+  const isClosedByWeekday = useCallback((dateStr) => {
+    if (!dateStr || closedWeekdays.length === 0) return false;
+    const dow = new Date(`${dateStr}T00:00:00`).getDay();
+    return closedWeekdays.includes(dow);
+  }, [closedWeekdays]);
+
+  const isUnavailableDate = useCallback((dateStr) => {
+    if (!dateStr) return false;
+    if (isClosedByWeekday(dateStr)) return true;
+    return unavailableRanges.some((range) => range?.start_date && range?.end_date && range.start_date <= dateStr && dateStr <= range.end_date);
+  }, [isClosedByWeekday, unavailableRanges]);
+
+  const normalizeCalendarDate = useCallback((arg) => {
+    if (arg?.dateStr) return arg.dateStr;
+    const date = arg?.date;
+    if (!(date instanceof Date)) return '';
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }, []);
+
+  const handleCalendarDayCellDidMount = useCallback((arg) => {
+    const cell = arg?.el;
+    if (!cell) return;
+
+    const frame = cell.querySelector('.fc-daygrid-day-frame') || cell;
+    frame.style.position = 'relative';
+
+    const dayStr = normalizeCalendarDate(arg);
+    const unavailable = isUnavailableDate(dayStr);
+    const existingIcon = cell.querySelector('.fc-unavailable-icon');
+
+    if (unavailable && !existingIcon) {
+      const icon = document.createElement('span');
+      icon.className = 'fc-unavailable-icon';
+      icon.textContent = '🚫';
+      icon.setAttribute('aria-label', 'Unavailable date');
+      icon.title = 'Unavailable date';
+      icon.style.cssText = 'position:absolute;top:3px;right:4px;font-size:15px;line-height:1;pointer-events:none;z-index:2;background:rgba(255,255,255,0.95);border-radius:999px;padding:1px';
+      frame.appendChild(icon);
+    } else if (!unavailable && existingIcon) {
+      existingIcon.remove();
+    }
+  }, [isUnavailableDate, normalizeCalendarDate]);
+
+  const handleDateSelect = useCallback((info) => {
+    if (!apptForm.chamber_id) {
+      toastError('Select a chamber first.');
+      return;
+    }
+
+    const dateStr = info.dateStr;
+    if (isUnavailableDate(dateStr)) {
+      toastError('Selected chamber is unavailable on this date.');
+      return;
+    }
+
+    setSelectedDate(dateStr);
+    setPreviewSerial(null);
+    setPreviewTime(null);
+    setApptForm((prev) => ({ ...prev, appointment_date: dateStr, appointment_time: '' }));
+  }, [apptForm.chamber_id, isUnavailableDate]);
+
+  useEffect(() => {
+    if (!showCreateModal || !apptForm.chamber_id) {
+      setSelectedDate(null);
+      setPreviewSerial(null);
+      setPreviewTime(null);
+      setUnavailableRanges([]);
+      setClosedWeekdays([]);
+      return;
+    }
+
+    let mounted = true;
+    const run = async () => {
+      try {
+        setLoadingCalendar(true);
+        const params = new URLSearchParams({ chamber_id: String(apptForm.chamber_id) });
+        const res = await fetch(`/api/public/unavailable-ranges?${params.toString()}`, {
+          headers: { Accept: 'application/json' },
+          credentials: 'same-origin',
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!mounted) return;
+        setUnavailableRanges(Array.isArray(data?.ranges) ? data.ranges : []);
+        setClosedWeekdays(Array.isArray(data?.closed_weekdays) ? data.closed_weekdays : []);
+      } catch {
+        if (!mounted) return;
+        setUnavailableRanges([]);
+        setClosedWeekdays([]);
+      } finally {
+        if (!mounted) return;
+        setLoadingCalendar(false);
+      }
+    };
+
+    run();
+    return () => { mounted = false; };
+  }, [showCreateModal, apptForm.chamber_id]);
+
+  useEffect(() => {
+    const date = apptForm.appointment_date;
+    const chamberId = apptForm.chamber_id;
+
+    if (!showCreateModal || !date || !chamberId) {
+      setPreviewSerial(null);
+      setPreviewTime(null);
+      setApptForm((prev) => (prev.appointment_time ? { ...prev, appointment_time: '' } : prev));
+      return;
+    }
+
+    let cancelled = false;
+    const run = async () => {
+      try {
+        setLoadingPreview(true);
+        const params = new URLSearchParams({ date, chamber_id: String(chamberId) });
+        const res = await fetch(`/api/public/booking-preview?${params.toString()}`, {
+          headers: { Accept: 'application/json' },
+          credentials: 'same-origin',
+        });
+        const data = await res.json().catch(() => ({}));
+        if (cancelled) return;
+        const nextTime = data?.estimated_time ?? null;
+        setPreviewSerial(data?.serial_no ?? null);
+        setPreviewTime(nextTime);
+        setApptForm((prev) => ({ ...prev, appointment_time: nextTime || '' }));
+      } catch {
+        if (cancelled) return;
+        setPreviewSerial(null);
+        setPreviewTime(null);
+        setApptForm((prev) => ({ ...prev, appointment_time: '' }));
+      } finally {
+        if (cancelled) return;
+        setLoadingPreview(false);
+      }
+    };
+
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [showCreateModal, apptForm.appointment_date, apptForm.chamber_id]);
 
   const handleCreateAppointment = async () => {
     setApptErrors({});
@@ -294,9 +518,10 @@ export default function DoctorAppointments() {
     if (apptMode === 'select' && !chosenPatient) {
       errors.patient = 'Please select a patient.';
     }
-    if ((apptMode === 'walkin' || apptMode === 'new') && !apptForm.patient_name.trim()) {
+    if (apptMode === 'walkin' && !apptForm.patient_name.trim()) {
       errors.patient_name = 'Patient name is required.';
     }
+    if (!apptForm.chamber_id) errors.chamber_id = 'Chamber is required.';
     if (!apptForm.appointment_date) errors.appointment_date = 'Date is required.';
     if (!apptForm.appointment_time) errors.appointment_time = 'Time is required.';
 
@@ -307,20 +532,19 @@ export default function DoctorAppointments() {
 
     setApptSubmitting(true);
     try {
-      const modeMap = { select: 'select_patient', walkin: 'walkin', new: 'new_patient' };
+      const modeMap = { select: 'select_patient', walkin: 'walkin' };
       const payload = {
-        mode:             modeMap[apptMode],
-        user_id:          apptMode === 'select' ? chosenPatient.id : undefined,
-        name:             apptMode === 'select' ? chosenPatient?.name : apptForm.patient_name,
-        phone:            apptMode === 'select' ? chosenPatient?.phone || undefined : apptForm.patient_phone || undefined,
-        address:          apptForm.patient_address || undefined,
-        age:              apptMode !== 'select' && apptForm.patient_age ? Number(apptForm.patient_age) : undefined,
-        gender:           apptMode !== 'select' && apptForm.patient_gender ? apptForm.patient_gender : undefined,
-        chamber_id:       apptForm.chamber_id ? Number(apptForm.chamber_id) : undefined,
+        mode: modeMap[apptMode],
+        user_id: apptMode === 'select' ? chosenPatient.id : undefined,
+        name: apptMode === 'select' ? chosenPatient?.name : apptForm.patient_name,
+        phone: apptMode === 'select' ? chosenPatient?.phone || undefined : apptForm.patient_phone || undefined,
+        address: apptMode === 'select' ? undefined : (apptForm.patient_address || undefined),
+        age: apptMode === 'walkin' && apptForm.patient_age ? Number(apptForm.patient_age) : undefined,
+        gender: apptMode === 'walkin' && apptForm.patient_gender ? apptForm.patient_gender : undefined,
+        chamber_id: apptForm.chamber_id ? Number(apptForm.chamber_id) : undefined,
         appointment_date: apptForm.appointment_date,
         appointment_time: apptForm.appointment_time,
-        symptoms:         apptForm.symptoms || undefined,
-        status:           apptForm.status,
+        status: 'scheduled',
       };
 
       const res = await fetch('/api/doctor/appointments', {
@@ -338,7 +562,8 @@ export default function DoctorAppointments() {
 
       if (res.ok) {
         toastSuccess('Appointment created successfully.');
-        fetchAppointments(buildParams());
+        setCurrentPage(1);
+        fetchAppointments(buildParams(1));
         resetAndClose();
       } else {
         if (data?.errors) {
@@ -358,109 +583,93 @@ export default function DoctorAppointments() {
     }
   };
 
-  const filteredRows = useMemo(() => {
-    const needle = searchTerm.trim().toLowerCase();
-    const now = new Date();
+  const handleSelectPatient = async (patient) => {
+    setChosenPatient(patient);
+    setPatientSearch(patient?.name || '');
+    setShowPatientDrop(false);
 
-    const inDateRange = (appointmentDate) => {
-      if (!appointmentDate) return false;
-      const dateOnly = String(appointmentDate).slice(0, 10);
+    if (!patient?.id) return;
 
-      if (datePreset === 'all') return true;
-      if (datePreset === 'custom') {
-        if (dateFrom && dateOnly < dateFrom) return false;
-        if (dateTo && dateOnly > dateTo) return false;
-        return true;
+    try {
+      const res = await fetch(`/api/doctor/patients/${patient.id}`, {
+        headers: { Accept: 'application/json' },
+        credentials: 'same-origin',
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data?.patient) {
+        setChosenPatient(data.patient);
+      }
+    } catch {
+      // Keep the lightweight search result if the detail request fails.
+    }
+  };
+
+  const handleCreatePatient = async () => {
+    const errors = {};
+    if (!patientForm.name.trim()) errors.name = 'Patient name is required.';
+    if (!patientForm.phone.trim()) errors.phone = 'Phone is required.';
+    if (Object.keys(errors).length > 0) {
+      setPatientFormErrors(errors);
+      return;
+    }
+
+    setPatientSubmitting(true);
+    setPatientFormErrors({});
+    try {
+      const res = await fetch('/api/doctor/patients', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          name: patientForm.name,
+          phone: patientForm.phone,
+          age: patientForm.age ? Number(patientForm.age) : undefined,
+          gender: patientForm.gender || undefined,
+          address: patientForm.address || undefined,
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (data?.errors) {
+          const mapped = {};
+          Object.entries(data.errors).forEach(([key, msgs]) => {
+            mapped[key] = Array.isArray(msgs) ? msgs[0] : msgs;
+          });
+          setPatientFormErrors(mapped);
+        } else {
+          toastError(data?.message || 'Failed to create patient.');
+        }
+        return;
       }
 
-      if (datePreset === 'today') {
-        return dateOnly === now.toISOString().slice(0, 10);
+      const patient = data?.patient || null;
+      if (patient) {
+        setApptMode('select');
+        setChosenPatient(patient);
+        setPatientSearch(patient.name || '');
+        setShowPatientDrop(false);
       }
-
-      const targetDate = new Date(dateOnly);
-      if (Number.isNaN(targetDate.getTime())) return false;
-
-      if (datePreset === 'week') {
-        const startOfWeek = new Date(now);
-        const day = startOfWeek.getDay();
-        startOfWeek.setDate(startOfWeek.getDate() - day);
-        startOfWeek.setHours(0, 0, 0, 0);
-
-        const endOfWeek = new Date(startOfWeek);
-        endOfWeek.setDate(startOfWeek.getDate() + 6);
-        endOfWeek.setHours(23, 59, 59, 999);
-
-        return targetDate >= startOfWeek && targetDate <= endOfWeek;
-      }
-
-      if (datePreset === 'month') {
-        return targetDate.getFullYear() === now.getFullYear() && targetDate.getMonth() === now.getMonth();
-      }
-
-      return true;
-    };
-
-    return rows.filter((appointment) => {
-      const statusOk = statusFilter === 'all' || appointment.status === statusFilter;
-      if (!statusOk) {
-        return false;
-      }
-
-      if (!inDateRange(appointment.appointment_date)) {
-        return false;
-      }
-
-      const genderValue = String(getPatientGender(appointment) || '').trim().toLowerCase();
-      const genderOk = genderFilter === 'all' || genderValue === genderFilter;
-      if (!genderOk) {
-        return false;
-      }
-
-      const ageRaw = Number(getPatientAge(appointment));
-      const hasAge = Number.isFinite(ageRaw) && ageRaw > 0;
-
-      if (ageMin !== '' && (!hasAge || ageRaw < Number(ageMin))) {
-        return false;
-      }
-
-      if (ageMax !== '' && (!hasAge || ageRaw > Number(ageMax))) {
-        return false;
-      }
-
-      if (chamberFilter !== 'all') {
-        const apptChamberId = appointment.chamber?.id ? String(appointment.chamber.id) : null;
-        if (apptChamberId !== chamberFilter) return false;
-      }
-
-      if (!needle) {
-        return true;
-      }
-
-      const name = getPatientName(appointment).toLowerCase();
-      const phone = (getPatientPhone(appointment) || '').toLowerCase();
-      const appointmentId = String(appointment.id || '').toLowerCase();
-      const serial = String(appointment.serial_no || '').toLowerCase();
-
-      return (
-        name.includes(needle)
-        || phone.includes(needle)
-        || appointmentId.includes(needle)
-        || serial.includes(needle)
-      );
-    });
-  }, [rows, statusFilter, searchTerm, datePreset, dateFrom, dateTo, genderFilter, ageMin, ageMax, chamberFilter]);
+      toastSuccess(data?.message || 'Patient created successfully.');
+      resetCreatePatientModal();
+    } catch {
+      toastError('Failed to create patient.');
+    } finally {
+      setPatientSubmitting(false);
+    }
+  };
 
   useEffect(() => {
     setCurrentPage(1);
   }, [statusFilter, searchTerm, datePreset, dateFrom, dateTo, genderFilter, ageMin, ageMax, chamberFilter]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredRows.length / ROWS_PER_PAGE));
+  const totalPages = Math.max(1, pageMeta.lastPage || 1);
   const safeCurrentPage = Math.min(currentPage, totalPages);
-  const paginatedRows = useMemo(() => {
-    const start = (safeCurrentPage - 1) * ROWS_PER_PAGE;
-    const end = start + ROWS_PER_PAGE;
-    return filteredRows.slice(start, end);
-  }, [filteredRows, safeCurrentPage, ROWS_PER_PAGE]);
+  const paginatedRows = rows;
 
   const visiblePageNumbers = useMemo(() => {
     const windowSize = 5;
@@ -477,12 +686,14 @@ export default function DoctorAppointments() {
 
   const today = new Date().toISOString().split('T')[0];
   const stats = useMemo(() => ({
-    total: rows.length,
+    total: pageMeta.total,
     today: rows.filter((item) => item.appointment_date === today).length,
+    awaitingTests: rows.filter((item) => item.status === 'awaiting_tests').length,
+    arrived: rows.filter((item) => item.status === 'arrived').length,
     inProgress: rows.filter((item) => item.status === 'in_consultation').length,
     completed: rows.filter((item) => item.status === 'prescribed').length,
-    visible: filteredRows.length,
-  }), [rows, today, filteredRows.length]);
+    visible: pageMeta.total,
+  }), [rows, today, pageMeta.total]);
 
   const statusCountItems = useMemo(() => (
     STATUS_OPTIONS
@@ -494,34 +705,108 @@ export default function DoctorAppointments() {
       }))
   ), [rows]);
 
+  const topWidgets = [
+    {
+      key: 'today',
+      label: 'Today Appointments',
+      value: stats.today,
+      helper: `${stats.visible} total appointments found`,
+      icon: CalendarCheck2,
+      tone: 'bg-sky-50 text-sky-700',
+    },
+    {
+      key: 'queue',
+      label: 'Queue Now',
+      value: stats.arrived,
+      helper: 'Patients marked arrived',
+      icon: UserCheck,
+      tone: 'bg-amber-50 text-amber-700',
+    },
+    {
+      key: 'progress',
+      label: 'In Consultation',
+      value: stats.inProgress,
+      helper: 'Currently being seen',
+      icon: Clock3,
+      tone: 'bg-violet-50 text-violet-700',
+    },
+    {
+      key: 'tests',
+      label: 'Awaiting Tests',
+      value: stats.awaitingTests,
+      helper: `${stats.completed} completed overall`,
+      icon: FileText,
+      tone: 'bg-orange-50 text-orange-700',
+    },
+  ];
+
+  const calendarRenderKey = useMemo(
+    () => [
+      apptForm.chamber_id || 'none',
+      closedWeekdays.join(','),
+      unavailableRanges.map((range) => `${range?.start_date || ''}-${range?.end_date || ''}`).join(','),
+    ].join('|'),
+    [apptForm.chamber_id, closedWeekdays, unavailableRanges]
+  );
+
   return (
     <DoctorLayout title="Appointments" gradient={false}>
       <div className="mx-auto max-w-[1400px]">
-        <section className="surface-card rounded-3xl overflow-hidden">
-          <div className="px-6 py-5 border-b border-slate-100">
-            <div className="flex flex-col justify-between gap-3 md:flex-row md:items-center">
+        <section className="mb-4 space-y-4">
+          <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
+            <div>
               <div className="flex items-center gap-3">
-                <h2 className="text-xl font-semibold text-[#2D3A74]">Appointments</h2>
+                <h2 className="text-2xl font-semibold text-[#2D3A74]">Appointments</h2>
                 <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
                   {stats.visible}
                 </span>
               </div>
-              <div className="grid grid-cols-2 gap-2 text-xs sm:flex sm:flex-wrap sm:items-center sm:gap-2.5">
-                <div className={`rounded-xl border px-2.5 py-1.5 ${getStatusSummaryTone('today')}`}>
-                  Today: <span className="font-semibold">{stats.today}</span>
-                </div>
-                {statusCountItems.map((statusItem) => (
-                  <div
-                    key={statusItem.key}
-                    className={`rounded-xl border px-2.5 py-1.5 ${getStatusSummaryTone(statusItem.key)}`}
-                  >
-                    {statusItem.label}: <span className="font-semibold">{statusItem.count}</span>
-                  </div>
-                ))}
-              </div>
+              <p className="mt-1 text-sm text-slate-500">Track today’s queue, update statuses, and open prescriptions from one place.</p>
             </div>
 
-            <div className="mt-4 flex flex-col gap-3">
+            <div className="flex flex-wrap items-center gap-2.5">
+              {/* <div className={`rounded-xl border px-2.5 py-1.5 text-xs ${getStatusSummaryTone('today')}`}>
+                Today: <span className="font-semibold">{stats.today}</span>
+              </div>
+              <div className={`rounded-xl border px-2.5 py-1.5 text-xs ${getStatusSummaryTone('awaiting_tests')}`}>
+                Awaiting tests: <span className="font-semibold">{stats.awaitingTests}</span>
+              </div> */}
+              <button
+                type="button"
+                onClick={() => setShowCreateModal(true)}
+                className="inline-flex items-center gap-2 rounded-xl bg-[#2D3A74] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#243063]"
+              >
+                <Plus className="h-4 w-4" />
+                New Appointment
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {topWidgets.map((widget) => {
+              const Icon = widget.icon;
+
+              return (
+                <div key={widget.key} className="surface-card rounded-3xl p-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-sm text-slate-500 mb-1">{widget.label}</p>
+                      <p className="text-3xl font-semibold text-[#2D3A74]">{widget.value}</p>
+                    </div>
+                    <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${widget.tone}`}>
+                      <Icon className="h-5 w-5" />
+                    </div>
+                  </div>
+                  <p className="mt-4 text-xs text-slate-400">{widget.helper}</p>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        <section className="surface-card rounded-3xl overflow-hidden">
+          <div className="px-6 py-5 border-b border-slate-100">
+            <div className="flex flex-col gap-3">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,360px)_180px_180px] lg:items-end">
                   <div>
@@ -580,14 +865,6 @@ export default function DoctorAppointments() {
                 <div className="flex items-center justify-end gap-2">
                   <button
                     type="button"
-                    onClick={() => setShowCreateModal(true)}
-                    className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100"
-                  >
-                    <Plus className="h-4 w-4" />
-                    New Appointment
-                  </button>
-                  <button
-                    type="button"
                     onClick={() => setShowFilters((prev) => !prev)}
                     className="inline-flex items-center gap-2 rounded-xl bg-[#2D3A74] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#243063]"
                   >
@@ -612,11 +889,10 @@ export default function DoctorAppointments() {
                             key={option.value}
                             type="button"
                             onClick={() => setGenderFilter(option.value)}
-                            className={`min-w-20 rounded-lg border px-3 py-2 text-sm font-semibold transition ${
-                              genderFilter === option.value
+                            className={`min-w-20 rounded-lg border px-3 py-2 text-sm font-semibold transition ${genderFilter === option.value
                                 ? 'border-[#2D3A74] bg-[#2D3A74] text-white'
                                 : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
-                            }`}
+                              }`}
                           >
                             {option.label}
                           </button>
@@ -712,14 +988,23 @@ export default function DoctorAppointments() {
                 <tr>
                   <th className="px-6 py-4 text-center">#</th>
                   <th className="px-6 py-4 text-center">Patient</th>
+                  <th className="px-6 py-4 text-center">Phone</th>
                   <th className="px-6 py-4 text-center">Date</th>
-                  <th className="px-6 py-4 text-center">Time</th>
                   <th className="px-6 py-4 text-center">Update Status</th>
                   <th className="px-6 py-4 text-center">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white">
-                {paginatedRows.map((appointment, index) => {
+                {loading ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-14">
+                      <div className="flex flex-col items-center justify-center gap-3 text-sm text-slate-500">
+                        <Loader2 className="h-6 w-6 animate-spin text-[#2D3A74]" />
+                        <span>Loading appointments...</span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : paginatedRows.map((appointment, index) => {
                   const serial = appointment.id;
                   const patientPhone = getPatientPhone(appointment);
 
@@ -732,31 +1017,28 @@ export default function DoctorAppointments() {
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="flex items-center justify-center gap-2.5 text-center">
+                        <div className="flex items-center justify-start gap-2.5 text-start">
                           <GenderIconAvatar gender={getPatientGender(appointment)} />
                           <div>
                             <div className="font-semibold text-slate-900">{renderHighlighted(getPatientName(appointment), searchTerm)}</div>
                             <div className="mt-0.5 text-xs font-medium text-slate-500">{formatAgeGender(appointment)}</div>
-                            <div className="mt-1 text-[12px] font-medium text-slate-500">
-                              <span className="inline-flex items-center justify-center gap-1.5">
-                                <Phone className="h-3.5 w-3.5 text-slate-400" />
-                                {renderHighlighted(patientPhone || 'N/A', searchTerm)}
-                              </span>
-                            </div>
+                            
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 text-[13px] font-medium text-slate-700 text-center">
                         <span className="inline-flex items-center justify-center gap-1.5">
+                          <Phone className="h-3.5 w-3.5 text-slate-400" />
+                          {renderHighlighted(patientPhone || 'N/A', searchTerm)}
+                        </span>
+                       
+                      </td>
+                      <td className="px-6 py-4 text-[13px] font-medium text-slate-700 text-center">
+                         <span className="inline-flex items-center justify-center gap-1.5">
                           <Calendar className="h-[18px] w-[18px] text-slate-600" />
                           {formatDisplayDateWithYearFromDateLike(appointment.appointment_date) || appointment.appointment_date}
                         </span>
-                      </td>
-                      <td className="px-6 py-4 text-[13px] font-medium text-slate-700 text-center">
-                        <span className="inline-flex items-center justify-center gap-1.5">
-                          <Clock3 className="h-4 w-4 text-slate-500" />
-                          {formatDisplayTime12h(appointment.appointment_time) || appointment.appointment_time}
-                        </span>
+                       
                       </td>
                       <td className="px-6 py-4 text-center">
                         <select
@@ -830,9 +1112,7 @@ export default function DoctorAppointments() {
             </table>
           </div>
 
-          {loading ? (
-            <div className="p-10 text-center text-sm text-slate-500">Loading appointments…</div>
-          ) : filteredRows.length === 0 ? (
+          {!loading && paginatedRows.length === 0 ? (
             <div className="p-5">
               <DocEmptyState
                 icon={CalendarCheck2}
@@ -842,20 +1122,20 @@ export default function DoctorAppointments() {
             </div>
           ) : null}
 
-          {!loading && filteredRows.length > 0 ? (
+          {!loading && paginatedRows.length > 0 ? (
             <div className="flex flex-col gap-3 border-t border-slate-100 bg-slate-50 px-6 py-3.5 md:flex-row md:items-center md:justify-between">
               <p className="text-xs text-slate-500">
                 Showing
                 {' '}
-                <span className="font-semibold text-slate-700">{(safeCurrentPage - 1) * ROWS_PER_PAGE + 1}</span>
+                <span className="font-semibold text-slate-700">{pageMeta.total === 0 ? 0 : ((safeCurrentPage - 1) * ROWS_PER_PAGE) + 1}</span>
                 {' '}
                 to
                 {' '}
-                <span className="font-semibold text-slate-700">{Math.min(safeCurrentPage * ROWS_PER_PAGE, filteredRows.length)}</span>
+                <span className="font-semibold text-slate-700">{Math.min(safeCurrentPage * ROWS_PER_PAGE, pageMeta.total)}</span>
                 {' '}
                 of
                 {' '}
-                <span className="font-semibold text-slate-700">{filteredRows.length}</span>
+                <span className="font-semibold text-slate-700">{pageMeta.total}</span>
                 {' '}
                 appointments
               </p>
@@ -874,11 +1154,10 @@ export default function DoctorAppointments() {
                     key={page}
                     type="button"
                     onClick={() => setCurrentPage(page)}
-                    className={`min-w-8 rounded-lg px-2.5 py-1.5 text-sm font-semibold transition ${
-                      page === safeCurrentPage
+                    className={`min-w-8 rounded-lg px-2.5 py-1.5 text-sm font-semibold transition ${page === safeCurrentPage
                         ? 'bg-[#2D3A74] text-white shadow-sm'
                         : 'border border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-100'
-                    }`}
+                      }`}
                   >
                     {page}
                   </button>
@@ -1006,11 +1285,10 @@ export default function DoctorAppointments() {
           {/* Patient type tabs */}
           <div>
             <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Patient Type</p>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               {[
                 { value: 'select', label: 'Select Patient', icon: UserCheck },
-                { value: 'walkin', label: 'Walk-in', icon: User },
-                { value: 'new', label: 'New Patient', icon: UserPlus },
+                { value: 'walkin', label: 'Walk-In', icon: Plus },
               ].map(({ value, label, icon: ModeIcon }) => (
                 <button
                   key={value}
@@ -1023,11 +1301,10 @@ export default function DoctorAppointments() {
                     setApptErrors({});
                     setApptForm((prev) => ({ ...prev, patient_name: '', patient_phone: '', patient_age: '', patient_gender: '' }));
                   }}
-                  className={`flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2.5 text-xs font-semibold transition ${
-                    apptMode === value
+                  className={`flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2.5 text-xs font-semibold transition ${apptMode === value
                       ? 'border-[#2D3A74] bg-[#2D3A74] text-white'
                       : 'border-slate-200 bg-white text-slate-600 hover:border-[#2D3A74]/30 hover:bg-slate-50'
-                  }`}
+                    }`}
                 >
                   <ModeIcon className="h-3.5 w-3.5" />
                   {label}
@@ -1052,10 +1329,18 @@ export default function DoctorAppointments() {
                   }}
                   onFocus={() => { if (patientSearch) setShowPatientDrop(true); }}
                   placeholder="Search by name or phone…"
-                  className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-10 text-sm text-slate-900 placeholder-slate-400 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+                  className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-24 text-sm text-slate-900 placeholder-slate-400 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowCreatePatientModal(true)}
+                  className="absolute right-2 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-600 transition hover:border-[#2D3A74]/30 hover:bg-[#2D3A74]/5 hover:text-[#2D3A74]"
+                  title="Create patient"
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
                 {patientSearching && (
-                  <Loader2 className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-slate-400" />
+                  <Loader2 className="pointer-events-none absolute right-12 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-slate-400" />
                 )}
 
                 {showPatientDrop && !patientSearching && patientSearch.trim() && patientResults.length === 0 && (
@@ -1070,11 +1355,7 @@ export default function DoctorAppointments() {
                       <button
                         key={patient.id}
                         type="button"
-                        onClick={() => {
-                          setChosenPatient(patient);
-                          setPatientSearch(patient.name);
-                          setShowPatientDrop(false);
-                        }}
+                        onClick={() => handleSelectPatient(patient)}
                         className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm transition hover:bg-slate-50"
                       >
                         <GenderIconAvatar gender={patient.gender} />
@@ -1093,24 +1374,12 @@ export default function DoctorAppointments() {
               </div>
               {apptErrors.patient && <p className="mt-1 text-xs text-rose-500">{apptErrors.patient}</p>}
 
-              {/* Address for select mode */}
-              <div className="mt-3">
-                <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Address</label>
-                <input
-                  type="text"
-                  value={apptForm.patient_address}
-                  onChange={(e) => setApptForm((prev) => ({ ...prev, patient_address: e.target.value }))}
-                  placeholder="Patient's home address"
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
-                />
-              </div>
-
               {/* Selected patient info card */}
               {chosenPatient && (
                 <div className="mt-3 rounded-xl border border-[#2D3A74]/20 bg-[#2D3A74]/5 p-3">
                   <div className="flex items-center gap-3">
                     <GenderIconAvatar gender={chosenPatient.gender} />
-                    <div className="grid flex-1 grid-cols-3 gap-x-4 gap-y-1">
+                    <div className="grid flex-1 grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4">
                       <div>
                         <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">Name</p>
                         <p className="text-[13px] font-semibold text-slate-800">{chosenPatient.name}</p>
@@ -1126,6 +1395,10 @@ export default function DoctorAppointments() {
                           {chosenPatient.gender ? ` • ${formatGender(chosenPatient.gender)}` : ''}
                         </p>
                       </div>
+                      <div className="col-span-2 sm:col-span-4">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">Address</p>
+                        <p className="text-[13px] font-semibold text-slate-800 break-words">{getPatientAddress(chosenPatient) || '—'}</p>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1133,8 +1406,8 @@ export default function DoctorAppointments() {
             </div>
           )}
 
-          {/* Walk-in / New Patient: manual fields */}
-          {(apptMode === 'walkin' || apptMode === 'new') && (
+          {/* Walk-in: manual fields */}
+          {apptMode === 'walkin' && (
             <div className="grid grid-cols-2 gap-3">
               <div className="col-span-2 sm:col-span-1">
                 <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
@@ -1159,13 +1432,6 @@ export default function DoctorAppointments() {
                   className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
                 />
               </div>
-              {apptMode === 'new' && apptForm.patient_phone.trim() && (
-                <div className="col-span-2 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs text-blue-700">
-                  <p className="mb-1 font-semibold">Auto-generated login credentials:</p>
-                  <p>Username: <span className="font-mono font-bold">{apptForm.patient_phone.trim()}</span></p>
-                  <p>Password: <span className="font-mono font-bold">{apptForm.patient_phone.trim()}</span></p>
-                </div>
-              )}
               <div className="col-span-2">
                 <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Address</label>
                 <input
@@ -1208,70 +1474,192 @@ export default function DoctorAppointments() {
 
           {/* Appointment fields */}
           <div className="grid grid-cols-2 gap-3">
-            <div>
+            <div className="col-span-2 sm:col-span-1">
               <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
-                Date <span className="text-rose-400">*</span>
+                Chamber <span className="text-rose-400">*</span>
               </label>
-              <input
-                type="date"
-                value={apptForm.appointment_date}
-                onChange={(e) => setApptForm((prev) => ({ ...prev, appointment_date: e.target.value }))}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-700 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
-              />
-              {apptErrors.appointment_date && <p className="mt-1 text-xs text-rose-500">{apptErrors.appointment_date}</p>}
-            </div>
-            <div>
-              <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
-                Time <span className="text-rose-400">*</span>
-              </label>
-              <input
-                type="time"
-                value={apptForm.appointment_time}
-                onChange={(e) => setApptForm((prev) => ({ ...prev, appointment_time: e.target.value }))}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-700 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
-              />
-              {apptErrors.appointment_time && <p className="mt-1 text-xs text-rose-500">{apptErrors.appointment_time}</p>}
-            </div>
-            <div>
-              <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Status</label>
               <select
-                value={apptForm.status}
-                onChange={(e) => setApptForm((prev) => ({ ...prev, status: e.target.value }))}
+                value={apptForm.chamber_id}
+                onChange={(e) => {
+                  const nextChamberId = e.target.value;
+                  setApptForm((prev) => ({ ...prev, chamber_id: nextChamberId, appointment_date: '', appointment_time: '' }));
+                  setSelectedDate(null);
+                  setPreviewSerial(null);
+                  setPreviewTime(null);
+                }}
                 className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-700 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
               >
-                <option value="scheduled">Scheduled</option>
-                <option value="arrived">Arrived</option>
-                <option value="in_consultation">In consultation</option>
-                <option value="awaiting_tests">Awaiting tests</option>
-                <option value="prescribed">Prescribed</option>
-                <option value="cancelled">Cancelled</option>
+                <option value="">Select chamber</option>
+                {chambers.map((c) => (
+                  <option key={c.id} value={String(c.id)}>{c.name}</option>
+                ))}
               </select>
+              {apptErrors.chamber_id && <p className="mt-1 text-xs text-rose-500">{apptErrors.chamber_id}</p>}
             </div>
-            <div>
-              <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Symptoms</label>
-              <input
-                type="text"
-                value={apptForm.symptoms}
-                onChange={(e) => setApptForm((prev) => ({ ...prev, symptoms: e.target.value }))}
-                placeholder="Chief complaints…"
-                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
-              />
-            </div>
-            {chambers.length > 0 && (
-              <div className="col-span-2 sm:col-span-1">
-                <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Chamber</label>
-                <select
-                  value={apptForm.chamber_id}
-                  onChange={(e) => setApptForm((prev) => ({ ...prev, chamber_id: e.target.value }))}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-700 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
-                >
-                  <option value="">No specific chamber</option>
-                  {chambers.map((c) => (
-                    <option key={c.id} value={String(c.id)}>{c.name}</option>
-                  ))}
-                </select>
+            <div className="col-span-2 grid gap-3 xl:grid-cols-[minmax(0,360px)_minmax(0,1fr)] xl:items-start">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Available Dates</p>
+                    <p className="text-xs text-slate-500">Select chamber first, then choose an available date.</p>
+                  </div>
+                  {loadingCalendar && <Loader2 className="h-4 w-4 animate-spin text-slate-400" />}
+                </div>
+                <div className="doctor-appointment-calendar mx-auto max-w-[340px] rounded-xl bg-white p-1.5 shadow-inner shadow-slate-100">
+                  <FullCalendar
+                    key={calendarRenderKey}
+                    plugins={[dayGridPlugin, interactionPlugin]}
+                    initialView="dayGridMonth"
+                    headerToolbar={{ left: 'prev', center: 'title', right: 'next' }}
+                    height={300}
+                    aspectRatio={0.92}
+                    showNonCurrentDates={false}
+                    fixedWeekCount={false}
+                    validRange={{ start: new Date().toISOString().split('T')[0] }}
+                    dateClick={handleDateSelect}
+                    dayCellDidMount={handleCalendarDayCellDidMount}
+                    dayCellClassNames={(arg) => {
+                      const dayStr = normalizeCalendarDate(arg);
+                      if (isUnavailableDate(dayStr)) return 'fc-unavailable';
+                      if (selectedDate === dayStr) return 'fc-day-selected';
+                      return '';
+                    }}
+                  />
+                </div>
+                {apptErrors.appointment_date && <p className="mt-2 text-xs text-rose-500">{apptErrors.appointment_date}</p>}
               </div>
-            )}
+
+              <div className="rounded-2xl border border-slate-200 bg-white p-3 xl:min-h-[365px]">
+                <div className="mb-2 flex items-center justify-between">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Appointment Preview</p>
+                    <p className="text-xs text-slate-500">Generated from selected date and chamber.</p>
+                  </div>
+                  {loadingPreview && <Loader2 className="h-4 w-4 animate-spin text-slate-400" />}
+                </div>
+                {!selectedDate ? (
+                  <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
+                    Select a date first.
+                  </div>
+                ) : !apptForm.chamber_id ? (
+                  <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
+                    Select a chamber first.
+                  </div>
+                ) : loadingPreview ? (
+                  <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Loading preview...
+                  </div>
+                ) : previewTime ? (
+                  <div className="rounded-xl border border-[#2D3A74]/20 bg-[#2D3A74]/8 px-4 py-3">
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">Date</p>
+                        <p className="mt-1 text-sm font-semibold text-slate-800">{formatDisplayDateWithYearFromDateLike(selectedDate) || selectedDate}</p>
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">Serial</p>
+                        <p className="mt-1 text-sm font-semibold text-slate-800">#{previewSerial}</p>
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">Time</p>
+                        <p className="mt-1 text-sm font-semibold text-slate-800">{formatDisplayTime12h(previewTime) || previewTime}</p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
+                    Preview unavailable.
+                  </div>
+                )}
+                {apptErrors.appointment_time && <p className="mt-2 text-xs text-rose-500">{apptErrors.appointment_time}</p>}
+              </div>
+            </div>
+          </div>
+        </div>
+      </DocModal>
+
+      <DocModal
+        open={showCreatePatientModal}
+        onClose={resetCreatePatientModal}
+        title="Create Patient"
+        description="Add a new patient and use them immediately in the appointment form."
+        size="lg"
+        footer={(
+          <div className="flex w-full items-center justify-end gap-2">
+            <DocButton variant="secondary" onClick={resetCreatePatientModal} disabled={patientSubmitting}>Cancel</DocButton>
+            <DocButton onClick={handleCreatePatient} disabled={patientSubmitting}>
+              {patientSubmitting ? (
+                <span className="inline-flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Creating...
+                </span>
+              ) : 'Create Patient'}
+            </DocButton>
+          </div>
+        )}
+      >
+        <div className="grid grid-cols-2 gap-3">
+          <div className="col-span-2 sm:col-span-1">
+            <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+              Patient Name <span className="text-rose-400">*</span>
+            </label>
+            <input
+              type="text"
+              value={patientForm.name}
+              onChange={(e) => setPatientForm((prev) => ({ ...prev, name: e.target.value }))}
+              placeholder="Full name"
+              className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+            />
+            {patientFormErrors.name && <p className="mt-1 text-xs text-rose-500">{patientFormErrors.name}</p>}
+          </div>
+          <div className="col-span-2 sm:col-span-1">
+            <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+              Phone <span className="text-rose-400">*</span>
+            </label>
+            <input
+              type="text"
+              value={patientForm.phone}
+              onChange={(e) => setPatientForm((prev) => ({ ...prev, phone: e.target.value }))}
+              placeholder="Phone number"
+              className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+            />
+            {patientFormErrors.phone && <p className="mt-1 text-xs text-rose-500">{patientFormErrors.phone}</p>}
+          </div>
+          <div>
+            <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Age</label>
+            <input
+              type="number"
+              min="0"
+              max="150"
+              value={patientForm.age}
+              onChange={(e) => setPatientForm((prev) => ({ ...prev, age: e.target.value }))}
+              placeholder="e.g. 30"
+              className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Gender</label>
+            <select
+              value={patientForm.gender}
+              onChange={(e) => setPatientForm((prev) => ({ ...prev, gender: e.target.value }))}
+              className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-700 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+            >
+              <option value="">Select gender</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div className="col-span-2">
+            <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Address</label>
+            <input
+              type="text"
+              value={patientForm.address}
+              onChange={(e) => setPatientForm((prev) => ({ ...prev, address: e.target.value }))}
+              placeholder="Home address"
+              className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+            />
           </div>
         </div>
       </DocModal>

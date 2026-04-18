@@ -84,14 +84,14 @@ export default function DoctorDashboard({
   const getCsrfToken = () => document.querySelector('meta[name="csrf-token"]')?.content || '';
 
   const defaultStats = {
-    todayAppointments:   apiStats?.today_appointments ?? 0,
-    scheduled:           apiStats?.scheduled ?? 0,
-    totalPatients:       apiStats?.total_patients ?? 0,
-    totalPrescriptions:  apiStats?.total_prescriptions ?? 0,
+    todayAppointments: apiStats?.today_appointments ?? 0,
+    scheduled: apiStats?.scheduled ?? 0,
+    totalPatients: apiStats?.total_patients ?? 0,
+    totalPrescriptions: apiStats?.total_prescriptions ?? 0,
     prescribedThisMonth: apiStats?.prescribed_this_month ?? 0,
-    inConsultation:      apiStats?.in_consultation ?? 0,
-    waitingPatients:     apiStats?.waiting_patients ?? 0,
-    followUpsDue:        todayAppts.filter((a) => a.status === 'awaiting_tests').length,
+    inConsultation: apiStats?.in_consultation ?? 0,
+    waitingPatients: apiStats?.waiting_patients ?? 0,
+    followUpsDue: todayAppts.filter((a) => a.status === 'awaiting_tests').length,
   };
 
   const fmt = (d) => {
@@ -106,6 +106,7 @@ export default function DoctorDashboard({
   const getAge = (a) => a?.patient_age || a?.user?.age || null;
   const getEmail = (a) => a?.patient_email || a?.user?.email || null;
   const getSerial = (a, fallback) => a?.serial_no || fallback;
+  const getChamberName = (a) => a?.chamber?.name || 'Unassigned chamber';
   const formatGender = (value) => {
     if (!value) return 'N/A';
     return value.charAt(0).toUpperCase() + value.slice(1);
@@ -163,8 +164,8 @@ export default function DoctorDashboard({
 
   const tabAppointments =
     activeTab === 'today' ? todayAppointments :
-    activeTab === 'awaiting' ? awaitingList :
-    todayAppointments.filter((a) => a.status === activeTab);
+      activeTab === 'awaiting' ? awaitingList :
+        todayAppointments.filter((a) => a.status === activeTab);
 
   const formatRangeTime = (start, end) => {
     const startLabel = start ? fmtTime(start) : '-';
@@ -189,11 +190,11 @@ export default function DoctorDashboard({
   }));
 
   const TABS = [
-    { key: 'today',           label: 'All Today',       count: todayAppointments.length },
-    { key: 'scheduled',       label: 'Scheduled',       count: todayAppointments.filter((a) => a.status === 'scheduled').length },
-    { key: 'in_consultation', label: 'In Progress',     count: todayAppointments.filter((a) => a.status === 'in_consultation').length },
-    { key: 'awaiting',        label: 'Awaiting Tests',  count: awaitingList.length },
-    { key: 'prescribed',      label: 'Completed',       count: todayAppointments.filter((a) => a.status === 'prescribed').length },
+    { key: 'today', label: 'All Today', count: todayAppointments.length },
+    { key: 'scheduled', label: 'Scheduled', count: todayAppointments.filter((a) => a.status === 'scheduled').length },
+    { key: 'in_consultation', label: 'In Progress', count: todayAppointments.filter((a) => a.status === 'in_consultation').length },
+    { key: 'awaiting', label: 'Awaiting Tests', count: awaitingList.length },
+    { key: 'prescribed', label: 'Completed', count: todayAppointments.filter((a) => a.status === 'prescribed').length },
   ];
 
   const getTabTone = (key) => {
@@ -273,13 +274,6 @@ export default function DoctorDashboard({
     },
   ];
 
-  const statCardItems = [
-    { label: 'Completed Today', value: completedCount, icon: CheckCircle, iconBg: 'bg-orange-50', iconColor: 'text-[#FF7C00]', desc: 'Consultations finished today.' },
-    { label: 'Follow Ups Due', value: defaultStats.followUpsDue, icon: Clock, iconBg: 'bg-blue-50', iconColor: 'text-blue-600', desc: 'Patients needing follow-up visits.' },
-    { label: 'Total Patients', value: defaultStats.totalPatients, icon: Users, iconBg: 'bg-emerald-50', iconColor: 'text-emerald-600', desc: 'All registered patients.' },
-    { label: 'Prescribed This Month', value: defaultStats.prescribedThisMonth, icon: ClipboardList, iconBg: 'bg-violet-50', iconColor: 'text-violet-600', desc: 'Prescriptions written this month.' },
-  ];
-
   const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const monthlyAppointments = Array(12).fill(0);
 
@@ -308,6 +302,28 @@ export default function DoctorDashboard({
     { key: 'prescribed', label: 'Completed', color: '#059669', value: todayAppointments.filter((a) => a.status === 'prescribed').length },
   ];
   const statusGraphMax = Math.max(1, ...statusGraphItems.map((item) => item.value));
+  const chamberBreakdown = Object.values(
+    todayAppointments.reduce((acc, appointment) => {
+      const name = getChamberName(appointment);
+      if (!acc[name]) {
+        acc[name] = {
+          name,
+          count: 0,
+          awaiting: 0,
+          active: 0,
+        };
+      }
+
+      acc[name].count += 1;
+      if (appointment.status === 'awaiting_tests') acc[name].awaiting += 1;
+      if (appointment.status === 'in_consultation') acc[name].active += 1;
+
+      return acc;
+    }, {})
+  ).sort((left, right) => right.count - left.count || left.name.localeCompare(right.name));
+  const chamberMax = Math.max(1, ...chamberBreakdown.map((item) => item.count));
+  const busiestChamber = chamberBreakdown[0] ?? null;
+  const chamberSummary = chamberBreakdown.slice(0, 4);
 
   return (
     <DoctorLayout title="Dashboard" gradient>
@@ -340,61 +356,148 @@ export default function DoctorDashboard({
           </div>
         </section>
 
-        {/* STAT CARDS — exact admin surface-card rounded-3xl p-5 */}
-        <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-          {statCardItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <div key={item.label} className="surface-card rounded-3xl p-5">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-sm text-slate-500 mb-1">{item.label}</p>
-                    <p className="text-3xl font-semibold text-[#2D3A74]">{item.value}</p>
-                  </div>
-                  <div className={`w-11 h-11 rounded-2xl ${item.iconBg} flex items-center justify-center`}>
-                    <Icon className={`h-5 w-5 ${item.iconColor}`} />
-                  </div>
+        <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="surface-card rounded-3xl overflow-hidden xl:col-span-2">
+            <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+              <div className="flex items-center gap-2">
+                <Building2 className="h-4 w-4 text-[#4055A8]" />
+                <div>
+                  <h3 className="text-sm font-semibold text-[#2D3A74]">Today by Chamber</h3>
+                  <p className="text-xs text-slate-500">Live appointment load across chambers.</p>
                 </div>
-                <p className="text-xs text-slate-400 mt-4">{item.desc}</p>
               </div>
-            );
-          })}
+              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
+                {todayAppointments.length} total
+              </span>
+            </div>
+
+            {chamberSummary.length > 0 ? (
+              <div className="space-y-4 px-5 py-5">
+                {busiestChamber && (
+                  <div className="rounded-2xl border border-[#d8e2fb] bg-[#f6f8ff] px-4 py-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#4055A8]">Busiest Chamber</p>
+                        <p className="mt-1 text-base font-semibold text-[#2D3A74]">{busiestChamber.name}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-semibold text-[#2D3A74]">{busiestChamber.count}</p>
+                        <p className="text-xs text-slate-500">appointments today</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-3">
+                  {chamberSummary.map((chamber) => (
+                    <div key={chamber.name}>
+                      <div className="mb-1.5 flex items-center justify-between gap-3 text-sm">
+                        <div>
+                          <p className="font-medium text-slate-700">{chamber.name}</p>
+                          <p className="text-xs text-slate-400">{chamber.active} in progress • {chamber.awaiting} awaiting tests</p>
+                        </div>
+                        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">{chamber.count}</span>
+                      </div>
+                      <div className="h-2.5 overflow-hidden rounded-full bg-slate-100">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-[#4055A8] to-[#4aa5ec]"
+                          style={{ width: `${(chamber.count / chamberMax) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <DocEmptyState icon={Building2} title="No chamber activity today" description="Today's appointments will be grouped here once bookings are available." />
+            )}
+          </div>
+
+          <div className="surface-card rounded-3xl p-5">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm text-slate-500 mb-1">Awaiting Tests</p>
+                <p className="text-3xl font-semibold text-[#2D3A74]">{awaitingList.length}</p>
+              </div>
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-orange-50">
+                <FlaskConical className="h-5 w-5 text-[#FF7C00]" />
+              </div>
+            </div>
+            <p className="mt-4 text-xs text-slate-400">Patients waiting for reports or test completion.</p>
+            <div className="mt-4 space-y-2">
+              {awaitingList.slice(0, 3).map((appointment, index) => (
+                <div key={appointment.id || index} className="flex items-center justify-between gap-3 rounded-2xl bg-orange-50/60 px-3 py-2">
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-semibold text-slate-700">{getName(appointment)}</p>
+                    <p className="truncate text-[11px] text-slate-500">{getChamberName(appointment)}</p>
+                  </div>
+                  <span className="text-[11px] font-semibold text-orange-700">{fmtTime(appointment.appointment_time) || 'Pending'}</span>
+                </div>
+              ))}
+              {awaitingList.length === 0 && (
+                <div className="rounded-2xl bg-slate-50 px-3 py-2 text-xs text-slate-500">No patients are awaiting tests right now.</div>
+              )}
+            </div>
+          </div>
+
+          <div className="surface-card rounded-3xl p-5">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm text-slate-500 mb-1">Total Appointments Today</p>
+                <p className="text-3xl font-semibold text-[#2D3A74]">{todayAppointments.length}</p>
+              </div>
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-50">
+                <CalendarDays className="h-5 w-5 text-sky-600" />
+              </div>
+            </div>
+            <p className="mt-4 text-xs text-slate-400">All booked patients scheduled for the current day.</p>
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <div className="rounded-2xl bg-slate-50 px-3 py-2">
+                <p className="text-[11px] uppercase tracking-[0.12em] text-slate-400">In Queue</p>
+                <p className="mt-1 text-lg font-semibold text-slate-700">{defaultStats.waitingPatients}</p>
+              </div>
+              <div className="rounded-2xl bg-violet-50 px-3 py-2">
+                <p className="text-[11px] uppercase tracking-[0.12em] text-violet-400">In Progress</p>
+                <p className="mt-1 text-lg font-semibold text-violet-700">{activeCount}</p>
+              </div>
+            </div>
+          </div>
         </section>
 
         <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           <div className="rounded-2xl border border-slate-200 bg-white p-4 lg:col-span-2">
-              <h3 className="text-sm font-semibold text-[#2D3A74]">Monthly Appointments</h3>
-              <svg viewBox={`0 0 ${monthlyChartWidth} ${monthlyChartHeight}`} className="mt-3 w-full">
-                {monthlyTicks.map((tick, index) => {
-                  const y = monthlyPadTop + (1 - tick / Math.max(1, monthlyMax)) * monthlyUsableHeight;
-                  return (
-                    <g key={`${tick}-${index}`}>
-                      <line x1={monthlyPadX} y1={y} x2={monthlyChartWidth - monthlyPadX} y2={y} stroke="#e5e7eb" strokeWidth="1" />
-                      <text x={monthlyPadX - 8} y={y + 4} textAnchor="end" className="fill-slate-400 text-[10px]">{tick}</text>
-                    </g>
-                  );
-                })}
+            <h3 className="text-sm font-semibold text-[#2D3A74]">Monthly Appointments</h3>
+            <svg viewBox={`0 0 ${monthlyChartWidth} ${monthlyChartHeight}`} className="mt-3 w-full">
+              {monthlyTicks.map((tick, index) => {
+                const y = monthlyPadTop + (1 - tick / Math.max(1, monthlyMax)) * monthlyUsableHeight;
+                return (
+                  <g key={`${tick}-${index}`}>
+                    <line x1={monthlyPadX} y1={y} x2={monthlyChartWidth - monthlyPadX} y2={y} stroke="#e5e7eb" strokeWidth="1" />
+                    <text x={monthlyPadX - 8} y={y + 4} textAnchor="end" className="fill-slate-400 text-[10px]">{tick}</text>
+                  </g>
+                );
+              })}
 
-                {monthLabels.map((label, index) => {
-                  const x = monthlyPadX + monthlyBarGap * index + (monthlyBarGap - monthlyBarWidth) / 2;
-                  const value = monthlyAppointments[index] || 0;
-                  const barHeight = (value / Math.max(1, monthlyMax)) * monthlyUsableHeight;
-                  const y = monthlyChartHeight - monthlyPadBottom - barHeight;
-                  return (
-                    <g key={label}>
-                      <rect x={x} y={y} width={monthlyBarWidth} height={barHeight} rx="3" fill="#4aa5ec" />
-                      <text x={x + monthlyBarWidth / 2} y={monthlyChartHeight - 12} textAnchor="middle" className="fill-slate-500 text-[10px]">{label}</text>
-                    </g>
-                  );
-                })}
-              </svg>
-              <div className="mt-1 inline-flex items-center gap-1.5 text-xs text-slate-500">
-                <span className="h-2.5 w-2.5 rounded-sm bg-[#4aa5ec]" />
-                Appointments
-              </div>
+              {monthLabels.map((label, index) => {
+                const x = monthlyPadX + monthlyBarGap * index + (monthlyBarGap - monthlyBarWidth) / 2;
+                const value = monthlyAppointments[index] || 0;
+                const barHeight = (value / Math.max(1, monthlyMax)) * monthlyUsableHeight;
+                const y = monthlyChartHeight - monthlyPadBottom - barHeight;
+                return (
+                  <g key={label}>
+                    <rect x={x} y={y} width={monthlyBarWidth} height={barHeight} rx="3" fill="#4aa5ec" />
+                    <text x={x + monthlyBarWidth / 2} y={monthlyChartHeight - 12} textAnchor="middle" className="fill-slate-500 text-[10px]">{label}</text>
+                  </g>
+                );
+              })}
+            </svg>
+            <div className="mt-1 inline-flex items-center gap-1.5 text-xs text-slate-500">
+              <span className="h-2.5 w-2.5 rounded-sm bg-[#4aa5ec]" />
+              Appointments
+            </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-4">
+          {/* <div className="rounded-2xl border border-slate-200 bg-white p-4">
             <div className="mb-3 flex items-center justify-between">
               <h3 className="text-sm font-semibold text-[#2D3A74]">Today Status Mix</h3>
               <span className="text-xs text-slate-500">{todayAppointments.length} total</span>
@@ -419,16 +522,148 @@ export default function DoctorDashboard({
                 );
               })}
             </div>
+          </div> */}
+          <div className="surface-card rounded-3xl overflow-hidden">
+            <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+              <div className="flex items-center gap-2">
+                <CalendarClock className="h-4 w-4 text-[#FF7C00]" />
+                <h3 className="text-sm font-semibold text-[#2D3A74]">Schedule</h3>
+              </div>
+              <Link href="/doctor/schedule" className="text-sm font-semibold text-[#4055A8] hover:text-[#2D3A74] transition-colors">
+                Manage
+              </Link>
+            </div>
+
+            <div className="border-b border-slate-100 px-5 pt-2">
+              <div className="flex gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setScheduleTab('today')}
+                  className={`rounded-t-lg px-3 py-2 text-xs font-semibold transition-colors ${scheduleTab === 'today'
+                      ? 'bg-slate-100 text-[#2D3A74]'
+                      : 'text-slate-700 hover:bg-slate-50 hover:text-[#2D3A74]'
+                    }`}
+                >
+                  Today's Schedule
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setScheduleTab('unavailable')}
+                  className={`rounded-t-lg px-3 py-2 text-xs font-semibold transition-colors ${scheduleTab === 'unavailable'
+                      ? 'bg-orange-50 text-orange-700'
+                      : 'text-slate-700 hover:bg-slate-50 hover:text-orange-700'
+                    }`}
+                >
+                  Unavailable Dates
+                </button>
+              </div>
+            </div>
+
+            {scheduleTab === 'today' ? (
+              todayScheduleRows.length > 0 ? (
+                <div className="overflow-x-auto border-t border-slate-100">
+                  <table className="min-w-full text-sm">
+                    <thead className="bg-slate-50 text-slate-500 uppercase text-[11px] tracking-[0.1em]">
+                      <tr>
+                        <th className="px-5 py-3 text-left">#</th>
+                        <th className="px-5 py-3 text-left">Time Range</th>
+                        <th className="px-5 py-3 text-left">Chamber</th>
+                        <th className="px-5 py-3 text-left">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 bg-white">
+                      {todayScheduleRows.slice(0, 8).map((row) => (
+                        <tr key={row.id} className="hover:bg-slate-50/80 transition-colors">
+                          <td className="px-5 py-3 text-xs font-semibold text-slate-600">
+                            <span className="inline-flex items-center gap-1.5">
+                              <Hash className="h-3.5 w-3.5 text-slate-400" />
+                              {row.serial}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3 text-xs font-medium text-slate-700">
+                            <span className="inline-flex items-center gap-1.5">
+                              <Clock className="h-3.5 w-3.5 text-slate-400" />
+                              {row.range}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3 text-xs text-slate-600">
+                            <span className="inline-flex items-center gap-1.5">
+                              <Building2 className="h-3.5 w-3.5 text-slate-400" />
+                              {row.chamber}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3 text-xs font-semibold text-emerald-700">
+                            <span className="inline-flex items-center gap-1.5">
+                              <CheckCircle className="h-3.5 w-3.5" />
+                              {row.slot}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <DocEmptyState icon={FileText} title={isScheduleClosedToday ? 'Today is marked closed' : 'No weekly schedule for today'} />
+              )
+            ) : (
+              unavailableDateRows.length > 0 ? (
+                <div className="overflow-x-auto border-t border-slate-100">
+                  <table className="min-w-full text-sm">
+                    <thead className="bg-orange-50/60 text-orange-700 uppercase text-[11px] tracking-[0.1em]">
+                      <tr>
+                        <th className="px-5 py-3 text-left">#</th>
+                        <th className="px-5 py-3 text-left">From</th>
+                        <th className="px-5 py-3 text-left">To</th>
+                        <th className="px-5 py-3 text-left">Note</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-orange-100 bg-white">
+                      {unavailableDateRows.slice(0, 8).map((row) => (
+                        <tr key={row.id} className="hover:bg-orange-50/40 transition-colors">
+                          <td className="px-5 py-3 text-xs font-semibold text-orange-700">
+                            <span className="inline-flex items-center gap-1.5">
+                              <Hash className="h-3.5 w-3.5" />
+                              {row.serial}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3 text-xs font-medium text-slate-700">
+                            <span className="inline-flex items-center gap-1.5">
+                              <CalendarDays className="h-3.5 w-3.5 text-slate-400" />
+                              {row.from}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3 text-xs font-medium text-slate-700">
+                            <span className="inline-flex items-center gap-1.5">
+                              <CalendarDays className="h-3.5 w-3.5 text-slate-400" />
+                              {row.to}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3 text-xs text-orange-700">
+                            <span className="inline-flex items-center gap-1.5">
+                              <FileText className="h-3.5 w-3.5" />
+                              {row.note}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <DocEmptyState icon={CalendarClock} title="No upcoming unavailable dates" />
+              )
+            )}
           </div>
         </section>
 
 
 
         {/* MAIN 2-COLUMN GRID */}
-        <div className="grid gap-6 lg:grid-cols-3">
+        <div className="grid gap-6 ">
 
           {/* LEFT (2/3) */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="space-y-6">
 
             {/* ACTIVE PATIENT CARD */}
             {visitPatient && !hideActiveVisitCard ? (
@@ -564,6 +799,8 @@ export default function DoctorDashboard({
               //     </div>
               //   </div>
               // </div>
+
+
             ) : null}
 
             {/* TABBED APPOINTMENTS TABLE — admin table style */}
@@ -587,22 +824,20 @@ export default function DoctorDashboard({
                     const isActive = activeTab === tab.key;
 
                     return (
-                  <button
-                    key={tab.key}
-                    onClick={() => setActiveTab(tab.key)}
-                    className={`flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-3 text-sm font-semibold transition-colors ${
-                      isActive ? tone.active : `border-transparent ${tone.idle}`
-                    }`}
-                  >
-                    {tab.label}
-                    {tab.count > 0 && (
-                      <span className={`rounded-full px-2 py-0.5 text-xs font-bold leading-none ${
-                        isActive ? tone.badgeActive : tone.badgeIdle
-                      }`}>
-                        {tab.count}
-                      </span>
-                    )}
-                  </button>
+                      <button
+                        key={tab.key}
+                        onClick={() => setActiveTab(tab.key)}
+                        className={`flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-3 text-sm font-semibold transition-colors ${isActive ? tone.active : `border-transparent ${tone.idle}`
+                          }`}
+                      >
+                        {tab.label}
+                        {tab.count > 0 && (
+                          <span className={`rounded-full px-2 py-0.5 text-xs font-bold leading-none ${isActive ? tone.badgeActive : tone.badgeIdle
+                            }`}>
+                            {tab.count}
+                          </span>
+                        )}
+                      </button>
                     );
                   })()
                 ))}
@@ -738,140 +973,7 @@ export default function DoctorDashboard({
             )}
 
             {/* Today's Schedule */}
-            <div className="surface-card rounded-3xl overflow-hidden">
-              <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-                <div className="flex items-center gap-2">
-                  <CalendarClock className="h-4 w-4 text-[#FF7C00]" />
-                  <h3 className="text-sm font-semibold text-[#2D3A74]">Schedule</h3>
-                </div>
-                <Link href="/doctor/schedule" className="text-sm font-semibold text-[#4055A8] hover:text-[#2D3A74] transition-colors">
-                  Manage
-                </Link>
-              </div>
 
-              <div className="border-b border-slate-100 px-5 pt-2">
-                <div className="flex gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setScheduleTab('today')}
-                    className={`rounded-t-lg px-3 py-2 text-xs font-semibold transition-colors ${
-                      scheduleTab === 'today'
-                        ? 'bg-slate-100 text-[#2D3A74]'
-                        : 'text-slate-700 hover:bg-slate-50 hover:text-[#2D3A74]'
-                    }`}
-                  >
-                    Today's Schedule
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setScheduleTab('unavailable')}
-                    className={`rounded-t-lg px-3 py-2 text-xs font-semibold transition-colors ${
-                      scheduleTab === 'unavailable'
-                        ? 'bg-orange-50 text-orange-700'
-                        : 'text-slate-700 hover:bg-slate-50 hover:text-orange-700'
-                    }`}
-                  >
-                    Unavailable Dates
-                  </button>
-                </div>
-              </div>
-
-              {scheduleTab === 'today' ? (
-                todayScheduleRows.length > 0 ? (
-                  <div className="overflow-x-auto border-t border-slate-100">
-                    <table className="min-w-full text-sm">
-                      <thead className="bg-slate-50 text-slate-500 uppercase text-[11px] tracking-[0.1em]">
-                        <tr>
-                          <th className="px-5 py-3 text-left">#</th>
-                          <th className="px-5 py-3 text-left">Time Range</th>
-                          <th className="px-5 py-3 text-left">Chamber</th>
-                          <th className="px-5 py-3 text-left">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 bg-white">
-                        {todayScheduleRows.slice(0, 8).map((row) => (
-                          <tr key={row.id} className="hover:bg-slate-50/80 transition-colors">
-                            <td className="px-5 py-3 text-xs font-semibold text-slate-600">
-                              <span className="inline-flex items-center gap-1.5">
-                                <Hash className="h-3.5 w-3.5 text-slate-400" />
-                                {row.serial}
-                              </span>
-                            </td>
-                            <td className="px-5 py-3 text-xs font-medium text-slate-700">
-                              <span className="inline-flex items-center gap-1.5">
-                                <Clock className="h-3.5 w-3.5 text-slate-400" />
-                                {row.range}
-                              </span>
-                            </td>
-                            <td className="px-5 py-3 text-xs text-slate-600">
-                              <span className="inline-flex items-center gap-1.5">
-                                <Building2 className="h-3.5 w-3.5 text-slate-400" />
-                                {row.chamber}
-                              </span>
-                            </td>
-                            <td className="px-5 py-3 text-xs font-semibold text-emerald-700">
-                              <span className="inline-flex items-center gap-1.5">
-                                <CheckCircle className="h-3.5 w-3.5" />
-                                {row.slot}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <DocEmptyState icon={FileText} title={isScheduleClosedToday ? 'Today is marked closed' : 'No weekly schedule for today'} />
-                )
-              ) : (
-                unavailableDateRows.length > 0 ? (
-                  <div className="overflow-x-auto border-t border-slate-100">
-                    <table className="min-w-full text-sm">
-                      <thead className="bg-orange-50/60 text-orange-700 uppercase text-[11px] tracking-[0.1em]">
-                        <tr>
-                          <th className="px-5 py-3 text-left">#</th>
-                          <th className="px-5 py-3 text-left">From</th>
-                          <th className="px-5 py-3 text-left">To</th>
-                          <th className="px-5 py-3 text-left">Note</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-orange-100 bg-white">
-                        {unavailableDateRows.slice(0, 8).map((row) => (
-                          <tr key={row.id} className="hover:bg-orange-50/40 transition-colors">
-                            <td className="px-5 py-3 text-xs font-semibold text-orange-700">
-                              <span className="inline-flex items-center gap-1.5">
-                                <Hash className="h-3.5 w-3.5" />
-                                {row.serial}
-                              </span>
-                            </td>
-                            <td className="px-5 py-3 text-xs font-medium text-slate-700">
-                              <span className="inline-flex items-center gap-1.5">
-                                <CalendarDays className="h-3.5 w-3.5 text-slate-400" />
-                                {row.from}
-                              </span>
-                            </td>
-                            <td className="px-5 py-3 text-xs font-medium text-slate-700">
-                              <span className="inline-flex items-center gap-1.5">
-                                <CalendarDays className="h-3.5 w-3.5 text-slate-400" />
-                                {row.to}
-                              </span>
-                            </td>
-                            <td className="px-5 py-3 text-xs text-orange-700">
-                              <span className="inline-flex items-center gap-1.5">
-                                <FileText className="h-3.5 w-3.5" />
-                                {row.note}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <DocEmptyState icon={CalendarClock} title="No upcoming unavailable dates" />
-                )
-              )}
-            </div>
           </div>
         </div>
       </div>
