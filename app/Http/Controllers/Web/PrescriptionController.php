@@ -92,7 +92,6 @@ class PrescriptionController extends Controller
         } elseif ($patientId) {
             $patient = User::where('id', $patientId)
                 ->whereHas('role', fn ($q) => $q->where('name', 'patient'))
-                ->whereHas('appointments', fn ($q) => $q->where('doctor_id', $doctor->doctorId()))
                 ->first();
 
             if ($patient) {

@@ -115,6 +115,7 @@ const initialState = {
     investigations: {
         common: Object.fromEntries(COMMON_TESTS.map((t) => [t, false])),
         custom: [''],
+        notes: '',
     },
     advice: {
         lifestyle: '',
@@ -330,9 +331,9 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
     );
 
     const inputClass =
-        'w-full rounded-md bg-slate-50/50 px-3 py-2 text-sm text-slate-900 doc-input-focus';
+        'w-full rounded-md border border-slate-200 bg-slate-50/50 px-3 py-2 text-sm text-slate-900 doc-input-focus';
     const medicineInputClass =
-        'w-full rounded-md bg-slate-50/50 px-2 py-1 text-xs text-slate-900 doc-input-focus';
+        'w-full rounded-md border border-slate-200 bg-slate-50/50 px-2 py-1 text-xs text-slate-900 doc-input-focus';
     const labelClass = 'mb-2 block text-xs font-semibold text-slate-700';
     const helperClass = 'mt-1 text-xs text-slate-500';
     const sectionTitleClass = 'text-base font-bold text-slate-800';
@@ -405,7 +406,8 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
         const custom = (state.investigations.custom || [])
             .map((t) => String(t || '').trim())
             .filter(Boolean);
-        return [...common, ...custom].join('\n').trim();
+        const notes = String(state.investigations.notes || '').trim();
+        return [...common, ...custom, ...(notes ? [notes] : [])].join('\n').trim();
     };
 
     const buildInstructionsText = () => {
@@ -615,7 +617,7 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                             <div className="flex min-w-[160px] flex-1 items-end gap-2">
                                 <span className="shrink-0 text-xs font-bold text-slate-600">Name:</span>
                                 <input
-                                    className="flex-1 border-b border-slate-300 bg-transparent px-0 pb-0.5 text-sm text-slate-900 placeholder-slate-300 focus:border-[#2D3A74] focus:outline-none"
+                                    className="flex-1 rounded-md border border-transparent border-b-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 placeholder-slate-300 hover:border-slate-300 focus:border-[#2D3A74] focus:outline-none"
                                     value={state.patient.name}
                                     onChange={(e) => dispatch({ type: 'setField', path: ['patient', 'name'], value: e.target.value })}
                                     placeholder="Patient name"
@@ -627,13 +629,13 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                 <div className="flex items-end gap-1">
                                     <input
                                         inputMode="numeric"
-                                        className="w-10 border-b border-slate-300 bg-transparent px-0 pb-0.5 text-center text-sm text-slate-900 placeholder-slate-300 focus:border-[#2D3A74] focus:outline-none"
+                                        className="w-12 rounded-md border border-transparent border-b-slate-300 bg-white px-2 py-1.5 text-center text-sm text-slate-900 placeholder-slate-300 hover:border-slate-300 focus:border-[#2D3A74] focus:outline-none"
                                         value={state.patient.age_value}
                                         onChange={(e) => dispatch({ type: 'setField', path: ['patient', 'age_value'], value: e.target.value })}
                                         placeholder="—"
                                     />
                                     <select
-                                        className="border-b border-slate-300 bg-transparent pb-0.5 text-xs text-slate-600 focus:border-[#2D3A74] focus:outline-none"
+                                        className="rounded-md border border-transparent border-b-slate-300 bg-white px-2 py-1.5 text-xs text-slate-600 hover:border-slate-300 focus:border-[#2D3A74] focus:outline-none"
                                         value={state.patient.age_unit}
                                         onChange={(e) => dispatch({ type: 'setField', path: ['patient', 'age_unit'], value: e.target.value })}
                                     >
@@ -646,7 +648,7 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                             <div className="flex items-end gap-1.5">
                                 <span className="shrink-0 text-xs font-bold text-slate-600">Gender:</span>
                                 <select
-                                    className="w-24 border-b border-slate-300 bg-transparent pb-0.5 text-sm text-slate-900 focus:border-[#2D3A74] focus:outline-none"
+                                    className="w-24 rounded-md border border-transparent border-b-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 hover:border-slate-300 focus:border-[#2D3A74] focus:outline-none"
                                     value={state.patient.gender}
                                     onChange={(e) => dispatch({ type: 'setField', path: ['patient', 'gender'], value: e.target.value })}
                                 >
@@ -656,43 +658,15 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                     <option value="other">Other</option>
                                 </select>
                             </div>
-                            {/* Weight */}
-                            <div className="flex items-end gap-1.5">
-                                <span className="shrink-0 text-xs font-bold text-slate-600">Weight:</span>
-                                <input
-                                    inputMode="decimal"
-                                    className="w-16 border-b border-slate-300 bg-transparent px-0 pb-0.5 text-sm text-slate-900 placeholder-slate-300 focus:border-[#2D3A74] focus:outline-none"
-                                    value={state.patient.weight}
-                                    onChange={(e) => dispatch({ type: 'setField', path: ['patient', 'weight'], value: e.target.value })}
-                                    placeholder="kg"
-                                />
-                            </div>
                             {/* Contact */}
                             <div className="flex items-end gap-1.5">
                                 <Phone className="h-3 w-3 shrink-0 text-slate-400 mb-1" />
                                 <input
-                                    className="w-32 border-b border-slate-300 bg-transparent px-0 pb-0.5 text-sm text-slate-900 placeholder-slate-300 focus:border-[#2D3A74] focus:outline-none"
+                                    className="w-36 rounded-md border border-transparent border-b-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 placeholder-slate-300 hover:border-slate-300 focus:border-[#2D3A74] focus:outline-none"
                                     value={state.patient.contact}
                                     onChange={(e) => dispatch({ type: 'setField', path: ['patient', 'contact'], value: e.target.value })}
                                     placeholder="Contact"
                                 />
-                            </div>
-                            {/* Visit Type */}
-                            <div className="flex items-end gap-1.5">
-                                <span className="shrink-0 text-xs font-bold text-slate-600">Visit:</span>
-                                <select
-                                    className="w-24 border-b border-slate-300 bg-transparent pb-0.5 text-sm text-slate-900 focus:border-[#2D3A74] focus:outline-none"
-                                    value={state.visit.type}
-                                    onChange={(e) => dispatch({ type: 'setField', path: ['visit', 'type'], value: e.target.value })}
-                                >
-                                    <option value="New">New</option>
-                                    <option value="Follow-up">Follow-up</option>
-                                </select>
-                            </div>
-                            {/* Date */}
-                            <div className="ml-auto flex items-end gap-1.5">
-                                <span className="shrink-0 text-xs font-bold text-slate-600">Date:</span>
-                                <span className="border-b border-slate-400 pb-0.5 text-sm font-semibold text-slate-700">{visitDateLabel}</span>
                             </div>
                         </div>
                     </div>
@@ -742,7 +716,7 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                                 {(state.investigations.custom || []).map((test, idx) => (
                                                     <div key={idx} className="flex gap-1">
                                                         <input
-                                                            className="w-full rounded-md bg-slate-50/50 px-2 py-1 text-xs text-slate-900 doc-input-focus"
+                                                            className={medicineInputClass}
                                                             value={test}
                                                             onChange={(e) => dispatch({
                                                                 type: 'setCustomTest',
@@ -771,6 +745,22 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                                 </button>
                                             </div>
                                         </div>
+
+                                        <div className="mt-3 border-t border-slate-200 pt-3">
+                                            <div className="mb-2 text-xs font-semibold text-slate-600">Write Tests</div>
+                                            <textarea
+                                                className="w-full rounded-md border border-slate-200 bg-slate-50/50 px-2 py-1.5 text-xs text-slate-900 doc-input-focus"
+                                                rows={4}
+                                                value={state.investigations.notes}
+                                                onChange={(e) => dispatch({
+                                                    type: 'setField',
+                                                    path: ['investigations', 'notes'],
+                                                    value: e.target.value,
+                                                })}
+                                                placeholder="Write investigation notes or test instructions"
+                                            />
+                                            <p className="mt-1 text-[10px] text-slate-500">You can use checklist above or write tests manually here.</p>
+                                        </div>
                                     </div>
                                     
                                     {/* Diagnosis & Complaints Section - Bottom Right */}
@@ -784,7 +774,7 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                         <div className="mb-3">
                                             <label className="mb-1 block text-xs font-semibold text-slate-600">Provisional</label>
                                             <textarea
-                                                className="w-full rounded-md bg-slate-50/50 px-2 py-1.5 text-xs text-slate-900 doc-input-focus"
+                                                className="w-full rounded-md border border-slate-200 bg-slate-50/50 px-2 py-1.5 text-xs text-slate-900 doc-input-focus"
                                                 rows={2}
                                                 value={state.diagnosis.provisional}
                                                 onChange={(e) => dispatch({
@@ -800,7 +790,7 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                         <div className="mb-3">
                                             <label className="mb-1 block text-xs font-semibold text-slate-600">Final</label>
                                             <textarea
-                                                className="w-full rounded-md bg-slate-50/50 px-2 py-1.5 text-xs text-slate-900 doc-input-focus"
+                                                className="w-full rounded-md border border-slate-200 bg-slate-50/50 px-2 py-1.5 text-xs text-slate-900 doc-input-focus"
                                                 rows={2}
                                                 value={state.diagnosis.final}
                                                 onChange={(e) => dispatch({
@@ -832,7 +822,7 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                                 {(state.complaints || []).map((c, idx) => (
                                                     <div key={idx} className="space-y-1 rounded border border-slate-200 bg-white p-1.5">
                                                         <input
-                                                            className="w-full rounded bg-slate-50/50 px-1.5 py-1 text-xs text-slate-900 doc-input-focus"
+                                                            className="w-full rounded border border-slate-200 bg-slate-50/50 px-1.5 py-1 text-xs text-slate-900 doc-input-focus"
                                                             value={c.description}
                                                             onChange={(e) => dispatch({
                                                                 type: 'setArrayItem',
@@ -843,7 +833,7 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                                             placeholder="Complaint"
                                                         />
                                                         <input
-                                                            className="w-full rounded bg-slate-50/50 px-1.5 py-1 text-xs text-slate-900 doc-input-focus"
+                                                            className="w-full rounded border border-slate-200 bg-slate-50/50 px-1.5 py-1 text-xs text-slate-900 doc-input-focus"
                                                             value={c.duration}
                                                             onChange={(e) => dispatch({
                                                                 type: 'setArrayItem',
@@ -878,7 +868,7 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                             <div className="grid grid-cols-2 gap-1.5">
                                                 <div>
                                                     <input
-                                                        className="w-full rounded bg-slate-50/50 px-1.5 py-1 text-xs text-slate-900 doc-input-focus"
+                                                        className="w-full rounded border border-slate-200 bg-slate-50/50 px-1.5 py-1 text-xs text-slate-900 doc-input-focus"
                                                         value={state.exam.bp}
                                                         onChange={(e) => dispatch({
                                                             type: 'setField',
@@ -890,7 +880,7 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                                 </div>
                                                 <div>
                                                     <input
-                                                        className="w-full rounded bg-slate-50/50 px-1.5 py-1 text-xs text-slate-900 doc-input-focus"
+                                                        className="w-full rounded border border-slate-200 bg-slate-50/50 px-1.5 py-1 text-xs text-slate-900 doc-input-focus"
                                                         value={state.exam.pulse}
                                                         onChange={(e) => dispatch({
                                                             type: 'setField',
@@ -902,7 +892,7 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                                 </div>
                                                 <div>
                                                     <input
-                                                        className="w-full rounded bg-slate-50/50 px-1.5 py-1 text-xs text-slate-900 doc-input-focus"
+                                                        className="w-full rounded border border-slate-200 bg-slate-50/50 px-1.5 py-1 text-xs text-slate-900 doc-input-focus"
                                                         value={state.exam.temperature}
                                                         onChange={(e) => dispatch({
                                                             type: 'setField',
@@ -914,7 +904,7 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                                 </div>
                                                 <div>
                                                     <input
-                                                        className="w-full rounded bg-slate-50/50 px-1.5 py-1 text-xs text-slate-900 doc-input-focus"
+                                                        className="w-full rounded border border-slate-200 bg-slate-50/50 px-1.5 py-1 text-xs text-slate-900 doc-input-focus"
                                                         value={state.exam.spo2}
                                                         onChange={(e) => dispatch({
                                                             type: 'setField',
@@ -1116,7 +1106,7 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                             <div>
                                                 <label className="mb-1 block text-xs font-semibold text-slate-600">Lifestyle</label>
                                                 <textarea
-                                                    className="w-full rounded-md border border-slate-200 bg-slate-50/50 px-2 py-1.5 text-xs text-slate-900 doc-input-focus"
+                                                    className="w-full rounded-md border border-slate-200 bg-slate-50/50 px-2 py-1.5 text-xs text-slate-900 "
                                                     rows={2}
                                                     value={state.advice.lifestyle}
                                                     onChange={(e) => dispatch({
@@ -1130,7 +1120,7 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                             <div>
                                                 <label className="mb-1 block text-xs font-semibold text-slate-600">Diet / Rest</label>
                                                 <textarea
-                                                    className="w-full rounded-md border border-slate-200 bg-slate-50/50 px-2 py-1.5 text-xs text-slate-900 doc-input-focus"
+                                                    className="w-full rounded-md border border-slate-200 bg-slate-50/50 px-2 py-1.5 text-xs text-slate-900 "
                                                     rows={2}
                                                     value={state.advice.diet_rest}
                                                     onChange={(e) => dispatch({
@@ -1145,7 +1135,7 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                                 <label className="mb-1 block text-xs font-semibold text-slate-600">Follow-up Date</label>
                                                 <input
                                                     type="date"
-                                                    className="w-full rounded-md border border-slate-200 bg-slate-50/50 px-2 py-1.5 text-xs text-slate-900 doc-input-focus"
+                                                    className="w-full rounded-md border border-slate-200 bg-slate-50/50 px-2 py-1.5 text-xs text-slate-900"
                                                     value={state.follow_up.date}
                                                     onChange={(e) => dispatch({
                                                         type: 'setField',
@@ -1162,13 +1152,25 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                     {/* Form Submit Section - Enhanced */}
                     <div className="mt-10 rounded-xl border border-slate-200 bg-slate-50 p-6">
                         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                            <div className="flex items-center gap-3 text-sm">
-                                <div className="rounded-full bg-[#f6ece5] p-2">
-                                    <CheckCircle2 className="h-5 w-5 text-[#c57945]" />
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4 text-sm">
+                                <div className="flex items-center gap-3">
+                                    <div className="rounded-full bg-[#f6ece5] p-2">
+                                        <CheckCircle2 className="h-5 w-5 text-[#c57945]" />
+                                    </div>
+                                    <span className="font-medium text-slate-600">
+                                        Form complete and ready to submit
+                                    </span>
                                 </div>
-                                <span className="font-medium text-slate-600">
-                                    Form complete and ready to submit
-                                </span>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Date</span>
+                                    <input
+                                        type="date"
+                                        className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-[#2D3A74] focus:outline-none"
+                                        value={state.visit.date}
+                                        onChange={(e) => dispatch({ type: 'setField', path: ['visit', 'date'], value: e.target.value })}
+                                    />
+                                    <span className="text-xs font-medium text-slate-500">{visitDateLabel}</span>
+                                </div>
                             </div>
                             <div className="flex gap-3">
                                 <button
