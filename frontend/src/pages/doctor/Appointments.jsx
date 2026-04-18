@@ -180,6 +180,7 @@ export default function DoctorAppointments() {
   const [closedWeekdays, setClosedWeekdays] = useState([]);
   const [loadingCalendar, setLoadingCalendar] = useState(false);
   const patientDropRef = useRef(null);
+  const skipPatientSearchRef = useRef(false);
 
   const buildParams = (page = currentPage) => {
     const params = {
@@ -263,6 +264,13 @@ export default function DoctorAppointments() {
       setPatientResults([]);
       return;
     }
+
+    if (skipPatientSearchRef.current) {
+      skipPatientSearchRef.current = false;
+      setPatientSearching(false);
+      return;
+    }
+
     setPatientSearching(true);
     const timer = setTimeout(async () => {
       try {
@@ -584,8 +592,10 @@ export default function DoctorAppointments() {
   };
 
   const handleSelectPatient = async (patient) => {
+    skipPatientSearchRef.current = true;
     setChosenPatient(patient);
     setPatientSearch(patient?.name || '');
+    setPatientResults([]);
     setShowPatientDrop(false);
 
     if (!patient?.id) return;
@@ -1323,11 +1333,14 @@ export default function DoctorAppointments() {
                   type="text"
                   value={patientSearch}
                   onChange={(e) => {
+                    skipPatientSearchRef.current = false;
                     setPatientSearch(e.target.value);
                     if (chosenPatient) setChosenPatient(null);
                     setShowPatientDrop(true);
                   }}
-                  onFocus={() => { if (patientSearch) setShowPatientDrop(true); }}
+                  onFocus={() => {
+                    if (patientSearch && !chosenPatient) setShowPatientDrop(true);
+                  }}
                   placeholder="Search by name or phone…"
                   className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-24 text-sm text-slate-900 placeholder-slate-400 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
                 />
