@@ -18,6 +18,7 @@ export default function PublicBookAppointment() {
   const page = usePage();
   const contactPhone = page?.props?.site?.contactPhone || '';
   const authUser = page?.props?.auth?.user || null;
+    const initialSearch = typeof window !== 'undefined' ? window.location.search : '';
 
   const initial = useMemo(
     () => ({
@@ -55,6 +56,15 @@ export default function PublicBookAppointment() {
   const [previewSerial, setPreviewSerial] = useState(null);
   const [previewTime, setPreviewTime] = useState(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
+    const [requestedChamberId, setRequestedChamberId] = useState(() => {
+      const params = new URLSearchParams(initialSearch);
+      return params.get('chamber_id');
+    });
+    const [requestedStep, setRequestedStep] = useState(() => {
+      const params = new URLSearchParams(initialSearch);
+      const rawStep = Number(params.get('step'));
+      return Number.isInteger(rawStep) && rawStep >= 1 && rawStep <= 3 ? rawStep : null;
+    });
 
   const isClosedByWeekday = (dateStr) => {
     if (!dateStr || !Array.isArray(closedWeekdays) || closedWeekdays.length === 0) return false;
@@ -147,8 +157,21 @@ export default function PublicBookAppointment() {
         if (!mounted) return;
         const list = Array.isArray(data?.chambers) ? data.chambers : [];
         setChambers(list);
-        if (list.length === 1) {
-          setSelectedChamberId(list[0].id);
+          const matchedRequestedChamber = requestedChamberId
+            ? list.find((item) => String(item?.id) === String(requestedChamberId))
+            : null;
+
+          if (matchedRequestedChamber) {
+            setSelectedChamberId(matchedRequestedChamber.id);
+            setSelectedChamber(matchedRequestedChamber);
+            if (requestedStep) {
+              setStep(requestedStep);
+            }
+            setRequestedChamberId(null);
+            setRequestedStep(null);
+          } else if (list.length === 1) {
+            setSelectedChamberId(list[0].id);
+            setSelectedChamber(list[0]);
         }
       } catch {
         if (!mounted) return;
@@ -162,7 +185,13 @@ export default function PublicBookAppointment() {
     return () => {
       mounted = false;
     };
-  }, []);
+    }, [requestedChamberId, requestedStep]);
+
+    useEffect(() => {
+      if (!selectedChamberId || chambers.length === 0) return;
+      const active = chambers.find((item) => String(item?.id) === String(selectedChamberId)) || null;
+      setSelectedChamber(active);
+    }, [selectedChamberId, chambers]);
 
   // Load a simple math captcha
   const loadCaptcha = async () => {

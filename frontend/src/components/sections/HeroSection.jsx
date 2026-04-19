@@ -1,220 +1,137 @@
-import { motion, useScroll, useTransform } from 'framer-motion';
-import { ArrowRight, CheckCircle2 } from 'lucide-react';
-import { useRef } from 'react';
-import PrimaryButton from '../PrimaryButton';
-import ParticlesBackground from '../ParticlesBackground';
+import { motion } from 'framer-motion';
+import { ArrowRight, ShieldCheck } from 'lucide-react';
 
 export default function HeroSection({ doctor }) {
-    const ref = useRef(null);
-    const { scrollYProgress } = useScroll({
-        target: ref,
-        offset: ['start start', 'end start'],
-    });
-
-    const opacity = useTransform(scrollYProgress, [0, 0.6], [1, 0]);
-
-    const aboutContent = doctor?.about_content || {};
-    const doctorName = doctor?.name || 'Doctor';
-    const doctorSubtitle =
-        [doctor?.degree, doctor?.specialization].filter(Boolean).join(', ') ||
+    const headingLines = doctor?.name ? [doctor.name] : ['Dr. Sarah Johnson'];
+    const doctorName = doctor?.name || 'Dr. Sarah Johnson';
+    const doctorTitle =
+        [doctor?.degree, doctor?.specialization].filter(Boolean).join(' • ') ||
         doctor?.specialization ||
         'Consultant Physician';
-    const doctorBadge = aboutContent?.subtitle || 'Doctor Profile';
-
-    const paragraphs = Array.isArray(aboutContent?.paragraphs) && aboutContent.paragraphs.length
-        ? aboutContent.paragraphs.filter(Boolean)
-        : (doctor?.bio ? [doctor.bio] : ['Compassionate and comprehensive healthcare with a patient-first approach.']);
-
-    const credentialsTitle = aboutContent?.credentialsTitle || 'Credentials & Certifications';
-    const credentials =
-        Array.isArray(aboutContent?.credentials) && aboutContent.credentials.length
-            ? aboutContent.credentials.filter(Boolean)
-            : [
-                  doctor?.degree,
-                  doctor?.specialization,
-                  doctor?.registration_no ? `Registration: ${doctor.registration_no}` : null,
-              ].filter(Boolean);
-
-    const stats =
-        Array.isArray(aboutContent?.stats) && aboutContent.stats.length
-            ? aboutContent.stats.filter((item) => item?.value || item?.label)
-            : [
-                  { value: '15K+', label: 'Patients Treated' },
-                  { value: '98%', label: 'Success Rate' },
-                  { value: '20+', label: 'Years of Care' },
-              ];
-
-    const highlightValue = aboutContent?.highlight?.value || stats?.[0]?.value || null;
-    const highlightLabel = aboutContent?.highlight?.label || stats?.[0]?.label || null;
-
-    const profilePicture = doctor?.profile_picture || '';
-    const imageUrl = profilePicture
-        ? (profilePicture.startsWith('http') || profilePicture.startsWith('/')
-            ? profilePicture
-            : `/storage/${profilePicture}`)
-        : 'https://mediicc.netlify.app/images/thunb.png';
-    const imageAlt = doctorName;
+    const doctorBio =
+        doctor?.bio ||
+        'A refined, patient-first consultation experience with clear treatment planning and modern clinical care.';
+    const imageUrl = doctor?.profile_picture
+        ? (doctor.profile_picture.startsWith('http') || doctor.profile_picture.startsWith('/')
+            ? doctor.profile_picture
+            : `/storage/${doctor.profile_picture}`)
+        : 'https://img.freepik.com/premium-photo/medical-background_935395-109680.jpg';
+    const serviceChips = ['Consultation', 'Treatment Plan', 'Follow-up Care'];
 
     return (
-        <section
-            ref={ref}
-            id="about"
-            className="relative w-full overflow-hidden bg-white pt-10 pb-20"
-        >
-            {/* Particles (pulse) */}
-            <div className="absolute inset-0 z-0">
-                <ParticlesBackground id="tsparticles-hero" variant="pulse" />
-            </div>
+        <section className="relative isolate overflow-hidden text-white">
+            <div
+                className="absolute inset-0 bg-cover bg-center"
+                style={{ backgroundImage: `url(${imageUrl})` }}
+            />
+            <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(7,22,27,0.92)_0%,rgba(8,26,31,0.74)_46%,rgba(9,24,29,0.42)_100%)]" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(140,241,220,0.24),_transparent_26%),radial-gradient(circle_at_bottom_right,_rgba(255,255,255,0.14),_transparent_24%)]" />
+            <div className="absolute left-[-7rem] top-20 h-64 w-64 rounded-full bg-[#8ff4de]/14 blur-3xl" />
+            <div className="absolute bottom-[-4rem] right-[-3rem] h-80 w-80 rounded-full bg-[#ffffff]/10 blur-3xl" />
 
-            <div className="relative z-10 grid grid-cols-1 items-center gap-8 px-4 sm:px-8 lg:grid-cols-2 lg:gap-16 lg:px-12 xl:px-24 min-h-[calc(100vh-80px)]">
-                {/* Left Content */}
-                <motion.div
-                    style={{ opacity }}
-                    className="flex flex-col justify-center py-12 lg:py-0"
-                >
-                    {/* Top Badge */}
+            <div className="relative mx-auto min-h-[calc(100vh-64px)] max-w-7xl px-4 pb-16 pt-14 sm:px-6 lg:px-8 lg:pb-24 lg:pt-20">
+                <div className="flex min-h-[calc(100vh-140px)] items-end">
                     <motion.div
-                        initial={{ opacity: 0, y: -20 }}
+                        initial={{ opacity: 0, y: 24 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.6 }}
-                        className="mb-8 inline-flex items-center gap-2 rounded-full bg-[#00acb1]/10 px-4 py-2 text-sm font-semibold text-[#005963]"
+                        transition={{ duration: 0.7 }}
+                        className="max-w-2xl pb-2 lg:pb-10"
                     >
-                        <div className="h-2 w-2 rounded-full bg-[#005963]" />
-                        {doctorBadge}
-                    </motion.div>
-
-                    {/* Main Heading */}
-                    <motion.h1
-                        initial={{ opacity: 0, y: 30 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.8, delay: 0.1 }}
-                        className="mb-6 text-5xl font-black tracking-tight sm:text-6xl lg:text-7xl text-[#005963]"
-                    >
-                        {doctorName}
-                    </motion.h1>
-
-                    {/* Subtitle */}
-                    <motion.p
-                        initial={{ opacity: 0, y: 30 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.8, delay: 0.2 }}
-                        className="mb-6 text-2xl font-bold text-[#005963] sm:text-3xl"
-                    >
-                        {doctorSubtitle}
-                    </motion.p>
-
-                    <motion.div
-                        className="mb-8 space-y-4"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ duration: 0.8, delay: 0.3, staggerChildren: 0.1 }}
-                    >
-                        {paragraphs.map((paragraph, idx) => (
-                            <motion.p
-                                key={idx}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.35 + idx * 0.08 }}
-                                className="text-lg text-[#686a6f] leading-relaxed"
-                            >
-                                {paragraph}
-                            </motion.p>
-                        ))}
-                    </motion.div>
-
-                    {credentials.length > 0 && (
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.8, delay: 0.45 }}
-                            className="mb-10"
-                        >
-                            <h3 className="mb-4 text-xl font-bold text-[#005963]">{credentialsTitle}</h3>
-                            <div className="space-y-2">
-                                {credentials.map((item, idx) => (
-                                    <div key={idx} className="flex items-start gap-2 text-base text-[#686a6f]">
-                                        <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-[#005963]" />
-                                        <span>{item}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </motion.div>
-                    )}
-
-                    {/* CTA Buttons */}
-                    <motion.div
-                        className="flex flex-col gap-3 sm:flex-row pt-4"
-                        initial={{ opacity: 0, y: 30 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.8, delay: 0.55 }}
-                    >
-                        <PrimaryButton
-                            onClick={() =>
-                                document
-                                    .getElementById('booking')
-                                    ?.scrollIntoView({ behavior: 'smooth' })
-                            }
-                            className="flex items-center justify-center text-sm gap-1.5"
-                        >
-                            Book Now
-                            <ArrowRight className="h-4 w-4" />
-                        </PrimaryButton>
-                        <motion.button
-                            type="button"
-                            onClick={() =>
-                                document
-                                    .getElementById('contact')
-                                    ?.scrollIntoView({ behavior: 'smooth' })
-                            }
-                            className="rounded-xl border-2 border-[#005963]/30 px-6 py-3 text-sm text-[#005963] font-semibold backdrop-blur-sm transition-all hover:border-[#005963] hover:bg-[#005963]/10"
-                            whileHover={{ scale: 1.05, borderColor: '#005963' }}
-                            whileTap={{ scale: 0.95 }}
-                        >
-                            Contact
-                        </motion.button>
-                    </motion.div>
-                </motion.div>
-
-                {/* Right Image */}
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.8, delay: 0.2 }}
-                    className="relative hidden lg:flex items-center justify-center"
-                >
-                    <div className="relative w-full max-w-sm">
-                        {/* Main Image Container */}
-                        <div className="relative z-20 aspect-[3/4] w-full overflow-hidden rounded-3xl shadow-2xl border-2 border-[#00acb1]/30 bg-white">
-                            <img
-                                src={imageUrl}
-                                alt={imageAlt}
-                                className="h-full w-full object-cover object-[center_30%]"
-                            />
+                        <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-[#b9f4ea] backdrop-blur-xl">
+                            <ShieldCheck className="h-4 w-4" />
+                            Trusted Doctor Portfolio
                         </div>
 
-                        {highlightValue && highlightLabel && (
-                            <div className="absolute -bottom-6 -left-6 z-30 rounded-2xl border border-[#00acb1]/20 bg-white px-5 py-4 shadow-xl">
-                                <div className="text-3xl font-black text-[#005963]">{highlightValue}</div>
-                                <div className="text-sm font-semibold text-[#686a6f]">{highlightLabel}</div>
-                            </div>
-                        )}
-                    </div>
-                </motion.div>
-            </div>
+                        <motion.h1
+                            className="mt-6 text-3xl font-semibold leading-[0.96] tracking-tight sm:text-4xl lg:text-5xl xl:text-[4.35rem]"
+                            initial="hidden"
+                            animate="visible"
+                            variants={{
+                                hidden: {},
+                                visible: {
+                                    transition: {
+                                        staggerChildren: 0.16,
+                                        delayChildren: 0.1,
+                                    },
+                                },
+                            }}
+                        >
+                            {headingLines.map((line) => (
+                                <span key={line} className="block overflow-hidden pb-1.5">
+                                    <motion.span
+                                        className="relative block"
+                                        variants={{
+                                            hidden: { opacity: 0, y: 28 },
+                                            visible: {
+                                                opacity: 1,
+                                                y: 0,
+                                                transition: {
+                                                    duration: 0.65,
+                                                    ease: [0.22, 1, 0.36, 1],
+                                                },
+                                            },
+                                        }}
+                                    >
+                                        {line}
+                                        <motion.span
+                                            aria-hidden="true"
+                                            className="absolute inset-0 origin-left bg-[#e8fff7] mix-blend-lighten"
+                                            variants={{
+                                                hidden: { scaleX: 1 },
+                                                visible: {
+                                                    scaleX: 0,
+                                                    transition: {
+                                                        duration: 0.78,
+                                                        ease: [0.76, 0, 0.24, 1],
+                                                    },
+                                                },
+                                            }}
+                                        />
+                                    </motion.span>
+                                </span>
+                            ))}
+                        </motion.h1>
 
-            <motion.div
-                className="relative z-10 mx-auto mt-8 grid w-full max-w-7xl grid-cols-1 gap-4 px-4 sm:grid-cols-2 lg:grid-cols-4 lg:px-12 xl:px-24"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, delay: 0.65 }}
-            >
-                {stats.slice(0, 4).map((item, idx) => (
-                    <div key={idx} className="rounded-2xl border border-[#00acb1]/20 bg-white p-5 shadow-lg">
-                        <div className="text-3xl font-black text-[#005963]">{item?.value || '-'}</div>
-                        <div className="text-sm font-semibold text-[#686a6f]">{item?.label || 'Stat'}</div>
-                    </div>
-                ))}
-            </motion.div>
+                        <p className="mt-6 max-w-lg text-base leading-8 text-[#d7e9e5] sm:text-lg">
+                            {doctorName} provides calm consultations, clear treatment planning, and a polished appointment experience designed for modern patients.
+                        </p>
+
+                        <div className="mt-6 text-sm font-medium uppercase tracking-[0.16em] text-[#9fe9dd]">
+                            {doctorTitle}
+                        </div>
+
+                        <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                            <a
+                                href="/book-appointment"
+                                className="inline-flex items-center justify-center gap-3 rounded-full bg-[#b8ff4f] px-10 py-5 text-lg font-semibold text-[#062128] shadow-[0_22px_55px_rgba(184,255,79,0.42)] ring-4 ring-[#dfffaa]/30 transition hover:bg-[#d2ff85] hover:shadow-[0_26px_65px_rgba(184,255,79,0.52)]"
+                            >
+                                Book appointment
+                                <ArrowRight className="h-5 w-5" />
+                            </a>
+                        </div>
+
+                        <div className="mt-10 flex flex-wrap gap-2">
+                            {serviceChips.map((chip) => (
+                                <div
+                                    key={chip}
+                                    className="rounded-full border border-white/14 bg-white/10 px-4 py-2 text-xs font-medium text-white backdrop-blur-xl"
+                                >
+                                    {chip}
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* <div className="mt-8 max-w-md rounded-[28px] border border-white/12 bg-[linear-gradient(180deg,rgba(255,255,255,0.14),rgba(255,255,255,0.08))] p-5 backdrop-blur-xl">
+                            <div className="text-sm font-medium uppercase tracking-[0.16em] text-[#9fe9dd]">
+                                {doctorName}
+                            </div>
+                            <p className="mt-3 text-sm leading-7 text-[#deeeeb] sm:text-base">
+                                {doctorBio}
+                            </p>
+                        </div> */}
+                    </motion.div>
+                </div>
+            </div>
         </section>
     );
 }
