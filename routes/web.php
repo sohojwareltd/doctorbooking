@@ -124,7 +124,10 @@ Route::middleware(['auth', 'verified', 'role:doctor'])
     ->group(function () {
     Route::get('/compounders', [CompoundUserController::class, 'index'])->name('compounders.index');
     Route::get('/compounder/create', [CompoundUserController::class, 'create'])->name('compounder.create');
+    Route::get('/compounder/{compounder}/edit', [CompoundUserController::class, 'edit'])->name('compounder.edit');
     Route::post('/compounder', [CompoundUserController::class, 'store'])->name('compounder.store');
+    Route::put('/compounder/{compounder}', [CompoundUserController::class, 'update'])->name('compounder.update');
+    Route::delete('/compounder/{compounder}', [CompoundUserController::class, 'destroy'])->name('compounder.destroy');
 });
 
 /*

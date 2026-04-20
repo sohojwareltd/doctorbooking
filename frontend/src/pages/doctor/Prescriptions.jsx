@@ -12,7 +12,6 @@ import {
   Plus,
   Printer,
   Search,
-  SlidersHorizontal,
   Stethoscope,
   User,
   Venus,
@@ -122,8 +121,6 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState('all');
   const [genderFilter, setGenderFilter] = useState('all');
-  const [followUpFilter, setFollowUpFilter] = useState('all');
-  const [showFilters, setShowFilters] = useState(false);
   const [selectedPrescription, setSelectedPrescription] = useState(null);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -215,14 +212,6 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
         return false;
       }
 
-      if (followUpFilter === 'with' && !prescription.next_visit_date) {
-        return false;
-      }
-
-      if (followUpFilter === 'without' && prescription.next_visit_date) {
-        return false;
-      }
-
       if (!needle) {
         return true;
       }
@@ -240,7 +229,7 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
 
       return haystack.includes(needle);
     });
-  }, [rows, searchTerm, dateFilter, todayIso, genderFilter, followUpFilter]);
+  }, [rows, searchTerm, dateFilter, todayIso, genderFilter]);
 
   const statsView = useMemo(() => ({
     visible: filteredRows.length,
@@ -473,7 +462,7 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
           <div className="border-b border-slate-100 px-6 py-5">
             <div className="flex flex-col gap-3">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,360px)_180px] lg:items-end">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,360px)_180px_180px] lg:items-end">
                   <div>
                     <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Search</label>
                     <div className="relative">
@@ -499,81 +488,24 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
                       <option value="today">Today</option>
                     </select>
                   </div>
-                </div>
 
-                <div className="flex items-center justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowFilters((prev) => !prev)}
-                    className="inline-flex items-center gap-2 rounded-xl bg-[#2D3A74] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#243063]"
-                  >
-                    <SlidersHorizontal className="h-4 w-4" />
-                    {showFilters ? 'Hide Filters' : 'Filters'}
-                  </button>
-                </div>
-              </div>
-
-              {showFilters && (
-                <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
-                  <div className="grid gap-4 lg:grid-cols-[1fr_1.5fr_auto] lg:items-end">
-                    <div>
-                      <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Gender</p>
-                      <div className="flex flex-wrap gap-2">
-                        {[
-                          { value: 'all', label: 'All' },
-                          { value: 'male', label: 'Male' },
-                          { value: 'female', label: 'Female' },
-                        ].map((option) => (
-                          <button
-                            key={option.value}
-                            type="button"
-                            onClick={() => setGenderFilter(option.value)}
-                            className={`min-w-20 rounded-lg border px-3 py-2 text-sm font-semibold transition ${
-                              genderFilter === option.value
-                                ? 'border-[#2D3A74] bg-[#2D3A74] text-white'
-                                : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
-                            }`}
-                          >
-                            {option.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div>
-                      <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Follow-up</p>
-                      <div className="flex flex-wrap gap-2">
-                        {[
-                          { value: 'all', label: 'All' },
-                          { value: 'with', label: 'With Follow-up' },
-                          { value: 'without', label: 'No Follow-up' },
-                        ].map((option) => (
-                          <button
-                            key={option.value}
-                            type="button"
-                            onClick={() => setFollowUpFilter(option.value)}
-                            className={`inline-flex h-10 items-center rounded-lg border px-3 text-sm font-semibold transition ${
-                              followUpFilter === option.value
-                                ? 'border-[#2D3A74] bg-[#2D3A74] text-white'
-                                : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
-                            }`}
-                          >
-                            {option.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => setShowFilters(false)}
-                      className="inline-flex h-10 items-center rounded-xl bg-[#2D3A74] px-4 text-sm font-semibold text-white transition hover:bg-[#243063]"
+                  <div className="sm:max-w-[190px] lg:w-[180px]">
+                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Gender</label>
+                    <select
+                      value={genderFilter}
+                      onChange={(e) => setGenderFilter(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-700 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
                     >
-                      Apply Filters
-                    </button>
+                      <option value="all">All gender</option>
+                      <option value="male">Male</option>
+                      <option value="female">Female</option>
+                      <option value="other">Other</option>
+                    </select>
                   </div>
                 </div>
-              )}
+
+                <div className="hidden lg:block" />
+              </div>
             </div>
           </div>
 
@@ -611,11 +543,7 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
                           <GenderIconAvatar gender={getPatientGender(prescription)} />
                           <div>
                             <div className="font-semibold text-slate-900">{renderHighlighted(getPatientName(prescription), searchTerm)}</div>
-                            <div className="mt-0.5 text-xs font-medium text-slate-500">
-                              {getPatientAge(prescription) ? `${getPatientAge(prescription)}y` : 'Age N/A'}
-                              {' • '}
-                              {formatGender(getPatientGender(prescription))}
-                            </div>
+                            <div className="mt-0.5 text-xs font-medium text-slate-500">{getPatientAge(prescription) ? `${getPatientAge(prescription)}y` : 'Age N/A'}</div>
                           </div>
                         </div>
                       </td>
@@ -634,10 +562,13 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
                         {getNextVisitLabel(prescription)}
                       </td>
                       <td className="px-6 py-4 text-center text-[13px] font-medium text-slate-700">
-                        <span className="inline-flex items-center justify-center gap-1.5">
-                          <Calendar className="h-3.5 w-3.5 text-slate-400" />
-                          {formatDisplayDateWithYearFromDateLike(prescription.created_at) || prescription.created_at}
-                        </span>
+                        <div className="inline-flex items-center justify-center gap-2">
+                          <span className="inline-flex items-center justify-center gap-1.5">
+                            <Calendar className="h-3.5 w-3.5 text-slate-400" />
+                            {formatDisplayDateWithYearFromDateLike(prescription.created_at) || prescription.created_at}
+                          </span>
+                         
+                        </div>
                       </td>
                       <td className="px-6 py-4 text-center" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-center gap-1.5">

@@ -1,6 +1,6 @@
 import { Link, usePage } from '@inertiajs/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Calendar, CalendarCheck2, Clock3, Eye, FilePlus, FileText, Hash, Loader2, Mars, Phone, Plus, Search, SlidersHorizontal, User, UserCheck, Venus, X } from 'lucide-react';
+import { Calendar, CalendarCheck2, Clock3, Eye, FilePlus, FileText, Hash, Loader2, Mars, Phone, Plus, Search, User, UserCheck, Venus } from 'lucide-react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
@@ -129,15 +129,10 @@ export default function DoctorAppointments() {
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [statusFilter, setStatusFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [datePreset, setDatePreset] = useState('all'); // all | today | week | month | custom
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+  const [datePreset, setDatePreset] = useState('all');
   const [genderFilter, setGenderFilter] = useState('all');
-  const [ageMin, setAgeMin] = useState('');
-  const [ageMax, setAgeMax] = useState('');
   const [chamberFilter, setChamberFilter] = useState('all');
   const [chambers, setChambers] = useState([]);
-  const [showFilters, setShowFilters] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
 
   // Create appointment modal states
@@ -200,21 +195,8 @@ export default function DoctorAppointments() {
       params.date_filter = datePreset;
     }
 
-    if (datePreset === 'custom') {
-      if (dateFrom) params.date_from = dateFrom;
-      if (dateTo) params.date_to = dateTo;
-    }
-
     if (genderFilter !== 'all') {
       params.gender = genderFilter;
-    }
-
-    if (ageMin !== '') {
-      params.age_min = ageMin;
-    }
-
-    if (ageMax !== '') {
-      params.age_max = ageMax;
     }
 
     if (chamberFilter !== 'all') {
@@ -248,15 +230,14 @@ export default function DoctorAppointments() {
   };
 
   useEffect(() => {
-    // Fetch doctor's chambers once
     fetch('/api/doctor/chambers', { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
-      .then((r) => r.ok ? r.json() : { chambers: [] })
+      .then((response) => response.ok ? response.json() : { chambers: [] })
       .then((data) => setChambers(Array.isArray(data.chambers) ? data.chambers : []));
   }, []);
 
   useEffect(() => {
     fetchAppointments(buildParams(currentPage));
-  }, [currentPage, searchTerm, statusFilter, datePreset, dateFrom, dateTo, genderFilter, ageMin, ageMax, chamberFilter]);
+  }, [currentPage, searchTerm, statusFilter, datePreset, genderFilter, chamberFilter]);
 
   // Patient search for create modal
   useEffect(() => {
@@ -675,7 +656,7 @@ export default function DoctorAppointments() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [statusFilter, searchTerm, datePreset, dateFrom, dateTo, genderFilter, ageMin, ageMax, chamberFilter]);
+  }, [statusFilter, searchTerm, datePreset, genderFilter, chamberFilter]);
 
   const totalPages = Math.max(1, pageMeta.lastPage || 1);
   const safeCurrentPage = Math.min(currentPage, totalPages);
@@ -818,7 +799,7 @@ export default function DoctorAppointments() {
           <div className="px-6 py-5 border-b border-slate-100">
             <div className="flex flex-col gap-3">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,360px)_180px_180px] lg:items-end">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,360px)_180px_180px_180px_180px] lg:items-end">
                   <div>
                     <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Search</label>
                     <div className="relative">
@@ -837,158 +818,60 @@ export default function DoctorAppointments() {
                     <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Date</label>
                     <select
                       value={datePreset}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        setDatePreset(value);
-                        if (value !== 'custom') {
-                          setDateFrom('');
-                          setDateTo('');
-                        }
-                      }}
+                      onChange={(e) => setDatePreset(e.target.value)}
                       className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-700 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
                     >
                       <option value="all">All time</option>
                       <option value="today">Today</option>
                       <option value="week">This week</option>
                       <option value="month">This month</option>
-                      <option value="custom">Custom range</option>
                     </select>
                   </div>
 
-                  {chambers.length > 0 && (
-                    <div className="sm:max-w-[190px] lg:w-[180px]">
-                      <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Chamber</label>
-                      <select
-                        value={chamberFilter}
-                        onChange={(e) => setChamberFilter(e.target.value)}
-                        className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-700 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
-                      >
-                        <option value="all">All chambers</option>
-                        {chambers.map((c) => (
-                          <option key={c.id} value={String(c.id)}>{c.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex items-center justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowFilters((prev) => !prev)}
-                    className="inline-flex items-center gap-2 rounded-xl bg-[#2D3A74] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#243063]"
-                  >
-                    <SlidersHorizontal className="h-4 w-4" />
-                    {showFilters ? 'Hide Filters' : 'Filters'}
-                  </button>
-                </div>
-              </div>
-
-              {showFilters && (
-                <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
-                  <div className="grid gap-4 lg:grid-cols-[1.1fr_1fr_1fr_auto] lg:items-end">
-                    <div>
-                      <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Gender</p>
-                      <div className="flex flex-wrap gap-2">
-                        {[
-                          { value: 'all', label: 'All' },
-                          { value: 'male', label: 'Male' },
-                          { value: 'female', label: 'Female' },
-                        ].map((option) => (
-                          <button
-                            key={option.value}
-                            type="button"
-                            onClick={() => setGenderFilter(option.value)}
-                            className={`min-w-20 rounded-lg border px-3 py-2 text-sm font-semibold transition ${genderFilter === option.value
-                                ? 'border-[#2D3A74] bg-[#2D3A74] text-white'
-                                : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
-                              }`}
-                          >
-                            {option.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div>
-                      <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Age Range</p>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="number"
-                          min="0"
-                          value={ageMin}
-                          onChange={(e) => setAgeMin(e.target.value)}
-                          placeholder="Min"
-                          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
-                        />
-                        <span className="text-slate-400">-</span>
-                        <input
-                          type="number"
-                          min="0"
-                          value={ageMax}
-                          onChange={(e) => setAgeMax(e.target.value)}
-                          placeholder="Max"
-                          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Status</p>
-                      <select
-                        value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value)}
-                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
-                      >
-                        {STATUS_OPTIONS.map((option) => (
-                          <option key={option.value} value={option.value}>{option.label}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => setShowFilters(false)}
-                      className="rounded-xl bg-[#2D3A74] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#243063]"
+                  <div className="sm:max-w-[190px] lg:w-[180px]">
+                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Gender</label>
+                    <select
+                      value={genderFilter}
+                      onChange={(e) => setGenderFilter(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-700 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
                     >
-                      Apply Filters
-                    </button>
+                      <option value="all">All gender</option>
+                      <option value="male">Male</option>
+                      <option value="female">Female</option>
+                      <option value="other">Other</option>
+                    </select>
                   </div>
 
-                  {datePreset === 'custom' && (
-                    <div className="mt-3 flex flex-wrap items-end gap-3">
-                      <div>
-                        <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">From</label>
-                        <input
-                          type="date"
-                          value={dateFrom}
-                          onChange={(e) => setDateFrom(e.target.value)}
-                          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
-                        />
-                      </div>
-                      <div>
-                        <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">To</label>
-                        <input
-                          type="date"
-                          value={dateTo}
-                          min={dateFrom || undefined}
-                          onChange={(e) => setDateTo(e.target.value)}
-                          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
-                        />
-                      </div>
-                      {(dateFrom || dateTo) && (
-                        <button
-                          type="button"
-                          onClick={() => { setDateFrom(''); setDateTo(''); }}
-                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs text-slate-500 hover:border-rose-200 hover:text-rose-500 transition"
-                        >
-                          <X className="h-3.5 w-3.5" /> Clear
-                        </button>
-                      )}
-                    </div>
-                  )}
+                  <div className="sm:max-w-[190px] lg:w-[180px]">
+                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Status</label>
+                    <select
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-700 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+                    >
+                      {STATUS_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="sm:max-w-[190px] lg:w-[180px]">
+                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Chamber</label>
+                    <select
+                      value={chamberFilter}
+                      onChange={(e) => setChamberFilter(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-700 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+                    >
+                      <option value="all">All chambers</option>
+                      {chambers.map((chamber) => (
+                        <option key={chamber.id} value={String(chamber.id)}>{chamber.name}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
-              )}
+
+                <div className="hidden lg:block" />
+              </div>
             </div>
           </div>
 
@@ -1279,7 +1162,8 @@ export default function DoctorAppointments() {
         onClose={resetAndClose}
         title="New Appointment"
         icon={CalendarCheck2}
-        size="lg"
+        size="xl"
+        panelClassName="max-h-[96vh] max-w-[60rem]"
         footer={
           <>
             <DocButton variant="secondary" size="sm" onClick={resetAndClose}>Cancel</DocButton>
@@ -1298,7 +1182,7 @@ export default function DoctorAppointments() {
             <div className="grid grid-cols-2 gap-2">
               {[
                 { value: 'select', label: 'Select Patient', icon: UserCheck },
-                { value: 'walkin', label: 'Walk-In', icon: Plus },
+                { value: 'walkin', label: 'Guest', icon: Plus },
               ].map(({ value, label, icon: ModeIcon }) => (
                 <button
                   key={value}
@@ -1325,71 +1209,95 @@ export default function DoctorAppointments() {
 
           {/* Select Patient: searchable dropdown */}
           {apptMode === 'select' && (
-            <div>
-              <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Search Patient</label>
-              <div className="relative" ref={patientDropRef}>
-                <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                <input
-                  type="text"
-                  value={patientSearch}
-                  onChange={(e) => {
-                    skipPatientSearchRef.current = false;
-                    setPatientSearch(e.target.value);
-                    if (chosenPatient) setChosenPatient(null);
-                    setShowPatientDrop(true);
-                  }}
-                  onFocus={() => {
-                    if (patientSearch && !chosenPatient) setShowPatientDrop(true);
-                  }}
-                  placeholder="Search by name or phone…"
-                  className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-24 text-sm text-slate-900 placeholder-slate-400 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowCreatePatientModal(true)}
-                  className="absolute right-2 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-600 transition hover:border-[#2D3A74]/30 hover:bg-[#2D3A74]/5 hover:text-[#2D3A74]"
-                  title="Create patient"
-                >
-                  <Plus className="h-4 w-4" />
-                </button>
-                {patientSearching && (
-                  <Loader2 className="pointer-events-none absolute right-12 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-slate-400" />
-                )}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="col-span-2 xl:col-span-1">
+                <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Search Patient</label>
+                <div className="relative" ref={patientDropRef}>
+                  <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    value={patientSearch}
+                    onChange={(e) => {
+                      skipPatientSearchRef.current = false;
+                      setPatientSearch(e.target.value);
+                      if (chosenPatient) setChosenPatient(null);
+                      setShowPatientDrop(true);
+                    }}
+                    onFocus={() => {
+                      if (patientSearch && !chosenPatient) setShowPatientDrop(true);
+                    }}
+                    placeholder="Search by name or phone…"
+                    className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-24 text-sm text-slate-900 placeholder-slate-400 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCreatePatientModal(true)}
+                    className="absolute right-2 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-600 transition hover:border-[#2D3A74]/30 hover:bg-[#2D3A74]/5 hover:text-[#2D3A74]"
+                    title="Create patient"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                  {patientSearching && (
+                    <Loader2 className="pointer-events-none absolute right-12 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-slate-400" />
+                  )}
 
-                {showPatientDrop && !patientSearching && patientSearch.trim() && patientResults.length === 0 && (
-                  <div className="absolute left-0 right-0 top-full z-50 mt-1 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500 shadow-lg">
-                    No patients found
-                  </div>
-                )}
+                  {showPatientDrop && !patientSearching && patientSearch.trim() && patientResults.length === 0 && (
+                    <div className="absolute left-0 right-0 top-full z-50 mt-1 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500 shadow-lg">
+                      No patients found
+                    </div>
+                  )}
 
-                {showPatientDrop && patientResults.length > 0 && (
-                  <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-52 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg">
-                    {patientResults.map((patient) => (
-                      <button
-                        key={patient.id}
-                        type="button"
-                        onClick={() => handleSelectPatient(patient)}
-                        className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm transition hover:bg-slate-50"
-                      >
-                        <GenderIconAvatar gender={patient.gender} />
-                        <div>
-                          <p className="font-semibold text-slate-800">{patient.name}</p>
-                          <p className="text-xs text-slate-400">
-                            {patient.phone || 'No phone'}
-                            {patient.age ? ` • ${patient.age}y` : ''}
-                            {patient.gender ? ` • ${formatGender(patient.gender)}` : ''}
-                          </p>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
+                  {showPatientDrop && patientResults.length > 0 && (
+                    <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-52 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg">
+                      {patientResults.map((patient) => (
+                        <button
+                          key={patient.id}
+                          type="button"
+                          onClick={() => handleSelectPatient(patient)}
+                          className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm transition hover:bg-slate-50"
+                        >
+                          <GenderIconAvatar gender={patient.gender} />
+                          <div>
+                            <p className="font-semibold text-slate-800">{patient.name}</p>
+                            <p className="text-xs text-slate-400">
+                              {patient.phone || 'No phone'}
+                              {patient.age ? ` • ${patient.age}y` : ''}
+                              {patient.gender ? ` • ${formatGender(patient.gender)}` : ''}
+                            </p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {apptErrors.patient && <p className="mt-1 text-xs text-rose-500">{apptErrors.patient}</p>}
               </div>
-              {apptErrors.patient && <p className="mt-1 text-xs text-rose-500">{apptErrors.patient}</p>}
 
-              {/* Selected patient info card */}
+              <div className="col-span-2 xl:col-span-1">
+                <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                  Chamber <span className="text-rose-400">*</span>
+                </label>
+                <select
+                  value={apptForm.chamber_id}
+                  onChange={(e) => {
+                    const nextChamberId = e.target.value;
+                    setApptForm((prev) => ({ ...prev, chamber_id: nextChamberId, appointment_date: '', appointment_time: '' }));
+                    setSelectedDate(null);
+                    setPreviewSerial(null);
+                    setPreviewTime(null);
+                  }}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-700 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+                >
+                  <option value="">Select chamber</option>
+                  {chambers.map((c) => (
+                    <option key={c.id} value={String(c.id)}>{c.name}</option>
+                  ))}
+                </select>
+                {apptErrors.chamber_id && <p className="mt-1 text-xs text-rose-500">{apptErrors.chamber_id}</p>}
+              </div>
+
               {chosenPatient && (
-                <div className="mt-3 rounded-xl border border-[#2D3A74]/20 bg-[#2D3A74]/5 p-3">
+                <div className="col-span-2 rounded-xl border border-[#2D3A74]/20 bg-[#2D3A74]/5 p-3">
                   <div className="flex items-center gap-3">
                     <GenderIconAvatar gender={chosenPatient.gender} />
                     <div className="grid flex-1 grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4">
@@ -1487,107 +1395,107 @@ export default function DoctorAppointments() {
 
           {/* Appointment fields */}
           <div className="grid grid-cols-2 gap-3">
-            <div className="col-span-2 sm:col-span-1">
-              <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
-                Chamber <span className="text-rose-400">*</span>
-              </label>
-              <select
-                value={apptForm.chamber_id}
-                onChange={(e) => {
-                  const nextChamberId = e.target.value;
-                  setApptForm((prev) => ({ ...prev, chamber_id: nextChamberId, appointment_date: '', appointment_time: '' }));
-                  setSelectedDate(null);
-                  setPreviewSerial(null);
-                  setPreviewTime(null);
-                }}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-700 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
-              >
-                <option value="">Select chamber</option>
-                {chambers.map((c) => (
-                  <option key={c.id} value={String(c.id)}>{c.name}</option>
-                ))}
-              </select>
-              {apptErrors.chamber_id && <p className="mt-1 text-xs text-rose-500">{apptErrors.chamber_id}</p>}
-            </div>
-            <div className="col-span-2 grid gap-3 xl:grid-cols-[minmax(0,360px)_minmax(0,1fr)] xl:items-start">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-3">
-                <div className="mb-2 flex items-center justify-between">
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Available Dates</p>
-                    <p className="text-xs text-slate-500">Select chamber first, then choose an available date.</p>
-                  </div>
-                  {loadingCalendar && <Loader2 className="h-4 w-4 animate-spin text-slate-400" />}
-                </div>
-                <div className="doctor-appointment-calendar mx-auto max-w-[340px] rounded-xl bg-white p-1.5 shadow-inner shadow-slate-100">
-                  <FullCalendar
-                    key={calendarRenderKey}
-                    plugins={[dayGridPlugin, interactionPlugin]}
-                    initialView="dayGridMonth"
-                    headerToolbar={{ left: 'prev', center: 'title', right: 'next' }}
-                    height={300}
-                    aspectRatio={0.92}
-                    showNonCurrentDates={false}
-                    fixedWeekCount={false}
-                    validRange={{ start: new Date().toISOString().split('T')[0] }}
-                    dateClick={handleDateSelect}
-                    dayCellDidMount={handleCalendarDayCellDidMount}
-                    dayCellClassNames={(arg) => {
-                      const dayStr = normalizeCalendarDate(arg);
-                      if (isUnavailableDate(dayStr)) return 'fc-unavailable';
-                      if (selectedDate === dayStr) return 'fc-day-selected';
-                      return '';
-                    }}
-                  />
-                </div>
-                {apptErrors.appointment_date && <p className="mt-2 text-xs text-rose-500">{apptErrors.appointment_date}</p>}
+            {apptMode !== 'select' && (
+              <div className="col-span-2 sm:col-span-1">
+                <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                  Chamber <span className="text-rose-400">*</span>
+                </label>
+                <select
+                  value={apptForm.chamber_id}
+                  onChange={(e) => {
+                    const nextChamberId = e.target.value;
+                    setApptForm((prev) => ({ ...prev, chamber_id: nextChamberId, appointment_date: '', appointment_time: '' }));
+                    setSelectedDate(null);
+                    setPreviewSerial(null);
+                    setPreviewTime(null);
+                  }}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-700 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+                >
+                  <option value="">Select chamber</option>
+                  {chambers.map((c) => (
+                    <option key={c.id} value={String(c.id)}>{c.name}</option>
+                  ))}
+                </select>
+                {apptErrors.chamber_id && <p className="mt-1 text-xs text-rose-500">{apptErrors.chamber_id}</p>}
               </div>
-
-              <div className="rounded-2xl border border-slate-200 bg-white p-3 xl:min-h-[365px]">
-                <div className="mb-2 flex items-center justify-between">
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Appointment Preview</p>
-                    <p className="text-xs text-slate-500">Generated from selected date and chamber.</p>
+            )}
+            {apptForm.chamber_id ? (
+              <div className="col-span-2 grid gap-3 xl:grid-cols-3 xl:items-start">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-3 xl:col-span-2">
+                  <div className="mb-2 flex items-center justify-between">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Available Dates</p>
+                      <p className="text-xs text-slate-500">Choose an available date for the selected chamber.</p>
+                    </div>
+                    {loadingCalendar && <Loader2 className="h-4 w-4 animate-spin text-slate-400" />}
                   </div>
-                  {loadingPreview && <Loader2 className="h-4 w-4 animate-spin text-slate-400" />}
+                  <div className="doctor-appointment-calendar w-full rounded-xl bg-white p-1.5 shadow-inner shadow-slate-100">
+                    <FullCalendar
+                      key={calendarRenderKey}
+                      plugins={[dayGridPlugin, interactionPlugin]}
+                      initialView="dayGridMonth"
+                      headerToolbar={{ left: 'prev', center: 'title', right: 'next' }}
+                      height={300}
+                      aspectRatio={0.92}
+                      showNonCurrentDates={false}
+                      fixedWeekCount={false}
+                      validRange={{ start: new Date().toISOString().split('T')[0] }}
+                      dateClick={handleDateSelect}
+                      dayCellDidMount={handleCalendarDayCellDidMount}
+                      dayCellClassNames={(arg) => {
+                        const dayStr = normalizeCalendarDate(arg);
+                        if (isUnavailableDate(dayStr)) return 'fc-unavailable';
+                        if (selectedDate === dayStr) return 'fc-day-selected';
+                        return '';
+                      }}
+                    />
+                  </div>
+                  {apptErrors.appointment_date && <p className="mt-2 text-xs text-rose-500">{apptErrors.appointment_date}</p>}
                 </div>
-                {!selectedDate ? (
-                  <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
-                    Select a date first.
+
+                <div className="rounded-2xl border border-slate-200 bg-white p-3 xl:col-span-1 xl:min-h-[365px]">
+                  <div className="mb-2 flex items-center justify-between">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Appointment Preview</p>
+                      <p className="text-xs text-slate-500">Generated from selected date and chamber.</p>
+                    </div>
+                    {loadingPreview && <Loader2 className="h-4 w-4 animate-spin text-slate-400" />}
                   </div>
-                ) : !apptForm.chamber_id ? (
-                  <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
-                    Select a chamber first.
-                  </div>
-                ) : loadingPreview ? (
-                  <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Loading preview...
-                  </div>
-                ) : previewTime ? (
-                  <div className="rounded-xl border border-[#2D3A74]/20 bg-[#2D3A74]/8 px-4 py-3">
-                    <div className="grid gap-3 sm:grid-cols-3">
-                      <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">Date</p>
-                        <p className="mt-1 text-sm font-semibold text-slate-800">{formatDisplayDateWithYearFromDateLike(selectedDate) || selectedDate}</p>
-                      </div>
-                      <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">Serial</p>
-                        <p className="mt-1 text-sm font-semibold text-slate-800">#{previewSerial}</p>
-                      </div>
-                      <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">Time</p>
-                        <p className="mt-1 text-sm font-semibold text-slate-800">{formatDisplayTime12h(previewTime) || previewTime}</p>
+                  {!selectedDate ? (
+                    <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
+                      Select a date first.
+                    </div>
+                  ) : loadingPreview ? (
+                    <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading preview...
+                    </div>
+                  ) : previewTime ? (
+                    <div className="rounded-xl border border-[#2D3A74]/20 bg-[#2D3A74]/8 px-4 py-3">
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        <div>
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">Date</p>
+                          <p className="mt-1 text-sm font-semibold text-slate-800">{formatDisplayDateWithYearFromDateLike(selectedDate) || selectedDate}</p>
+                        </div>
+                        <div>
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">Serial</p>
+                          <p className="mt-1 text-sm font-semibold text-slate-800">#{previewSerial}</p>
+                        </div>
+                        <div>
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">Time</p>
+                          <p className="mt-1 text-sm font-semibold text-slate-800">{formatDisplayTime12h(previewTime) || previewTime}</p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ) : (
-                  <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
-                    Preview unavailable.
-                  </div>
-                )}
-                {apptErrors.appointment_time && <p className="mt-2 text-xs text-rose-500">{apptErrors.appointment_time}</p>}
+                  ) : (
+                    <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
+                      Preview unavailable.
+                    </div>
+                  )}
+                  {apptErrors.appointment_time && <p className="mt-2 text-xs text-rose-500">{apptErrors.appointment_time}</p>}
+                </div>
               </div>
-            </div>
+            ) : null}
           </div>
         </div>
       </DocModal>
