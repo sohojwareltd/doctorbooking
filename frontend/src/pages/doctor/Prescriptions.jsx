@@ -394,7 +394,6 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
       return;
     }
 
-    resetCreateModal();
     router.visit(`/doctor/prescriptions/create?patient_id=${chosenPatient.id}`);
   };
 

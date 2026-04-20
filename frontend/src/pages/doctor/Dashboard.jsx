@@ -464,8 +464,8 @@ export default function DoctorDashboard({
           </div>
         </section>
 
-        <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 lg:col-span-2">
+        <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4">
             <h3 className="text-sm font-semibold text-[#2D3A74]">Monthly Appointments</h3>
             <svg viewBox={`0 0 ${monthlyChartWidth} ${monthlyChartHeight}`} className="mt-3 w-full">
               {monthlyTicks.map((tick, index) => {

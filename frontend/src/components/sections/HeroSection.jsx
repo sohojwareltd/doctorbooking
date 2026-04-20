@@ -31,7 +31,7 @@ export default function HeroSection({ doctor }) {
             <div className="absolute bottom-[-4rem] right-[-3rem] h-80 w-80 rounded-full bg-[#ffffff]/10 blur-3xl" />
 
             <div className="relative mx-auto min-h-[calc(100vh-64px)] max-w-7xl px-4 pb-16 pt-14 sm:px-6 lg:px-8 lg:pb-24 lg:pt-20">
-                <div className="flex min-h-[calc(100vh-140px)] items-end">
+                <div className="flex min-h-[calc(100vh-140px)] items-center">
                     <motion.div
                         initial={{ opacity: 0, y: 24 }}
                         animate={{ opacity: 1, y: 0 }}

@@ -392,10 +392,9 @@ export default function DoctorAppointments() {
     if (unavailable && !existingIcon) {
       const icon = document.createElement('span');
       icon.className = 'fc-unavailable-icon';
-      icon.textContent = '🚫';
+      icon.textContent = 'x';
       icon.setAttribute('aria-label', 'Unavailable date');
       icon.title = 'Unavailable date';
-      icon.style.cssText = 'position:absolute;top:3px;right:4px;font-size:15px;line-height:1;pointer-events:none;z-index:2;background:rgba(255,255,255,0.95);border-radius:999px;padding:1px';
       frame.appendChild(icon);
     } else if (!unavailable && existingIcon) {
       existingIcon.remove();
@@ -1163,7 +1162,7 @@ export default function DoctorAppointments() {
         title="New Appointment"
         icon={CalendarCheck2}
         size="xl"
-        panelClassName="max-h-[96vh] max-w-[60rem]"
+        panelClassName="min-h-[44rem] max-h-[96vh] max-w-[60rem]"
         footer={
           <>
             <DocButton variant="secondary" size="sm" onClick={resetAndClose}>Cancel</DocButton>
@@ -1421,7 +1420,7 @@ export default function DoctorAppointments() {
             )}
             {apptForm.chamber_id ? (
               <div className="col-span-2 grid gap-3 xl:grid-cols-3 xl:items-start">
-                <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-3 xl:col-span-2">
+                <div className="rounded-[26px] border border-slate-200/80 bg-[linear-gradient(180deg,#fdfefe_0%,#f5faf9_100%)] p-3.5 shadow-[0_18px_45px_rgba(15,23,42,0.04)] xl:col-span-2">
                   <div className="mb-2 flex items-center justify-between">
                     <div>
                       <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Available Dates</p>
@@ -1429,7 +1428,7 @@ export default function DoctorAppointments() {
                     </div>
                     {loadingCalendar && <Loader2 className="h-4 w-4 animate-spin text-slate-400" />}
                   </div>
-                  <div className="doctor-appointment-calendar w-full rounded-xl bg-white p-1.5 shadow-inner shadow-slate-100">
+                  <div className="doctor-appointment-calendar w-full rounded-[24px] border border-slate-200/80 bg-[linear-gradient(180deg,#ffffff_0%,#f8fbfb_100%)] p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_12px_30px_rgba(15,23,42,0.05)]">
                     <FullCalendar
                       key={calendarRenderKey}
                       plugins={[dayGridPlugin, interactionPlugin]}

@@ -37,7 +37,7 @@ export default function DocModal({
   }[size] || 'max-w-lg';
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-start justify-center p-4 pt-20 sm:items-center sm:pt-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-20 sm:items-center sm:pt-4" onClick={onClose}>
       <div className={`absolute inset-0 bg-[rgba(24,34,63,0.58)] backdrop-blur-[2px] ${overlayClassName}`} />
       <div
         className={`relative flex max-h-[90vh] w-full flex-col overflow-hidden rounded-xl border border-[var(--doc-border)] bg-white shadow-2xl ${widthClass} ${panelClassName}`}

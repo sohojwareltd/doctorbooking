@@ -9,8 +9,11 @@ export default function PublicLayout({ children }) {
     const { auth, home, doctor, publicDoctor } = usePage().props;
 
     const header = home?.header || {};
+    const footer = home?.footer || {};
     const headerLogoUrl = header.logoUrl;
     const brandName = publicDoctor?.name || doctor?.name || auth?.user?.name || 'Doctor Profile';
+    const footerBrandName = footer.brandName || brandName;
+    const footerCopyright = footer.copyright || `Copyright ${new Date().getFullYear()} ${footerBrandName}. All rights reserved.`;
 
         const dashboardHref =
                 auth?.user?.role === 'admin'
@@ -204,6 +207,12 @@ export default function PublicLayout({ children }) {
             <main className="flex-grow">
                 {children}
             </main>
+
+            <footer className="border-t border-slate-200 bg-[#f8fbfa]">
+                <div className="mx-auto max-w-7xl px-4 py-5 text-center text-sm text-slate-500 sm:px-6 lg:px-8">
+                    {footerCopyright}
+                </div>
+            </footer>
 
             {/* Scroll to Top Button */}
             {showScrollTop && (

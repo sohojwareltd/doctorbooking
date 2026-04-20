@@ -42,6 +42,13 @@ export default function UserBookAppointment() {
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [existingAppointments, setExistingAppointments] = useState([]);
   const calendarContainerRef = useRef(null);
+  const dateStepRef = useRef(null);
+
+  const scrollToDateStep = useCallback(() => {
+    window.requestAnimationFrame(() => {
+      dateStepRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, []);
 
   const isClosedByWeekday = (dateStr) => {
     if (!dateStr || !Array.isArray(closedWeekdays) || closedWeekdays.length === 0) return false;
@@ -458,6 +465,7 @@ export default function UserBookAppointment() {
 
         <div className="grid gap-6 lg:grid-cols-2">
           {/* Step 1 – Date */}
+          <div ref={dateStepRef}>
           <GlassCard variant="solid" className="p-5">
             <h3 className="mb-1 text-xs font-semibold uppercase tracking-wider text-[#005963]/80">Step 1</h3>
             <h3 className="mb-3 text-lg font-extrabold text-[#005963]">Choose Date</h3>
@@ -503,6 +511,7 @@ export default function UserBookAppointment() {
               </div>
             )}
           </GlassCard>
+          </div>
 
           {/* Step 2 – Chamber & Time frame */}
           <GlassCard variant="solid" className="p-5 flex flex-col">
@@ -524,12 +533,15 @@ export default function UserBookAppointment() {
                       type="button"
                       onClick={() => {
                         setSelectedChamberId(ch.id);
-                        setSelectedChamber(ch);                        // Clear the selected date — it may be closed at this chamber
+                        setSelectedChamber(ch);
+                        // Clear the selected date — it may be closed at this chamber
                         setSelectedDate(null);
                         selectedDateRef.current = null;
                         setFormData((p) => ({ ...p, date: '' }));
                         setPreviewSerial(null);
-                        setPreviewTime(null);                      }}
+                        setPreviewTime(null);
+                        scrollToDateStep();
+                      }}
                       className={`rounded-xl border px-3 py-2 text-xs font-semibold transition ${
                         selectedChamberId === ch.id
                           ? 'border-[#005963] bg-[#005963] text-white'
@@ -575,7 +587,7 @@ export default function UserBookAppointment() {
                 </div>
               ) : (
                 <div className="text-xs text-gray-500">
-                  Unable to calculate estimated time. You can still continue.
+                  Unable to calculate estimated time. You can still confirm the booking.
                 </div>
               )}
             </div>

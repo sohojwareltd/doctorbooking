@@ -10,6 +10,13 @@ export default function Welcome({ home, doctor, chambers = [] }) {
     const [chambersLoading, setChambersLoading] = useState(!Array.isArray(chambers) || chambers.length === 0);
     const meta = home?.meta || {};
     const doctorName = doctor?.name || 'Dr. Sarah Johnson';
+    const doctorInitials = doctorName
+        .split(' ')
+        .map((part) => part.trim()[0])
+        .filter(Boolean)
+        .slice(0, 2)
+        .join('')
+        .toUpperCase();
     const doctorTitle =
         [doctor?.degree, doctor?.specialization].filter(Boolean).join(' • ') ||
         doctor?.specialization ||
@@ -18,6 +25,10 @@ export default function Welcome({ home, doctor, chambers = [] }) {
         doctor?.about_bio_details ||
         doctor?.bio ||
         'Personalized care, thoughtful diagnosis, and a calm clinical experience for every patient.';
+    const aboutParagraphs = String(shortBio)
+        .split(/\n\s*\n/)
+        .map((item) => item.trim())
+        .filter(Boolean);
     const aboutSubtitle =
         doctor?.about_subtitle ||
         'Thoughtful consultation, clear explanation, and a patient-friendly care journey.';
@@ -27,6 +38,12 @@ export default function Welcome({ home, doctor, chambers = [] }) {
         .map((item) => item.trim())
         .filter(Boolean)
         .slice(0, 4);
+    const profileSource = doctor?.profile_picture || doctor?.hero_image || '';
+    const profileImageUrl = profileSource
+        ? (profileSource.startsWith('http') || profileSource.startsWith('/')
+            ? profileSource
+            : `/storage/${profileSource}`)
+        : '';
     const liveChambers = apiChambers.length
         ? apiChambers
         : Array.isArray(chambers)
@@ -45,7 +62,7 @@ export default function Welcome({ home, doctor, chambers = [] }) {
     const chamberCount = chamberCards.length;
     const aboutHighlightValue = doctor?.about_highlight_value || (doctor?.registration_no ? 'Verified' : `${chamberCount}`);
     const aboutHighlightLabel = doctor?.about_highlight_label || (doctor?.registration_no ? 'Professional registration' : 'Consultation chambers');
-    const aboutStats = [
+    const profileDetails = [
         {
             label: 'Registration',
             value: doctor?.registration_no || 'Available on request',
@@ -63,7 +80,24 @@ export default function Welcome({ home, doctor, chambers = [] }) {
             value: `${chamberCount} ${chamberCount === 1 ? 'active chamber' : 'active chambers'}`,
         },
     ];
-
+    const aboutStats = [
+        {
+            label: 'Patients treated',
+            value: doctor?.about_stats_patients_treated,
+        },
+        {
+            label: 'Experience',
+            value: doctor?.about_stats_years_experience,
+        },
+        {
+            label: 'Patient satisfaction',
+            value: doctor?.about_stats_patient_satisfaction,
+        },
+        {
+            label: 'Medical cases',
+            value: doctor?.about_stats_medical_cases,
+        },
+    ].filter((item) => String(item.value || '').trim() !== '');
     useEffect(() => {
         let ignore = false;
 
@@ -109,19 +143,19 @@ export default function Welcome({ home, doctor, chambers = [] }) {
             <div className="min-h-screen bg-[linear-gradient(180deg,#edf3f1_0%,#f8fbfa_28%,#f7f8f8_100%)] text-slate-900">
                 <HeroSection doctor={doctor} />
 
-                <section id="chambers" className="relative z-10 -mt-8 px-4 py-12 sm:px-6 lg:-mt-10 lg:px-8 lg:py-14">
+                <section id="chambers" className="relative z-10  px-4 py-12 sm:px-6  lg:px-8 lg:py-14">
                     <div className="mx-auto max-w-6xl rounded-[36px] border border-[#dbe7e3] bg-white/94 p-8 shadow-[0_30px_75px_rgba(15,23,42,0.07)] backdrop-blur sm:p-10 lg:p-12">
                         <div className="mb-8 flex flex-col gap-5 border-b border-slate-100 pb-6 lg:flex-row lg:items-end lg:justify-between">
                             <div className="max-w-3xl">
-                                <p className="text-sm font-semibold uppercase tracking-[0.28em] text-[#0f766e]">
+                                {/* <p className="text-sm font-semibold uppercase tracking-[0.28em] text-[#0f766e]">
                                     {doctorName}
-                                </p>
-                                <h2 className="mt-3 max-w-2xl text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl lg:text-[2.9rem]">
-                                    Consultation chambers for {doctorName} with clear location and booking details.
+                                </p> */}
+                                <h2 className="mt-3 max-w-2xl text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl lg:text-[35px]">
+                                    Consultation Chambers
                                 </h2>
-                                <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600">
+                                {/* <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600">
                                     Browse all active chambers, compare locations, and continue directly to the booking flow.
-                                </p>
+                                </p> */}
                             </div>
                             <div className="inline-flex items-center gap-3 self-start rounded-full border border-[#d8e8e3] bg-[#f4fbf8] px-5 py-3 text-sm font-medium text-[#115e59] lg:self-end">
                                 <span className="h-2.5 w-2.5 rounded-full bg-[#0f766e]" />
@@ -200,114 +234,96 @@ export default function Welcome({ home, doctor, chambers = [] }) {
                     </div>
                 </section>
 
-                <section id="about" className="px-4 py-8 sm:px-6 lg:px-8 lg:py-16">
-                    <div className="mx-auto max-w-6xl rounded-[36px] border border-[#dbe7e3] bg-white/94 p-8 shadow-[0_30px_75px_rgba(15,23,42,0.07)] backdrop-blur sm:p-10 lg:p-12">
-                        <div className="grid gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
+                <section id="about" className="px-4 pb-10">
+                    <div className="mx-auto max-w-6xl rounded-[32px]  sm:p-10 lg:p-12">
+                        <div className="mb-8">
+                            <div className="inline-flex items-center rounded-full border border-[#dce7e3] bg-[#f9fbfa] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#115e59]">
+                                About Us
+                            </div>
+                        </div>
+
+                        <div className="grid gap-8 lg:grid-cols-[minmax(0,1.22fr)_minmax(280px,0.78fr)] lg:items-start">
                             <div className="space-y-6">
-                                <div className="inline-flex items-center rounded-full border border-[#d6e7e1] bg-[#f4fbf8] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-[#0f766e]">
-                                    About {doctorName}
-                                </div>
                                 <div>
-                                    <h2 className="max-w-2xl text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl lg:text-[2.95rem]">
+                                    {/* <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#115e59]">
+                                        Portfolio profile
+                                    </div> */}
+                                    <h2 className="max-w-2xl text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl lg:text-[2.85rem]">
                                         {doctorName}
                                     </h2>
                                     <p className="mt-3 text-base font-medium text-[#115e59]">{doctorTitle}</p>
-                                    <p className="mt-5 max-w-3xl text-base leading-8 text-slate-600">
-                                        {shortBio}
+                                    <p className="mt-5 max-w-3xl text-sm font-medium uppercase tracking-[0.18em] text-slate-400">
+                                        {aboutSubtitle}
                                     </p>
+                                    <div className="mt-5 max-w-3xl space-y-4 text-base leading-8 text-slate-600">
+                                        {aboutParagraphs.map((paragraph, index) => (
+                                            <p key={`${paragraph}-${index}`}>{paragraph}</p>
+                                        ))}
+                                    </div>
                                 </div>
 
-                                <div className="rounded-[30px] border border-[#dde9e5] bg-[linear-gradient(135deg,#f8fbfa_0%,#eef6f3_100%)] p-6 shadow-[0_18px_45px_rgba(15,23,42,0.04)] sm:p-7">
-                                    <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-                                        <div className="max-w-xl">
-                                            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-                                                {credentialsTitle}
-                                            </p>
-                                            <p className="mt-3 text-sm leading-7 text-slate-600">
-                                                {aboutSubtitle}
-                                            </p>
-                                        </div>
-                                        <div className="rounded-[24px] bg-[#123c46] px-5 py-4 text-white shadow-[0_18px_45px_rgba(18,60,70,0.18)] sm:min-w-[190px]">
-                                            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9fe9dd]">
-                                                Highlight
-                                            </div>
-                                            <div className="mt-3 text-2xl font-semibold tracking-tight">
-                                                {aboutHighlightValue}
-                                            </div>
-                                            <div className="mt-1 text-sm text-white/78">
-                                                {aboutHighlightLabel}
-                                            </div>
-                                        </div>
-                                    </div>
+                                <div className="space-y-5 ">
+                                   
 
                                     {credentialLines.length ? (
-                                        <div className="mt-5 flex flex-wrap gap-2.5">
+                                        <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-slate-700">
                                             {credentialLines.map((item) => (
-                                                <div
-                                                    key={item}
-                                                    className="rounded-full border border-[#d6e7e1] bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm"
-                                                >
-                                                    {item}
+                                                <div key={item} className="inline-flex items-center gap-2">
+                                                    <span className="h-1.5 w-1.5 rounded-full bg-[#115e59]" />
+                                                    <span>{item}</span>
                                                 </div>
                                             ))}
                                         </div>
                                     ) : null}
                                 </div>
-                            </div>
 
-                            <div className="space-y-4">
-                                <div className="rounded-[30px] bg-[linear-gradient(135deg,#123c46_0%,#0f2d35_100%)] p-7 text-white shadow-[0_28px_70px_rgba(18,60,70,0.18)] sm:p-8">
-                                    <div className="flex items-start justify-between gap-4">
-                                        <div>
-                                            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#9fe9dd]">
-                                                {doctorName} details
-                                            </p>
-                                            <p className="mt-3 max-w-sm text-sm leading-7 text-white/78">
-                                                A more organized snapshot of profile, contact, and availability for patients who want quick details before booking.
-                                            </p>
-                                        </div>
-                                        <div className="hidden rounded-2xl border border-white/10 bg-white/10 p-3 sm:block">
-                                            <Phone className="h-5 w-5 text-[#9fe9dd]" />
-                                        </div>
-                                    </div>
-
-                                    <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                                {aboutStats.length ? (
+                                    <div className="grid gap-4 border-t border-[#e7eeeb] pt-5 sm:grid-cols-2">
                                         {aboutStats.map((item) => (
-                                            <div
-                                                key={item.label}
-                                                className="rounded-[22px] border border-white/10 bg-white/8 p-4 backdrop-blur-sm"
-                                            >
-                                                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/50">
+                                            <div key={item.label} className="grid gap-1">
+                                                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
                                                     {item.label}
                                                 </div>
-                                                <div className="mt-2 text-sm leading-7 text-white/88">
+                                                <div className="text-sm leading-7 text-slate-700">
                                                     {item.value}
                                                 </div>
                                             </div>
                                         ))}
                                     </div>
-                                </div>
+                                ) : null}
 
-                                <div className="grid gap-4 sm:grid-cols-2">
-                                    <div className="rounded-[24px] border border-[#dde9e5] bg-white p-5 shadow-[0_18px_45px_rgba(15,23,42,0.04)]">
-                                        <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                                            <Phone className="h-4 w-4 text-[#115e59]" />
-                                            Direct contact
+                                <div className="grid gap-4 border-t border-[#e7eeeb] pt-5 sm:grid-cols-2">
+                                    {profileDetails.map((item) => (
+                                        <div key={item.label} className="grid gap-1">
+                                            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                                                {item.label}
+                                            </div>
+                                            <div className="text-sm leading-7 text-slate-700">
+                                                {item.value}
+                                            </div>
                                         </div>
-                                        <div className="mt-3 text-sm font-medium text-slate-700">
-                                            {doctor?.phone || 'Please contact the chamber directly'}
-                                        </div>
-                                    </div>
-                                    <div className="rounded-[24px] border border-[#dde9e5] bg-white p-5 shadow-[0_18px_45px_rgba(15,23,42,0.04)]">
-                                        <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                                            <Mail className="h-4 w-4 text-[#115e59]" />
-                                            Email address
-                                        </div>
-                                        <div className="mt-3 text-sm font-medium text-slate-700">
-                                            {doctor?.email || 'Shared after appointment confirmation'}
-                                        </div>
-                                    </div>
+                                    ))}
                                 </div>
+                            </div>
+
+                            <div className="overflow-hidden rounded-[28px] border border-[#e1eae7] bg-[#f8fbfa] lg:sticky lg:top-24">
+                                <div className="flex aspect-[4/5] items-center justify-center overflow-hidden bg-[#f3f8f6]">
+                                    {profileImageUrl ? (
+                                        <img
+                                            src={profileImageUrl}
+                                            alt={doctorName}
+                                            className="h-full w-full object-cover"
+                                        />
+                                    ) : (
+                                        <div className="flex h-full w-full items-center justify-center text-5xl font-semibold tracking-tight text-[#123c46]">
+                                            {doctorInitials}
+                                        </div>
+                                    )}
+                                </div>
+                                {/* <div className="border-t border-[#e1eae7] px-5 py-4">
+                                    <div className="text-sm font-semibold text-slate-900">{doctorName}</div>
+                                    <div className="mt-1 text-sm text-slate-600">{doctorTitle}</div>
+                                </div> */}
                             </div>
                         </div>
                     </div>

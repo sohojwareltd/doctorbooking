@@ -516,6 +516,7 @@ export default function PublicBookAppointment() {
                                   setFormData((p) => ({ ...p, date: '' }));
                                   setSelectedDate(null);
                                   selectedDateRef.current = null;
+                                  setStep(2);
                                 }}
                                 className={`w-full rounded-[26px] border px-5 py-4 text-left transition ${isActive ? 'border-[#8edfd7] bg-[linear-gradient(135deg,#eefaf8_0%,#ffffff_100%)] shadow-[0_16px_40px_rgba(12,123,121,0.12)]' : 'border-slate-200 bg-white hover:border-[#9dded7] hover:bg-[#fbfefd]'}`}
                               >
@@ -554,7 +555,7 @@ export default function PublicBookAppointment() {
                                     </button>
                                   ) : null}
                                   <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
-                                    Continue to choose a date
+                                    Auto move to date step
                                     <ArrowRight className="h-3.5 w-3.5" />
                                   </div>
                                 </div>
@@ -563,17 +564,6 @@ export default function PublicBookAppointment() {
                           })}
                         </div>
                       )}
-
-                      <div className="mt-6 flex justify-end">
-                        <PrimaryButton
-                          type="button"
-                          disabled={!isStep1Complete}
-                          className={`rounded-full px-6 py-3 ${!isStep1Complete ? 'opacity-60' : ''}`}
-                          onClick={() => setStep(2)}
-                        >
-                          Continue
-                        </PrimaryButton>
-                      </div>
                     </GlassCard>
                   </motion.div>
                 )}
@@ -598,7 +588,7 @@ export default function PublicBookAppointment() {
                         </button>
                       </div>
 
-                      <div className="rounded-[26px] border border-[#d7ece8] bg-white p-4 shadow-inner shadow-slate-100/50">
+                      <div className="public-booking-calendar rounded-[28px] border border-slate-200/80 bg-[linear-gradient(180deg,#ffffff_0%,#f8fcfb_100%)] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.75),0_12px_30px_rgba(15,23,42,0.04)] sm:p-4">
                         <FullCalendar
                           key={calendarRenderKey}
                           plugins={[dayGridPlugin, interactionPlugin]}

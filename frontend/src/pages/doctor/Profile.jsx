@@ -264,7 +264,7 @@ export default function DoctorProfile({ doctor = {} }) {
             {/* Photo View Modal */}
             {showPhotoModal && photoPreview && (
                 <div
-                    className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4"
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
                     onClick={() => setShowPhotoModal(false)}
                 >
                     <div className="relative max-h-[90vh] max-w-[90vw]">
@@ -284,7 +284,7 @@ export default function DoctorProfile({ doctor = {} }) {
             )}
             {showHeroModal && heroPreview && (
                 <div
-                    className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4"
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
                     onClick={() => setShowHeroModal(false)}
                 >
                     <div className="relative max-h-[90vh] max-w-[92vw]">
