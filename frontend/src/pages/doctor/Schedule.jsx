@@ -1,8 +1,7 @@
-import { Head } from '@inertiajs/react';
 import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
-import { Calendar, Clock, RefreshCw, X, Link2, CalendarOff, Plus, Trash2, Pencil, ChevronDown, Check, ArrowRight } from 'lucide-react';
+import { Calendar, Clock, X, Link2, CalendarOff, Plus, Trash2, Pencil, ChevronDown, Check } from 'lucide-react';
 import DoctorLayout from '../../layouts/DoctorLayout';
-import { DocCard, DocButton } from '../../components/doctor/DocUI';
+import { DocButton } from '../../components/doctor/DocUI';
 import { toastError, toastSuccess, toastWarning } from '../../utils/toast';
 
 const DAY_SHORT = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
@@ -293,34 +292,44 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
 
   return (
     <DoctorLayout title="Schedule">
-      <div className="mx-auto max-w-[1400px] space-y-6">
-
-        <section className="surface-card rounded-3xl overflow-hidden">
-          <div className="px-6 py-5 border-b border-slate-100 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div>
-              <h2 className="text-xl font-semibold text-[#2D3A74]">Schedule</h2>
-              <p className="text-sm text-slate-500">Manage weekly hours and unavailable date ranges.</p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2 text-xs">
-              <span className="rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-slate-600">Open Days: <span className="font-semibold text-slate-900">{weekStats.daysOpen}</span></span>
-              <span className="rounded-xl border border-sky-200 bg-sky-50 px-2.5 py-1.5 text-sky-700">Ranges: <span className="font-semibold">{weekStats.totalRanges}</span></span>
-              <span className="rounded-xl border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-amber-700">Unavailable: <span className="font-semibold">{weekStats.unavailableDays}</span></span>
-            </div>
-          </div>
-        </section>
-
-        {/* ─── MAIN SCHEDULE CARD (Appointments-style structure) ─── */}
+      <div className="mx-auto max-w-[1420px] space-y-5">
         <div ref={bannerOverlayRef} className="relative z-[40]">
-          <section className="surface-card rounded-3xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100">
-              <div className="flex flex-wrap items-center gap-2">
+          <section className="surface-card overflow-hidden rounded-3xl border border-slate-200/80 bg-white">
+            <div className="flex flex-col gap-5 px-6 py-6 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <h2 className="text-[22px] font-semibold tracking-tight text-[#243b6b]">Manage Schedule</h2>
+                <div className="mt-5 flex flex-wrap items-center gap-x-7 gap-y-2 text-[13px] text-slate-500">
+                  <span className="inline-flex items-center gap-2 uppercase tracking-[0.08em]">
+                    <Calendar className="h-4 w-4 text-slate-400" />
+                    <span>Days Open</span>
+                    <span className="text-lg font-semibold normal-case text-[#22b8b0]">{weekStats.daysOpen}/7</span>
+                  </span>
+                  <span className="inline-flex items-center gap-2 uppercase tracking-[0.08em]">
+                    <Clock className="h-4 w-4 text-slate-400" />
+                    <span>Time Ranges</span>
+                    <span className="text-lg font-semibold normal-case text-[#22b8b0]">{weekStats.totalRanges}</span>
+                  </span>
+                  <span className="inline-flex items-center gap-2 uppercase tracking-[0.08em]">
+                    <Clock className="h-4 w-4 text-slate-400" />
+                    <span>Avg Slot</span>
+                    <span className="text-lg font-semibold normal-case text-[#22b8b0]">{Math.round(weekStats.avgSlot)}m</span>
+                  </span>
+                  <span className="inline-flex items-center gap-2 uppercase tracking-[0.08em]">
+                    <CalendarOff className="h-4 w-4 text-slate-400" />
+                    <span>Unavailable</span>
+                    <span className="text-lg font-semibold normal-case text-[#22b8b0]">{weekStats.unavailableDays}</span>
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
                 {Array.isArray(chambers) && chambers.length > 0 && (
                   <div className="relative">
                     <button
                       ref={chamberButtonRef}
                       type="button"
                       onClick={() => setChamberMenuOpen((prev) => !prev)}
-                      className="inline-flex min-w-[180px] items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300"
+                      className="inline-flex min-w-[160px] items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:border-slate-300"
                     >
                       <span className="truncate">{selectedChamber?.name || 'Select Chamber'}</span>
                       <ChevronDown className={`h-4 w-4 transition-transform ${chamberMenuOpen ? 'rotate-180' : ''}`} />
@@ -330,80 +339,134 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
                 <button
                   type="button"
                   onClick={addUnavailable}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300"
+                  className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-100"
                 >
-                  <CalendarOff className="h-4 w-4" />
                   Add Vacation / Holiday
                 </button>
               </div>
             </div>
 
-          {chamberMenuOpen && chamberMenuStyle && (
-            <div
-              ref={chamberMenuRef}
-              className="absolute z-[120] overflow-hidden rounded-2xl border border-[#d7e0f0] bg-[#f8faff] p-1.5 text-slate-800 shadow-[0_24px_40px_-18px_rgba(15,23,42,0.42)]"
-              style={{
-                top: `${chamberMenuStyle.top}px`,
-                left: `${chamberMenuStyle.left}px`,
-                width: `${chamberMenuStyle.width}px`,
-              }}
-            >
-              {chambers.map((c) => {
-                const active = String(c.id) === selectedChamberId;
-                return (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => {
-                      setChamberMenuOpen(false);
-                      if (!active) {
-                        window.location.href = `/doctor/schedule?chamber_id=${c.id}`;
-                      }
-                    }}
-                    className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm font-medium transition ${active ? 'bg-[#3556a6] text-white shadow-sm' : 'text-slate-700 hover:bg-slate-100'}`}
-                  >
-                    <span className="truncate">{c.name}</span>
-                    {active ? <Check className="h-4 w-4 flex-shrink-0" /> : null}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-            {Array.isArray(chambers) && chambers.length > 0 && (
-              <div className="p-4">
-                {/* ─── Two Column Layout: Weekly Schedule + Unavailable ─── */}
-                <div className="grid gap-5 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+            {chamberMenuOpen && chamberMenuStyle && (
+              <div
+                ref={chamberMenuRef}
+                className="absolute z-[120] overflow-hidden rounded-2xl border border-slate-200 bg-white p-1.5 text-slate-800 shadow-[0_24px_40px_-18px_rgba(15,23,42,0.22)]"
+                style={{
+                  top: `${chamberMenuStyle.top}px`,
+                  left: `${chamberMenuStyle.left}px`,
+                  width: `${chamberMenuStyle.width}px`,
+                }}
+              >
+                {chambers.map((c) => {
+                  const active = String(c.id) === selectedChamberId;
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => {
+                        setChamberMenuOpen(false);
+                        if (!active) {
+                          window.location.href = `/doctor/schedule?chamber_id=${c.id}`;
+                        }
+                      }}
+                      className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm font-medium transition ${active ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-700 hover:bg-slate-100'}`}
+                    >
+                      <span className="truncate">{c.name}</span>
+                      {active ? <Check className="h-4 w-4 flex-shrink-0" /> : null}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        </div>
 
-                  {/* LEFT: Weekly Schedule */}
-                  <div className="rounded-2xl border border-slate-200 overflow-hidden bg-white">
-                    <div className="border-b border-slate-100 bg-slate-50 px-5 py-3">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                          <div className="rounded-xl bg-[#edf1fb] p-2">
-                            <Calendar className="h-4 w-4 text-[#3556a6]" />
+        {Array.isArray(chambers) && chambers.length > 0 && (
+          <>
+            <section ref={unavailableSectionRef} className="surface-card overflow-hidden rounded-3xl border border-slate-200/80 bg-white">
+              <div className="flex flex-col gap-4 px-6 py-5 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <h3 className="text-[18px] font-semibold tracking-tight text-slate-900">Unavailable Date Ranges</h3>
+                  <p className="mt-1 text-sm text-slate-500">Block dates when you're away to prevent bookings.</p>
+                </div>
+                <button
+                  type="button"
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
+                  onClick={addUnavailable}
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Date Range
+                </button>
+              </div>
+
+              <div className="px-6 pb-5">
+                {(!Array.isArray(unavailable) || unavailable.length === 0) && (
+                  <div className="flex items-center gap-2 rounded-2xl bg-sky-50 px-4 py-3 text-sm text-sky-500">
+                    <Calendar className="h-4 w-4" />
+                    No unavailable date ranges
+                  </div>
+                )}
+
+                {Array.isArray(unavailable) && unavailable.length > 0 && (
+                  <div className="space-y-3">
+                    {unavailable.map((r, idx) => (
+                      <div
+                        key={`unavailable-${idx}`}
+                        ref={(element) => {
+                          unavailableCardRefs.current[idx] = element;
+                        }}
+                        className={`rounded-2xl border px-4 py-4 transition ${idx === highlightUnavailableIndex ? 'border-rose-200 bg-rose-50/70 shadow-sm' : 'border-slate-200 bg-white'}`}
+                      >
+                        <div className="mb-3 flex items-center justify-between">
+                          <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Blocked Period {idx + 1}</span>
+                          <button
+                            type="button"
+                            className="rounded-lg p-2 text-slate-300 transition hover:bg-rose-50 hover:text-rose-500"
+                            onClick={() => removeUnavailable(idx)}
+                            title="Remove"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                        <div className="grid gap-3 md:grid-cols-2">
+                          <div className="flex items-center gap-3">
+                            <span className="w-12 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">From</span>
+                            <input
+                              type="date"
+                              className="flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                              value={r.start_date || ''}
+                              onChange={(e) => updateUnavailable(idx, { start_date: e.target.value })}
+                            />
                           </div>
-                          <div>
-                            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-800">Weekly Schedule</h2>
-                            <p className="text-[11px] text-slate-500">Set your regular chamber hours</p>
+                          <div className="flex items-center gap-3">
+                            <span className="w-12 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">To</span>
+                            <input
+                              type="date"
+                              className="flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                              value={r.end_date || ''}
+                              onChange={(e) => updateUnavailable(idx, { end_date: e.target.value })}
+                            />
                           </div>
                         </div>
-                        <span className="text-[11px] font-semibold text-slate-500">{weekStats.daysOpen} of 7 days open</span>
                       </div>
-                    </div>
-                    <div className="space-y-1 p-2">
-                    {rows.map((r, idx) => {
+                    ))}
+                  </div>
+                )}
+              </div>
+            </section>
+
+            <section className="surface-card overflow-hidden rounded-3xl border border-slate-200/80 bg-white">
+              <div className="divide-y divide-slate-200/80">
+                {rows.map((r, idx) => {
                       const isEditing = editingDay === idx;
                       const isOpen = !r.is_closed;
                       const rangeCount = Array.isArray(r.ranges) ? r.ranges.length : 0;
 
                       return (
-                        <DocCard key={r.day_of_week} padding={false} className={`border border-slate-200 transition-all ${isEditing ? 'ring-2 ring-sky-200' : 'hover:border-slate-300'}`}>
-                          {/* ── Compact header strip ── */}
+                        <div key={r.day_of_week} className={`${r.is_closed ? 'bg-rose-50/45' : 'bg-white'}`}>
                           <div
-                            className={`flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 bg-white ${isOpen ? 'cursor-pointer hover:bg-slate-50' : ''}`}
+                            className={`flex flex-wrap items-center gap-3 px-6 py-5 ${isOpen ? 'cursor-pointer hover:bg-slate-50/60' : ''}`}
                             onClick={() => { if (isOpen) setEditingDay(isEditing ? null : idx); }}
                           >
-                            {/* Toggle */}
                             <button
                               type="button"
                               onClick={(e) => {
@@ -416,38 +479,34 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
                                 if (newClosed && editingDay === idx) setEditingDay(null);
                               }}
                               className={`relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition-colors duration-200 ${
-                                isOpen ? 'bg-sky-500' : 'bg-slate-300'
+                                isOpen ? 'bg-[#26c0b8]' : 'bg-slate-300'
                               }`}
                             >
-                              <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow-sm transition-transform duration-200 ${isOpen ? 'translate-x-[18px]' : 'translate-x-[3px]'}`} />
+                              <span className={`inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${isOpen ? 'translate-x-[18px]' : 'translate-x-[2px]'}`} />
                             </button>
 
-                            {/* Day initial circle + name */}
-                            <div className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
-                              r.is_closed ? 'bg-slate-100 text-slate-400' : 'bg-slate-800 text-white'
-                            }`}>
-                              {DAY_SHORT[r.day_of_week]}
-                            </div>
-                            <span className={`text-[13px] font-semibold min-w-[66px] ${r.is_closed ? 'text-slate-400' : 'text-slate-800'}`}>
+                            <span className={`min-w-[86px] text-[15px] font-medium ${r.is_closed ? 'text-slate-700' : 'text-slate-800'}`}>
                               {DAY_LABELS[r.day_of_week]}
                             </span>
 
-                            {/* Closed badge */}
                             {r.is_closed && (
-                              <span className="rounded bg-rose-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-rose-500">Closed</span>
+                              <span className="rounded-xl bg-rose-100 px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.08em] text-rose-500">Closed</span>
                             )}
 
-                            {/* Collapsed: time pills */}
                             {isOpen && !isEditing && (
-                              <div className="flex flex-1 flex-wrap items-center gap-1.5">
+                              <div className="flex flex-1 flex-wrap items-center gap-3">
                                 {Array.isArray(r.ranges) && r.ranges.map((rg, j) => (
-                                  <span key={j} className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2.5 py-0.5 text-[11px] font-semibold text-sky-700 border border-sky-100">
-                                    <Clock className="h-2.5 w-2.5" />
-                                    {formatTime12h(rg.start_time)} – {formatTime12h(rg.end_time)}
+                                  <span key={j} className="inline-flex items-center gap-3 rounded-2xl bg-[#eefaf8] px-4 py-3 text-[15px] font-semibold text-slate-800">
+                                    {formatTime12h(rg.start_time)}
+                                    <span className="h-5 w-px bg-[#9be1db]" />
+                                    {formatTime12h(rg.end_time)}
                                   </span>
                                 ))}
                                 {rangeCount > 0 && (
-                                  <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-500">{r.slot_minutes}m</span>
+                                  <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-50 px-3 py-1.5 text-[12px] font-medium text-slate-500">
+                                    <Clock className="h-3.5 w-3.5 text-slate-400" />
+                                    {r.slot_minutes}m slots
+                                  </span>
                                 )}
                                 {rangeCount === 0 && (
                                   <span className="text-[11px] italic text-slate-400">No time ranges</span>
@@ -457,22 +516,21 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
 
                             {isEditing && <div className="flex-1" />}
 
-                            {/* Right side action icons */}
-                            <div className="flex items-center gap-1 ml-auto">
+                            <div className="ml-auto flex items-center gap-2">
                               {isOpen && rangeCount > 0 && (
                                 <button
                                   type="button"
-                                  className="rounded-md p-2 text-slate-400 hover:bg-sky-50 hover:text-sky-600 transition"
+                                  className="inline-flex items-center gap-1.5 rounded-xl px-2.5 py-2 text-sm font-semibold text-[#21b8b0] transition hover:bg-[#ecfbf8]"
                                   onClick={(e) => { e.stopPropagation(); openSyncModal(idx); }}
                                   title="Quick Sync to other days"
                                 >
-                                  <Link2 className="h-4 w-4" />
+                                  <Link2 className="h-4 w-4" /> Quick Sync
                                 </button>
                               )}
                               {isOpen && (
                                 <button
                                   type="button"
-                                  className={`rounded-md p-2 transition ${isEditing ? 'bg-sky-500 text-white hover:bg-sky-600' : 'text-slate-400 hover:bg-sky-50 hover:text-sky-600'}`}
+                                  className={`rounded-xl p-2 transition ${isEditing ? 'bg-slate-900 text-white hover:bg-slate-800' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-700'}`}
                                   onClick={(e) => { e.stopPropagation(); setEditingDay(isEditing ? null : idx); }}
                                   title={isEditing ? 'Done editing' : 'Edit schedule'}
                                 >
@@ -482,16 +540,15 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
                             </div>
                           </div>
 
-                          {/* ── Expanded editing area ── */}
                           {isOpen && isEditing && (
-                            <div className="border-t border-slate-100 px-4 py-3 space-y-2.5">
+                            <div className="space-y-3 border-t border-slate-100 bg-slate-50/60 px-6 py-4">
                               {Array.isArray(r.ranges) && r.ranges.map((rg, j) => (
-                                <div key={`${r.day_of_week}-${j}`} className="flex flex-wrap items-center gap-2.5 rounded-xl border border-slate-200 bg-white px-3 py-2.5">
+                                <div key={`${r.day_of_week}-${j}`} className="flex flex-wrap items-center gap-2.5 rounded-2xl border border-slate-200 bg-white px-3.5 py-3 shadow-sm shadow-slate-100/60">
                                   <div className="flex items-center gap-2">
-                                    <Clock className="h-3.5 w-3.5 text-sky-400" />
+                                    <Clock className="h-3.5 w-3.5 text-slate-400" />
                                     <input
                                       type="time"
-                                      className="w-[120px] rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm font-medium text-slate-700 shadow-sm cursor-pointer transition focus:border-sky-400 focus:ring-2 focus:ring-sky-100 focus:outline-none hover:border-slate-400"
+                                      className="w-[120px] cursor-pointer rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:border-slate-400 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
                                       value={rg.start_time || '09:00'}
                                       onChange={(e) => updateRange(idx, j, { start_time: e.target.value })}
                                     />
@@ -500,13 +557,13 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
                                   <div className="flex items-center gap-2">
                                     <input
                                       type="time"
-                                      className="w-[120px] rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm font-medium text-slate-700 shadow-sm cursor-pointer transition focus:border-sky-400 focus:ring-2 focus:ring-sky-100 focus:outline-none hover:border-slate-400"
+                                      className="w-[120px] cursor-pointer rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:border-slate-400 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
                                       value={rg.end_time || '17:00'}
                                       onChange={(e) => updateRange(idx, j, { end_time: e.target.value })}
                                     />
                                   </div>
                                   {j === 0 && (
-                                    <div className="flex items-center gap-1.5 ml-1 rounded-md border border-dashed border-slate-300 bg-slate-50 px-2 py-1">
+                                    <div className="ml-1 flex items-center gap-1.5 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-2.5 py-1.5">
                                       <Clock className="h-3 w-3 text-slate-400" />
                                       <input
                                         type="number"
@@ -521,7 +578,7 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
                                   )}
                                   <button
                                     type="button"
-                                    className="ml-auto rounded-md p-1.5 text-slate-300 hover:bg-rose-50 hover:text-rose-500 transition"
+                                    className="ml-auto rounded-lg p-2 text-slate-300 transition hover:bg-rose-50 hover:text-rose-500"
                                     onClick={() => removeRange(idx, j)}
                                     title="Remove"
                                   >
@@ -531,7 +588,7 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
                               ))}
                               <button
                                 type="button"
-                                className="inline-flex items-center gap-1.5 rounded-md border border-dashed border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-500 hover:border-sky-300 hover:text-sky-600 hover:bg-sky-50/50 transition"
+                                className="inline-flex items-center gap-1.5 rounded-xl border border-dashed border-slate-300 bg-white px-3.5 py-2 text-xs font-medium text-slate-600 transition hover:border-slate-400 hover:bg-slate-100"
                                 onClick={() => addRange(idx)}
                               >
                                 <Plus className="h-3 w-3" />
@@ -539,119 +596,23 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
                               </button>
                             </div>
                           )}
-                        </DocCard>
+                        </div>
                       );
                     })}
-                    </div>
-                  </div>
-
-                  {/* RIGHT: Unavailable Date Ranges */}
-                  <div ref={unavailableSectionRef} className="rounded-2xl border border-slate-200 overflow-hidden bg-white">
-                    <div className="border-b border-slate-100 bg-slate-50 px-5 py-3">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                          <div className="rounded-xl bg-[#edf1fb] p-2">
-                            <CalendarOff className="h-4 w-4 text-[#3556a6]" />
-                          </div>
-                          <div>
-                            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-800">Unavailable Dates</h2>
-                            <p className="text-[11px] text-slate-500">Block vacation and holiday ranges</p>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          className="inline-flex h-8 items-center justify-center gap-1 rounded-md bg-slate-100 px-3 text-[11px] font-semibold text-slate-600 transition hover:bg-slate-200"
-                          onClick={addUnavailable}
-                        >
-                          <Plus className="h-3 w-3" />
-                          Add
-                        </button>
-                      </div>
-                    </div>
-
-                    <DocCard padding={false} className="border-0 shadow-none">
-                      <div className="p-4 space-y-3">
-                        {(!Array.isArray(unavailable) || unavailable.length === 0) && (
-                          <div className="flex flex-col items-center justify-center py-8 text-center">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sky-50 mb-2">
-                              <Calendar className="h-5 w-5 text-sky-400" />
-                            </div>
-                            <p className="text-sm font-medium text-slate-500">No blocked dates</p>
-                            <p className="text-xs text-slate-400 mt-0.5">Add vacation or holiday dates</p>
-                            <button
-                              type="button"
-                              className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-dashed border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-500 hover:border-sky-300 hover:text-sky-600 transition"
-                              onClick={addUnavailable}
-                            >
-                              <Plus className="h-3 w-3" />
-                              Add Date Range
-                            </button>
-                          </div>
-                        )}
-                        {Array.isArray(unavailable) && unavailable.length > 0 && unavailable.map((r, idx) => (
-                          <div
-                            key={`unavailable-${idx}`}
-                            ref={(element) => {
-                              unavailableCardRefs.current[idx] = element;
-                            }}
-                            className={`rounded-xl border p-3 space-y-2 transition ${idx === highlightUnavailableIndex ? 'border-rose-300 bg-rose-50/70' : 'border-slate-200 bg-white'}`}
-                          >
-                            <div className="flex items-center justify-between">
-                              <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                                <CalendarOff className="h-3 w-3" />
-                                Blocked Period {idx + 1}
-                              </span>
-                              <button
-                                type="button"
-                                className="rounded-md p-1.5 text-slate-300 hover:bg-rose-50 hover:text-rose-500 transition"
-                                onClick={() => removeUnavailable(idx)}
-                                title="Remove"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            </div>
-                            <div className="space-y-1.5">
-                              <div className="flex items-center gap-2">
-                                <span className="w-10 text-[10px] font-bold uppercase tracking-wider text-slate-400">From</span>
-                                <input
-                                  type="date"
-                                  className="flex-1 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm font-medium text-slate-700 shadow-sm transition focus:border-sky-400 focus:ring-2 focus:ring-sky-100 focus:outline-none"
-                                  value={r.start_date || ''}
-                                  onChange={(e) => updateUnavailable(idx, { start_date: e.target.value })}
-                                />
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="w-10 text-[10px] font-bold uppercase tracking-wider text-slate-400">To</span>
-                                <input
-                                  type="date"
-                                  className="flex-1 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm font-medium text-slate-700 shadow-sm transition focus:border-sky-400 focus:ring-2 focus:ring-sky-100 focus:outline-none"
-                                  value={r.end_date || ''}
-                                  onChange={(e) => updateUnavailable(idx, { end_date: e.target.value })}
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </DocCard>
-                  </div>
-
-                </div>
-
-                {/* Save Button */}
-                <div className="flex justify-end pt-4">
-                  <DocButton
-                    onClick={save}
-                    disabled={saving}
-                    className="!bg-sky-600 !px-8 !py-3 !text-white hover:!bg-sky-700 disabled:!opacity-50"
-                  >
-                    {saving ? 'Saving...' : 'Save Schedule'}
-                  </DocButton>
-                </div>
               </div>
-            )}
-          </section>
-        </div>
+            </section>
+
+            <div className="flex justify-end pt-1">
+              <DocButton
+                onClick={save}
+                disabled={saving}
+                className="!rounded-2xl !bg-slate-900 !px-8 !py-3 !text-white hover:!bg-slate-800 disabled:!opacity-50"
+              >
+                {saving ? 'Saving...' : 'Save Schedule'}
+              </DocButton>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Quick Sync Modal */}
