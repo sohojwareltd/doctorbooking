@@ -8,6 +8,7 @@ import {
 export default function DoctorSidebar({ currentPath, onClose, collapsed = false, onToggleCollapse }) {
   const { auth } = usePage().props;
   const user = auth?.user;
+  const brandName = user?.name || 'Doctor Profile';
 
   const isCompounder = user?.role === 'compounder';
 
@@ -63,7 +64,7 @@ export default function DoctorSidebar({ currentPath, onClose, collapsed = false,
           </div>
           {!collapsed && (
             <div className="min-w-0">
-              <div className="text-base font-bold tracking-wide text-white">MediCare</div>
+              <div className="truncate text-base font-bold tracking-wide text-white">{brandName}</div>
               <div className="text-[11px] font-medium text-white/60">Doctor Portal</div>
             </div>
           )}
