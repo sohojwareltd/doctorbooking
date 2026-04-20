@@ -753,8 +753,8 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
         title="New Prescription"
         icon={FilePlus}
         size="xl"
-        panelClassName="max-h-[96vh] max-w-[60rem]"
-        bodyClassName="overflow-visible px-6 py-6"
+        panelClassName="min-h-[44rem] max-h-none max-w-[60rem] overflow-visible"
+        bodyClassName="h-auto overflow-visible px-6 py-6"
         footer={(
           <>
             <button
@@ -822,7 +822,7 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
               ) : null}
 
               {showPatientDrop && patientResults.length > 0 ? (
-                <div className="absolute left-0 right-0 top-full z-50 mt-2 max-h-80 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">
+                <div className="absolute left-0 right-0 top-full z-50 mt-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">
                   {patientResults.map((patient) => (
                     <button
                       key={patient.id}

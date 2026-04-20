@@ -65,7 +65,7 @@ export default function DocModal({
         )}
 
         {/* Body */}
-        <div className={`flex-1 overflow-y-auto px-6 py-5 ${bodyClassName}`}>
+        <div className={`flex-1 overflow-y-auto h-full px-6 py-5 ${bodyClassName}`}>
           {children}
         </div>
 
