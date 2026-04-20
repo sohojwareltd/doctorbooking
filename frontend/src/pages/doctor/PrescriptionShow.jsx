@@ -2,6 +2,11 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Calendar, ClipboardList, Heart, Phone, Mail, User, Stethoscope, Pill, FlaskConical, FileText, MapPin, Printer, ArrowLeft, Download, Save, X, Plus, Trash2 } from 'lucide-react';
 import { useMemo, useRef, useState, useEffect } from 'react';
 import DoctorLayout from '../../layouts/DoctorLayout';
+import EyePrescriptionSection, {
+  createEmptyEyePrescriptionData,
+  isEyeSpecialist,
+  normalizeEyePrescriptionData,
+} from '../../components/prescription/EyePrescriptionSection';
 import { formatDisplayDate, formatDisplayFromDateLike, formatTime12hFromDateTime } from '../../utils/dateFormat';
 import { toastSuccess, toastError } from '../../utils/toast';
 
@@ -9,6 +14,8 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
   const page = usePage();
   const authUser = page?.props?.auth?.user;
   const prescriptionSettings = page?.props?.site?.prescription || {};
+  const doctorSpecialization = authUser?.specialization || '';
+  const prefersEyeTemplate = isEyeSpecialist(doctorSpecialization);
 
   const toStr = (val) => (val === null || val === undefined ? '' : String(val));
   const calculateAgeFromDob = (dob) => {
@@ -99,6 +106,8 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
     patient_gender: source?.patient_gender || source?.user?.gender || source?.appointment?.gender || '',
     patient_weight: source?.patient_weight || source?.user?.weight || '',
     visit_type: source?.visit_type || '',
+    template_type: source?.template_type || 'general',
+    specialty_data: source?.specialty_data || createEmptyEyePrescriptionData(),
   });
 
   const [data, setData] = useState(prescription || {});
@@ -111,6 +120,20 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
     setForm(buildFormState(prescription || {}));
     setMedicines(parseMedicationsText(prescription?.medications));
   }, [prescription]);
+
+  useEffect(() => {
+    if (prefersEyeTemplate) {
+      setForm((prev) => (
+        prev.template_type === 'general' && !prescription?.template_type
+          ? {
+              ...prev,
+              template_type: 'eye',
+              specialty_data: normalizeEyePrescriptionData(prev.specialty_data),
+            }
+          : prev
+      ));
+    }
+  }, [prefersEyeTemplate, prescription?.template_type]);
 
   const handleChange = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -127,6 +150,10 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
         patient_age: toStr(form.patient_age).trim(),
         patient_contact: toStr(form.patient_contact).trim(),
         medications: buildMedicationsText(medicines),
+        template_type: form.template_type || 'general',
+        specialty_data: form.template_type === 'eye'
+          ? normalizeEyePrescriptionData(form.specialty_data)
+          : null,
       };
       const res = await fetch(`/doctor/prescriptions/${data.id}`, {
         method: 'PUT',
@@ -170,6 +197,10 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
         patient_age: toStr(form.patient_age).trim(),
         patient_contact: toStr(form.patient_contact).trim(),
         medications: buildMedicationsText(medicines),
+        template_type: form.template_type || 'general',
+        specialty_data: form.template_type === 'eye'
+          ? normalizeEyePrescriptionData(form.specialty_data)
+          : null,
         appointment_action: 'prescribed',
       };
       const res = await fetch(`/doctor/prescriptions/${data.id}`, {
@@ -598,6 +629,42 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
 
             {/* Prescription Content - Matches CreatePrescription column layout */}
             <div className="rx-pad-inputs prescription-content-section min-h-[500px] bg-white p-8 pb-12">
+              <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-4 print:hidden sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <div className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">Prescription Template</div>
+                  <div className="mt-1 text-sm text-slate-600">Switch between the regular prescription pad and a dedicated eye-refraction layout.</div>
+                </div>
+                <div className="inline-flex rounded-full border border-slate-200 bg-white p-1 shadow-sm">
+                  {[
+                    { value: 'general', label: 'General', Icon: ClipboardList },
+                    { value: 'eye', label: 'Eye', Icon: Stethoscope },
+                  ].map(({ value, label, Icon }) => {
+                    const active = form.template_type === value;
+                    return (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => handleChange('template_type', value)}
+                        className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${active ? 'bg-[#3556a6] text-white shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}
+                      >
+                        <Icon className="h-4 w-4" />
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {form.template_type === 'eye' ? (
+                <div className="mb-6">
+                  <EyePrescriptionSection
+                    value={form.specialty_data}
+                    onChange={(nextValue) => handleChange('specialty_data', nextValue)}
+                    readOnly={isPrintMode}
+                  />
+                </div>
+              ) : null}
+
               <div className="grid grid-cols-12 gap-8">
 
                 {/* Left Column - Tests + Diagnosis */}

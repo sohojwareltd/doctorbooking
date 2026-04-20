@@ -2,6 +2,7 @@ import { Link, router } from '@inertiajs/react';
 import { Calendar, FileText, FlaskConical, Mail, MapPin, MessageCircle, Phone, Printer, ArrowLeft, Download, Share2, Stethoscope, User } from 'lucide-react';
 import { useMemo, useRef, useState, useEffect } from 'react';
 import UserLayout from '../../layouts/UserLayout';
+import EyePrescriptionSection, { isEyeSpecialist } from '../../components/prescription/EyePrescriptionSection';
 import { formatDisplayDate, formatDisplayFromDateLike, formatTime12hFromDateTime } from '../../utils/dateFormat';
 import { toastSuccess, toastError } from '../../utils/toast';
 
@@ -37,6 +38,7 @@ export default function UserPrescriptionShow({ prescription = {}, doctorInfo = {
   const patientWeight = prescription?.patient_weight;
   const patientContact = prescription?.patient_contact;
   const visitType = prescription?.visit_type;
+  const templateType = prescription?.template_type || (isEyeSpecialist(doctorInfo?.specialization) ? 'eye' : 'general');
 
   const prescriptionRef = useRef(null);
   const [sharing, setSharing] = useState(false);
@@ -291,6 +293,12 @@ export default function UserPrescriptionShow({ prescription = {}, doctorInfo = {
 
             {/* Prescription Content */}
             <div className="min-h-[500px] bg-white p-8 pb-12">
+              {templateType === 'eye' ? (
+                <div className="mb-6">
+                  <EyePrescriptionSection value={prescription?.specialty_data} readOnly />
+                </div>
+              ) : null}
+
               <div className="grid grid-cols-12 gap-8">
 
                 {/* Left Column — Investigations + Diagnosis */}

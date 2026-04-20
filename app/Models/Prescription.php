@@ -25,12 +25,20 @@ class Prescription extends Model
         'appointment_id',
         'user_id',
         'doctor_id',
+        'patient_name',
+        'patient_age',
+        'patient_age_unit',
+        'patient_gender',
+        'patient_weight',
+        'patient_contact',
         'name',
         'phone',
         'gender',
         'age',
         'address',
         'visit_type',
+        'template_type',
+        'specialty_data',
         'diagnosis',
         'medications',
         'instructions',
@@ -40,6 +48,7 @@ class Prescription extends Model
 
     protected $casts = [
         'next_visit_date' => 'date',
+        'specialty_data' => 'array',
     ];
 
     public function appointment(): BelongsTo

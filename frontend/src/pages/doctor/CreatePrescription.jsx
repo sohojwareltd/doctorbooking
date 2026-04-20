@@ -4,9 +4,9 @@ import {
     Calendar,
     CheckCircle2,
     ClipboardList,
+    Eye,
     FileText,
     FlaskConical,
-    Heart,
     Mail,
     MapPin,
     Phone,
@@ -21,6 +21,11 @@ import {
 import { useEffect, useMemo, useReducer, useState } from 'react';
 import DoctorLayout from '../../layouts/DoctorLayout';
 import { DocCard } from '../../components/doctor/DocUI';
+import EyePrescriptionSection, {
+    createEmptyEyePrescriptionData,
+    isEyeSpecialist,
+    normalizeEyePrescriptionData,
+} from '../../components/prescription/EyePrescriptionSection';
 import { toastError, toastSuccess } from '../../utils/toast';
 
 const COMMON_TESTS = [
@@ -87,6 +92,7 @@ function formatDisplayTime12h(time) {
 }
 
 const initialState = {
+    template_type: 'general',
     patient: {
         name: '',
         age_value: '',
@@ -126,6 +132,7 @@ const initialState = {
         emergency_note:
             'If symptoms worsen or persist, seek emergency care immediately.',
     },
+    specialty_data: createEmptyEyePrescriptionData(),
 };
 
 function reducer(state, action) {
@@ -232,14 +239,27 @@ function reducer(state, action) {
         }
         case 'reset':
             return initialState;
+        case 'setTemplateType':
+            return {
+                ...state,
+                template_type: action.value,
+            };
+        case 'setSpecialtyData':
+            return {
+                ...state,
+                specialty_data: action.value,
+            };
         default:
             return state;
     }
 }
 
-export default function CreatePrescription({ appointmentId = null, chamberInfo, selectedPatient, medicines = [] }) {
+export default function CreatePrescription({ appointmentId = null, chamberInfo, selectedPatient, medicines = [], doctorInfo = null }) {
     const page = usePage();
     const authUser = page?.props?.auth?.user;
+    const doctorSpecialization = doctorInfo?.specialization || authUser?.specialization || '';
+    const doctorDegree = doctorInfo?.degree || authUser?.degree || '';
+    const prefersEyeTemplate = isEyeSpecialist(doctorSpecialization);
 
     const chamberName = chamberInfo?.name || '';
     const chamberAddress = chamberInfo?.location || '';
@@ -311,6 +331,12 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
             }
         }
     }, [selectedPatient]);
+
+    useEffect(() => {
+        if (prefersEyeTemplate && state.template_type === 'general') {
+            dispatch({ type: 'setTemplateType', value: 'eye' });
+        }
+    }, [prefersEyeTemplate, state.template_type]);
 
     const visitDateLabel = useMemo(
         () => formatDisplayDate(state.visit.date),
@@ -446,6 +472,10 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
         const medicationsText = buildMedicationsText();
         const testsText = buildTestsText();
         const instructionsText = buildInstructionsText();
+        const specialtyData =
+            state.template_type === 'eye'
+                ? normalizeEyePrescriptionData(state.specialty_data)
+                : null;
 
         setSubmitting(true);
         try {
@@ -472,6 +502,8 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                     patient_weight: state.patient.weight,
                     patient_contact: state.patient.contact,
                     visit_type: state.visit.type,
+                    template_type: state.template_type,
+                    specialty_data: specialtyData,
                     visit_date: state.visit.date,
                     diagnosis: diagnosisText,
                     medications: medicationsText,
@@ -566,7 +598,7 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                         {authUser?.name || 'Doctor'}
                                     </p>
                                     <p className="mt-0.5 text-sm font-medium text-slate-300">
-                                        {authUser?.specialization || authUser?.degree || 'MBBS, FCPS'}
+                                        {doctorSpecialization || doctorDegree || 'MBBS, FCPS'}
                                     </p>
                                     <div className="mt-3 space-y-1.5">
                                         {authUser?.phone ? (
@@ -674,6 +706,47 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                     {/* Form Main Content - Real Prescription Pad Layout */}
                     <div className="min-h-[500px] bg-white p-8 pb-12">
                         <form onSubmit={(e) => e.preventDefault()}>
+                            <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-4 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                    <div className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">Prescription Template</div>
+                                    <div className="mt-1 text-sm text-slate-600">
+                                        Use the general layout for regular prescriptions or switch to the eye template for refraction and ophthalmology notes.
+                                    </div>
+                                </div>
+                                <div className="inline-flex rounded-full border border-slate-200 bg-white p-1 shadow-sm">
+                                    {[
+                                        { value: 'general', label: 'General', Icon: ClipboardList },
+                                        { value: 'eye', label: 'Eye', Icon: Eye },
+                                    ].map(({ value, label, Icon }) => {
+                                        const active = state.template_type === value;
+                                        return (
+                                            <button
+                                                key={value}
+                                                type="button"
+                                                onClick={() => dispatch({ type: 'setTemplateType', value })}
+                                                className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${
+                                                    active
+                                                        ? 'bg-[#3556a6] text-white shadow-sm'
+                                                        : 'text-slate-600 hover:bg-slate-50'
+                                                }`}
+                                            >
+                                                <Icon className="h-4 w-4" />
+                                                {label}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {state.template_type === 'eye' ? (
+                                <div className="mb-6">
+                                    <EyePrescriptionSection
+                                        value={state.specialty_data}
+                                        onChange={(nextValue) => dispatch({ type: 'setSpecialtyData', value: nextValue })}
+                                    />
+                                </div>
+                            ) : null}
+
                             {/* Prescription Pad Layout - Two Column Grid */}
                             <div className="grid grid-cols-12 gap-8">
                                 
@@ -862,60 +935,61 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                             </div>
                                         </div>
                                         
-                                        {/* Vitals */}
-                                        <div className="mt-3 border-t border-slate-200 pt-3">
-                                            <div className="mb-2 text-xs font-semibold text-slate-600">Vitals</div>
-                                            <div className="grid grid-cols-2 gap-1.5">
-                                                <div>
-                                                    <input
-                                                        className="w-full rounded border border-slate-200 bg-slate-50/50 px-1.5 py-1 text-xs text-slate-900 doc-input-focus"
-                                                        value={state.exam.bp}
-                                                        onChange={(e) => dispatch({
-                                                            type: 'setField',
-                                                            path: ['exam', 'bp'],
-                                                            value: e.target.value,
-                                                        })}
-                                                        placeholder="BP"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <input
-                                                        className="w-full rounded border border-slate-200 bg-slate-50/50 px-1.5 py-1 text-xs text-slate-900 doc-input-focus"
-                                                        value={state.exam.pulse}
-                                                        onChange={(e) => dispatch({
-                                                            type: 'setField',
-                                                            path: ['exam', 'pulse'],
-                                                            value: e.target.value,
-                                                        })}
-                                                        placeholder="Pulse"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <input
-                                                        className="w-full rounded border border-slate-200 bg-slate-50/50 px-1.5 py-1 text-xs text-slate-900 doc-input-focus"
-                                                        value={state.exam.temperature}
-                                                        onChange={(e) => dispatch({
-                                                            type: 'setField',
-                                                            path: ['exam', 'temperature'],
-                                                            value: e.target.value,
-                                                        })}
-                                                        placeholder="Temp"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <input
-                                                        className="w-full rounded border border-slate-200 bg-slate-50/50 px-1.5 py-1 text-xs text-slate-900 doc-input-focus"
-                                                        value={state.exam.spo2}
-                                                        onChange={(e) => dispatch({
-                                                            type: 'setField',
-                                                            path: ['exam', 'spo2'],
-                                                            value: e.target.value,
-                                                        })}
-                                                        placeholder="SpO₂"
-                                                    />
+                                        {state.template_type !== 'eye' ? (
+                                            <div className="mt-3 border-t border-slate-200 pt-3">
+                                                <div className="mb-2 text-xs font-semibold text-slate-600">Vitals</div>
+                                                <div className="grid grid-cols-2 gap-1.5">
+                                                    <div>
+                                                        <input
+                                                            className="w-full rounded border border-slate-200 bg-slate-50/50 px-1.5 py-1 text-xs text-slate-900 doc-input-focus"
+                                                            value={state.exam.bp}
+                                                            onChange={(e) => dispatch({
+                                                                type: 'setField',
+                                                                path: ['exam', 'bp'],
+                                                                value: e.target.value,
+                                                            })}
+                                                            placeholder="BP"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <input
+                                                            className="w-full rounded border border-slate-200 bg-slate-50/50 px-1.5 py-1 text-xs text-slate-900 doc-input-focus"
+                                                            value={state.exam.pulse}
+                                                            onChange={(e) => dispatch({
+                                                                type: 'setField',
+                                                                path: ['exam', 'pulse'],
+                                                                value: e.target.value,
+                                                            })}
+                                                            placeholder="Pulse"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <input
+                                                            className="w-full rounded border border-slate-200 bg-slate-50/50 px-1.5 py-1 text-xs text-slate-900 doc-input-focus"
+                                                            value={state.exam.temperature}
+                                                            onChange={(e) => dispatch({
+                                                                type: 'setField',
+                                                                path: ['exam', 'temperature'],
+                                                                value: e.target.value,
+                                                            })}
+                                                            placeholder="Temp"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <input
+                                                            className="w-full rounded border border-slate-200 bg-slate-50/50 px-1.5 py-1 text-xs text-slate-900 doc-input-focus"
+                                                            value={state.exam.spo2}
+                                                            onChange={(e) => dispatch({
+                                                                type: 'setField',
+                                                                path: ['exam', 'spo2'],
+                                                                value: e.target.value,
+                                                            })}
+                                                            placeholder="SpO₂"
+                                                        />
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
+                                        ) : null}
                                     </div>
                                 </div>
 

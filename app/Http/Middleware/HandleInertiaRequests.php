@@ -127,6 +127,8 @@ class HandleInertiaRequests extends Middleware
                     'username'     => $request->user()->username,
                     'email'        => $request->user()->email,
                     'phone'        => $request->user()->phone,
+                    'specialization' => $request->user()->doctorProfile?->specialization,
+                    'degree' => $request->user()->doctorProfile?->degree,
                     'profile_picture' => $request->user()->loadMissing('doctorProfile')->doctorProfile?->profile_picture
                         ? asset('storage/' . $request->user()->doctorProfile->profile_picture)
                         : null,

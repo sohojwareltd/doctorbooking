@@ -21,6 +21,7 @@ class PrescriptionController extends Controller
     /** GET /doctor/prescriptions */
     public function doctorIndex(): Response
     {
+        /** @var User $doctor */
         $doctor       = Auth::user();
         $prescriptions = Prescription::with([
                 'user:id,name,phone',
@@ -65,6 +66,7 @@ class PrescriptionController extends Controller
     /** GET /doctor/prescriptions/create */
     public function doctorCreate(Request $request): Response
     {
+        /** @var User $doctor */
         $doctor        = Auth::user();
         $appointmentId = $request->query('appointment_id');
         $patientId     = $request->query('patient_id') ?? $request->query('patient');
@@ -129,6 +131,13 @@ class PrescriptionController extends Controller
             'appointmentId'   => $appointmentId ? (int) $appointmentId : null,
             'selectedPatient' => $selectedPatient,
             'chamberInfo'     => $chamberInfo,
+            'doctorInfo'      => [
+                'name' => $doctor->name,
+                'email' => $doctor->email,
+                'phone' => $doctor->phone,
+                'specialization' => $doctor->doctorProfile?->specialization,
+                'degree' => $doctor->doctorProfile?->degree,
+            ],
             'medicines'       => Medicine::orderBy('name')->get(['id', 'name', 'strength']),
         ]);
     }
@@ -136,6 +145,7 @@ class PrescriptionController extends Controller
     /** GET /doctor/prescriptions/{prescription} */
     public function doctorShow(Prescription $prescription): Response
     {
+        /** @var User $doctor */
         $doctor   = Auth::user();
         $doctorId = $doctor->doctorId();
         if ($doctorId) {
@@ -162,6 +172,8 @@ class PrescriptionController extends Controller
                 'tests'            => $prescription->tests,
                 'next_visit_date'  => $prescription->next_visit_date?->format('Y-m-d'),
                 'visit_type'       => $prescription->visit_type,
+                'template_type'    => $prescription->template_type,
+                'specialty_data'   => $prescription->specialty_data,
                 'patient_name'     => $prescription->patient_name ?? $prescription->user?->name,
                 'patient_contact'  => $prescription->patient_contact ?? $prescription->user?->phone,
                 'patient_age'      => $prescription->patient_age ?? $prescription->user?->patientProfile?->age,
@@ -299,6 +311,8 @@ class PrescriptionController extends Controller
                 'tests'            => $prescription->tests,
                 'next_visit_date'  => $prescription->next_visit_date?->format('Y-m-d'),
                 'visit_type'       => $prescription->visit_type,
+                'template_type'    => $prescription->template_type,
+                'specialty_data'   => $prescription->specialty_data,
                 'patient_name'     => $prescription->patient_name ?? $user->name,
                 'patient_contact'  => $prescription->patient_contact ?? $user->phone,
                 'patient_age'      => $prescription->patient_age,

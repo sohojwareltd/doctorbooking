@@ -18,6 +18,8 @@ class PrescriptionResource extends JsonResource
             'user_id'          => $this->user_id,
             'doctor_id'        => $this->doctor_id,
             'visit_type'       => $this->visit_type,
+            'template_type'    => $this->template_type,
+            'specialty_data'   => $this->specialty_data,
             'diagnosis'        => $this->diagnosis,
             'medications'      => $this->medications,
             'instructions'     => $this->instructions,
