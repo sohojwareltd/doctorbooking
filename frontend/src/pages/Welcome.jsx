@@ -1,5 +1,5 @@
 import { Head, Link } from '@inertiajs/react';
-import { ArrowRight, MapPin, Phone } from 'lucide-react';
+import { ArrowRight, Mail, MapPin, Phone } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import HeroSection from '../components/sections/HeroSection';
 
@@ -18,6 +18,15 @@ export default function Welcome({ home, doctor, chambers = [] }) {
         doctor?.about_bio_details ||
         doctor?.bio ||
         'Personalized care, thoughtful diagnosis, and a calm clinical experience for every patient.';
+    const aboutSubtitle =
+        doctor?.about_subtitle ||
+        'Thoughtful consultation, clear explanation, and a patient-friendly care journey.';
+    const credentialsTitle = doctor?.about_credentials_title || 'Professional profile';
+    const credentialLines = String(doctor?.about_credentials_text || '')
+        .split('\n')
+        .map((item) => item.trim())
+        .filter(Boolean)
+        .slice(0, 4);
     const liveChambers = apiChambers.length
         ? apiChambers
         : Array.isArray(chambers)
@@ -34,6 +43,26 @@ export default function Welcome({ home, doctor, chambers = [] }) {
               },
           ];
     const chamberCount = chamberCards.length;
+    const aboutHighlightValue = doctor?.about_highlight_value || (doctor?.registration_no ? 'Verified' : `${chamberCount}`);
+    const aboutHighlightLabel = doctor?.about_highlight_label || (doctor?.registration_no ? 'Professional registration' : 'Consultation chambers');
+    const aboutStats = [
+        {
+            label: 'Registration',
+            value: doctor?.registration_no || 'Available on request',
+        },
+        {
+            label: 'Phone',
+            value: doctor?.phone || 'Please contact the chamber directly',
+        },
+        {
+            label: 'Email',
+            value: doctor?.email || 'Shared after appointment confirmation',
+        },
+        {
+            label: 'Locations',
+            value: `${chamberCount} ${chamberCount === 1 ? 'active chamber' : 'active chambers'}`,
+        },
+    ];
 
     useEffect(() => {
         let ignore = false;
@@ -173,47 +202,109 @@ export default function Welcome({ home, doctor, chambers = [] }) {
 
                 <section id="about" className="px-4 py-8 sm:px-6 lg:px-8 lg:py-16">
                     <div className="mx-auto max-w-6xl rounded-[36px] border border-[#dbe7e3] bg-white/94 p-8 shadow-[0_30px_75px_rgba(15,23,42,0.07)] backdrop-blur sm:p-10 lg:p-12">
-                        <div className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
-                            <div>
-                                <p className="mb-4 text-sm font-semibold uppercase tracking-[0.28em] text-[#0f766e]">
-                                About {doctorName}
-                                </p>
-                                <h2 className="max-w-2xl text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl lg:text-[2.9rem]">
-                                    {doctorName}
-                                </h2>
-                                <p className="mt-3 text-base font-medium text-[#115e59]">{doctorTitle}</p>
-                                <p className="mt-6 max-w-3xl text-base leading-8 text-slate-600">
-                                    {shortBio}
-                                </p>
-                            </div>
+                        <div className="grid gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
+                            <div className="space-y-6">
+                                <div className="inline-flex items-center rounded-full border border-[#d6e7e1] bg-[#f4fbf8] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-[#0f766e]">
+                                    About {doctorName}
+                                </div>
+                                <div>
+                                    <h2 className="max-w-2xl text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl lg:text-[2.95rem]">
+                                        {doctorName}
+                                    </h2>
+                                    <p className="mt-3 text-base font-medium text-[#115e59]">{doctorTitle}</p>
+                                    <p className="mt-5 max-w-3xl text-base leading-8 text-slate-600">
+                                        {shortBio}
+                                    </p>
+                                </div>
 
-                            <div className="rounded-[30px] bg-[linear-gradient(135deg,#123c46_0%,#0f2d35_100%)] p-7 text-white shadow-[0_28px_70px_rgba(18,60,70,0.18)] sm:p-8">
-                                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#9fe9dd]">
-                                    {doctorName} details
-                                </p>
-                                <div className="mt-6 grid gap-5 sm:grid-cols-2">
-                                    <div>
-                                        <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/55">Registration</div>
-                                        <div className="mt-2 text-sm leading-7 text-white/88">
-                                            {doctor?.registration_no || 'Available on request'}
+                                <div className="rounded-[30px] border border-[#dde9e5] bg-[linear-gradient(135deg,#f8fbfa_0%,#eef6f3_100%)] p-6 shadow-[0_18px_45px_rgba(15,23,42,0.04)] sm:p-7">
+                                    <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+                                        <div className="max-w-xl">
+                                            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
+                                                {credentialsTitle}
+                                            </p>
+                                            <p className="mt-3 text-sm leading-7 text-slate-600">
+                                                {aboutSubtitle}
+                                            </p>
+                                        </div>
+                                        <div className="rounded-[24px] bg-[#123c46] px-5 py-4 text-white shadow-[0_18px_45px_rgba(18,60,70,0.18)] sm:min-w-[190px]">
+                                            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9fe9dd]">
+                                                Highlight
+                                            </div>
+                                            <div className="mt-3 text-2xl font-semibold tracking-tight">
+                                                {aboutHighlightValue}
+                                            </div>
+                                            <div className="mt-1 text-sm text-white/78">
+                                                {aboutHighlightLabel}
+                                            </div>
                                         </div>
                                     </div>
-                                    <div>
-                                        <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/55">Phone</div>
-                                        <div className="mt-2 text-sm leading-7 text-white/88">
+
+                                    {credentialLines.length ? (
+                                        <div className="mt-5 flex flex-wrap gap-2.5">
+                                            {credentialLines.map((item) => (
+                                                <div
+                                                    key={item}
+                                                    className="rounded-full border border-[#d6e7e1] bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm"
+                                                >
+                                                    {item}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : null}
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div className="rounded-[30px] bg-[linear-gradient(135deg,#123c46_0%,#0f2d35_100%)] p-7 text-white shadow-[0_28px_70px_rgba(18,60,70,0.18)] sm:p-8">
+                                    <div className="flex items-start justify-between gap-4">
+                                        <div>
+                                            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#9fe9dd]">
+                                                {doctorName} details
+                                            </p>
+                                            <p className="mt-3 max-w-sm text-sm leading-7 text-white/78">
+                                                A more organized snapshot of profile, contact, and availability for patients who want quick details before booking.
+                                            </p>
+                                        </div>
+                                        <div className="hidden rounded-2xl border border-white/10 bg-white/10 p-3 sm:block">
+                                            <Phone className="h-5 w-5 text-[#9fe9dd]" />
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                                        {aboutStats.map((item) => (
+                                            <div
+                                                key={item.label}
+                                                className="rounded-[22px] border border-white/10 bg-white/8 p-4 backdrop-blur-sm"
+                                            >
+                                                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/50">
+                                                    {item.label}
+                                                </div>
+                                                <div className="mt-2 text-sm leading-7 text-white/88">
+                                                    {item.value}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="grid gap-4 sm:grid-cols-2">
+                                    <div className="rounded-[24px] border border-[#dde9e5] bg-white p-5 shadow-[0_18px_45px_rgba(15,23,42,0.04)]">
+                                        <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                                            <Phone className="h-4 w-4 text-[#115e59]" />
+                                            Direct contact
+                                        </div>
+                                        <div className="mt-3 text-sm font-medium text-slate-700">
                                             {doctor?.phone || 'Please contact the chamber directly'}
                                         </div>
                                     </div>
-                                    <div>
-                                        <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/55">Email</div>
-                                        <div className="mt-2 text-sm leading-7 text-white/88">
-                                            {doctor?.email || 'Shared after appointment confirmation'}
+                                    <div className="rounded-[24px] border border-[#dde9e5] bg-white p-5 shadow-[0_18px_45px_rgba(15,23,42,0.04)]">
+                                        <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                                            <Mail className="h-4 w-4 text-[#115e59]" />
+                                            Email address
                                         </div>
-                                    </div>
-                                    <div>
-                                        <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/55">Consultation chambers</div>
-                                        <div className="mt-2 text-sm leading-7 text-white/88">
-                                            {chamberCount} {chamberCount === 1 ? 'location currently available' : 'locations currently available'}
+                                        <div className="mt-3 text-sm font-medium text-slate-700">
+                                            {doctor?.email || 'Shared after appointment confirmation'}
                                         </div>
                                     </div>
                                 </div>
