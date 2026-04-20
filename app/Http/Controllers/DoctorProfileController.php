@@ -39,6 +39,7 @@ class DoctorProfileController extends Controller
                 'degree'           => $doctor?->degree,
                 'registration_no'  => $doctor?->registration_no,
                 'profile_picture'  => $doctor?->profile_picture ? asset('storage/' . $doctor->profile_picture) : null,
+                'hero_image'       => $doctor?->hero_image ? asset('storage/' . $doctor->hero_image) : null,
                 'bio'              => $doctor?->bio,
                 'about_subtitle'              => $about['subtitle'] ?? null,
                 'about_bio_details'           => !empty($aboutParagraphs)
@@ -182,5 +183,45 @@ class DoctorProfileController extends Controller
         );
 
         return back()->with('success', 'Profile photo removed successfully.');
+    }
+
+    public function uploadHeroImage(Request $request)
+    {
+        $request->validate([
+            'hero_image' => ['required', 'image', 'mimes:jpeg,png,jpg,gif,webp', 'max:4096'],
+        ]);
+
+        $user = $this->currentDoctor();
+        $doctor = $user->doctorProfile;
+
+        if ($doctor?->hero_image && Storage::disk('public')->exists($doctor->hero_image)) {
+            Storage::disk('public')->delete($doctor->hero_image);
+        }
+
+        $path = $request->file('hero_image')->store('hero-images', 'public');
+
+        $user->doctorProfile()->updateOrCreate(
+            ['user_id' => $user->id],
+            ['hero_image' => $path]
+        );
+
+        return back()->with('success', 'Hero image updated successfully.');
+    }
+
+    public function deleteHeroImage()
+    {
+        $user = $this->currentDoctor();
+        $doctor = $user->doctorProfile;
+
+        if ($doctor?->hero_image && Storage::disk('public')->exists($doctor->hero_image)) {
+            Storage::disk('public')->delete($doctor->hero_image);
+        }
+
+        $user->doctorProfile()->updateOrCreate(
+            ['user_id' => $user->id],
+            ['hero_image' => null]
+        );
+
+        return back()->with('success', 'Hero image removed successfully.');
     }
 }

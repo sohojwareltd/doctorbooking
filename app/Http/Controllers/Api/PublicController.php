@@ -41,6 +41,7 @@ class PublicController extends Controller
                 'bio'            => $profile?->bio,
                 'experience'     => $profile?->experience,
                 'profile_picture'=> $profile?->profile_picture,
+                'hero_image'     => $profile?->hero_image,
             ],
         ]);
     }

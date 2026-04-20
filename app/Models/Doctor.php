@@ -18,6 +18,7 @@ class Doctor extends Model
         'degree',
         'registration_no',
         'profile_picture',
+        'hero_image',
         'bio',
         'experience',
         'about_content',

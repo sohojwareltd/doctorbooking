@@ -24,11 +24,16 @@ export default function DoctorProfile({ doctor = {} }) {
     const page = usePage();
     const flash = page?.props?.flash || {};
     const [photoPreview, setPhotoPreview] = useState(doctor.profile_picture || null);
+    const [heroPreview, setHeroPreview] = useState(doctor.hero_image || null);
     const [uploadingPhoto, setUploadingPhoto] = useState(false);
+    const [uploadingHero, setUploadingHero] = useState(false);
     const [deletingPhoto, setDeletingPhoto] = useState(false);
+    const [deletingHero, setDeletingHero] = useState(false);
     const [showPhotoModal, setShowPhotoModal] = useState(false);
+    const [showHeroModal, setShowHeroModal] = useState(false);
     const [activeTab, setActiveTab] = useState('profile');
     const fileInputRef = useRef(null);
+    const heroInputRef = useRef(null);
 
     const { data, setData, put, processing, errors } = useForm({
         name: doctor.name || '',
@@ -64,6 +69,10 @@ export default function DoctorProfile({ doctor = {} }) {
     useEffect(() => {
         setPhotoPreview(doctor.profile_picture || null);
     }, [doctor.profile_picture]);
+
+    useEffect(() => {
+        setHeroPreview(doctor.hero_image || null);
+    }, [doctor.hero_image]);
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -135,8 +144,64 @@ export default function DoctorProfile({ doctor = {} }) {
         });
     };
 
+    const handleHeroSelect = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp'];
+        if (!validTypes.includes(file.type)) {
+            toastError('Please select a valid hero image file (JPEG, PNG, GIF, or WebP)');
+            return;
+        }
+
+        if (file.size > 4 * 1024 * 1024) {
+            toastError('Hero image size must be less than 4MB');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            setHeroPreview(event.target.result);
+        };
+        reader.readAsDataURL(file);
+
+        setUploadingHero(true);
+        const formData = new FormData();
+        formData.append('hero_image', file);
+
+        router.post('/doctor/profile/hero-image', formData, {
+            forceFormData: true,
+            preserveScroll: true,
+            onSuccess: () => {
+                setUploadingHero(false);
+            },
+            onError: (uploadErrors) => {
+                setUploadingHero(false);
+                setHeroPreview(doctor.hero_image || null);
+                toastError(uploadErrors?.hero_image || 'Failed to upload hero image');
+            },
+        });
+    };
+
+    const handleDeleteHero = () => {
+        if (!confirm('Are you sure you want to delete your hero image?')) return;
+
+        setDeletingHero(true);
+        router.delete('/doctor/profile/hero-image', {
+            preserveScroll: true,
+            onSuccess: () => {
+                setDeletingHero(false);
+                setHeroPreview(null);
+            },
+            onError: () => {
+                setDeletingHero(false);
+                toastError('Failed to delete hero image');
+            },
+        });
+    };
+
     const inputClass =
-        'w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 doc-input-focus transition';
+        'w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900  transition';
     const labelClass = 'mb-2 block text-sm font-semibold text-slate-700';
     const errorClass = 'mt-1 text-xs font-semibold text-rose-600';
     const isFilled = (value) => String(value ?? '').trim() !== '';
@@ -217,10 +282,31 @@ export default function DoctorProfile({ doctor = {} }) {
                     </div>
                 </div>
             )}
+            {showHeroModal && heroPreview && (
+                <div
+                    className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4"
+                    onClick={() => setShowHeroModal(false)}
+                >
+                    <div className="relative max-h-[90vh] max-w-[92vw]">
+                        <button
+                            onClick={() => setShowHeroModal(false)}
+                            className="absolute -right-3 -top-3 rounded-full bg-white p-2 shadow-lg transition hover:bg-slate-100"
+                        >
+                            <X className="h-5 w-5 text-slate-700" />
+                        </button>
+                        <img
+                            src={heroPreview}
+                            alt="Hero"
+                            className="max-h-[85vh] max-w-full rounded-2xl object-contain shadow-2xl"
+                        />
+                    </div>
+                </div>
+            )}
             {activeTab === 'profile' && (
-                <div className="surface-card overflow-hidden rounded-3xl">
-                    <div className="relative bg-gradient-to-br from-slate-50 via-white to-slate-100/70 p-8">
-                        <div className="relative z-10">
+                <div className="space-y-6">
+                    <div className="surface-card overflow-hidden rounded-3xl">
+                        <div className="relative bg-gradient-to-br from-slate-50 via-white to-slate-100/70 p-8">
+                            <div className="relative z-10">
                             <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
                                 <div className="flex items-center gap-3">
                                     <div className="rounded-xl bg-[#253566] p-3 shadow-lg">
@@ -336,6 +422,109 @@ export default function DoctorProfile({ doctor = {} }) {
                                             </button>
                                         );
                                     })}
+                                </div>
+                            </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="surface-card overflow-hidden rounded-3xl">
+                        <div className="relative bg-gradient-to-br from-slate-50 via-white to-slate-100/70 p-8">
+                            <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="rounded-xl bg-[#0f766e] p-3 shadow-lg">
+                                        <Camera className="h-6 w-6 text-white" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-xl font-bold text-slate-800">Hero Image</h2>
+                                        <p className="text-sm text-slate-500">Upload the wide banner image shown in the homepage hero section.</p>
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-wrap gap-2">
+                                    <span className="rounded-full border border-slate-200 bg-white/90 px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm">
+                                        {heroPreview ? 'Hero ready' : 'No hero image uploaded'}
+                                    </span>
+                                    <span className="rounded-full border border-slate-200 bg-white/90 px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm">
+                                        Recommended: 1600×900+
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div className="grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_280px] lg:items-start">
+                                <div>
+                                    <div
+                                        onClick={() => heroPreview && setShowHeroModal(true)}
+                                        className={`relative aspect-[16/9] overflow-hidden rounded-[28px] border border-slate-200 bg-slate-100 shadow-xl ${heroPreview ? 'cursor-pointer' : ''}`}
+                                    >
+                                        {heroPreview ? (
+                                            <img
+                                                src={heroPreview}
+                                                alt="Hero preview"
+                                                className="h-full w-full object-cover transition hover:scale-[1.02]"
+                                            />
+                                        ) : (
+                                            <div className="flex h-full items-center justify-center bg-[linear-gradient(135deg,#d9f2ef_0%,#eff6ff_48%,#f8fafc_100%)] text-slate-500">
+                                                <div className="text-center">
+                                                    <Camera className="mx-auto h-12 w-12 text-slate-400" />
+                                                    <p className="mt-3 text-sm font-semibold">No hero image yet</p>
+                                                    <p className="mt-1 text-xs text-slate-400">This image appears behind the homepage headline.</p>
+                                                </div>
+                                            </div>
+                                        )}
+                                        {(uploadingHero || deletingHero) && (
+                                            <div className="absolute inset-0 flex items-center justify-center bg-black/45">
+                                                <div className="h-10 w-10 animate-spin rounded-full border-4 border-white border-t-transparent"></div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-col gap-3">
+                                    <input
+                                        ref={heroInputRef}
+                                        type="file"
+                                        accept="image/jpeg,image/png,image/jpg,image/gif,image/webp"
+                                        onChange={handleHeroSelect}
+                                        className="hidden"
+                                    />
+
+                                    <button
+                                        type="button"
+                                        onClick={() => heroInputRef.current?.click()}
+                                        disabled={uploadingHero}
+                                        className="flex items-center justify-center gap-2 rounded-xl bg-[#0f766e] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0b5f59] hover:-translate-y-0.5 disabled:opacity-50"
+                                    >
+                                        <Upload className="h-5 w-5" />
+                                        {heroPreview ? 'Change Hero Image' : 'Upload Hero Image'}
+                                    </button>
+
+                                    {heroPreview && (
+                                        <div className="flex gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowHeroModal(true)}
+                                                className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+                                            >
+                                                <Camera className="h-4 w-4" />
+                                                View
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={handleDeleteHero}
+                                                disabled={deletingHero}
+                                                className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-rose-200 bg-white px-4 py-2.5 text-sm font-medium text-rose-600 transition hover:border-rose-300 hover:bg-rose-50 disabled:opacity-50"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                                Delete
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    <div className="rounded-2xl border border-slate-200 bg-white/90 p-4 text-sm text-slate-600 shadow-sm">
+                                        <p className="font-semibold text-slate-800">Where this image appears</p>
+                                        <p className="mt-3 text-xs text-slate-400">Max: 4MB • JPEG, PNG, GIF, WebP</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>

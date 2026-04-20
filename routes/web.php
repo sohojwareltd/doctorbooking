@@ -105,6 +105,8 @@ Route::middleware(['auth', 'verified', 'role:doctor,compounder'])
     Route::put('/profile', [ProfileController::class, 'doctorUpdate'])->name('profile.update');
     Route::post('/profile/photo', [ProfileController::class, 'doctorPhotoUpload'])->name('profile.photo.upload');
     Route::delete('/profile/photo', [ProfileController::class, 'doctorPhotoDelete'])->name('profile.photo.delete');
+    Route::post('/profile/hero-image', [ProfileController::class, 'doctorHeroUpload'])->name('profile.hero.upload');
+    Route::delete('/profile/hero-image', [ProfileController::class, 'doctorHeroDelete'])->name('profile.hero.delete');
 
     // Chambers
     Route::get('/chambers', [ChamberController::class, 'index'])->name('chambers');

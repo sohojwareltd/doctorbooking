@@ -38,6 +38,16 @@ class ProfileController extends Controller
         return app(DoctorProfileController::class)->deletePhoto();
     }
 
+    public function doctorHeroUpload(Request $request): mixed
+    {
+        return app(DoctorProfileController::class)->uploadHeroImage($request);
+    }
+
+    public function doctorHeroDelete(): mixed
+    {
+        return app(DoctorProfileController::class)->deleteHeroImage();
+    }
+
     /** GET /patient/profile */
     public function patientShow(): Response
     {

@@ -6,11 +6,11 @@ import DoctorLogo from '../components/DoctorLogo';
 export default function PublicLayout({ children }) {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [showScrollTop, setShowScrollTop] = useState(false);
-    const { auth, home, doctor } = usePage().props;
+    const { auth, home, doctor, publicDoctor } = usePage().props;
 
     const header = home?.header || {};
     const headerLogoUrl = header.logoUrl;
-    const brandName = doctor?.name || 'MediCare';
+    const brandName = publicDoctor?.name || doctor?.name || auth?.user?.name || 'Doctor Profile';
 
         const dashboardHref =
                 auth?.user?.role === 'admin'

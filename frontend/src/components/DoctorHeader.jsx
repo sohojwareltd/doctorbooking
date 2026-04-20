@@ -18,7 +18,7 @@ export default function DoctorHeader({ title = '', onMenuClick, collapsed = fals
   }, [dropdownOpen]);
 
   return (
-    <header className="fixed top-0 left-0 right-0 h-16 bg-white shadow-sm border-b border-[#EDEDED] flex items-center justify-between px-4 md:px-8 " style={{ left: undefined }} id="doc-header">
+    <header className="fixed top-0 left-0 right-0 z-[70] h-16 border-b border-[#EDEDED] bg-white shadow-sm flex items-center justify-between px-4 md:px-8" style={{ left: undefined }} id="doc-header">
       <div className="flex items-center gap-3 text-sm">
         <button onClick={onMenuClick} className="lg:hidden text-[#2D3A74]" aria-label="Open menu">
           <Menu className="h-5 w-5" />
@@ -66,7 +66,7 @@ export default function DoctorHeader({ title = '', onMenuClick, collapsed = fals
           </button>
 
           {dropdownOpen && (
-            <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+            <div className="absolute right-0 z-[80] mt-2 w-48 rounded-lg border border-gray-200 bg-white py-2 shadow-lg">
               <div className="px-4 py-2 border-b border-gray-100">
                 <p className="text-sm font-medium text-gray-900">{user?.name || 'Doctor'}</p>
                 <p className="text-xs text-gray-500">{user?.email || ''}</p>

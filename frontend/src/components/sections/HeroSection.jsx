@@ -11,10 +11,11 @@ export default function HeroSection({ doctor }) {
     const doctorBio =
         doctor?.bio ||
         'A refined, patient-first consultation experience with clear treatment planning and modern clinical care.';
-    const imageUrl = doctor?.profile_picture
-        ? (doctor.profile_picture.startsWith('http') || doctor.profile_picture.startsWith('/')
-            ? doctor.profile_picture
-            : `/storage/${doctor.profile_picture}`)
+    const heroSource = doctor?.hero_image || doctor?.profile_picture || '';
+    const imageUrl = heroSource
+        ? (heroSource.startsWith('http') || heroSource.startsWith('/')
+            ? heroSource
+            : `/storage/${heroSource}`)
         : 'https://img.freepik.com/premium-photo/medical-background_935395-109680.jpg';
     const serviceChips = ['Consultation', 'Treatment Plan', 'Follow-up Care'];
 

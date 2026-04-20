@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\SiteContent;
+use App\Models\User;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
@@ -42,6 +43,7 @@ class HandleInertiaRequests extends Middleware
 
         $contactPhone = null;
         $prescription = null;
+        $publicDoctor = null;
         if (Schema::hasTable('site_contents')) {
             $homeContent = SiteContent::where('key', 'home')->first()?->value;
             $homeContent = SiteContent::normalizeValue($homeContent);
@@ -98,6 +100,22 @@ class HandleInertiaRequests extends Middleware
             }
         }
 
+        if (Schema::hasTable('users')) {
+            $doctorUser = User::query()
+                ->with('doctorProfile')
+                ->whereHas('role', fn ($q) => $q->where('name', 'doctor'))
+                ->first();
+
+            if ($doctorUser) {
+                $publicDoctor = [
+                    'name' => $doctorUser->name,
+                    'profile_picture' => $doctorUser->doctorProfile?->profile_picture
+                        ? asset('storage/' . $doctorUser->doctorProfile->profile_picture)
+                        : null,
+                ];
+            }
+        }
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
@@ -109,6 +127,12 @@ class HandleInertiaRequests extends Middleware
                     'username'     => $request->user()->username,
                     'email'        => $request->user()->email,
                     'phone'        => $request->user()->phone,
+                    'profile_picture' => $request->user()->loadMissing('doctorProfile')->doctorProfile?->profile_picture
+                        ? asset('storage/' . $request->user()->doctorProfile->profile_picture)
+                        : null,
+                    'hero_image' => $request->user()->doctorProfile?->hero_image
+                        ? asset('storage/' . $request->user()->doctorProfile->hero_image)
+                        : null,
                     'role'         => $request->user()->loadMissing('role')->role?->name,
                     'role_display' => $request->user()->role?->display_name,
                 ] : null,
@@ -123,6 +147,7 @@ class HandleInertiaRequests extends Middleware
                 'contactPhone' => $contactPhone,
                 'prescription' => $prescription,
             ],
+            'publicDoctor' => $publicDoctor,
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
     }
