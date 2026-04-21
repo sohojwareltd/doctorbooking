@@ -138,7 +138,6 @@ class PrescriptionController extends Controller
                 'specialization' => $doctor->doctorProfile?->specialization,
                 'degree' => $doctor->doctorProfile?->degree,
             ],
-            'medicines'       => Medicine::orderBy('name')->get(['id', 'name', 'strength']),
         ]);
     }
 

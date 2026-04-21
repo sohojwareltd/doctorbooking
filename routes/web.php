@@ -10,6 +10,7 @@ use App\Http\Controllers\Web\PatientController;
 use App\Http\Controllers\Web\ReportsController;
 use App\Http\Controllers\Web\ProfileController;
 use App\Http\Controllers\Web\ChamberController;
+use App\Http\Controllers\Web\MedicineController;
 use App\Http\Controllers\DoctorScheduleController;
 use App\Http\Controllers\Admin\SiteContentController;
 use App\Http\Controllers\Web\CompoundUserController;
@@ -112,6 +113,9 @@ Route::middleware(['auth', 'verified', 'role:doctor,compounder'])
     Route::get('/chambers', [ChamberController::class, 'index'])->name('chambers');
     Route::post('/chambers', [ChamberController::class, 'save'])->name('chambers.save');
     Route::delete('/chambers/{chamber}', [ChamberController::class, 'destroy'])->name('chambers.delete');
+
+    // Medicines
+    Route::get('/medicines', [MedicineController::class, 'index'])->name('medicines');
 });
 
 /*

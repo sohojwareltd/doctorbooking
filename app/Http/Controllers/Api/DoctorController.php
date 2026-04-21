@@ -9,6 +9,7 @@ use App\Models\Appointment;
 use App\Models\DoctorSchedule;
 use App\Models\DoctorScheduleRange;
 use App\Models\DoctorUnavailableRange;
+use App\Models\Medicine;
 use App\Models\Prescription;
 use App\Models\Role;
 use App\Models\User;
@@ -513,9 +514,112 @@ class DoctorController extends Controller
 
     public function medicines(Request $request): JsonResponse
     {
-        return response()->json(
-            \App\Models\Medicine::orderBy('name')->get(['id', 'name', 'strength'])
-        );
+        $validated = $request->validate([
+            'query' => ['nullable', 'string', 'max:120'],
+            'exact' => ['nullable', 'boolean'],
+            'limit' => ['nullable', 'integer', 'min:1', 'max:100'],
+            'page' => ['nullable', 'integer', 'min:1'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+        ]);
+
+        $query = trim((string) ($validated['query'] ?? ''));
+        $exact = (bool) ($validated['exact'] ?? false);
+        $limit = array_key_exists('limit', $validated) ? (int) $validated['limit'] : null;
+        $perPage = array_key_exists('per_page', $validated) ? (int) $validated['per_page'] : 10;
+
+        $builder = Medicine::query()->select(['id', 'name', 'strength']);
+
+        if ($query !== '') {
+            $normalized = preg_replace('/\s+/', ' ', Str::lower($query));
+            if ($exact) {
+                $builder->whereRaw('LOWER(TRIM(name)) = ?', [$normalized]);
+            } else {
+                $builder->where('name', 'like', '%' . $query . '%');
+            }
+        }
+
+        $builder->orderBy('name');
+        if ($exact || $limit !== null) {
+            if ($limit !== null) {
+                $builder->limit($limit);
+            }
+
+            return response()->json($builder->get());
+        }
+
+        $paginator = $builder
+            ->paginate($perPage)
+            ->appends($request->query());
+
+        return response()->json($paginator);
+    }
+
+    /** POST /api/doctor/medicines */
+    public function storeMedicine(Request $request): JsonResponse
+    {
+        $request->merge([
+            'name' => preg_replace('/\s+/', ' ', trim((string) $request->input('name', ''))),
+            'strength' => trim((string) $request->input('strength', '')),
+        ]);
+
+        $validated = $request->validate([
+            'name' => [
+                'required', 'string', 'max:120',
+                Rule::unique('medicines')->where(fn ($q) =>
+                    $q->whereRaw('LOWER(name) = ?', [Str::lower((string) $request->input('name'))])
+                ),
+            ],
+            'strength' => ['nullable', 'string', 'max:60'],
+        ]);
+
+        $medicine = Medicine::create([
+            'name' => $validated['name'],
+            'strength' => $validated['strength'] ?? null,
+        ]);
+
+        return response()->json([
+            'message' => 'Medicine created successfully.',
+            'medicine' => $medicine->only(['id', 'name', 'strength']),
+        ], 201);
+    }
+
+    /** PUT /api/doctor/medicines/{medicine} */
+    public function updateMedicine(Request $request, Medicine $medicine): JsonResponse
+    {
+        $request->merge([
+            'name' => preg_replace('/\s+/', ' ', trim((string) $request->input('name', ''))),
+            'strength' => trim((string) $request->input('strength', '')),
+        ]);
+
+        $validated = $request->validate([
+            'name' => [
+                'required', 'string', 'max:120',
+                Rule::unique('medicines')->where(fn ($q) =>
+                    $q->whereRaw('LOWER(name) = ?', [Str::lower((string) $request->input('name'))])
+                )->ignore($medicine->id),
+            ],
+            'strength' => ['nullable', 'string', 'max:60'],
+        ]);
+
+        $medicine->update([
+            'name' => $validated['name'],
+            'strength' => $validated['strength'] ?? null,
+        ]);
+
+        return response()->json([
+            'message' => 'Medicine updated successfully.',
+            'medicine' => $medicine->only(['id', 'name', 'strength']),
+        ]);
+    }
+
+    /** DELETE /api/doctor/medicines/{medicine} */
+    public function destroyMedicine(Medicine $medicine): JsonResponse
+    {
+        $medicine->delete();
+
+        return response()->json([
+            'message' => 'Medicine deleted successfully.',
+        ]);
     }
 
     // ── Walk-in appointment ───────────────────────────────────────────────────

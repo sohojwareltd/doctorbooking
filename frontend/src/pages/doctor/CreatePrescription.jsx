@@ -18,7 +18,7 @@ import {
     Trash2,
     User,
 } from 'lucide-react';
-import { useEffect, useMemo, useReducer, useState } from 'react';
+import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import DoctorLayout from '../../layouts/DoctorLayout';
 import { DocCard } from '../../components/doctor/DocUI';
 import EyePrescriptionSection, {
@@ -53,6 +53,10 @@ const emptyMedicine = () => ({
 });
 
 const todayYmd = () => new Date().toISOString().split('T')[0];
+
+function normalizeMedicineName(value) {
+    return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
 
 function formatDisplayDate(ymd) {
     if (!ymd) return '';
@@ -254,7 +258,7 @@ function reducer(state, action) {
     }
 }
 
-export default function CreatePrescription({ appointmentId = null, chamberInfo, selectedPatient, medicines = [], doctorInfo = null }) {
+export default function CreatePrescription({ appointmentId = null, chamberInfo, selectedPatient, doctorInfo = null }) {
     const page = usePage();
     const authUser = page?.props?.auth?.user;
     const doctorSpecialization = doctorInfo?.specialization || authUser?.specialization || '';
@@ -268,20 +272,10 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
     const [state, dispatch] = useReducer(reducer, initialState);
     const [submitting, setSubmitting] = useState(false);
     const [appointmentAction, setAppointmentAction] = useState(null);
+    const [medicineMatchesByRow, setMedicineMatchesByRow] = useState({});
+    const medicineMatchCacheRef = useRef(new Map());
+    const medicineQuerySeqRef = useRef({});
 
-    // Medicines from backend (App\Models\Medicine) for search/suggestions
-    const medicineSuggestions = useMemo(
-        () =>
-            Array.isArray(medicines)
-                ? medicines.map((m) => ({
-                      id: m.id,
-                      name: m.name || '',
-                      strength: m.strength || '',
-                  }))
-                : [],
-        [medicines],
-    );
-    
     // Medicine form state (fix for getElementById issue)
     const [newMedicine, setNewMedicine] = useState({
         name: '',
@@ -290,6 +284,76 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
         duration: '',
         instruction: 'After meal',
     });
+    const [focusedMedicineIndex, setFocusedMedicineIndex] = useState(null);
+
+    const queryMedicineMatches = async (rawName, rowIndex) => {
+        const normalized = normalizeMedicineName(rawName);
+        if (!normalized) {
+            setMedicineMatchesByRow((prev) => ({ ...prev, [rowIndex]: [] }));
+            return;
+        }
+
+        const cached = medicineMatchCacheRef.current.get(normalized);
+        if (cached) {
+            setMedicineMatchesByRow((prev) => ({ ...prev, [rowIndex]: cached }));
+            const exactCachedMatch = cached.find(
+                (item) => normalizeMedicineName(item.name) === normalized,
+            );
+            if (exactCachedMatch?.strength) {
+                dispatch({
+                    type: 'setArrayItem',
+                    path: ['medicines'],
+                    index: rowIndex,
+                    patch: { name: rawName, strength: exactCachedMatch.strength },
+                });
+            }
+            return;
+        }
+
+        const seq = (medicineQuerySeqRef.current[rowIndex] || 0) + 1;
+        medicineQuerySeqRef.current[rowIndex] = seq;
+
+        try {
+            const params = new URLSearchParams({
+                query: rawName,
+                limit: '8',
+            });
+            const res = await fetch(`/api/doctor/medicines?${params.toString()}`, {
+                headers: { Accept: 'application/json' },
+                credentials: 'same-origin',
+            });
+            if (!res.ok) throw new Error('Failed to load medicines');
+            const data = await res.json();
+            if (medicineQuerySeqRef.current[rowIndex] !== seq) return;
+
+            const matches = Array.isArray(data)
+                ? data.map((med) => ({
+                    id: med.id,
+                    name: med.name || '',
+                    strength: med.strength || '',
+                }))
+                : [];
+
+            medicineMatchCacheRef.current.set(normalized, matches);
+            setMedicineMatchesByRow((prev) => ({ ...prev, [rowIndex]: matches }));
+
+            const exactMatch = matches.find(
+                (item) => normalizeMedicineName(item.name) === normalized,
+            );
+
+            if (exactMatch?.strength) {
+                dispatch({
+                    type: 'setArrayItem',
+                    path: ['medicines'],
+                    index: rowIndex,
+                    patch: { name: rawName, strength: exactMatch.strength },
+                });
+            }
+        } catch {
+            if (medicineQuerySeqRef.current[rowIndex] !== seq) return;
+            setMedicineMatchesByRow((prev) => ({ ...prev, [rowIndex]: [] }));
+        }
+    };
 
     // Initialize appointment from URL query parameter
     useEffect(() => {
@@ -1003,33 +1067,73 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                             <div className="flex-1 pt-2">
                                                 {/* Medicine Rows - Dynamic */}
                                                 <div className="space-y-2">
-                                                    {(state.medicines || []).map((m, idx) => (
-                                                        <div key={idx} className="group/med flex items-start gap-2 rounded border border-slate-200 bg-white p-2 transition hover:border-[#b9caee] hover:bg-slate-50">
+                                                    {(state.medicines || []).map((m, idx) => {
+                                                        const normalizedMedicineName = normalizeMedicineName(m.name);
+                                                        const matchedSuggestions = medicineMatchesByRow[idx] || [];
+                                                        const hasMedicineMatches = matchedSuggestions.length > 0;
+                                                        const showMedicineMatchDropdown = focusedMedicineIndex === idx && hasMedicineMatches;
+
+                                                        return (
+                                                        <div key={idx} className="group/med flex items-start gap-2 rounded-lg border border-slate-200 bg-white p-2.5 shadow-sm transition hover:border-[#9fb7ea] hover:shadow">
                                                             <span className="mt-1 text-xs font-bold text-slate-400">{idx + 1}.</span>
                                                             <div className="flex-1 grid grid-cols-6 gap-2">
-                                                                <input
-                                                                    className="col-span-2 rounded border border-slate-200 bg-slate-50/50 px-3 py-1.5 text-sm text-slate-900 doc-input-focus"
-                                                                    value={m.name}
-                                                                    onChange={(e) => {
-                                                                        const value = e.target.value;
-                                                                        const match = medicineSuggestions.find(
-                                                                            (med) =>
-                                                                                med.name.toLowerCase() === value.toLowerCase(),
-                                                                        );
-                                                                        const patch = { name: value };
-                                                                        if (match && match.strength) {
-                                                                            patch.strength = match.strength;
-                                                                        }
-                                                                        dispatch({
-                                                                            type: 'setArrayItem',
-                                                                            path: ['medicines'],
-                                                                            index: idx,
-                                                                            patch,
-                                                                        });
-                                                                    }}
-                                                                    placeholder="Medicine name"
-                                                                    list="medicine-suggestions"
-                                                                />
+                                                                <div className="col-span-2 relative">
+                                                                    <input
+                                                                        className="w-full rounded border border-slate-200 bg-slate-50/50 px-3 py-1.5 text-sm text-slate-900 doc-input-focus"
+                                                                        value={m.name}
+                                                                        onFocus={() => {
+                                                                            setFocusedMedicineIndex(idx);
+                                                                            void queryMedicineMatches(m.name, idx);
+                                                                        }}
+                                                                        onBlur={() => {
+                                                                            window.setTimeout(() => {
+                                                                                setFocusedMedicineIndex((current) => (current === idx ? null : current));
+                                                                            }, 120);
+                                                                        }}
+                                                                        onChange={(e) => {
+                                                                            const value = e.target.value;
+                                                                            const patch = { name: value };
+                                                                            dispatch({
+                                                                                type: 'setArrayItem',
+                                                                                path: ['medicines'],
+                                                                                index: idx,
+                                                                                patch,
+                                                                            });
+                                                                            void queryMedicineMatches(value, idx);
+                                                                        }}
+                                                                        placeholder="Search medicine name"
+                                                                    />
+                                                                    {showMedicineMatchDropdown ? (
+                                                                        <div className="absolute left-0 right-0 z-20 mt-1 rounded-md border border-[#c7d6f7] bg-white shadow-lg">
+                                                                            {matchedSuggestions.slice(0, 8).map((med, optionIdx) => (
+                                                                                <button
+                                                                                    key={`${med.id ?? med.name}-${med.strength}-${optionIdx}`}
+                                                                                    type="button"
+                                                                                    className="flex w-full items-center justify-between border-b border-slate-100 px-3 py-2 text-left text-xs last:border-b-0 hover:bg-[#edf2ff]"
+                                                                                    onMouseDown={(event) => {
+                                                                                        event.preventDefault();
+                                                                                        dispatch({
+                                                                                            type: 'setArrayItem',
+                                                                                            path: ['medicines'],
+                                                                                            index: idx,
+                                                                                            patch: {
+                                                                                                name: med.name,
+                                                                                                strength: med.strength || m.strength,
+                                                                                            },
+                                                                                        });
+                                                                                        setFocusedMedicineIndex(null);
+                                                                                    }}
+                                                                                >
+                                                                                    <span className="font-semibold text-slate-800">{med.name}</span>
+                                                                                    <span className="text-slate-500">{med.strength || 'No strength'}</span>
+                                                                                </button>
+                                                                            ))}
+                                                                        </div>
+                                                                    ) : null}
+                                                                    {normalizedMedicineName && !hasMedicineMatches ? (
+                                                                        <p className="mt-1 text-[11px] font-medium text-amber-700">No medicine match found.</p>
+                                                                    ) : null}
+                                                                </div>
                                                                 <input
                                                                     className="rounded border border-slate-200 bg-slate-50/50 px-3 py-1.5 text-sm text-slate-900 doc-input-focus"
                                                                     value={m.strength}
@@ -1133,7 +1237,8 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                                                 ×
                                                             </button>
                                                         </div>
-                                                    ))}
+                                                        );
+                                                    })}
                                                     
                                                     {/* Add New Medicine Row Button */}
                                                     <button
@@ -1151,19 +1256,6 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                                         Add Medicine Row
                                                     </button>
                                                     
-                                                    {/* Medicine Suggestions Datalist from backend medicines */}
-                                                    <datalist id="medicine-suggestions">
-                                                        {medicineSuggestions.map((med) => (
-                                                            <option
-                                                                key={med.id ?? med.name}
-                                                                value={med.name}
-                                                            >
-                                                                {med.strength
-                                                                    ? `${med.name} ${med.strength}`
-                                                                    : med.name}
-                                                            </option>
-                                                        ))}
-                                                    </datalist>
                                                 </div>
                                             </div>
                                         </div>
