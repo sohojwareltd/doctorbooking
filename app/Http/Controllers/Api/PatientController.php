@@ -8,7 +8,9 @@ use App\Http\Resources\PrescriptionResource;
 use App\Models\Appointment;
 use App\Models\PatientReport;
 use App\Models\Prescription;
+use App\Models\SiteContent;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -18,6 +20,98 @@ use Illuminate\Http\Request;
  */
 class PatientController extends Controller
 {
+    /** GET /api/patient/dashboard-mobile */
+    public function dashboardMobile(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $upcomingAppointment = Appointment::query()
+            ->with(['chamber:id,name,location'])
+            ->where(fn ($q) => $q->where('user_id', $user->id)
+                ->orWhere('email', $user->email))
+            ->whereDate('appointment_date', '>=', now()->toDateString())
+            ->orderBy('appointment_date')
+            ->orderBy('appointment_time')
+            ->first();
+
+        $appointmentAt = null;
+        $countdownSeconds = null;
+        if ($upcomingAppointment?->appointment_date) {
+            $date = $upcomingAppointment->appointment_date->toDateString();
+            $time = $upcomingAppointment->appointment_time ?: '00:00:00';
+            $appointmentAt = Carbon::parse($date.' '.$time);
+            $countdownSeconds = max(0, now()->diffInSeconds($appointmentAt, false));
+        }
+
+        $recentPrescription = Prescription::query()
+            ->with(['appointment:id,chamber_id', 'appointment.chamber:id,name,location'])
+            ->where('user_id', $user->id)
+            ->latest('created_at')
+            ->first();
+
+        $recentReport = PatientReport::query()
+            ->where('user_id', $user->id)
+            ->latest('created_at')
+            ->first();
+
+        $homeContent = SiteContent::query()->where('key', 'home')->first()?->value;
+        $homeContent = is_array($homeContent) ? SiteContent::normalizeValue($homeContent) : [];
+
+        $defaultTip = 'A short walk after meals can help steady your energy through the afternoon.';
+        $tipText = data_get($homeContent, 'health_tip')
+            ?? data_get($homeContent, 'daily_health_tip')
+            ?? data_get($homeContent, 'tip.text')
+            ?? $defaultTip;
+
+        $chamberName = $upcomingAppointment?->chamber?->name
+            ?? $recentPrescription?->appointment?->chamber?->name;
+        $chamberLocation = $upcomingAppointment?->chamber?->location
+            ?? $recentPrescription?->appointment?->chamber?->location;
+
+        return response()->json([
+            'message' => 'Patient dashboard snapshot fetched successfully.',
+            'dashboard' => [
+                'greeting' => [
+                    'name' => $user->name,
+                    'subtitle' => 'Here is a calm snapshot of your care today.',
+                ],
+                'upcoming_appointment' => $upcomingAppointment ? [
+                    'id' => $upcomingAppointment->id,
+                    'date' => $upcomingAppointment->appointment_date?->toDateString(),
+                    'time' => $upcomingAppointment->appointment_time,
+                    'serial_no' => $upcomingAppointment->serial_no,
+                    'status' => $upcomingAppointment->status,
+                    'chamber_name' => $upcomingAppointment->chamber?->name,
+                    'chamber_location' => $upcomingAppointment->chamber?->location,
+                    'appointment_at' => $appointmentAt?->toIso8601String(),
+                    'countdown_seconds' => $countdownSeconds,
+                ] : null,
+                'daily_tip' => [
+                    'title' => 'Daily health tip',
+                    'text' => $tipText,
+                ],
+                'your_chamber' => [
+                    'name' => $chamberName,
+                    'location' => $chamberLocation,
+                ],
+                'recent_prescription' => $recentPrescription ? [
+                    'id' => $recentPrescription->id,
+                    'summary' => $recentPrescription->medications
+                        ? mb_substr(trim(strip_tags($recentPrescription->medications)), 0, 140)
+                        : null,
+                    'issued_at' => $recentPrescription->created_at?->toDateString(),
+                ] : null,
+                'recent_test_result' => $recentReport ? [
+                    'id' => $recentReport->id,
+                    'name' => $recentReport->note ?: $recentReport->original_name,
+                    'status' => 'ready',
+                    'uploaded_at' => $recentReport->created_at?->toDateString(),
+                    'file_url' => asset('storage/'.$recentReport->file_path),
+                ] : null,
+            ],
+        ]);
+    }
+
     /** GET /api/patient/profile */
     public function profile(Request $request): JsonResponse
     {
