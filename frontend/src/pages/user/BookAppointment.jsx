@@ -1,5 +1,5 @@
 import { Head, usePage } from '@inertiajs/react';
-import { Calendar, Clock, Mail, Phone, User } from 'lucide-react';
+import { Calendar, Clock, MapPin, Phone } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
@@ -8,7 +8,7 @@ import GlassCard from '../../components/GlassCard';
 import PrimaryButton from '../../components/PrimaryButton';
 import UserLayout from '../../layouts/UserLayout';
 import { toastError, toastSuccess } from '../../utils/toast';
-import { formatDisplayDateTimeFromYmdAndTime, formatDisplayDateWithYear, formatDisplayTime12h } from '../../utils/dateFormat';
+import { formatDisplayDateWithYear, formatDisplayTime12h } from '../../utils/dateFormat';
 
 export default function UserBookAppointment() {
   const page = usePage();
@@ -41,14 +41,8 @@ export default function UserBookAppointment() {
   const [previewTime, setPreviewTime] = useState(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [existingAppointments, setExistingAppointments] = useState([]);
+  const [step, setStep] = useState(1);
   const calendarContainerRef = useRef(null);
-  const dateStepRef = useRef(null);
-
-  const scrollToDateStep = useCallback(() => {
-    window.requestAnimationFrame(() => {
-      dateStepRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-  }, []);
 
   const isClosedByWeekday = (dateStr) => {
     if (!dateStr || !Array.isArray(closedWeekdays) || closedWeekdays.length === 0) return false;
@@ -140,6 +134,7 @@ export default function UserBookAppointment() {
         setChambers(list);
         if (list.length === 1) {
           setSelectedChamberId(list[0].id);
+          setSelectedChamber(list[0]);
         }
       } catch {
         if (!mounted) return;
@@ -152,6 +147,12 @@ export default function UserBookAppointment() {
     run();
     return () => { mounted = false; };
   }, []);
+
+  useEffect(() => {
+    if (!selectedChamberId || chambers.length === 0) return;
+    const active = chambers.find((item) => String(item?.id) === String(selectedChamberId)) || null;
+    setSelectedChamber(active);
+  }, [selectedChamberId, chambers]);
 
   // Auto-preview serial and estimated time when date and chamber are selected
   useEffect(() => {
@@ -194,6 +195,13 @@ export default function UserBookAppointment() {
 
   const handleDateClick = (info) => {
     const clickedDate = info.dateStr;
+
+    if (!selectedChamberId) {
+      const message = 'Please choose a chamber first to load that chamber schedule.';
+      setError(message);
+      toastError(message);
+      return;
+    }
 
     if (isUnavailableDate(clickedDate)) {
       const message = 'Doctor is unavailable on the selected date. Please choose another date.';
@@ -319,6 +327,7 @@ export default function UserBookAppointment() {
         setSelectedChamber(null);
         setPreviewSerial(null);
         setPreviewTime(null);
+        setStep(1);
       } else {
         const data = await res.json().catch(() => ({}));
         const message = data?.message || 'Failed to submit the booking. Please try again.';
@@ -334,7 +343,26 @@ export default function UserBookAppointment() {
     }
   };
 
-  const inputClass = 'w-full rounded-2xl border border-[#00acb1]/30 bg-white px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-4 focus:ring-[#00acb1]/20';
+  const selectChamberAndResetDate = useCallback((chamber) => {
+    if (!chamber) return;
+    setSelectedChamberId(chamber.id);
+    setSelectedChamber(chamber);
+    setSelectedDate(null);
+    selectedDateRef.current = null;
+    setFormData((p) => ({ ...p, date: '' }));
+    setPreviewSerial(null);
+    setPreviewTime(null);
+    setStep(2);
+  }, []);
+
+  const isStep1Complete = Boolean(selectedChamberId);
+  const isStep2Complete = Boolean(selectedChamberId && formData.date);
+
+  const steps = [
+    { id: 1, label: 'Chamber' },
+    { id: 2, label: 'Date' },
+    { id: 3, label: 'Confirm' },
+  ];
 
   const calendarRenderKey = useMemo(
     () => [
@@ -444,16 +472,22 @@ export default function UserBookAppointment() {
         </div>
       )}
 
-      <div className="w-full px-4 py-10">
-        <div className="mb-6 flex items-start gap-3">
-          <div className="rounded-2xl border border-[#00acb1]/20 bg-white/60 p-2">
+      <div className="relative mx-auto w-full px-4 py-10 lg:w-[60%] lg:max-w-[980px]">
+        <div className="pointer-events-none absolute left-0 top-8 h-32 w-32 rounded-full bg-[#7cd9cf]/25 blur-3xl" />
+        <div className="pointer-events-none absolute right-3 top-24 h-40 w-40 rounded-full bg-[#0c7b79]/10 blur-3xl" />
+
+        <div className="mb-4 flex items-start gap-3 rounded-3xl border border-white/70 bg-[linear-gradient(180deg,#f5fbfa_0%,#eef7f5_100%)] p-4 shadow-[0_20px_60px_rgba(15,23,42,0.06)] sm:p-5">
+          <div className="rounded-2xl border border-[#00acb1]/20 bg-white/80 p-2">
             <Calendar className="h-6 w-6 text-[#005963]" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-[#005963]">Book Appointment</h1>
-            <p className="mt-1 text-sm text-gray-700">
-              Step 1: select a date • Step 2: choose chamber & time • Step 3: confirmation
-            </p>
+            <h1 className="text-2xl font-bold text-[#005963] sm:text-3xl">Book Appointment</h1>
+            <p className="mt-1 text-sm text-gray-700">Fast 3-step booking flow.</p>
+            <div className="mt-2 flex flex-wrap gap-1.5 text-[11px] font-semibold uppercase tracking-[0.08em]">
+              <span className="rounded-full border border-[#00acb1]/30 bg-white px-2.5 py-1 text-[#005963]">1 Chamber</span>
+              <span className="rounded-full border border-[#00acb1]/30 bg-white px-2.5 py-1 text-[#005963]">2 Date</span>
+              <span className="rounded-full border border-[#00acb1]/30 bg-white px-2.5 py-1 text-[#005963]">3 Confirm</span>
+            </div>
           </div>
         </div>
 
@@ -463,86 +497,54 @@ export default function UserBookAppointment() {
           </GlassCard>
         )}
 
-        <div className="grid gap-6 lg:grid-cols-2">
-          {/* Step 1 – Date */}
-          <div ref={dateStepRef}>
-          <GlassCard variant="solid" className="p-5">
-            <h3 className="mb-1 text-xs font-semibold uppercase tracking-wider text-[#005963]/80">Step 1</h3>
-            <h3 className="mb-3 text-lg font-extrabold text-[#005963]">Choose Date</h3>
-            <div ref={calendarContainerRef} className="rounded-2xl border border-[#00acb1]/20 bg-white p-3">
-              <FullCalendar
-                key={calendarRenderKey}
-                plugins={[dayGridPlugin, interactionPlugin]}
-                initialView="dayGridMonth"
-                dateClick={handleDateClick}
-                dayCellDidMount={handleDayCellDidMount}
-                datesSet={() => setTimeout(injectAppointmentDots, 80)}
-                selectable
-                showNonCurrentDates={false}
-                fixedWeekCount={false}
-                headerToolbar={{ left: 'prev', center: 'title', right: 'next' }}
-                height="auto"
-                validRange={{ start: new Date().toISOString().split('T')[0] }}
-                dayCellClassNames={(arg) => {
-                  const dayStr = normalizeCalendarDate(arg);
-                  if (isUnavailableDate(dayStr)) return 'fc-unavailable';
-                  if (dayStr === selectedDate) return 'fc-day-selected';
-                  return '';
+        <div className="mb-4 grid gap-2 sm:grid-cols-3">
+          {steps.map((item) => {
+            const active = step === item.id;
+            const done = step > item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => {
+                  if (item.id === 1) setStep(1);
+                  if (item.id === 2 && isStep1Complete) setStep(2);
+                  if (item.id === 3 && isStep2Complete) setStep(3);
                 }}
-              />
+                className={`rounded-2xl border px-3 py-2 text-left transition ${
+                  done
+                    ? 'border-emerald-200 bg-emerald-50/80'
+                    : active
+                      ? 'border-[#9dded7] bg-white shadow-sm'
+                      : 'border-white/70 bg-white/60'
+                }`}
+              >
+                <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">Step {item.id}</div>
+                <div className={`mt-0.5 text-sm font-semibold ${active || done ? 'text-[#12373d]' : 'text-slate-500'}`}>{item.label}</div>
+              </button>
+            );
+          })}
+        </div>
+
+        {step === 1 && (
+          <GlassCard variant="solid" className="p-4 sm:p-5">
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className="text-base font-extrabold text-[#005963] sm:text-lg">Choose Chamber</h3>
+              <span className="rounded-full bg-[#00acb1]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-[#005963]">Step 1</span>
             </div>
-            {/* Legend */}
-            {existingAppointments.length > 0 && (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {[
-                  { status: 'scheduled',       label: 'Scheduled' },
-                  { status: 'arrived',         label: 'Arrived' },
-                  { status: 'in_consultation', label: 'In Consultation' },
-                  { status: 'awaiting_tests',  label: 'Awaiting Tests' },
-                  { status: 'prescribed',      label: 'Prescribed' },
-                  { status: 'cancelled',       label: 'Cancelled' },
-                ]
-                  .filter(({ status }) => existingAppointments.some((a) => a.status === status))
-                  .map(({ status, label }) => (
-                    <span key={status} className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold text-white" style={{ backgroundColor: statusColor(status) }}>
-                      {label}
-                    </span>
-                  ))}
-              </div>
-            )}
-          </GlassCard>
-          </div>
 
-          {/* Step 2 – Chamber & Time frame */}
-          <GlassCard variant="solid" className="p-5 flex flex-col">
-            <h3 className="mb-1 text-xs font-semibold uppercase tracking-wider text-[#005963]/80">Step 2</h3>
-            <h3 className="mb-3 text-lg font-extrabold text-[#005963]">Choose Chamber</h3>
-
-            <div className="flex-1 min-h-0 space-y-4">
-            {/* Chambers row */}
-            <div>
-              {loadingChambers ? (
-                <div className="text-sm text-gray-600">Loading chambers…</div>
-              ) : chambers.length === 0 ? (
-                <div className="text-sm text-gray-500">No chambers configured yet.</div>
-              ) : (
-                <div className="flex flex-wrap gap-2">
+            {loadingChambers ? (
+              <div className="text-sm text-gray-600">Loading chambers...</div>
+            ) : chambers.length === 0 ? (
+              <div className="text-sm text-gray-500">No chambers configured yet.</div>
+            ) : (
+              <div className="max-h-48 overflow-y-auto pr-1">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {chambers.map((ch) => (
                     <button
                       key={ch.id}
                       type="button"
-                      onClick={() => {
-                        setSelectedChamberId(ch.id);
-                        setSelectedChamber(ch);
-                        // Clear the selected date — it may be closed at this chamber
-                        setSelectedDate(null);
-                        selectedDateRef.current = null;
-                        setFormData((p) => ({ ...p, date: '' }));
-                        setPreviewSerial(null);
-                        setPreviewTime(null);
-                        scrollToDateStep();
-                      }}
-                      className={`rounded-xl border px-3 py-2 text-xs font-semibold transition ${
+                      onClick={() => selectChamberAndResetDate(ch)}
+                      className={`rounded-full border px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em] transition ${
                         selectedChamberId === ch.id
                           ? 'border-[#005963] bg-[#005963] text-white'
                           : 'border-[#00acb1]/30 bg-white text-[#005963] hover:border-[#005963] hover:bg-[#00acb1]/10'
@@ -552,113 +554,163 @@ export default function UserBookAppointment() {
                     </button>
                   ))}
                 </div>
-              )}
-            </div>
-
-            {/* Estimated time preview (no manual time selection) */}
-            <div className="mt-4 border-t border-gray-100 pt-4">
-              <div className="mb-2 text-xs font-semibold text-[#005963]">
-                Estimated visit time
-              </div>
-              {!selectedDate ? (
-                <div className="text-xs text-gray-500">
-                  Please select a date first.
-                </div>
-              ) : !selectedChamberId ? (
-                <div className="text-xs text-gray-500">
-                  Please choose a chamber to see your estimated time.
-                </div>
-              ) : loadingPreview ? (
-                <div className="flex items-center gap-2 text-xs text-gray-600">
-                  <Clock className="h-4 w-4 animate-spin" />
-                  Calculating estimated time…
-                </div>
-              ) : previewTime ? (
-                <div className="text-xs text-gray-700">
-                  You will be seen around{' '}
-                  <span className="font-semibold">
-                    {formatDisplayTime12h(previewTime) || previewTime}
-                  </span>{' '}
-                  as serial{' '}
-                  <span className="font-semibold">
-                    #{previewSerial}
-                  </span>
-                  .
-                </div>
-              ) : (
-                <div className="text-xs text-gray-500">
-                  Unable to calculate estimated time. You can still confirm the booking.
-                </div>
-              )}
-            </div>
-
-            </div>
-
-            {formData.date && previewTime && previewSerial && (
-              <div className="mt-4 rounded-2xl border border-[#00acb1]/30 bg-[#005963]/10 px-4 py-3 text-center text-sm font-semibold text-[#005963]">
-                {formatDisplayDateWithYear(formData.date) || formData.date} • Serial #{previewSerial} • Est. time {formatDisplayTime12h(previewTime) || previewTime}
               </div>
             )}
-          </GlassCard>
-        </div>
 
-        {/* Step 3 – Quick confirmation (no long form) */}
-        <div className="mt-6">
-          <GlassCard variant="solid" className="p-6 flex flex-col gap-4">
-            <div>
-              <h3 className="mb-1 text-xs font-semibold uppercase tracking-wider text-[#005963]/80">Step 3</h3>
-              <h3 className="text-lg font-extrabold text-[#005963]">Confirm & Submit</h3>
-              <p className="mt-1 text-sm text-gray-600">
-                We will use your profile information to create the booking.
-              </p>
+            {selectedChamber && (
+              <div className="mt-3 rounded-2xl border border-[#00acb1]/20 bg-[#00acb1]/5 px-3 py-2.5 text-xs text-[#0f5963]">
+                <div className="font-semibold">Selected chamber</div>
+                <div className="mt-0.5">{selectedChamber.name}</div>
+                {selectedChamber.location && (
+                  <div className="mt-0.5 inline-flex items-start gap-1.5 text-gray-600">
+                    <MapPin className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
+                    <span>{selectedChamber.location}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="mt-4 flex justify-end">
+              <PrimaryButton
+                type="button"
+                onClick={() => setStep(2)}
+                disabled={!isStep1Complete}
+                className={!isStep1Complete ? 'opacity-60' : ''}
+              >
+                Continue
+              </PrimaryButton>
+            </div>
+          </GlassCard>
+        )}
+
+        {step === 2 && (
+          <GlassCard variant="solid" className="p-4 sm:p-5 flex flex-col">
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className="text-base font-extrabold text-[#005963] sm:text-lg">Choose Date</h3>
+              <span className="rounded-full bg-[#00acb1]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-[#005963]">Step 2</span>
             </div>
 
-            <div className="grid gap-4 text-sm md:grid-cols-3">
-              <div>
-                <div className="text-xs font-semibold text-gray-500">Patient</div>
-                <div className="mt-1 font-semibold text-gray-900">
-                  {authUser?.name || formData.name || '—'}
-                </div>
-                <div className="mt-1 text-xs text-gray-600">
-                  {authUser?.email || formData.email || 'No email'}
-                </div>
-                <div className="mt-0.5 text-xs text-gray-600">
-                  {authUser?.phone || formData.phone || 'No phone'}
-                </div>
+            <div className="mt-3 rounded-[24px] border border-[#caebe6] bg-[linear-gradient(180deg,#f8fcfb_0%,#ffffff_100%)] p-3 sm:p-4">
+              <div className="text-xs font-semibold text-[#005963]">
+                {selectedChamberId
+                  ? `Schedule for: ${selectedChamber?.name || 'Selected chamber'}`
+                  : 'Please choose a chamber first in Step 1.'}
               </div>
-              <div>
-                <div className="text-xs font-semibold text-gray-500">Appointment</div>
-                <div className="mt-1 text-sm text-gray-900">
-                  {formData.date
-                    ? (formatDisplayDateWithYear(formData.date) || formData.date)
-                    : 'Please select a date'}
+
+              <div ref={calendarContainerRef} className="public-booking-calendar doctor-appointment-calendar mt-3 rounded-2xl border border-[#00acb1]/20 bg-white p-2.5 sm:p-3">
+                <FullCalendar
+                  key={calendarRenderKey}
+                  plugins={[dayGridPlugin, interactionPlugin]}
+                  initialView="dayGridMonth"
+                  dateClick={handleDateClick}
+                  dayCellDidMount={handleDayCellDidMount}
+                  datesSet={() => setTimeout(injectAppointmentDots, 80)}
+                  selectable
+                  showNonCurrentDates={false}
+                  fixedWeekCount={false}
+                  headerToolbar={{ left: 'prev', center: 'title', right: 'next' }}
+                  height="auto"
+                  validRange={{ start: new Date().toISOString().split('T')[0] }}
+                  dayCellClassNames={(arg) => {
+                    const dayStr = normalizeCalendarDate(arg);
+                    if (isUnavailableDate(dayStr)) return 'fc-unavailable';
+                    if (dayStr === selectedDate) return 'fc-day-selected';
+                    return '';
+                  }}
+                />
+              </div>
+
+              {formData.date && previewTime && previewSerial && (
+                <div className="mt-3 rounded-2xl border border-[#00acb1]/30 bg-[#005963]/10 px-4 py-2.5 text-center text-sm font-semibold text-[#005963]">
+                  {formatDisplayDateWithYear(formData.date) || formData.date} • Serial #{previewSerial} • Est. time {formatDisplayTime12h(previewTime) || previewTime}
                 </div>
-                <div className="mt-1 text-xs text-gray-600">
+              )}
+
+              <div className="mt-3 border-t border-gray-100 pt-3">
+                <div className="mb-2 text-xs font-semibold text-[#005963]">Estimated visit time</div>
+                {!selectedDate ? (
+                  <div className="text-xs text-gray-500">Please select a date first.</div>
+                ) : !selectedChamberId ? (
+                  <div className="text-xs text-gray-500">Please choose a chamber to see your estimated time.</div>
+                ) : loadingPreview ? (
+                  <div className="flex items-center gap-2 text-xs text-gray-600">
+                    <Clock className="h-4 w-4 animate-spin" />
+                    Calculating estimated time…
+                  </div>
+                ) : previewTime ? (
+                  <div className="text-xs text-gray-700">
+                    You will be seen around <span className="font-semibold">{formatDisplayTime12h(previewTime) || previewTime}</span> as serial <span className="font-semibold">#{previewSerial}</span>.
+                  </div>
+                ) : (
+                  <div className="text-xs text-gray-500">Unable to calculate estimated time. You can still continue.</div>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-4 flex items-center justify-between">
+              <button
+                type="button"
+                className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
+                onClick={() => setStep(1)}
+              >
+                Back
+              </button>
+              <PrimaryButton
+                type="button"
+                onClick={() => setStep(3)}
+                disabled={!isStep2Complete}
+                className={!isStep2Complete ? 'opacity-60' : ''}
+              >
+                Continue
+              </PrimaryButton>
+            </div>
+          </GlassCard>
+        )}
+
+        {step === 3 && (
+          <GlassCard variant="solid" className="p-4 sm:p-5">
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className="text-base font-extrabold text-[#005963] sm:text-lg">Confirm & Submit</h3>
+              <span className="rounded-full bg-[#00acb1]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-[#005963]">Step 3</span>
+            </div>
+
+            <div className="mt-3 grid gap-2 text-xs sm:grid-cols-2 lg:grid-cols-4">
+              <div className="rounded-xl border border-[#00acb1]/20 bg-[#00acb1]/5 px-3 py-2">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-gray-500">Patient</div>
+                <div className="mt-1 font-semibold text-gray-900">{authUser?.name || formData.name || '—'}</div>
+              </div>
+              <div className="rounded-xl border border-[#00acb1]/20 bg-[#00acb1]/5 px-3 py-2">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-gray-500">Contact</div>
+                <div className="mt-1 text-gray-700">{authUser?.phone || formData.phone || 'No phone'}</div>
+              </div>
+              <div className="rounded-xl border border-[#00acb1]/20 bg-[#00acb1]/5 px-3 py-2">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-gray-500">Date & Chamber</div>
+                <div className="mt-1 text-gray-700">
+                  {formData.date ? (formatDisplayDateWithYear(formData.date) || formData.date) : 'Date not selected'}
+                  {' • '}
                   {selectedChamberId
-                    ? `Chamber: ${chambers.find((c) => c.id === selectedChamberId)?.name ?? 'Selected'}`
+                    ? chambers.find((c) => c.id === selectedChamberId)?.name ?? 'Selected'
                     : 'Chamber not selected'}
                 </div>
-                <div className="mt-1 text-xs text-gray-600">
-                  {previewSerial
-                    ? `Serial: #${previewSerial}${
-                        previewTime
-                          ? ` • Est. time: ${
-                              formatDisplayTime12h(previewTime) || previewTime
-                            }`
-                          : ''
-                      }`
-                    : 'Serial will be assigned automatically'}
-                </div>
               </div>
-              <div>
-                <div className="text-xs font-semibold text-gray-500">Notes</div>
-                <div className="mt-1 text-xs text-gray-600">
-                  You can update your profile information from your account page if needed.
+              <div className="rounded-xl border border-[#00acb1]/20 bg-[#00acb1]/5 px-3 py-2">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-gray-500">Serial & Time</div>
+                <div className="mt-1 text-gray-700">
+                  {previewSerial
+                    ? `#${previewSerial}${previewTime ? ` • ${formatDisplayTime12h(previewTime) || previewTime}` : ''}`
+                    : 'Assigned after confirmation'}
                 </div>
               </div>
             </div>
 
-            <div className="pt-1">
+            <div className="mt-4 flex items-center justify-between">
+              <button
+                type="button"
+                className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
+                onClick={() => setStep(2)}
+              >
+                Back
+              </button>
               <PrimaryButton
                 type="button"
                 onClick={handleSubmit}
@@ -669,7 +721,7 @@ export default function UserBookAppointment() {
               </PrimaryButton>
             </div>
           </GlassCard>
-        </div>
+        )}
 
 
       </div>

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\AppointmentResource;
 use App\Http\Resources\PrescriptionResource;
 use App\Models\Appointment;
+use App\Models\PatientReport;
 use App\Models\Prescription;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -135,6 +136,68 @@ class PatientController extends Controller
         ]);
 
         return response()->json(['prescription' => new PrescriptionResource($prescription)]);
+    }
+
+    /** GET /api/patient/prescriptions/{prescription}/reports */
+    public function prescriptionReports(Request $request, Prescription $prescription): JsonResponse
+    {
+        $user = $request->user();
+        abort_unless($prescription->user_id === $user->id, 403);
+
+        $reports = PatientReport::query()
+            ->where('user_id', $user->id)
+            ->where('prescription_id', $prescription->id)
+            ->latest()
+            ->get()
+            ->map(fn (PatientReport $report) => [
+                'id' => $report->id,
+                'original_name' => $report->original_name,
+                'file_url' => asset('storage/'.$report->file_path),
+                'mime_type' => $report->mime_type,
+                'file_size' => $report->file_size,
+                'note' => $report->note,
+                'created_at' => $report->created_at?->toDateTimeString(),
+            ]);
+
+        return response()->json(['reports' => $reports]);
+    }
+
+    /** POST /api/patient/prescriptions/{prescription}/reports */
+    public function uploadPrescriptionReport(Request $request, Prescription $prescription): JsonResponse
+    {
+        $user = $request->user();
+        abort_unless($prescription->user_id === $user->id, 403);
+
+        $validated = $request->validate([
+            'report_file' => ['required', 'file', 'max:10240', 'mimes:pdf,jpg,jpeg,png,webp'],
+            'note' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $file = $validated['report_file'];
+        $path = $file->store("patient-reports/{$user->id}", 'public');
+
+        $report = PatientReport::create([
+            'user_id' => $user->id,
+            'prescription_id' => $prescription->id,
+            'original_name' => $file->getClientOriginalName(),
+            'file_path' => $path,
+            'mime_type' => $file->getClientMimeType(),
+            'file_size' => $file->getSize(),
+            'note' => $validated['note'] ?? null,
+        ]);
+
+        return response()->json([
+            'message' => 'Report uploaded successfully.',
+            'report' => [
+                'id' => $report->id,
+                'original_name' => $report->original_name,
+                'file_url' => asset('storage/'.$report->file_path),
+                'mime_type' => $report->mime_type,
+                'file_size' => $report->file_size,
+                'note' => $report->note,
+                'created_at' => $report->created_at?->toDateTimeString(),
+            ],
+        ], 201);
     }
 
     /** POST /api/patient/link-guest-appointments */

@@ -2,7 +2,7 @@ import { Head, Link } from '@inertiajs/react';
 import { CalendarDays } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import UserLayout from '../../layouts/UserLayout';
-import { formatDisplayDateWithYearFromDateLike, formatDisplayTime12h } from '../../utils/dateFormat';
+import { formatDisplayDateWithYearFromDateLike } from '../../utils/dateFormat';
 
 export default function UserAppointments() {
   const [rows, setRows] = useState([]);
@@ -42,120 +42,131 @@ export default function UserAppointments() {
     { label: 'Completed', value: 'completed' },
     { label: 'Cancelled', value: 'cancelled' },
   ];
+
   const [activeTab, setActiveTab] = useState(null);
+
   const filteredRows = useMemo(() => (
     activeTab ? rows.filter((a) => (a.status || '').toLowerCase() === activeTab) : rows
   ), [rows, activeTab]);
+
+  const formatLastUpdated = (updatedAt) => {
+    if (!updatedAt) return '-';
+    const d = new Date(updatedAt);
+    if (Number.isNaN(d.getTime())) return '-';
+    return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: '2-digit' });
+  };
 
   return (
     <>
       <Head title="My Appointments" />
 
-      {/* Page header — matches image exactly */}
-      <div className="mb-5 flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-lg font-bold text-gray-900">My Appointments</h1>
-          <p className="mt-0.5 text-sm text-gray-500">Manage your accounts and bookings.</p>
+      <div className="mb-6 rounded-3xl border border-[#dceeed] bg-[linear-gradient(120deg,#f8fcfb_0%,#eef8f6_100%)] p-5 shadow-[0_16px_40px_rgba(12,123,121,0.06)] sm:p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 className="text-xl font-bold text-[#12373d]">My Appointments</h1>
+            <p className="mt-1 text-sm text-slate-600">Track appointment status and recent updates in one place.</p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Link
+              href="/user/prescriptions"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-[#cfe8e5] bg-white px-3 py-2 text-sm font-medium text-[#22535a] shadow-sm hover:bg-[#f4fbfa] transition"
+            >
+              View Prescriptions
+            </Link>
+            <Link
+              href="/user/book-appointment"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-[#0c7b79] px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#0a6664] transition"
+            >
+              <CalendarDays className="h-3.5 w-3.5" />
+              Book Appointment
+            </Link>
+          </div>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <Link
-            href="/user/prescriptions"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition"
-          >
-            View Prescriptions
-          </Link>
-          <Link
-            href="/user/book-appointment"
-            className="inline-flex items-center gap-1.5 rounded-lg bg-gray-900 px-3 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-gray-800 transition"
-          >
-            <CalendarDays className="h-3.5 w-3.5" />
-            Book Appointment
-          </Link>
+
+        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <div className="rounded-xl border border-[#d7ece9] bg-white px-3 py-2.5">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">Total</div>
+            <div className="mt-1 text-lg font-bold text-[#12373d]">{rows.length}</div>
+          </div>
+          <div className="rounded-xl border border-[#d7ece9] bg-white px-3 py-2.5">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">Approved</div>
+            <div className="mt-1 text-lg font-bold text-emerald-600">{rows.filter((a) => (a.status || '').toLowerCase() === 'approved').length}</div>
+          </div>
+          <div className="rounded-xl border border-[#d7ece9] bg-white px-3 py-2.5">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">Completed</div>
+            <div className="mt-1 text-lg font-bold text-sky-600">{rows.filter((a) => (a.status || '').toLowerCase() === 'completed').length}</div>
+          </div>
+          <div className="rounded-xl border border-[#d7ece9] bg-white px-3 py-2.5">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">Cancelled</div>
+            <div className="mt-1 text-lg font-bold text-rose-600">{rows.filter((a) => (a.status || '').toLowerCase() === 'cancelled').length}</div>
+          </div>
         </div>
       </div>
 
-      {/* Main card */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-
-        {/* Tabs row — matches image tab bar */}
-        <div className="flex items-center justify-between border-b border-gray-200 px-5">
-          <div className="flex items-center">
+      <div className="overflow-hidden rounded-2xl border border-[#d9e9e7] bg-white shadow-[0_18px_40px_rgba(15,23,42,0.04)]">
+        <div className="flex flex-col gap-3 border-b border-[#e7f1f0] px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+          <div className="flex flex-wrap items-center gap-2">
             {tabs.map((t) => (
               <button
                 key={String(t.value)}
                 onClick={() => setActiveTab(t.value)}
-                className={`px-4 py-3 text-sm border-b-2 transition-colors whitespace-nowrap ${
+                className={`rounded-full px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] transition ${
                   activeTab === t.value
-                    ? 'border-gray-900 text-gray-900 font-semibold'
-                    : 'border-transparent text-gray-500 font-medium hover:text-gray-700'
+                    ? 'bg-[#0c7b79] text-white'
+                    : 'bg-[#f1f7f6] text-slate-600 hover:bg-[#e7f3f1]'
                 }`}
               >
                 {t.label}
               </button>
             ))}
           </div>
-          <div className="flex items-center gap-2 text-xs text-gray-400">
-            <span className="hidden sm:inline">{pagination?.total ?? rows.length} total</span>
-          </div>        </div>
-
-        {/* Section header */}
-        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
-          <span className="text-sm font-semibold text-gray-800">All Records</span>
-          <div className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 cursor-pointer hover:bg-gray-50 transition">
-            Status <span className="ml-1 text-gray-400">▾</span>
-          </div>
+          <div className="text-xs font-medium text-slate-400">{pagination?.total ?? rows.length} records</div>
         </div>
 
-        {/* Table */}
+        <div className="px-5 py-3 border-b border-[#edf4f3]">
+          <span className="text-sm font-semibold text-[#244b50]">Appointments</span>
+        </div>
+
         <div className="overflow-x-auto">
           <table className="min-w-full">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-100">
-                <th className="w-10 px-5 py-3">
-                  <input type="checkbox" className="rounded border-gray-300 text-[#005963] focus:ring-[#005963]" />
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500">Due date</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500">Doctor / Notes</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500">Time</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500">Invoice no</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500">Last Update</th>
+              <tr className="border-b border-[#edf4f3] bg-[#f8fcfb]">
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Date</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Details</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Last Update</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={7} className="px-5 py-16 text-center text-sm text-gray-400">Loading appointments…</td></tr>
+                <tr>
+                  <td colSpan={4} className="px-5 py-16 text-center text-sm text-gray-400">Loading appointments...</td>
+                </tr>
               ) : null}
+
               {filteredRows.map((a) => (
-                <tr key={a.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                  <td className="px-5 py-3.5">
-                    <input type="checkbox" className="rounded border-gray-300 text-[#005963] focus:ring-[#005963]" />
-                  </td>
-                  <td className="px-4 py-3.5 text-sm text-gray-800 font-medium whitespace-nowrap">
+                <tr key={a.id} className="border-b border-[#f1f5f4] transition-colors hover:bg-[#f9fcfb]">
+                  <td className="px-4 py-3.5 text-sm font-medium text-[#1b3f44] whitespace-nowrap">
                     {formatDisplayDateWithYearFromDateLike(a.appointment_date) || a.appointment_date}
                   </td>
                   <td className="px-4 py-3.5">
-                    <span className={`inline-flex items-center rounded-md px-2.5 py-1 text-xs font-semibold capitalize ${statusBadge(a.status)}`}>
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${statusBadge(a.status)}`}>
                       {a.status || 'Pending'}
                     </span>
                   </td>
-                  <td className="px-4 py-3.5 text-sm text-gray-600 max-w-[180px] truncate">{a.symptoms || '-'}</td>
-                  <td className="px-4 py-3.5 text-sm text-gray-600 whitespace-nowrap">
-                    {formatDisplayTime12h(a.appointment_time) || a.appointment_time}
+                  <td className="px-4 py-3.5 text-sm text-slate-600">
+                    <div className="max-w-[360px] truncate">{a.symptoms || 'No notes added'}</div>
+                    {a?.chamber?.name ? <div className="mt-0.5 text-xs text-slate-400">Chamber: {a.chamber.name}</div> : null}
                   </td>
-                  <td className="px-4 py-3.5 text-sm text-gray-500 font-mono">
-                    #{a.id ?? '-'}
-                  </td>
-                  <td className="px-4 py-3.5 text-sm text-gray-400 whitespace-nowrap">
-                    {a.updated_at
-                      ? new Date(a.updated_at).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' })
-                      : '-'}
+                  <td className="px-4 py-3.5 text-sm text-slate-500 whitespace-nowrap">
+                    {formatLastUpdated(a.updated_at)}
                   </td>
                 </tr>
               ))}
-              {filteredRows.length === 0 && (
+
+              {filteredRows.length === 0 && !loading && (
                 <tr>
-                  <td colSpan={7} className="px-5 py-16 text-center">
+                  <td colSpan={4} className="px-5 py-16 text-center">
                     <p className="text-sm text-gray-400">No appointments found.</p>
                   </td>
                 </tr>
@@ -164,9 +175,8 @@ export default function UserAppointments() {
           </table>
         </div>
 
-        {/* Pagination */}
         {pagination?.data && typeof pagination.current_page === 'number' ? (
-          <div className="border-t border-gray-200 px-5 py-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="border-t border-[#e7f1f0] px-5 py-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="text-xs text-gray-400">
               Page <span className="font-semibold text-gray-700">{pagination.current_page}</span> of{' '}
               <span className="font-semibold text-gray-700">{pagination.last_page}</span>

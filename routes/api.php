@@ -58,6 +58,8 @@ Route::middleware(['auth:sanctum', 'role:patient'])
         Route::get('/appointments/{appointment}', [PatientController::class, 'appointmentShow']);
         Route::get('/prescriptions', [PatientController::class, 'prescriptions']);
         Route::get('/prescriptions/{prescription}', [PatientController::class, 'prescriptionShow']);
+        Route::get('/prescriptions/{prescription}/reports', [PatientController::class, 'prescriptionReports']);
+        Route::post('/prescriptions/{prescription}/reports', [PatientController::class, 'uploadPrescriptionReport']);
         Route::post('/link-guest-appointments', [PatientController::class, 'linkGuestAppointments']);
     });
 
