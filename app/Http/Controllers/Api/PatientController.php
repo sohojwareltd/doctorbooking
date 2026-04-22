@@ -13,6 +13,7 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 /**
  * Patient (registered user) API endpoints.
@@ -183,6 +184,68 @@ class PatientController extends Controller
         ]);
     }
 
+    /** GET /api/patient/appointments-mobile */
+    public function appointmentsMobile(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $rows = Appointment::query()
+            ->with([
+                'chamber:id,name,location',
+                'doctor:id,user_id,specialization',
+                'prescription:id,appointment_id,diagnosis,medications,tests',
+            ])
+            ->where(fn ($q) => $q->where('user_id', $user->id)
+                ->orWhere('email', $user->email))
+            ->orderBy('appointment_date')
+            ->orderBy('appointment_time')
+            ->get();
+
+        $upcoming = [];
+        $pastCancelled = [];
+
+        foreach ($rows as $appointment) {
+            $payload = [
+                'id' => $appointment->id,
+                'date' => $appointment->appointment_date?->toDateString(),
+                'time' => $appointment->appointment_time ? substr((string) $appointment->appointment_time, 0, 5) : null,
+                'serial_no' => $appointment->serial_no,
+                'status' => $appointment->status,
+                'status_label' => $this->statusLabel((string) $appointment->status),
+                'title' => $appointment->prescription?->diagnosis
+                    ? Str::of(strip_tags((string) $appointment->prescription->diagnosis))->squish()->limit(80, '')->__toString()
+                    : ($appointment->symptoms ?: 'Appointment follow-up'),
+                'specialty' => $appointment->doctor?->specialization ?: 'General Medicine',
+                'chamber' => [
+                    'name' => $appointment->chamber?->name,
+                    'location' => $appointment->chamber?->location,
+                ],
+                'labs_count' => $this->countDelimitedItems($appointment->prescription?->tests),
+                'prescriptions_count' => $appointment->prescription ? 1 : 0,
+                'has_prescription' => (bool) $appointment->prescription,
+            ];
+
+            if ($this->isUpcomingAppointment($appointment)) {
+                $upcoming[] = $payload;
+            } else {
+                $pastCancelled[] = $payload;
+            }
+        }
+
+        return response()->json([
+            'message' => 'Appointments data fetched successfully.',
+            'appointments' => [
+                'upcoming' => $upcoming,
+                'past_cancelled' => $pastCancelled,
+            ],
+            'counts' => [
+                'upcoming' => count($upcoming),
+                'past_cancelled' => count($pastCancelled),
+                'total' => count($rows),
+            ],
+        ]);
+    }
+
     /** GET /api/patient/appointments/{appointment} */
     public function appointmentShow(Request $request, Appointment $appointment): JsonResponse
     {
@@ -308,5 +371,41 @@ class PatientController extends Controller
             'message' => "Linked {$count} guest appointment(s) to your account.",
             'count'   => $count,
         ]);
+    }
+
+    private function isUpcomingAppointment(Appointment $appointment): bool
+    {
+        if (! $appointment->appointment_date) {
+            return false;
+        }
+
+        $time = $appointment->appointment_time ?: '23:59:59';
+        $slotAt = Carbon::parse($appointment->appointment_date->toDateString().' '.$time);
+
+        return $slotAt->greaterThanOrEqualTo(now()) && ! in_array(strtolower((string) $appointment->status), ['cancelled', 'completed'], true);
+    }
+
+    private function countDelimitedItems(?string $value): int
+    {
+        if (! $value) {
+            return 0;
+        }
+
+        $parts = preg_split('/[\r\n,;]+/', strip_tags($value)) ?: [];
+        $parts = array_values(array_filter(array_map(fn ($item) => trim((string) $item), $parts)));
+
+        return count($parts);
+    }
+
+    private function statusLabel(string $status): string
+    {
+        $normalized = strtolower(trim($status));
+
+        return match ($normalized) {
+            'approved', 'pending', 'arrived', 'in_consultation', 'awaiting_tests', 'prescribed' => 'Upcoming',
+            'cancelled' => 'Cancelled',
+            'completed' => 'Completed',
+            default => 'Past',
+        };
     }
 }

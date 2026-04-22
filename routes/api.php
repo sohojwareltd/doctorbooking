@@ -53,6 +53,7 @@ Route::middleware(['auth:sanctum', 'role:patient'])
     ->prefix('patient')
     ->group(function () {
         Route::get('/dashboard-mobile', [PatientController::class, 'dashboardMobile']);
+        Route::get('/appointments-mobile', [PatientController::class, 'appointmentsMobile']);
         Route::get('/profile', [PatientController::class, 'profile']);
         Route::put('/profile', [PatientController::class, 'updateProfile']);
         Route::get('/appointments', [PatientController::class, 'appointments']);
