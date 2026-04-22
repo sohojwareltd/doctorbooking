@@ -9,33 +9,33 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
     /**
-     * Login with email OR phone + password.
-     * Returns a Sanctum personal access token.
+     * Login with username + password.
+     * username is the email or phone used during registration.
+     *
+     * POST /api/auth/login
+     * Body: { username, password, device_name? }
      */
     public function login(Request $request): JsonResponse
     {
         $request->validate([
-            'identifier'  => ['required', 'string'],   // email or phone
+            'username'    => ['required', 'string'],
             'password'    => ['required', 'string'],
             'device_name' => ['nullable', 'string', 'max:255'],
         ]);
 
-        $identifier = $request->identifier;
-
         $user = User::with('role')
-            ->where('username', $identifier)
-            ->orWhere('email', $identifier)
-            ->orWhere('phone', $identifier)
+            ->where('username', $request->username)
             ->first();
 
         if (! $user || ! Hash::check($request->password, $user->password)) {
             throw ValidationException::withMessages([
-                'identifier' => ['The provided credentials are incorrect.'],
+                'username' => ['The provided credentials are incorrect.'],
             ]);
         }
 
@@ -51,49 +51,63 @@ class AuthController extends Controller
 
     /**
      * Register a new patient account.
+     *
+     * POST /api/auth/register
+     * Body (JSON):
+     *   name         string  required
+     *   email        string  required if phone absent  (unique)
+     *   phone        string  required if email absent  (unique)
+     *   password     string  required – min 8 chars, 1 uppercase, 1 number
+     *   password_confirmation  string  required
+     *   device_name  string  optional (defaults to "mobile-app")
+     *
+     * The value sent (email or phone) is stored as `username`.
+     * Login uses: POST /api/auth/login  { username, password }
      */
     public function register(Request $request): JsonResponse
     {
-        $request->validate([
-            'name'     => ['required', 'string', 'max:255'],
-            'email'    => ['nullable', 'email', 'max:255', 'unique:users,email'],
-            'phone'    => ['nullable', 'string', 'max:50'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
+        $validated = $request->validate([
+            'name'        => ['required', 'string', 'max:255'],
+            'email'       => ['nullable', 'email:rfc,dns', 'max:255', 'unique:users,email', 'unique:users,username'],
+            'phone'       => ['nullable', 'string', 'max:50', 'unique:users,phone', 'unique:users,username'],
+            'password'    => [
+                'required',
+                'confirmed',
+                Password::min(8)->mixedCase()->numbers(),
+            ],
+            'device_name' => ['nullable', 'string', 'max:255'],
         ]);
 
-        // At least one contact is required
-        if (empty($request->email) && empty($request->phone)) {
-            return response()->json([
-                'message' => 'Provide at least an email or a phone number.',
-            ], 422);
+        // At least one of email or phone is required
+        if (empty($validated['email']) && empty($validated['phone'])) {
+            throw ValidationException::withMessages([
+                'email' => ['Provide at least an email or a phone number.'],
+            ]);
         }
 
-        // Derive username from email (preferred) or phone
-        $username = $request->email ?? $request->phone;
-
-        // Ensure username is unique
-        if (User::where('username', $username)->exists()) {
-            return response()->json([
-                'message' => 'This identifier is already registered.',
-            ], 422);
-        }
+        // email takes priority as username; falls back to phone
+        $username = $validated['email'] ?? $validated['phone'];
 
         $patientRole = Role::where('name', 'patient')->firstOrFail();
 
         $user = User::create([
-            'name'     => $request->name,
+            'name'     => $validated['name'],
             'username' => $username,
-            'email'    => $request->email,
-            'phone'    => $request->phone,
-            'password' => $request->password,
+            'email'    => $validated['email'] ?? null,
+            'phone'    => $validated['phone'] ?? null,
+            'password' => $validated['password'],
             'role_id'  => $patientRole->id,
         ]);
 
         $user->load('role');
-        $token = $user->createToken('api-client')->plainTextToken;
+
+        $deviceName = $validated['device_name'] ?? 'mobile-app';
+        $tokenResult = $user->createToken($deviceName);
 
         return response()->json([
-            'token'      => $token,
+            'message'    => 'Account created successfully.',
+            'username'   => $username,
+            'token'      => $tokenResult->plainTextToken,
             'token_type' => 'Bearer',
             'user'       => new UserResource($user),
         ], 201);
