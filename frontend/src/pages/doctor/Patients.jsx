@@ -357,7 +357,94 @@ export default function Patients() {
           </div>
 
           {/* ── Table ── */}
-          <div className="overflow-x-auto border-t border-slate-100">
+          {/* ── Mobile Cards ── */}
+          {!loading && (
+            <div className="md:hidden divide-y divide-slate-100 border-t border-slate-100">
+              {rows.length === 0 ? (
+                <div className="p-5">
+                  <DocEmptyState icon={Users} title="No patients found" description="Try adjusting your search or filters." />
+                </div>
+              ) : rows.map((p, idx) => {
+                const serial = (meta.current_page - 1) * 15 + idx + 1;
+                return (
+                  <div
+                    key={p.id ?? idx}
+                    className="p-4 space-y-2 cursor-pointer active:bg-slate-50"
+                    onClick={() => router.visit(`/doctor/patients/${p.id}`)}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2.5">
+                        <GenderAvatar gender={getGender(p)} />
+                        <div>
+                          <div className="text-sm font-semibold text-slate-900">{renderHighlighted(p.name, search)}</div>
+                          <div className="text-xs text-slate-500">{ageGenderLabel(p)}</div>
+                        </div>
+                      </div>
+                      <span className={`shrink-0 inline-flex items-center justify-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                        (p.prescriptions_count ?? 0) > 0 ? 'bg-violet-100 text-violet-700' : 'bg-slate-100 text-slate-400'
+                      }`}>
+                        {p.prescriptions_count ?? 0} Rx
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-0.5 text-xs text-slate-600">
+                      {p.phone && (
+                        <span className="inline-flex items-center gap-1.5">
+                          <Phone className="h-3 w-3 text-slate-400" />
+                          {renderHighlighted(p.phone, search)}
+                        </span>
+                      )}
+                      {p.email && (
+                        <span className="inline-flex items-center gap-1.5 text-slate-500">
+                          <Mail className="h-3 w-3 text-slate-400" />
+                          {renderHighlighted(p.email, search)}
+                        </span>
+                      )}
+                      {p.address && (
+                        <span className="text-slate-400 truncate">{p.address}</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 pt-1" onClick={(e) => e.stopPropagation()}>
+                      <ActionBtn
+                        label="View"
+                        className="border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100"
+                        onClick={() => router.visit(`/doctor/patients/${p.id}`)}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </ActionBtn>
+                      <ActionBtn
+                        label="Prescriptions"
+                        className="border-violet-300 bg-violet-100 text-violet-800 hover:bg-violet-200"
+                        onClick={() => handlePrescriptionClick(p)}
+                      >
+                        <FileText className="h-4 w-4" />
+                      </ActionBtn>
+                      {p.email && (
+                        <ActionBtn
+                          label="Email"
+                          className="border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
+                          onClick={() => { window.location.href = `mailto:${p.email}`; }}
+                        >
+                          <Mail className="h-4 w-4" />
+                        </ActionBtn>
+                      )}
+                      {p.phone && (
+                        <ActionBtn
+                          label="Call"
+                          className="border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                          onClick={() => { window.location.href = `tel:${p.phone}`; }}
+                        >
+                          <Phone className="h-4 w-4" />
+                        </ActionBtn>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* ── Table ── */}
+          <div className="hidden md:block overflow-x-auto border-t border-slate-100">
             {loading ? (
               <div className="flex items-center justify-center py-16 text-sm text-slate-400">Loading…</div>
             ) : (
@@ -490,7 +577,7 @@ export default function Patients() {
 
           {/* Empty state */}
           {!loading && rows.length === 0 && (
-            <div className="p-5">
+            <div className="hidden md:block p-5">
               <DocEmptyState icon={Users} title="No patients found" description="Try adjusting your search or filters." />
             </div>
           )}

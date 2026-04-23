@@ -719,7 +719,7 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                     <div className="border-b border-slate-200 bg-white px-8 py-4">
                         <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
                             {/* Name */}
-                            <div className="flex min-w-[160px] flex-1 items-end gap-2">
+                            <div className="flex w-full min-w-[180px] max-w-[360px] items-end gap-2">
                                 <span className="shrink-0 text-xs font-bold text-slate-600">Name:</span>
                                 <input
                                     className="flex-1 rounded-md border border-transparent border-b-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 placeholder-slate-300 hover:border-slate-300 focus:border-[#2D3A74] focus:outline-none"
@@ -731,16 +731,16 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                             {/* Age */}
                             <div className="flex items-end gap-1.5">
                                 <span className="shrink-0 text-xs font-bold text-slate-600">Age:</span>
-                                <div className="flex items-end gap-1">
+                                <div className="flex items-end gap-1.5">
                                     <input
                                         inputMode="numeric"
-                                        className="w-12 rounded-md border border-transparent border-b-slate-300 bg-white px-2 py-1.5 text-center text-sm text-slate-900 placeholder-slate-300 hover:border-slate-300 focus:border-[#2D3A74] focus:outline-none"
+                                        className="w-16 rounded-md border border-transparent border-b-slate-300 bg-white px-2.5 py-2 text-center text-base text-slate-900 placeholder-slate-300 hover:border-slate-300 focus:border-[#2D3A74] focus:outline-none"
                                         value={state.patient.age_value}
                                         onChange={(e) => dispatch({ type: 'setField', path: ['patient', 'age_value'], value: e.target.value })}
                                         placeholder="—"
                                     />
                                     <select
-                                        className="rounded-md border border-transparent border-b-slate-300 bg-white px-2 py-1.5 text-xs text-slate-600 hover:border-slate-300 focus:border-[#2D3A74] focus:outline-none"
+                                        className="min-w-[64px] rounded-md border border-transparent border-b-slate-300 bg-white px-2.5 py-2 text-sm text-slate-700 hover:border-slate-300 focus:border-[#2D3A74] focus:outline-none"
                                         value={state.patient.age_unit}
                                         onChange={(e) => dispatch({ type: 'setField', path: ['patient', 'age_unit'], value: e.target.value })}
                                     >
@@ -753,7 +753,7 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                             <div className="flex items-end gap-1.5">
                                 <span className="shrink-0 text-xs font-bold text-slate-600">Gender:</span>
                                 <select
-                                    className="w-24 rounded-md border border-transparent border-b-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 hover:border-slate-300 focus:border-[#2D3A74] focus:outline-none"
+                                    className="w-32 rounded-md border border-transparent border-b-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 hover:border-slate-300 focus:border-[#2D3A74] focus:outline-none"
                                     value={state.patient.gender}
                                     onChange={(e) => dispatch({ type: 'setField', path: ['patient', 'gender'], value: e.target.value })}
                                 >
@@ -1085,7 +1085,7 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                                         return (
                                                         <div key={idx} className="group/med flex items-start gap-2 rounded-lg border border-slate-200 bg-white p-2.5 shadow-sm transition hover:border-[#9fb7ea] hover:shadow">
                                                             <span className="mt-1 text-xs font-bold text-slate-400">{idx + 1}.</span>
-                                                            <div className="flex-1 grid grid-cols-6 gap-2">
+                                                            <div className="flex-1 grid grid-cols-4 gap-2">
                                                                 <div className="col-span-2 relative">
                                                                     <input
                                                                         className="w-full rounded border border-slate-200 bg-slate-50/50 px-3 py-1.5 text-sm text-slate-900 doc-input-focus"
@@ -1101,7 +1101,7 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                                                         }}
                                                                         onChange={(e) => {
                                                                             const value = e.target.value;
-                                                                            const patch = { name: value };
+                                                                            const patch = { name: value, strength: '' };
                                                                             dispatch({
                                                                                 type: 'setArrayItem',
                                                                                 path: ['medicines'],
@@ -1127,7 +1127,7 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                                                                             index: idx,
                                                                                             patch: {
                                                                                                 name: med.name,
-                                                                                                strength: med.strength || m.strength,
+                                                                                                strength: med.strength || '',
                                                                                             },
                                                                                         });
                                                                                         setFocusedMedicineIndex(null);
@@ -1142,8 +1142,13 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                                                     {normalizedMedicineName && !hasMedicineMatches ? (
                                                                         <p className="mt-1 text-[11px] font-medium text-amber-700">No medicine match found.</p>
                                                                     ) : null}
+                                                                    {String(m.strength || '').trim() ? (
+                                                                        <p className="mt-1 text-[11px] font-medium text-emerald-700">
+                                                                            Strength: <span className="font-semibold">{m.strength}</span>
+                                                                        </p>
+                                                                    ) : null}
                                                                 </div>
-                                                                <input
+                                                                {/* <input
                                                                     className="rounded border border-slate-200 bg-slate-50/50 px-3 py-1.5 text-sm text-slate-900 doc-input-focus"
                                                                     value={m.strength}
                                                                     onChange={(e) => dispatch({
@@ -1153,7 +1158,7 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                                                         patch: { strength: e.target.value },
                                                                     })}
                                                                     placeholder="Strength"
-                                                                />
+                                                                /> */}
                                                                 <input
                                                                     className="rounded border border-slate-200 bg-slate-50/50 px-3 py-1.5 text-sm text-slate-900 doc-input-focus"
                                                                     value={m.dosage}

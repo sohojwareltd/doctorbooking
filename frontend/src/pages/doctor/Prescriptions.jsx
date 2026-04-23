@@ -508,7 +508,73 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
             </div>
           </div>
 
-          <div className="overflow-x-auto border-t border-slate-100">
+          {/* ── Mobile Cards ── */}
+          <div className="md:hidden divide-y divide-slate-100 border-t border-slate-100">
+            {filteredRows.length === 0 ? (
+              <div className="p-5">
+                <DocEmptyState icon={FileText} title="No prescriptions found" description="Try another filter or search keyword." />
+              </div>
+            ) : filteredRows.map((prescription, index) => {
+              const serial = ((pagination?.current_page || 1) - 1) * (pagination?.per_page || 10) + index + 1;
+              return (
+                <div
+                  key={prescription.id}
+                  className="p-4 space-y-2 cursor-pointer active:bg-slate-50"
+                  onClick={() => setSelectedPrescription(prescription)}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2.5">
+                      <GenderIconAvatar gender={getPatientGender(prescription)} />
+                      <div>
+                        <div className="text-sm font-semibold text-slate-900">{renderHighlighted(getPatientName(prescription), searchTerm)}</div>
+                        <div className="text-xs text-slate-500">
+                          {getPatientAge(prescription) ? `${getPatientAge(prescription)}y` : 'Age N/A'}
+                          {getPatientPhone(prescription) ? ` · ${getPatientPhone(prescription)}` : ''}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="shrink-0 text-xs text-slate-400 text-right">
+                      <div>{formatDisplayDateWithYearFromDateLike(prescription.created_at) || prescription.created_at}</div>
+                    </div>
+                  </div>
+                  {prescription.diagnosis && (
+                    <div className="text-xs text-slate-600 line-clamp-2">{prescription.diagnosis}</div>
+                  )}
+                  <div className="text-xs text-slate-400">
+                    Follow-up: {getNextVisitLabel(prescription)}
+                  </div>
+                  <div className="flex items-center gap-1.5 pt-1" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedPrescription(prescription)}
+                      className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100"
+                      aria-label="View details"
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                    </button>
+                    <Link
+                      href={`/doctor/prescriptions/${prescription.id}`}
+                      className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                      aria-label="Open prescription"
+                    >
+                      <FileText className="h-3.5 w-3.5" />
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => handlePrintPrescription(prescription)}
+                      className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                      aria-label="Print"
+                    >
+                      <Printer className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* ── Desktop Table ── */}
+          <div className="hidden md:block overflow-x-auto border-t border-slate-100">
             <table className="min-w-full text-sm">
               <thead className="bg-slate-50 text-xs uppercase tracking-[0.12em] text-slate-500">
                 <tr>
@@ -615,7 +681,7 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
           </div>
 
           {filteredRows.length === 0 ? (
-            <div className="p-5">
+            <div className="hidden md:block p-5">
               <DocEmptyState
                 icon={FileText}
                 title="No prescriptions found"

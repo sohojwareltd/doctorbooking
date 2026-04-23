@@ -1,8 +1,9 @@
 import { Head, useForm, usePage, router } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
-import { Building2, MapPin, Phone, ToggleLeft, ToggleRight, ExternalLink, ArrowRight, Pencil, Trash2 } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Building2, MapPin, Phone, ToggleLeft, ToggleRight, ExternalLink, Pencil, Trash2, X, Plus } from 'lucide-react';
 import DoctorLayout from '../../layouts/DoctorLayout';
-import { DocButton, DocCard, DocEmptyState } from '../../components/doctor/DocUI';
+import { DocButton, DocEmptyState } from '../../components/doctor/DocUI';
 import { toastError, toastSuccess } from '../../utils/toast';
 
 export default function DoctorChambers() {
@@ -10,6 +11,7 @@ export default function DoctorChambers() {
   const chambers = Array.isArray(page?.props?.chambers) ? page.props.chambers : [];
   const flash = page?.props?.flash || {};
   const [deletingId, setDeletingId] = useState(null);
+  const [modalOpen, setModalOpen] = useState(false);
   const activeCount = chambers.filter((ch) => !!ch.is_active).length;
   const mappedCount = chambers.filter((ch) => (ch.google_maps_url && ch.google_maps_url.trim() !== '') || ch.location).length;
   const chamberHeaderMetrics = [
@@ -76,9 +78,19 @@ export default function DoctorChambers() {
       google_maps_url: ch.google_maps_url || '',
       is_active: !!ch.is_active,
     });
+    setModalOpen(true);
   };
 
   const handleNew = () => {
+    reset();
+    setData('id', null);
+    setData('google_maps_url', '');
+    setData('is_active', true);
+    setModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setModalOpen(false);
     reset();
     setData('id', null);
     setData('google_maps_url', '');
@@ -90,7 +102,7 @@ export default function DoctorChambers() {
     post('/doctor/chambers', {
       preserveScroll: true,
       onSuccess: () => {
-        handleNew();
+        closeModal();
       },
     });
   };
@@ -105,7 +117,7 @@ export default function DoctorChambers() {
       preserveScroll: true,
       onSuccess: () => {
         if (data.id === chamber.id) {
-          handleNew();
+          closeModal();
         }
       },
       onFinish: () => {
@@ -133,191 +145,294 @@ export default function DoctorChambers() {
           </div>
         </section>
 
-        <div className="grid gap-6 lg:grid-cols-3">
-        {/* Form */}
-        <section className="surface-card rounded-3xl overflow-hidden lg:col-span-1">
-          <div className="px-5 py-4 border-b border-slate-100">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-400">
-              {isEditing ? 'Edit Chamber' : 'Add Chamber'}
-            </h2>
-          </div>
-          <form onSubmit={handleSubmit} className="space-y-4 p-5">
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-700">Name</label>
-              <div className="relative">
-                <Building2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                <input
-                  type="text"
-                  required
-                  className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm text-slate-900 transition doc-input-focus"
-                  value={data.name}
-                  onChange={(e) => setData('name', e.target.value)}
-                  placeholder="City Heart Clinic"
-                  disabled={processing}
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-700">Location</label>
-              <div className="relative">
-                <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                <input
-                  type="text"
-                  className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm text-slate-900 transition doc-input-focus"
-                  value={data.location}
-                  onChange={(e) => setData('location', e.target.value)}
-                  placeholder="House 12, Road 5, Dhanmondi, Dhaka"
-                  disabled={processing}
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-700">Phone</label>
-              <div className="relative">
-                <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                <input
-                  type="text"
-                  className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm text-slate-900 transition doc-input-focus"
-                  value={data.phone}
-                  onChange={(e) => setData('phone', e.target.value)}
-                  placeholder="+8801XXXXXXXXX"
-                  disabled={processing}
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-700">Google Maps URL <span className="text-slate-400 font-normal">(optional)</span></label>
-              <input
-                type="url"
-                className="w-full rounded-lg border border-slate-200 bg-white py-2.5 px-3 text-sm text-slate-900 transition doc-input-focus"
-                value={data.google_maps_url}
-                onChange={(e) => setData('google_maps_url', e.target.value)}
-                placeholder="https://www.google.com/maps/place/..."
-                disabled={processing}
-              />
-              <p className="mt-1.5 text-xs text-slate-400">
-                Paste a shared Google Maps link. If empty, a directions link is built from location text.
-              </p>
-            </div>
-
-            <div className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 px-3 py-2.5">
-              <span className="text-sm font-medium text-slate-700">Active</span>
-              <button
-                type="button"
-                onClick={() => setData('is_active', !data.is_active)}
-                className="flex items-center gap-2 text-xs font-medium"
-              >
-                {data.is_active ? (
-                  <>
-                    <ToggleRight className="h-5 w-5 text-[#c57945]" />
-                    <span className="text-[#ad6639]">Visible on public page</span>
-                  </>
-                ) : (
-                  <>
-                    <ToggleLeft className="h-5 w-5 text-slate-400" />
-                    <span className="text-slate-500">Hidden from public page</span>
-                  </>
-                )}
-              </button>
-            </div>
-
-            <div className="flex items-center justify-between gap-3 pt-1">
-              <DocButton type="button" variant="secondary" size="sm" onClick={handleNew} disabled={processing}>
-                Clear
-              </DocButton>
-              <DocButton type="submit" size="sm" disabled={processing}>
-                {processing ? 'Saving…' : isEditing ? 'Update Chamber' : 'Add Chamber'}
-              </DocButton>
-            </div>
-
-          </form>
-        </section>
-
         {/* List */}
-        <section className="surface-card rounded-3xl overflow-hidden lg:col-span-2">
-          <div className="px-5 py-4 border-b border-slate-100">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-400">
-              Existing Chambers
-            </h2>
+        <section className="surface-card rounded-3xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-400">Existing Chambers</h2>
+            <DocButton type="button" size="sm" onClick={handleNew}>
+              <Plus className="h-4 w-4" /> Add Chamber
+            </DocButton>
           </div>
 
-          <div className="p-5">
+          {/* Mobile cards */}
+          <div className="md:hidden divide-y divide-slate-100">
+            {chambers.length === 0 ? (
+              <div className="p-5">
+                <DocEmptyState icon={Building2} title="You have not added any chambers yet." />
+              </div>
+            ) : chambers.map((ch) => {
+              const mapsUrlM =
+                ch.google_maps_url && ch.google_maps_url.trim() !== ''
+                  ? ch.google_maps_url
+                  : ch.location
+                    ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(ch.location)}`
+                    : null;
+              return (
+                <div key={ch.id} className="p-4 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <button type="button" onClick={() => handleEdit(ch)} className="text-left text-sm font-semibold text-[#2D3A74]">
+                      {ch.name}
+                    </button>
+                    {ch.is_active ? (
+                      <span className="shrink-0 inline-flex items-center rounded-full border border-[#efc7a9] bg-[#fff6ee] px-2.5 py-1 text-xs font-semibold text-[#ad6639]">Active</span>
+                    ) : (
+                      <span className="shrink-0 inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-500">Inactive</span>
+                    )}
+                  </div>
+                  {ch.location && (
+                    <div className="text-xs text-slate-500">{ch.location}</div>
+                  )}
+                  {ch.phone && (
+                    <div className="text-xs text-slate-400">{ch.phone}</div>
+                  )}
+                  {mapsUrlM && (
+                    <button
+                      type="button"
+                      onClick={() => window.open(mapsUrlM, '_blank', 'noopener,noreferrer')}
+                      className="inline-flex items-center gap-1 text-xs font-medium text-[#3556a6] hover:text-[#2a488f] transition"
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      Maps
+                    </button>
+                  )}
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => handleEdit(ch)}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-[#d8e2f8] bg-white px-3 py-1.5 text-xs font-semibold text-[#3556a6] transition hover:bg-[#f3f7ff]"
+                    >
+                      <Pencil className="h-3 w-3" />
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(ch)}
+                      disabled={processing || deletingId === ch.id}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-[#f2c4c4] bg-[#fff6f6] px-3 py-1.5 text-xs font-semibold text-[#b74444] transition hover:bg-[#ffeaea] disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                      {deletingId === ch.id ? 'Deleting...' : 'Delete'}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
 
-          {chambers.length === 0 ? (
-            <DocEmptyState icon={Building2} title="You have not added any chambers yet." />
-          ) : (
-            <div className="space-y-3">
-              {chambers.map((ch) => {
-                const mapsUrl =
-                  ch.google_maps_url && ch.google_maps_url.trim() !== ''
-                    ? ch.google_maps_url
-                    : ch.location
-                      ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(ch.location)}`
-                      : null;
-                return (
-                  <div
-                    key={ch.id}
-                    className="flex w-full items-start justify-between gap-4 rounded-xl border border-slate-200 bg-white px-4 py-3.5 text-sm transition group hover:border-[#d9c2ac] hover:bg-[#fff7f0]"
+          {/* Desktop table */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="min-w-full">
+              <thead>
+                <tr className="border-b border-slate-100 bg-slate-50">
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Name</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Location</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Phone</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {chambers.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-5 py-16 text-center">
+                      <DocEmptyState icon={Building2} title="You have not added any chambers yet." />
+                    </td>
+                  </tr>
+                ) : (
+                  chambers.map((ch) => {
+                    const mapsUrl =
+                      ch.google_maps_url && ch.google_maps_url.trim() !== ''
+                        ? ch.google_maps_url
+                        : ch.location
+                          ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(ch.location)}`
+                          : null;
+                    return (
+                      <tr key={ch.id} className="border-b border-slate-100 transition-colors hover:bg-slate-50">
+                        <td className="px-4 py-3.5">
+                          <button type="button" onClick={() => handleEdit(ch)} className="text-left text-sm font-semibold text-[#2D3A74] hover:underline">
+                            {ch.name}
+                          </button>
+                        </td>
+                        <td className="px-4 py-3.5 text-sm text-slate-600">
+                          {ch.location ? (
+                            <div>
+                              <div className="max-w-[240px] truncate">{ch.location}</div>
+                              {mapsUrl && (
+                                <button
+                                  type="button"
+                                  onClick={() => window.open(mapsUrl, '_blank', 'noopener,noreferrer')}
+                                  className="mt-0.5 inline-flex items-center gap-1 text-xs font-medium text-[#3556a6] hover:text-[#2a488f] transition"
+                                >
+                                  <ExternalLink className="h-3 w-3" />
+                                  Maps
+                                </button>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-slate-400">—</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3.5 text-sm text-slate-500 whitespace-nowrap">
+                          {ch.phone || <span className="text-slate-400">—</span>}
+                        </td>
+                        <td className="px-4 py-3.5">
+                          {ch.is_active ? (
+                            <span className="inline-flex items-center rounded-full border border-[#efc7a9] bg-[#fff6ee] px-2.5 py-1 text-xs font-semibold text-[#ad6639]">Active</span>
+                          ) : (
+                            <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-500">Inactive</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3.5">
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleEdit(ch)}
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-[#d8e2f8] bg-white px-3 py-1.5 text-xs font-semibold text-[#3556a6] transition hover:bg-[#f3f7ff]"
+                            >
+                              <Pencil className="h-3 w-3" />
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(ch)}
+                              disabled={processing || deletingId === ch.id}
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-[#f2c4c4] bg-[#fff6f6] px-3 py-1.5 text-xs font-semibold text-[#b74444] transition hover:bg-[#ffeaea] disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                              {deletingId === ch.id ? 'Deleting...' : 'Delete'}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      {/* Modal */}
+      {modalOpen && typeof document !== 'undefined'
+        ? createPortal(
+            <div className="fixed inset-0 z-[120] flex items-center justify-center">
+              <div className="absolute inset-0 bg-slate-900/45" onClick={closeModal} />
+              <div className="relative z-10 w-[calc(100vw-2rem)] max-w-lg rounded-2xl border border-slate-200 bg-white shadow-2xl">
+                <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+                  <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-500">
+                    {isEditing ? 'Edit Chamber' : 'Add Chamber'}
+                  </h2>
+                  <button
+                    type="button"
+                    onClick={closeModal}
+                    className="rounded-md p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+                    aria-label="Close modal"
                   >
-                    <div className="min-w-0 flex-1 pr-3">
-                      <button type="button" onClick={() => handleEdit(ch)} className="text-left">
-                        <div className="font-semibold text-slate-800 transition-colors group-hover:text-[#3556a6]">{ch.name}</div>
-                      </button>
-                      {ch.location && <div className="mt-0.5 text-xs text-slate-500">{ch.location}</div>}
-                      {ch.phone && <div className="mt-0.5 text-xs text-slate-400">{ch.phone}</div>}
-                      {mapsUrl && (
-                        <button
-                          type="button"
-                          onClick={() => window.open(mapsUrl, '_blank', 'noopener,noreferrer')}
-                          className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-[#3556a6] transition hover:text-[#2a488f]"
-                        >
-                          <ExternalLink className="h-3 w-3" />
-                          Open in Google Maps
-                        </button>
-                      )}
-                    </div>
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
 
-                    <div className="ml-2 flex shrink-0 flex-col items-end gap-3">
-                      <div className="text-xs font-semibold">
-                        {ch.is_active ? (
-                          <span className="rounded-full border border-[#efc7a9] bg-[#fff6ee] px-3 py-1 text-[#ad6639]">Active</span>
-                        ) : (
-                          <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-slate-500">Inactive</span>
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleEdit(ch)}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-[#d8e2f8] bg-white px-3 py-1.5 text-xs font-semibold text-[#3556a6] transition hover:bg-[#f3f7ff]"
-                        >
-                          <Pencil className="h-3 w-3" />
-                          Edit
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(ch)}
-                          disabled={processing || deletingId === ch.id}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-[#f2c4c4] bg-[#fff6f6] px-3 py-1.5 text-xs font-semibold text-[#b74444] transition hover:bg-[#ffeaea] disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                          {deletingId === ch.id ? 'Deleting...' : 'Delete'}
-                        </button>
-                      </div>
+                <form onSubmit={handleSubmit} className="space-y-4 p-5">
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium text-slate-700">Name</label>
+                    <div className="relative">
+                      <Building2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                      <input
+                        type="text"
+                        required
+                        autoFocus
+                        className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm text-slate-900 transition "
+                        value={data.name}
+                        onChange={(e) => setData('name', e.target.value)}
+                        placeholder="City Heart Clinic"
+                        disabled={processing}
+                      />
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          )}
-          </div>
-        </section>
-        </div>
-      </div>
+
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium text-slate-700">Location</label>
+                    <div className="relative">
+                      <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                      <input
+                        type="text"
+                        className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm text-slate-900 transition "
+                        value={data.location}
+                        onChange={(e) => setData('location', e.target.value)}
+                        placeholder="House 12, Road 5, Dhanmondi, Dhaka"
+                        disabled={processing}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium text-slate-700">Phone</label>
+                    <div className="relative">
+                      <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                      <input
+                        type="text"
+                        className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm text-slate-900 transition "
+                        value={data.phone}
+                        onChange={(e) => setData('phone', e.target.value)}
+                        placeholder="+8801XXXXXXXXX"
+                        disabled={processing}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                      Google Maps URL <span className="text-slate-400 font-normal">(optional)</span>
+                    </label>
+                    <input
+                      type="url"
+                      className="w-full rounded-lg border border-slate-200 bg-white py-2.5 px-3 text-sm text-slate-900 transition "
+                      value={data.google_maps_url}
+                      onChange={(e) => setData('google_maps_url', e.target.value)}
+                      placeholder="https://www.google.com/maps/place/..."
+                      disabled={processing}
+                    />
+                    <p className="mt-1.5 text-xs text-slate-400">
+                      Paste a shared Google Maps link. If empty, a directions link is built from location text.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 px-3 py-2.5">
+                    <span className="text-sm font-medium text-slate-700">Active</span>
+                    <button
+                      type="button"
+                      onClick={() => setData('is_active', !data.is_active)}
+                      className="flex items-center gap-2 text-xs font-medium"
+                    >
+                      {data.is_active ? (
+                        <>
+                          <ToggleRight className="h-5 w-5 text-[#c57945]" />
+                          <span className="text-[#ad6639]">Visible on public page</span>
+                        </>
+                      ) : (
+                        <>
+                          <ToggleLeft className="h-5 w-5 text-slate-400" />
+                          <span className="text-slate-500">Hidden from public page</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2 pt-1">
+                    <DocButton type="button" variant="secondary" size="sm" onClick={closeModal} disabled={processing}>
+                      Cancel
+                    </DocButton>
+                    <DocButton type="submit" size="sm" disabled={processing}>
+                      {processing ? 'Saving…' : isEditing ? 'Update Chamber' : 'Add Chamber'}
+                    </DocButton>
+                  </div>
+                </form>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
     </DoctorLayout>
   );
 }

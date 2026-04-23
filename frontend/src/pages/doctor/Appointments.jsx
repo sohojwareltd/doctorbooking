@@ -772,22 +772,22 @@ export default function DoctorAppointments() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-4">
             {topWidgets.map((widget) => {
               const Icon = widget.icon;
 
               return (
-                <div key={widget.key} className="surface-card rounded-3xl p-5">
-                  <div className="flex items-start justify-between gap-4">
+                <div key={widget.key} className="surface-card rounded-2xl p-3.5 sm:rounded-3xl sm:p-5">
+                  <div className="flex items-start justify-between gap-3 sm:gap-4">
                     <div>
-                      <p className="text-sm text-slate-500 mb-1">{widget.label}</p>
-                      <p className="text-3xl font-semibold text-[#2D3A74]">{widget.value}</p>
+                      <p className="mb-1 text-xs text-slate-500 sm:text-sm">{widget.label}</p>
+                      <p className="text-2xl font-semibold text-[#2D3A74] sm:text-3xl">{widget.value}</p>
                     </div>
-                    <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${widget.tone}`}>
-                      <Icon className="h-5 w-5" />
+                    <div className={`flex h-9 w-9 items-center justify-center rounded-xl sm:h-11 sm:w-11 sm:rounded-2xl ${widget.tone}`}>
+                      <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
                     </div>
                   </div>
-                  <p className="mt-4 text-xs text-slate-400">{widget.helper}</p>
+                  <p className="mt-2.5 line-clamp-2 text-[11px] text-slate-400 sm:mt-4 sm:text-xs">{widget.helper}</p>
                 </div>
               );
             })}
@@ -798,8 +798,8 @@ export default function DoctorAppointments() {
           <div className="px-6 py-5 border-b border-slate-100">
             <div className="flex flex-col gap-3">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,360px)_180px_180px_180px_180px] lg:items-end">
-                  <div>
+                <div className="grid grid-cols-2 gap-3 lg:grid-cols-[minmax(0,360px)_180px_180px_180px_180px] lg:items-end">
+                  <div className="col-span-2 lg:col-span-1">
                     <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Search</label>
                     <div className="relative">
                       <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -813,7 +813,7 @@ export default function DoctorAppointments() {
                     </div>
                   </div>
 
-                  <div className="sm:max-w-[190px] lg:w-[180px]">
+                  <div className="col-span-1 min-w-0 lg:w-[180px]">
                     <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Date</label>
                     <select
                       value={datePreset}
@@ -827,7 +827,7 @@ export default function DoctorAppointments() {
                     </select>
                   </div>
 
-                  <div className="sm:max-w-[190px] lg:w-[180px]">
+                  <div className="col-span-1 min-w-0 lg:w-[180px]">
                     <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Gender</label>
                     <select
                       value={genderFilter}
@@ -841,7 +841,7 @@ export default function DoctorAppointments() {
                     </select>
                   </div>
 
-                  <div className="sm:max-w-[190px] lg:w-[180px]">
+                  <div className="col-span-1 min-w-0 lg:w-[180px]">
                     <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Status</label>
                     <select
                       value={statusFilter}
@@ -854,7 +854,7 @@ export default function DoctorAppointments() {
                     </select>
                   </div>
 
-                  <div className="sm:max-w-[190px] lg:w-[180px]">
+                  <div className="col-span-1 min-w-0 lg:w-[180px]">
                     <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Chamber</label>
                     <select
                       value={chamberFilter}
@@ -874,7 +874,126 @@ export default function DoctorAppointments() {
             </div>
           </div>
 
-          <div className="overflow-x-auto border-t border-slate-100">
+          <div className="md:hidden border-t border-slate-100 bg-slate-50/70 px-3 py-3 space-y-3">
+            {loading ? (
+              <div className="rounded-2xl border border-slate-200 bg-white px-6 py-14 shadow-sm">
+                <div className="flex flex-col items-center justify-center gap-3 text-sm text-slate-500">
+                  <Loader2 className="h-6 w-6 animate-spin text-[#2D3A74]" />
+                  <span>Loading appointments...</span>
+                </div>
+              </div>
+            ) : paginatedRows.length === 0 ? (
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <DocEmptyState
+                  icon={CalendarCheck2}
+                  title="No appointments found"
+                  description="Try another status or keyword."
+                />
+              </div>
+            ) : paginatedRows.map((appointment) => {
+              const patientPhone = getPatientPhone(appointment);
+
+              return (
+                <div
+                  key={appointment.id}
+                  className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3 shadow-sm cursor-pointer transition active:scale-[0.995]"
+                  onClick={() => setSelectedPatient(appointment)}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2.5">
+                      <GenderIconAvatar gender={getPatientGender(appointment)} />
+                      <div>
+                        <div className="text-sm font-semibold text-slate-900 leading-tight">{renderHighlighted(getPatientName(appointment), searchTerm)}</div>
+                        <div className="mt-0.5 text-xs text-slate-500">{formatAgeGender(appointment)}</div>
+                      </div>
+                    </div>
+                    <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-slate-500">#{appointment.id}</span>
+                  </div>
+
+                  <div className="rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2">
+                    <div className="flex items-center justify-between gap-2 text-xs text-slate-600">
+                      <span className="inline-flex items-center gap-1.5">
+                        <Phone className="h-3.5 w-3.5 text-slate-400" />
+                        {renderHighlighted(patientPhone || 'N/A', searchTerm)}
+                      </span>
+                      <span className="inline-flex items-center gap-1.5 text-slate-500">
+                        <Calendar className="h-3.5 w-3.5 text-slate-400" />
+                        {formatDisplayDateWithYearFromDateLike(appointment.appointment_date) || appointment.appointment_date}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="pt-0.5" onClick={(e) => e.stopPropagation()}>
+                    <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                      <div className="mb-1.5 flex items-center justify-between gap-2">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Schedule Status</p>
+                        <StatusBadge status={appointment.status} />
+                      </div>
+                      <select
+                        value={appointment.status}
+                        onChange={(e) => updateStatus(appointment.id, e.target.value)}
+                        className={`w-full rounded-lg border bg-white px-2.5 py-2 text-xs font-semibold transition-colors hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-200 ${getStatusSelectTone(appointment.status)}`}
+                      >
+                        <option value="scheduled">Scheduled</option>
+                        <option value="arrived">Arrived</option>
+                        <option value="in_consultation">In consultation</option>
+                        <option value="awaiting_tests">Awaiting tests</option>
+                        <option value="prescribed">Prescribed</option>
+                        <option value="cancelled">Cancelled</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-0.5" onClick={(e) => e.stopPropagation()}>
+                    {!isCompounder && (
+                      !appointment.has_prescription || !appointment.prescription_id ? (
+                        <Link
+                          href={`/doctor/prescriptions/create?appointment_id=${appointment.id}`}
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[#d8e2f8] bg-white text-[#3556a6] transition hover:bg-[#f3f7ff]"
+                          aria-label="Create prescription"
+                        >
+                          <FilePlus className="h-4 w-4" />
+                        </Link>
+                      ) : (
+                        <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-300">
+                          <FilePlus className="h-4 w-4" />
+                        </span>
+                      )
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => setSelectedPatient(appointment)}
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-sky-200 bg-sky-50 text-sky-700 transition hover:border-sky-300 hover:bg-sky-100 hover:text-sky-800"
+                      aria-label="View details"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </button>
+
+                    {appointment.has_prescription && appointment.prescription_id ? (
+                      <Link
+                        href={`/doctor/prescriptions/${appointment.prescription_id}`}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 transition hover:border-emerald-300 hover:text-emerald-800"
+                        aria-label="View prescription"
+                      >
+                        <FileText className="h-4 w-4" />
+                      </Link>
+                    ) : null}
+
+                    <button
+                      type="button"
+                      onClick={() => setSelectedPatient(appointment)}
+                      className="ml-auto inline-flex items-center rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+                    >
+                      Details
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="hidden md:block overflow-x-auto border-t border-slate-100">
             <table className="min-w-full text-sm">
               <thead className="bg-slate-50 text-slate-500 uppercase text-xs tracking-[0.12em]">
                 <tr>
@@ -1005,7 +1124,7 @@ export default function DoctorAppointments() {
           </div>
 
           {!loading && paginatedRows.length === 0 ? (
-            <div className="p-5">
+            <div className="hidden md:block p-5">
               <DocEmptyState
                 icon={CalendarCheck2}
                 title="No appointments found"

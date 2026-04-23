@@ -48,7 +48,53 @@ export default function Compounders({ compounders }) {
         </div>
 
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-          <div className="overflow-x-auto">
+          {/* Mobile cards */}
+          <div className="md:hidden divide-y divide-slate-100">
+            {rows.length === 0 ? (
+              <div className="px-4 py-12 text-center text-sm text-slate-500">No compounder found.</div>
+            ) : rows.map((row) => (
+              <div key={row.id} className="p-4 space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <div className="text-sm font-semibold text-slate-800">{row.name || 'N/A'}</div>
+                    {row.designation && <div className="text-xs text-slate-500">{row.designation}</div>}
+                  </div>
+                  <div className="shrink-0 text-xs text-slate-400">{formatDisplayDateWithYearFromDateLike(row.created_at) || row.created_at || ''}</div>
+                </div>
+                <div className="text-xs text-slate-600">@{row.username || 'N/A'}</div>
+                <div className="space-y-1 text-xs text-slate-600">
+                  <div className="flex items-center gap-1.5">
+                    <Mail className="h-3.5 w-3.5 text-slate-400" />
+                    {row.email || 'N/A'}
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Phone className="h-3.5 w-3.5 text-slate-400" />
+                    {row.phone || 'N/A'}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 pt-1">
+                  <Link
+                    href={`/doctor/compounder/${row.id}/edit`}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-[#d8e2f8] bg-white px-3 py-1.5 text-xs font-semibold text-[#3556a6] transition hover:bg-[#f3f7ff]"
+                  >
+                    <Pencil className="h-3 w-3" />
+                    Edit
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(row)}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-[#f2c4c4] bg-[#fff6f6] px-3 py-1.5 text-xs font-semibold text-[#b74444] transition hover:bg-[#ffeaea]"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop table */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="min-w-full divide-y divide-slate-200">
               <thead className="bg-slate-50">
                 <tr>
