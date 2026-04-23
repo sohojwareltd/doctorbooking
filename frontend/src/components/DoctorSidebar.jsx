@@ -12,12 +12,17 @@ export default function DoctorSidebar({ currentPath, onClose, collapsed = false,
 
   const isCompounder = user?.role === 'compounder';
 
-  const practiceSettingsItems = isCompounder ? [] : [
-    { href: '/doctor/chambers', label: 'Chambers', Icon: Stethoscope },
-    { href: '/doctor/medicines', label: 'Medicines', Icon: Pill },
-    { href: '/doctor/schedule', label: 'Schedule', Icon: CalendarClock },
-    { href: '/doctor/profile', label: 'Profile', Icon: UserCog },
-  ];
+  const practiceSettingsItems = isCompounder
+    ? [
+      { href: '/doctor/chambers', label: 'Chambers', Icon: Stethoscope },
+      { href: '/doctor/schedule', label: 'Schedule', Icon: CalendarClock },
+    ]
+    : [
+      { href: '/doctor/chambers', label: 'Chambers', Icon: Stethoscope },
+      { href: '/doctor/medicines', label: 'Medicines', Icon: Pill },
+      { href: '/doctor/schedule', label: 'Schedule', Icon: CalendarClock },
+      { href: '/doctor/profile', label: 'Profile', Icon: UserCog },
+    ];
 
   const practiceSettingsActive = practiceSettingsItems.some(
     (item) => currentPath === item.href || currentPath.startsWith(item.href + '/')
@@ -40,7 +45,7 @@ export default function DoctorSidebar({ currentPath, onClose, collapsed = false,
         { href: '/doctor/dashboard', label: 'Dashboard', Icon: LayoutDashboard },
         { href: '/doctor/appointments', label: 'Appointments', Icon: CalendarDays, badge: null },
         { href: '/doctor/patients', label: 'Patients', Icon: Users },
-        ...(!isCompounder ? [{ href: '/doctor/prescriptions', label: 'Prescriptions', Icon: ClipboardList }] : []),
+        { href: '/doctor/prescriptions', label: 'Prescriptions', Icon: ClipboardList },
         ...(!isCompounder ? [{ href: '/doctor/compounders', label: 'Compounders', Icon: UserPlus }] : []),
       ],
     },
@@ -105,7 +110,7 @@ export default function DoctorSidebar({ currentPath, onClose, collapsed = false,
             })}
 
             {/* Practice Settings Dropdown — doctor only */}
-            {!isCompounder && (
+            {practiceSettingsItems.length > 0 && (
             <li>
               <div className="sidebar-menu-item">
                 <div className={`flex items-center ${practiceSettingsActive && !practiceOpen ? '' : ''}`}

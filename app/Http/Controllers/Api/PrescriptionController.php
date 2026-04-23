@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\PrescriptionResource;
 use App\Models\Appointment;
+use App\Models\PatientReport;
 use App\Models\Patient;
 use App\Models\Prescription;
 use App\Models\Role;
@@ -12,6 +13,8 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 /**
  * Prescription CRUD — doctor only.
@@ -195,5 +198,143 @@ class PrescriptionController extends Controller
             'message'      => 'Prescription updated.',
             'prescription' => new PrescriptionResource($prescription),
         ]);
+    }
+
+    /** GET /api/doctor/prescriptions/{prescription}/reports */
+    public function reports(Request $request, Prescription $prescription): JsonResponse
+    {
+        $this->authorizeReportAccess($request, $prescription);
+
+        $reports = PatientReport::query()
+            ->where('prescription_id', $prescription->id)
+            ->latest()
+            ->get()
+            ->map(fn (PatientReport $report) => $this->mapReport($report));
+
+        return response()->json(['reports' => $reports]);
+    }
+
+    /** POST /api/doctor/prescriptions/{prescription}/reports */
+    public function uploadReport(Request $request, Prescription $prescription): JsonResponse
+    {
+        $this->authorizeReportAccess($request, $prescription);
+
+        $validated = $request->validate([
+            'report_file' => ['nullable', 'file', 'max:10240', 'mimes:pdf,jpg,jpeg,png,webp'],
+            'report_text' => ['nullable', 'string', 'max:20000'],
+            'note' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $reportText = trim((string) ($validated['report_text'] ?? ''));
+        $hasFile = $request->hasFile('report_file');
+
+        if (! $hasFile && $reportText === '') {
+            return response()->json([
+                'message' => 'Please upload a file or write a text report.',
+            ], 422);
+        }
+
+        $ownerUserId = $prescription->user_id ?: $request->user()->id;
+
+        if ($hasFile) {
+            $file = $validated['report_file'];
+            $path = $file->store("patient-reports/{$ownerUserId}", 'public');
+            $originalName = $file->getClientOriginalName();
+            $mimeType = $file->getClientMimeType();
+            $fileSize = $file->getSize();
+        } else {
+            $baseName = trim((string) ($validated['note'] ?? ''));
+            $slug = Str::slug($baseName) ?: 'text-report';
+            $fileName = now()->format('Ymd_His').'_'.$slug.'_'.Str::lower(Str::random(6)).'.txt';
+            $path = "patient-reports/{$ownerUserId}/{$fileName}";
+            Storage::disk('public')->put($path, $reportText);
+            $originalName = $fileName;
+            $mimeType = 'text/plain';
+            $fileSize = strlen($reportText);
+        }
+
+        $report = PatientReport::create([
+            'user_id' => $ownerUserId,
+            'prescription_id' => $prescription->id,
+            'original_name' => $originalName,
+            'file_path' => $path,
+            'mime_type' => $mimeType,
+            'file_size' => $fileSize,
+            'note' => $validated['note'] ?? null,
+            'report_text' => $reportText !== '' ? $reportText : null,
+        ]);
+
+        return response()->json([
+            'message' => 'Report uploaded successfully.',
+            'report' => $this->mapReport($report),
+        ], 201);
+    }
+
+    /** PUT /api/doctor/prescriptions/{prescription}/reports/{report} */
+    public function updateReport(Request $request, Prescription $prescription, PatientReport $report): JsonResponse
+    {
+        $this->authorizeReportAccess($request, $prescription);
+        abort_unless((int) $report->prescription_id === (int) $prescription->id, 404);
+
+        $validated = $request->validate([
+            'report_text' => ['nullable', 'string', 'max:20000'],
+            'note' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $hasNote = array_key_exists('note', $validated);
+        $hasText = array_key_exists('report_text', $validated);
+        if (! $hasNote && ! $hasText) {
+            return response()->json([
+                'message' => 'Please provide note or text report to update.',
+            ], 422);
+        }
+
+        if ($hasNote) {
+            $note = trim((string) ($validated['note'] ?? ''));
+            $report->note = $note !== '' ? $note : null;
+        }
+
+        if ($hasText) {
+            $reportText = trim((string) ($validated['report_text'] ?? ''));
+            $report->report_text = $reportText !== '' ? $reportText : null;
+
+            if (Str::startsWith((string) $report->mime_type, 'text/')) {
+                Storage::disk('public')->put($report->file_path, $reportText);
+                $report->file_size = strlen($reportText);
+            }
+        }
+
+        $report->save();
+
+        return response()->json([
+            'message' => 'Report updated successfully.',
+            'report' => $this->mapReport($report),
+        ]);
+    }
+
+    private function authorizeReportAccess(Request $request, Prescription $prescription): void
+    {
+        $user = $request->user();
+
+        if ($user->hasRole('doctor')) {
+            abort_unless($prescription->doctor_id === $user->doctorId(), 403);
+            return;
+        }
+
+        abort_unless($user->hasRole('compounder'), 403);
+    }
+
+    private function mapReport(PatientReport $report): array
+    {
+        return [
+            'id' => $report->id,
+            'original_name' => $report->original_name,
+            'file_url' => asset('storage/'.$report->file_path),
+            'mime_type' => $report->mime_type,
+            'file_size' => $report->file_size,
+            'note' => $report->note,
+            'report_text' => $report->report_text,
+            'created_at' => $report->created_at?->toDateTimeString(),
+        ];
     }
 }

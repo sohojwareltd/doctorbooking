@@ -15,6 +15,7 @@ class PatientReport extends Model
         'mime_type',
         'file_size',
         'note',
+        'report_text',
     ];
 
     public function user(): BelongsTo

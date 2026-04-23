@@ -1,6 +1,7 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { Calendar, ClipboardList, Heart, Phone, Mail, User, Stethoscope, Pill, FlaskConical, FileText, MapPin, Printer, ArrowLeft, Download, Save, X, Plus, Trash2 } from 'lucide-react';
+import { Calendar, ClipboardList, Heart, Phone, Mail, User, Stethoscope, Pill, FlaskConical, FileText, MapPin, Printer, ArrowLeft, Download, Save, X, Plus, Trash2, Upload, FileUp, Pencil } from 'lucide-react';
 import { useMemo, useRef, useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import DoctorLayout from '../../layouts/DoctorLayout';
 import EyePrescriptionSection, {
   createEmptyEyePrescriptionData,
@@ -56,11 +57,11 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
       const dosage = parts[1] || '';
       const duration = parts[2] || '';
       const instruction = parts[3] || '';
-      // Try to extract strength (last word matching mg/ml/mcg/g/IU/% patterns)
-      const strengthRx = /^(.*?)\s+(\d+(?:\.\d+)?(?:mg|mcg|ml|g|IU|%|mg\/ml|mg\/5ml|iu)(?:\/\w+)?)\s*$/i;
+      // Extract common strength formats like "500mg", "120 mg/5 ml", "1 g", "2.5 mg/ml"
+      const strengthRx = /^(.*?)\s+(\d+(?:\.\d+)?\s*(?:mg|mcg|ml|g|iu|%)(?:\s*\/\s*\d+(?:\.\d+)?\s*(?:mg|mcg|ml|g|iu|%))?)\s*$/i;
       const match = nameStrength.match(strengthRx);
       return match
-        ? { name: match[1].trim(), strength: match[2], dosage, duration, instruction }
+        ? { name: match[1].trim(), strength: match[2].replace(/\s*\/\s*/g, '/').trim(), dosage, duration, instruction }
         : { name: nameStrength.trim(), strength: '', dosage, duration, instruction };
     });
     return rows.length ? rows : [emptyMedicine()];
@@ -303,6 +304,19 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
   const visitType = editMode ? form?.visit_type : data?.visit_type || prescription?.visit_type;
   const prescriptionRef = useRef(null);
   const [downloadingPDF, setDownloadingPDF] = useState(false);
+  const [reports, setReports] = useState([]);
+  const [loadingReports, setLoadingReports] = useState(false);
+  const [uploadingReport, setUploadingReport] = useState(false);
+  const [reportFile, setReportFile] = useState(null);
+  const [reportNote, setReportNote] = useState('');
+  const [reportText, setReportText] = useState('');
+  const [showEditReportModal, setShowEditReportModal] = useState(false);
+  const [editingReport, setEditingReport] = useState(null);
+  const [editReportNote, setEditReportNote] = useState('');
+  const [editReportText, setEditReportText] = useState('');
+  const [updatingReport, setUpdatingReport] = useState(false);
+  const [showReportUploadModal, setShowReportUploadModal] = useState(false);
+  const reportEditorRef = useRef(null);
   const isPrintMode = useMemo(() => new URLSearchParams(window.location.search).get('action') === 'print', []);
 
   // Auto-print if action=print in URL
@@ -346,8 +360,163 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
     };
   }, []);
 
+  const loadReports = async () => {
+    const id = data?.id || prescription?.id;
+    if (!id) return;
+
+    try {
+      setLoadingReports(true);
+      const res = await fetch(`/api/doctor/prescriptions/${id}/reports`, {
+        headers: { Accept: 'application/json' },
+        credentials: 'same-origin',
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toastError(body?.message || 'Failed to load test reports.');
+        return;
+      }
+      setReports(Array.isArray(body?.reports) ? body.reports : []);
+    } catch {
+      toastError('Failed to load test reports.');
+    } finally {
+      setLoadingReports(false);
+    }
+  };
+
+  useEffect(() => {
+    loadReports();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data?.id, prescription?.id]);
+
+  const handleUploadReport = async (event) => {
+    event?.preventDefault?.();
+
+    const id = data?.id || prescription?.id;
+    if (!id) {
+      toastError('Prescription not found for report upload.');
+      return;
+    }
+
+    const plainText = String(reportEditorRef.current?.innerText || reportText || '').trim();
+    const trimmedText = plainText;
+    if (!reportFile && !trimmedText) {
+      toastError('Please choose a file or write a text report.');
+      return;
+    }
+
+    try {
+      setUploadingReport(true);
+      const formData = new FormData();
+      if (reportFile) formData.append('report_file', reportFile);
+      if (trimmedText) formData.append('report_text', trimmedText);
+      if (reportNote.trim()) formData.append('note', reportNote.trim());
+
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+      const res = await fetch(`/api/doctor/prescriptions/${id}/reports`, {
+        method: 'POST',
+        body: formData,
+        credentials: 'same-origin',
+        headers: {
+          Accept: 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          ...(csrfToken ? { 'X-CSRF-TOKEN': csrfToken } : {}),
+        },
+      });
+
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toastError(body?.message || 'Failed to upload report.');
+        return;
+      }
+
+      toastSuccess(body?.message || 'Report uploaded successfully.');
+      setReportFile(null);
+      setReportNote('');
+      setReportText('');
+      setShowReportUploadModal(false);
+      if (reportEditorRef.current) reportEditorRef.current.innerHTML = '';
+      const fileInput = document.getElementById('doctor-report-upload-input');
+      if (fileInput) fileInput.value = '';
+      await loadReports();
+    } catch {
+      toastError('Network error while uploading report.');
+    } finally {
+      setUploadingReport(false);
+    }
+  };
+
+  const openEditReportModal = (report) => {
+    setEditingReport(report);
+    setEditReportNote(report?.note || '');
+    setEditReportText(report?.report_text || '');
+    setShowEditReportModal(true);
+  };
+
+  const handleUpdateReport = async (event) => {
+    event?.preventDefault?.();
+    const id = data?.id || prescription?.id;
+    const reportId = editingReport?.id;
+    if (!id || !reportId) {
+      toastError('Report not found for edit.');
+      return;
+    }
+
+    try {
+      setUpdatingReport(true);
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+      const payload = {
+        note: String(editReportNote || '').trim(),
+        report_text: editReportText,
+      };
+
+      const res = await fetch(`/api/doctor/prescriptions/${id}/reports/${reportId}`, {
+        method: 'PUT',
+        credentials: 'same-origin',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          ...(csrfToken ? { 'X-CSRF-TOKEN': csrfToken } : {}),
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toastError(body?.message || 'Failed to update report.');
+        return;
+      }
+
+      toastSuccess(body?.message || 'Report updated successfully.');
+      setShowEditReportModal(false);
+      setEditingReport(null);
+      await loadReports();
+    } catch {
+      toastError('Network error while updating report.');
+    } finally {
+      setUpdatingReport(false);
+    }
+  };
+
+  const formatBytes = (bytes) => {
+    const value = Number(bytes || 0);
+    if (!value || Number.isNaN(value)) return 'N/A';
+    if (value < 1024) return `${value} B`;
+    if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
+    return `${(value / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
   const handlePrint = () => {
     window.print();
+  };
+
+  const applyReportFormat = (command) => {
+    try {
+      document.execCommand(command, false);
+      reportEditorRef.current?.focus();
+    } catch {
+      // keep editor usable even if formatting command fails
+    }
   };
 
   const handleDownloadPDF = async () => {
@@ -478,6 +647,239 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
             </button>
           </div>
         </div>
+
+        <div className="print:hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-base font-bold text-slate-800">Test Report Upload</h2>
+            <span className="text-xs text-slate-400">Doctor and compounder can upload file or text report</span>
+          </div>
+          <div className="mt-3 flex justify-end">
+            <button
+              type="button"
+              onClick={() => setShowReportUploadModal(true)}
+              className="inline-flex items-center gap-2 rounded-lg bg-[#2D3A74] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#243063]"
+            >
+              <Upload className="h-4 w-4" />
+              Upload Report
+            </button>
+          </div>
+
+          <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200">
+            <table className="min-w-full">
+              <thead>
+                <tr className="bg-slate-50 text-left">
+                  <th className="px-3 py-2 text-xs font-semibold text-slate-500">File</th>
+                  <th className="px-3 py-2 text-xs font-semibold text-slate-500">Note</th>
+                  <th className="px-3 py-2 text-xs font-semibold text-slate-500">Text Report</th>
+                  <th className="px-3 py-2 text-xs font-semibold text-slate-500">Size</th>
+                  <th className="px-3 py-2 text-xs font-semibold text-slate-500">Uploaded</th>
+                  <th className="px-3 py-2 text-xs font-semibold text-slate-500">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loadingReports ? (
+                  <tr>
+                    <td colSpan={6} className="px-3 py-5 text-center text-sm text-slate-400">Loading reports...</td>
+                  </tr>
+                ) : reports.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-3 py-5 text-center text-sm text-slate-400">No report uploaded yet.</td>
+                  </tr>
+                ) : reports.map((report) => (
+                  <tr key={report.id} className="border-t border-slate-100">
+                    <td className="px-3 py-2 text-sm text-slate-700">{report.original_name}</td>
+                    <td className="px-3 py-2 text-sm text-slate-600">{report.note || '-'}</td>
+                    <td className="px-3 py-2 text-sm text-slate-600">
+                      {String(report.mime_type || '').startsWith('text/') ? (
+                        <a
+                          href={report.file_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-xs font-semibold text-sky-700 hover:bg-sky-100"
+                        >
+                          View Text
+                        </a>
+                      ) : (
+                        <span className="text-slate-400">-</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-sm text-slate-600">{formatBytes(report.file_size)}</td>
+                    <td className="px-3 py-2 text-sm text-slate-500">{formatDisplayFromDateLike(report.created_at) || '-'}</td>
+                    <td className="px-3 py-2 text-sm">
+                      <div className="flex items-center gap-3">
+                        <a
+                          href={report.file_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 font-semibold text-[#2D3A74] hover:underline"
+                        >
+                          <FileUp className="h-3.5 w-3.5" />
+                          View
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => openEditReportModal(report)}
+                          className="inline-flex items-center gap-1 font-semibold text-amber-700 hover:underline"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                          Edit
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {showEditReportModal && typeof document !== 'undefined' ? createPortal(
+          <div className="fixed inset-0 z-[121] flex items-start justify-center overflow-y-auto bg-[rgba(2,6,23,0.78)] backdrop-blur-sm p-4 pt-6 sm:pt-10 print:hidden">
+            <div className="w-full max-w-2xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+              <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">
+                <h3 className="text-base font-bold text-slate-800">Edit Report</h3>
+                <button
+                  type="button"
+                  onClick={() => setShowEditReportModal(false)}
+                  className="rounded-md border border-slate-200 bg-white p-1.5 text-slate-600 transition hover:bg-slate-50"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleUpdateReport} className="space-y-4 px-5 py-4">
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-slate-600">Title / Note</label>
+                  <input
+                    type="text"
+                    value={editReportNote}
+                    onChange={(e) => setEditReportNote(e.target.value)}
+                    placeholder="e.g. CBC report"
+                    className="block w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-slate-600">Text Report</label>
+                  <textarea
+                    rows={8}
+                    value={editReportText}
+                    onChange={(e) => setEditReportText(e.target.value)}
+                    placeholder="Edit text report content"
+                    className="block w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                  />
+                </div>
+
+                <div className="flex items-center justify-end gap-2 border-t border-slate-100 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowEditReportModal(false)}
+                    className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={updatingReport}
+                    className="inline-flex items-center gap-2 rounded-lg bg-[#2D3A74] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#243063] disabled:opacity-60"
+                  >
+                    {updatingReport ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" /> : <Pencil className="h-4 w-4" />}
+                    {updatingReport ? 'Updating...' : 'Update Report'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>,
+          document.body,
+        ) : null}
+
+        {showReportUploadModal && typeof document !== 'undefined' ? createPortal(
+          <div className="fixed inset-0 z-[120] flex items-start justify-center overflow-y-auto bg-[rgba(2,6,23,0.78)] backdrop-blur-sm p-4 pt-6 sm:pt-10 print:hidden">
+            <div className="w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+              <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">
+                <h3 className="text-base font-bold text-slate-800">Upload Test Report</h3>
+                <button
+                  type="button"
+                  onClick={() => setShowReportUploadModal(false)}
+                  className="rounded-md border border-slate-200 bg-white p-1.5 text-slate-600 transition hover:bg-slate-50"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleUploadReport} className="space-y-4 px-5 py-4">
+                <div className="grid gap-3 md:grid-cols-[1fr_220px]">
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold text-slate-600">Report File (PDF/JPG/PNG)</label>
+                    <input
+                      id="doctor-report-upload-input"
+                      type="file"
+                      accept=".pdf,.jpg,.jpeg,.png,.webp"
+                      onChange={(e) => setReportFile(e.target.files?.[0] ?? null)}
+                      className="block w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold text-slate-600">Title / Note</label>
+                    <input
+                      type="text"
+                      value={reportNote}
+                      onChange={(e) => setReportNote(e.target.value)}
+                      placeholder="e.g. CBC report"
+                      className="block w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-slate-600">Text Report</label>
+                  <div className="rounded-lg border border-slate-200 bg-white">
+                    <div className="flex flex-wrap items-center gap-1 border-b border-slate-200 px-2 py-1.5">
+                      <button type="button" onClick={() => applyReportFormat('bold')} className="rounded border border-slate-200 px-2 py-0.5 text-xs font-bold text-slate-700 hover:bg-slate-50">B</button>
+                      <button type="button" onClick={() => applyReportFormat('italic')} className="rounded border border-slate-200 px-2 py-0.5 text-xs italic text-slate-700 hover:bg-slate-50">I</button>
+                      <button type="button" onClick={() => applyReportFormat('underline')} className="rounded border border-slate-200 px-2 py-0.5 text-xs underline text-slate-700 hover:bg-slate-50">U</button>
+                      <button type="button" onClick={() => applyReportFormat('insertUnorderedList')} className="rounded border border-slate-200 px-2 py-0.5 text-xs text-slate-700 hover:bg-slate-50">• List</button>
+                      <button type="button" onClick={() => applyReportFormat('insertOrderedList')} className="rounded border border-slate-200 px-2 py-0.5 text-xs text-slate-700 hover:bg-slate-50">1. List</button>
+                    </div>
+                    <div className="relative">
+                      {!reportText ? (
+                        <span className="pointer-events-none absolute left-3 top-2 text-sm text-slate-400">
+                          Write report details here...
+                        </span>
+                      ) : null}
+                      <div
+                        ref={reportEditorRef}
+                        contentEditable
+                        suppressContentEditableWarning
+                        onInput={(e) => setReportText(e.currentTarget.innerHTML)}
+                        className="min-h-[170px] px-3 py-2 text-sm text-slate-800 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 border-t border-slate-100 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowReportUploadModal(false)}
+                    className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={uploadingReport || (!reportFile && !String(reportEditorRef.current?.innerText || reportText || '').trim())}
+                    className="inline-flex items-center gap-2 rounded-lg bg-[#2D3A74] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#243063] disabled:opacity-60"
+                  >
+                    {uploadingReport ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" /> : <Upload className="h-4 w-4" />}
+                    {uploadingReport ? 'Uploading...' : 'Upload Report'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>,
+          document.body,
+        ) : null}
 
         {/* Prescription Layout - Matches CreatePrescription */}
         <div ref={prescriptionRef} className="prescription-print-area">
@@ -768,10 +1170,10 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
                             const hasMedicineMatches = matchedSuggestions.length > 0;
                             const showMedicineMatchDropdown = focusedMedicineIndex === idx && hasMedicineMatches;
                             return (
-                            <div key={idx} className="medicine-row group/med relative flex items-start gap-2 rounded border border-[#b9caee] bg-white p-2 pr-10 hover:border-[#b9caee] hover:bg-slate-50">
-                              <span className="mt-2 text-xs font-bold text-slate-400 flex-shrink-0 print:hidden">{idx + 1}.</span>
-                              <div className="medicine-fields flex-1 grid grid-cols-6 gap-2">
-                                <div className="col-span-3 relative min-w-0">
+                            <div key={idx} className="medicine-row group/med relative flex items-start gap-2.5 rounded-xl border border-[#c8d6f3] bg-white p-3 pr-10 shadow-[0_1px_0_rgba(15,23,42,0.02)] transition hover:border-[#b9caee] hover:bg-slate-50">
+                              <span className="mt-2 inline-flex h-5 min-w-5 items-center justify-center rounded-md bg-slate-100 px-1 text-[11px] font-bold text-slate-500 flex-shrink-0 print:hidden">{idx + 1}</span>
+                              <div className="medicine-fields flex-1 grid grid-cols-6 gap-2.5">
+                                <div className="col-span-4 relative min-w-0">
                                   <input
                                     className="w-full rounded border px-3 py-1.5 text-sm text-slate-900 doc-input-focus"
                                     value={m.name}
@@ -811,16 +1213,15 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
                                       ))}
                                     </div>
                                   ) : null}
-                                  {normalizedMedicineName && !hasMedicineMatches ? (
+                                  {/* {normalizedMedicineName && !hasMedicineMatches ? (
                                     <p className="mt-1 text-[11px] font-medium text-amber-700">No medicine match found.</p>
+                                  ) : null} */}
+                                  {m.strength ? (
+                                    <div className="mt-1 inline-flex rounded-full border border-[#cddaf7] bg-[#f3f7ff] px-2 py-0.5 text-[11px] font-semibold text-[#3556a6]">
+                                      Strength: {m.strength}
+                                    </div>
                                   ) : null}
                                 </div>
-                                <input
-                                  className="rounded border px-3 py-1.5 text-sm text-slate-900 doc-input-focus"
-                                  value={m.strength}
-                                  onChange={(e) => handleMedicineChange(idx, 'strength', e.target.value)}
-                                  placeholder="Strength"
-                                />
                                 <input
                                   className="rounded border px-3 py-1.5 text-sm text-slate-900 doc-input-focus"
                                   value={m.dosage}
@@ -834,9 +1235,9 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
                                   placeholder="Duration"
                                 />
                               </div>
-                              <div className="medicine-timing flex flex-col gap-1 text-xs text-slate-600 flex-shrink-0">
+                              <div className="medicine-timing mt-0.5 flex min-w-[175px] flex-col gap-1 text-xs text-slate-600 flex-shrink-0">
                                 <span className="font-semibold text-[10px]">Timing</span>
-                                <div className="flex items-center gap-3">
+                                <div className="flex flex-wrap items-center gap-2.5">
                                   <label className="inline-flex items-center gap-1 cursor-pointer">
                                     <input type="radio" className="h-3 w-3" value=""
                                       checked={!m.instruction}
@@ -1058,12 +1459,12 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
 
           .medicine-fields {
             display: grid !important;
-            grid-template-columns: minmax(0, 2fr) repeat(3, minmax(42px, 56px)) !important;
+            grid-template-columns: minmax(0, 2fr) repeat(2, minmax(42px, 56px)) !important;
             gap: 4px !important;
             width: 100% !important;
           }
 
-          .medicine-fields .col-span-3 {
+          .medicine-fields .col-span-4 {
             grid-column: 1 / 2 !important;
           }
 
@@ -1092,6 +1493,11 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
           .medicine-timing input[type="radio"] {
             width: 10px !important;
             height: 10px !important;
+          }
+
+          .medicine-row .rounded-full {
+            font-size: 8px !important;
+            padding: 1px 5px !important;
           }
 
           .prescription-content-section .text-5xl {

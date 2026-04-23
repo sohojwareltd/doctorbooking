@@ -22,12 +22,19 @@ class PrescriptionController extends Controller
     public function doctorIndex(): Response
     {
         /** @var User $doctor */
-        $doctor       = Auth::user();
-        $prescriptions = Prescription::with([
+        $doctor = Auth::user();
+        $doctorId = $doctor->doctorId();
+
+        $prescriptionsQuery = Prescription::with([
                 'user:id,name,phone',
                 'appointment:id,name,age,gender,phone,symptoms',
-            ])
-            ->where('doctor_id', $doctor->doctorId())
+            ]);
+
+        if ($doctorId) {
+            $prescriptionsQuery->where('doctor_id', $doctorId);
+        }
+
+        $prescriptions = $prescriptionsQuery
             ->orderByDesc('id')
             ->paginate(10)
             ->through(fn ($p) => [
@@ -47,7 +54,11 @@ class PrescriptionController extends Controller
             ])
             ->withQueryString();
 
-        $all            = Prescription::where('doctor_id', $doctor->doctorId())->get(['next_visit_date']);
+        $allQuery = Prescription::query();
+        if ($doctorId) {
+            $allQuery->where('doctor_id', $doctorId);
+        }
+        $all = $allQuery->get(['next_visit_date']);
         $withFollowUp   = $all->filter(fn ($p) => $p->next_visit_date)->count();
         $upcomingFollowUps = $all->filter(fn ($p) => $p->next_visit_date
             && \Carbon\Carbon::parse($p->next_visit_date)->gte(now()->startOfDay())

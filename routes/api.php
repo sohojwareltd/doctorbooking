@@ -93,6 +93,11 @@ Route::middleware(['auth:sanctum', 'role:doctor,compounder'])
         Route::post('/prescriptions', [ApiPrescriptionController::class, 'store']);
         Route::get('/prescriptions/{prescription}', [DoctorController::class, 'prescriptionShow'])->whereNumber('prescription');
         Route::put('/prescriptions/{prescription}', [ApiPrescriptionController::class, 'update'])->whereNumber('prescription');
+        Route::get('/prescriptions/{prescription}/reports', [ApiPrescriptionController::class, 'reports'])->whereNumber('prescription');
+        Route::post('/prescriptions/{prescription}/reports', [ApiPrescriptionController::class, 'uploadReport'])->whereNumber('prescription');
+        Route::put('/prescriptions/{prescription}/reports/{report}', [ApiPrescriptionController::class, 'updateReport'])
+            ->whereNumber('prescription')
+            ->whereNumber('report');
 
         // Schedule
         Route::get('/schedule', [DoctorController::class, 'schedule']);

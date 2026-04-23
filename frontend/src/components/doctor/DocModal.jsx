@@ -1,5 +1,6 @@
 import { X } from 'lucide-react';
 import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 export default function DocModal({
   open,
@@ -11,6 +12,7 @@ export default function DocModal({
   footer,
   overlayClassName = '',
   panelClassName = '',
+  containerClassName = '',
   headerClassName = '',
   bodyClassName = '',
   footerClassName = '',
@@ -28,6 +30,7 @@ export default function DocModal({
   }, [open, onClose]);
 
   if (!open) return null;
+  if (typeof document === 'undefined') return null;
 
   const widthClass = {
     sm: 'max-w-sm',
@@ -36,8 +39,8 @@ export default function DocModal({
     xl: 'max-w-4xl',
   }[size] || 'max-w-lg';
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-20 sm:items-center sm:pt-4" onClick={onClose}>
+  return createPortal((
+    <div className={`fixed inset-0 z-50 flex items-start justify-center p-4 pt-20 sm:items-center sm:pt-4 ${containerClassName}`} onClick={onClose}>
       <div className={`absolute inset-0 bg-[rgba(24,34,63,0.58)] backdrop-blur-[2px] ${overlayClassName}`} />
       <div
         className={`relative flex max-h-[90vh] w-full flex-col overflow-hidden rounded-xl border border-[var(--doc-border)] bg-white shadow-2xl ${widthClass} ${panelClassName}`}
@@ -77,5 +80,5 @@ export default function DocModal({
         )}
       </div>
     </div>
-  );
+  ), document.body);
 }

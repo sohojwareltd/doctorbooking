@@ -13,6 +13,7 @@ import {
   Printer,
   Search,
   Stethoscope,
+  Upload,
   User,
   Venus,
 } from 'lucide-react';
@@ -122,6 +123,13 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
   const [dateFilter, setDateFilter] = useState('all');
   const [genderFilter, setGenderFilter] = useState('all');
   const [selectedPrescription, setSelectedPrescription] = useState(null);
+  const [reportsByPrescription, setReportsByPrescription] = useState({});
+  const [reportLoading, setReportLoading] = useState(false);
+  const [uploadingReport, setUploadingReport] = useState(false);
+  const [reportFile, setReportFile] = useState(null);
+  const [reportNote, setReportNote] = useState('');
+  const [reportText, setReportText] = useState('');
+  const [showReportUploadModal, setShowReportUploadModal] = useState(false);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showCreatePatientModal, setShowCreatePatientModal] = useState(false);
@@ -142,6 +150,7 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
 
   const patientDropRef = useRef(null);
   const skipPatientSearchRef = useRef(false);
+  const reportEditorRef = useRef(null);
 
   useEffect(() => {
     setRows(pageRows);
@@ -193,6 +202,38 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
+
+  useEffect(() => {
+    const id = selectedPrescription?.id;
+    if (!id) return;
+
+    const loadReports = async () => {
+      setReportLoading(true);
+      try {
+        const res = await fetch(`/api/doctor/prescriptions/${id}/reports`, {
+          headers: { Accept: 'application/json' },
+          credentials: 'same-origin',
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          toastError(data?.message || 'Failed to load reports.');
+          return;
+        }
+        const list = Array.isArray(data?.reports) ? data.reports : [];
+        setReportsByPrescription((prev) => ({ ...prev, [id]: list }));
+      } catch {
+        toastError('Failed to load reports.');
+      } finally {
+        setReportLoading(false);
+      }
+    };
+
+    setReportFile(null);
+    setReportNote('');
+    setReportText('');
+    setShowReportUploadModal(false);
+    loadReports();
+  }, [selectedPrescription?.id]);
 
   const todayIso = new Date().toISOString().split('T')[0];
 
@@ -406,6 +447,80 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
     }
 
     toastError('Unable to open the print view right now.');
+  };
+
+  const formatFileSize = (value) => {
+    const size = Number(value || 0);
+    if (!size || Number.isNaN(size)) return 'N/A';
+    if (size < 1024) return `${size} B`;
+    if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+    return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const handleUploadReport = async () => {
+    const prescriptionId = selectedPrescription?.id;
+    if (!prescriptionId || uploadingReport) return;
+
+    const trimmedText = reportText.trim();
+    if (!reportFile && !trimmedText) {
+      toastError('Add a report file or write a text report.');
+      return;
+    }
+
+    setUploadingReport(true);
+    try {
+      const formData = new FormData();
+      if (reportFile) {
+        formData.append('report_file', reportFile);
+      }
+      if (trimmedText) {
+        formData.append('report_text', trimmedText);
+      }
+      if (reportNote.trim()) {
+        formData.append('note', reportNote.trim());
+      }
+
+      const res = await fetch(`/api/doctor/prescriptions/${prescriptionId}/reports`, {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
+        },
+        credentials: 'same-origin',
+        body: formData,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toastError(data?.message || 'Failed to upload report.');
+        return;
+      }
+
+      const created = data?.report;
+      if (created) {
+        setReportsByPrescription((prev) => {
+          const list = Array.isArray(prev[prescriptionId]) ? prev[prescriptionId] : [];
+          return { ...prev, [prescriptionId]: [created, ...list] };
+        });
+      }
+      setReportFile(null);
+      setReportNote('');
+      setReportText('');
+      setShowReportUploadModal(false);
+      toastSuccess(data?.message || 'Report uploaded successfully.');
+    } catch {
+      toastError('Failed to upload report.');
+    } finally {
+      setUploadingReport(false);
+    }
+  };
+
+  const applyReportFormat = (command) => {
+    try {
+      document.execCommand(command, false);
+      reportEditorRef.current?.focus();
+    } catch {
+      // no-op fallback
+    }
   };
 
   return (
@@ -808,8 +923,121 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
                 <p className="mt-0.5 line-clamp-3 text-[13px] text-slate-700">{selectedPrescription.tests}</p>
               </div>
             ) : null}
+
+            <div className="rounded-lg border border-slate-200 bg-white/95 px-2.5 py-2.5">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <p className="text-xs uppercase tracking-[0.12em] text-slate-400">Test Reports</p>
+                {reportLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-400" /> : null}
+              </div>
+
+              <div className="mb-3">
+                <button
+                  type="button"
+                  onClick={() => setShowReportUploadModal(true)}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-[#2D3A74]/20 bg-[#2D3A74]/5 px-3 py-1.5 text-xs font-semibold text-[#2D3A74] transition hover:bg-[#2D3A74]/10"
+                >
+                  <Upload className="h-3.5 w-3.5" />
+                  Upload Test Report
+                </button>
+              </div>
+
+              <div className="mt-3 space-y-1.5">
+                {((reportsByPrescription[selectedPrescription.id] || []).length === 0 && !reportLoading) ? (
+                  <p className="text-xs text-slate-500">No reports uploaded yet.</p>
+                ) : null}
+                {(reportsByPrescription[selectedPrescription.id] || []).map((report) => (
+                  <a
+                    key={report.id}
+                    href={report.file_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2 text-xs text-slate-700 hover:bg-slate-100"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="font-semibold text-slate-800">{report.note || report.original_name}</div>
+                      <span className={`inline-flex rounded-full border px-1.5 py-0.5 text-[10px] font-semibold ${String(report.mime_type || '').startsWith('text/') ? 'border-sky-200 bg-sky-50 text-sky-700' : 'border-slate-200 bg-white text-slate-500'}`}>
+                        {String(report.mime_type || '').startsWith('text/') ? 'Text Report' : 'File Report'}
+                      </span>
+                    </div>
+                    <div className="mt-0.5 text-[11px] text-slate-500">
+                      {formatFileSize(report.file_size)}
+                      {' · '}
+                      {formatDisplayDateWithYearFromDateLike(report.created_at) || report.created_at}
+                    </div>
+                  </a>
+                ))}
+              </div>
+            </div>
           </div>
         ) : null}
+      </DocModal>
+
+      <DocModal
+        open={showReportUploadModal && !!selectedPrescription}
+        onClose={() => setShowReportUploadModal(false)}
+        title="Upload Test Report"
+        icon={Upload}
+        size="lg"
+        containerClassName="z-[120] items-start pt-6 sm:items-start sm:pt-10"
+        overlayClassName="bg-[rgba(2,6,23,0.78)] backdrop-blur-sm"
+        footer={(
+          <>
+            <button
+              type="button"
+              onClick={() => setShowReportUploadModal(false)}
+              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleUploadReport}
+              disabled={uploadingReport}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[#2D3A74] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#243063] disabled:opacity-60"
+            >
+              {uploadingReport ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+              {uploadingReport ? 'Uploading...' : 'Upload'}
+            </button>
+          </>
+        )}
+      >
+        <div className="space-y-3">
+          <input
+            type="file"
+            accept=".pdf,.jpg,.jpeg,.png,.webp"
+            onChange={(e) => setReportFile(e.target.files?.[0] || null)}
+            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+          />
+          <input
+            type="text"
+            value={reportNote}
+            onChange={(e) => setReportNote(e.target.value)}
+            placeholder="Report title or note"
+            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800"
+          />
+          <div>
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Text Report Editor</label>
+            <div className="rounded-lg border border-slate-200 bg-white">
+              <div className="flex flex-wrap items-center gap-1 border-b border-slate-200 px-2 py-1.5">
+                <button type="button" onClick={() => applyReportFormat('bold')} className="rounded border border-slate-200 px-2 py-0.5 text-xs font-bold text-slate-700 hover:bg-slate-50">B</button>
+                <button type="button" onClick={() => applyReportFormat('italic')} className="rounded border border-slate-200 px-2 py-0.5 text-xs italic text-slate-700 hover:bg-slate-50">I</button>
+                <button type="button" onClick={() => applyReportFormat('underline')} className="rounded border border-slate-200 px-2 py-0.5 text-xs underline text-slate-700 hover:bg-slate-50">U</button>
+                <button type="button" onClick={() => applyReportFormat('insertUnorderedList')} className="rounded border border-slate-200 px-2 py-0.5 text-xs text-slate-700 hover:bg-slate-50">• List</button>
+                <button type="button" onClick={() => applyReportFormat('insertOrderedList')} className="rounded border border-slate-200 px-2 py-0.5 text-xs text-slate-700 hover:bg-slate-50">1. List</button>
+              </div>
+              <div
+                ref={reportEditorRef}
+                contentEditable
+                suppressContentEditableWarning
+                onInput={(e) => setReportText(e.currentTarget.innerHTML)}
+                className="min-h-[150px] px-3 py-2 text-sm text-slate-800 focus:outline-none"
+                dangerouslySetInnerHTML={{ __html: reportText || '' }}
+                data-placeholder="Write detailed report using rich text editor..."
+              />
+            </div>
+          </div>
+          <p className="text-[11px] text-slate-500">You can upload a file, write a text report, or both.</p>
+        </div>
       </DocModal>
 
       <DocModal

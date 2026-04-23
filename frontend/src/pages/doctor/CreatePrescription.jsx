@@ -602,6 +602,10 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
             toastSuccess('Prescription saved successfully.');
             const data = await res.json().catch(() => ({}));
             const prescriptionId = data?.prescription_id;
+            if (prescriptionId && action === 'awaiting_tests') {
+                setTimeout(() => router.visit(`/doctor/prescriptions/${prescriptionId}`), 400);
+                return;
+            }
             // If came from dashboard (has appointmentId), go back to dashboard
             if (appointmentId) {
                 setTimeout(() => router.visit('/doctor/dashboard'), 400);
@@ -1331,6 +1335,9 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
 
                     {/* Form Submit Section - Enhanced */}
                     <div className="mt-10 rounded-xl border border-slate-200 bg-slate-50 p-6">
+                        <div className="mb-4 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-xs text-blue-800">
+                            After clicking <span className="font-semibold">Save &amp; Send for Tests</span>, you will be redirected to prescription details where you can upload test files and text reports.
+                        </div>
                         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4 text-sm">
                                 <div className="flex items-center gap-3">
