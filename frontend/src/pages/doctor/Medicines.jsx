@@ -49,7 +49,20 @@ export default function DoctorMedicines() {
       });
       if (!res.ok) throw new Error('Failed to load medicines');
       const payload = await res.json();
-      const nextRows = Array.isArray(payload?.data) ? payload.data : [];
+      let nextRows = Array.isArray(payload?.data) ? payload.data : [];
+
+      // Exact matches first, then starts-with, then rest
+      if (trimmedQuery) {
+        const q = trimmedQuery.toLowerCase();
+        nextRows = [...nextRows].sort((a, b) => {
+          const aN = (a.name || '').toLowerCase();
+          const bN = (b.name || '').toLowerCase();
+          const aRank = aN === q ? 0 : aN.startsWith(q) ? 1 : 2;
+          const bRank = bN === q ? 0 : bN.startsWith(q) ? 1 : 2;
+          return aRank - bRank;
+        });
+      }
+
       const nextLastPage = Number(payload?.last_page || 1);
 
       if (pageNumber > nextLastPage && nextLastPage > 0) {

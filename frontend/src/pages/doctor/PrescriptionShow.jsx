@@ -18,6 +18,7 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
   const prefersEyeTemplate = isEyeSpecialist(doctorSpecialization);
 
   const toStr = (val) => (val === null || val === undefined ? '' : String(val));
+  const normalizeMedicineName = (value) => String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
   const calculateAgeFromDob = (dob) => {
     if (!dob) return null;
     const birthDate = new Date(dob);
@@ -86,6 +87,59 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
   };
 
   const [medicines, setMedicines] = useState(() => parseMedicationsText(prescription?.medications));
+  const [medicineMatchesByRow, setMedicineMatchesByRow] = useState({});
+  const [focusedMedicineIndex, setFocusedMedicineIndex] = useState(null);
+  const medicineMatchCacheRef = useRef(new Map());
+  const medicineQuerySeqRef = useRef({});
+
+  const queryMedicineMatches = async (rawName, rowIndex) => {
+    const normalized = normalizeMedicineName(rawName);
+    if (!normalized) {
+      setMedicineMatchesByRow((prev) => ({ ...prev, [rowIndex]: [] }));
+      return;
+    }
+    const cached = medicineMatchCacheRef.current.get(normalized);
+    if (cached) {
+      setMedicineMatchesByRow((prev) => ({ ...prev, [rowIndex]: cached }));
+      const exactCached = cached.find((item) => normalizeMedicineName(item.name) === normalized);
+      if (exactCached?.strength) {
+        setMedicines((prev) => prev.map((m, i) => i === rowIndex ? { ...m, strength: exactCached.strength } : m));
+      }
+      return;
+    }
+    const seq = (medicineQuerySeqRef.current[rowIndex] || 0) + 1;
+    medicineQuerySeqRef.current[rowIndex] = seq;
+    try {
+      const params = new URLSearchParams({ query: rawName, limit: '8' });
+      const res = await fetch(`/api/doctor/medicines?${params.toString()}`, {
+        headers: { Accept: 'application/json' },
+        credentials: 'same-origin',
+      });
+      if (!res.ok) throw new Error('Failed');
+      const json = await res.json();
+      if (medicineQuerySeqRef.current[rowIndex] !== seq) return;
+      const raw = Array.isArray(json)
+        ? json.map((med) => ({ id: med.id, name: med.name || '', strength: med.strength || '' }))
+        : [];
+      // Exact matches first, then starts-with, then rest
+      const matches = [...raw].sort((a, b) => {
+        const aN = normalizeMedicineName(a.name);
+        const bN = normalizeMedicineName(b.name);
+        const aRank = aN === normalized ? 0 : aN.startsWith(normalized) ? 1 : 2;
+        const bRank = bN === normalized ? 0 : bN.startsWith(normalized) ? 1 : 2;
+        return aRank - bRank;
+      });
+      medicineMatchCacheRef.current.set(normalized, matches);
+      setMedicineMatchesByRow((prev) => ({ ...prev, [rowIndex]: matches }));
+      const exact = matches.find((item) => normalizeMedicineName(item.name) === normalized);
+      if (exact?.strength) {
+        setMedicines((prev) => prev.map((m, i) => i === rowIndex ? { ...m, strength: exact.strength } : m));
+      }
+    } catch {
+      if (medicineQuerySeqRef.current[rowIndex] !== seq) return;
+      setMedicineMatchesByRow((prev) => ({ ...prev, [rowIndex]: [] }));
+    }
+  };
 
   const handleMedicineChange = (idx, field, value) => {
     setMedicines(prev => prev.map((m, i) => i === idx ? { ...m, [field]: value } : m));
@@ -708,22 +762,59 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
                       <div className="absolute left-[-25px] top-[-23px] z-[999] text-5xl font-serif font-bold italic text-slate-800">℞</div>
                       <div className="flex-1 pt-8">
                         <div className="space-y-2">
-                          {medicines.map((m, idx) => (
-                            <div key={idx} className="medicine-row group/med relative flex items-start gap-2 rounded  border border-[#b9caee] bg-white p-2 pr-10 hover:border-[#b9caee] hover:bg-slate-50">
+                          {medicines.map((m, idx) => {
+                            const normalizedMedicineName = normalizeMedicineName(m.name);
+                            const matchedSuggestions = medicineMatchesByRow[idx] || [];
+                            const hasMedicineMatches = matchedSuggestions.length > 0;
+                            const showMedicineMatchDropdown = focusedMedicineIndex === idx && hasMedicineMatches;
+                            return (
+                            <div key={idx} className="medicine-row group/med relative flex items-start gap-2 rounded border border-[#b9caee] bg-white p-2 pr-10 hover:border-[#b9caee] hover:bg-slate-50">
                               <span className="mt-2 text-xs font-bold text-slate-400 flex-shrink-0 print:hidden">{idx + 1}.</span>
                               <div className="medicine-fields flex-1 grid grid-cols-6 gap-2">
-                                <input
-                                  className="col-span-3 min-w-0 rounded border px-3 py-1.5 text-sm text-slate-900 doc-input-focus"
-                                  value={m.name}
-                                  onChange={(e) => {
-                                    const val = e.target.value;
-                                    const match = medicineSuggestions.find(med => med.name.toLowerCase() === val.toLowerCase());
-                                    handleMedicineChange(idx, 'name', val);
-                                    if (match?.strength) handleMedicineChange(idx, 'strength', match.strength);
-                                  }}
-                                  placeholder="Medicine name"
-                                  list="med-suggestions-show"
-                                />
+                                <div className="col-span-3 relative min-w-0">
+                                  <input
+                                    className="w-full rounded border px-3 py-1.5 text-sm text-slate-900 doc-input-focus"
+                                    value={m.name}
+                                    onFocus={() => {
+                                      setFocusedMedicineIndex(idx);
+                                      void queryMedicineMatches(m.name, idx);
+                                    }}
+                                    onBlur={() => {
+                                      window.setTimeout(() => {
+                                        setFocusedMedicineIndex((current) => (current === idx ? null : current));
+                                      }, 120);
+                                    }}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      handleMedicineChange(idx, 'name', val);
+                                      void queryMedicineMatches(val, idx);
+                                    }}
+                                    placeholder="Search medicine name"
+                                  />
+                                  {showMedicineMatchDropdown ? (
+                                    <div className="absolute left-0 right-0 z-20 mt-1 rounded-md border border-[#c7d6f7] bg-white shadow-lg">
+                                      {matchedSuggestions.slice(0, 8).map((med, optionIdx) => (
+                                        <button
+                                          key={`${med.id ?? med.name}-${med.strength}-${optionIdx}`}
+                                          type="button"
+                                          className="flex w-full items-center justify-between border-b border-slate-100 px-3 py-2 text-left text-xs last:border-b-0 hover:bg-[#edf2ff]"
+                                          onMouseDown={(e) => {
+                                            e.preventDefault();
+                                            handleMedicineChange(idx, 'name', med.name);
+                                            if (med.strength) handleMedicineChange(idx, 'strength', med.strength);
+                                            setFocusedMedicineIndex(null);
+                                          }}
+                                        >
+                                          <span className="font-semibold text-slate-800">{med.name}</span>
+                                          <span className="text-slate-500">{med.strength || 'No strength'}</span>
+                                        </button>
+                                      ))}
+                                    </div>
+                                  ) : null}
+                                  {normalizedMedicineName && !hasMedicineMatches ? (
+                                    <p className="mt-1 text-[11px] font-medium text-amber-700">No medicine match found.</p>
+                                  ) : null}
+                                </div>
                                 <input
                                   className="rounded border px-3 py-1.5 text-sm text-slate-900 doc-input-focus"
                                   value={m.strength}
@@ -777,7 +868,7 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
                                 <Trash2 className="h-3.5 w-3.5" />
                               </button>
                             </div>
-                          ))}
+                          );})}
 
                           {/* Add Medicine */}
                           <button
@@ -789,13 +880,6 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
                             Add Medicine Row
                           </button>
 
-                          <datalist id="med-suggestions-show">
-                            {medicineSuggestions.map((med) => (
-                              <option key={med.id ?? med.name} value={med.name}>
-                                {med.strength ? `${med.name} ${med.strength}` : med.name}
-                              </option>
-                            ))}
-                          </datalist>
                         </div>
                       </div>
                     </div>

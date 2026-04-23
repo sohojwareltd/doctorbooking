@@ -326,13 +326,22 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
             const data = await res.json();
             if (medicineQuerySeqRef.current[rowIndex] !== seq) return;
 
-            const matches = Array.isArray(data)
+            const raw = Array.isArray(data)
                 ? data.map((med) => ({
                     id: med.id,
                     name: med.name || '',
                     strength: med.strength || '',
                 }))
                 : [];
+
+            // Exact matches first, then starts-with, then rest
+            const matches = [...raw].sort((a, b) => {
+                const aN = normalizeMedicineName(a.name);
+                const bN = normalizeMedicineName(b.name);
+                const aExact = aN === normalized ? 0 : aN.startsWith(normalized) ? 1 : 2;
+                const bExact = bN === normalized ? 0 : bN.startsWith(normalized) ? 1 : 2;
+                return aExact - bExact;
+            });
 
             medicineMatchCacheRef.current.set(normalized, matches);
             setMedicineMatchesByRow((prev) => ({ ...prev, [rowIndex]: matches }));
