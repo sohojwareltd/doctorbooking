@@ -355,311 +355,6 @@ export default function DoctorDashboard({
             </div>
           </div>
         </section>
-
-        <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <div className="surface-card rounded-3xl overflow-hidden xl:col-span-2">
-            <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-              <div className="flex items-center gap-2">
-                <Building2 className="h-4 w-4 text-[#4055A8]" />
-                <div>
-                  <h3 className="text-sm font-semibold text-[#2D3A74]">Today by Chamber</h3>
-                  <p className="text-xs text-slate-500">Live appointment load across chambers.</p>
-                </div>
-              </div>
-              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-                {todayAppointments.length} total
-              </span>
-            </div>
-
-            {chamberSummary.length > 0 ? (
-              <div className="space-y-4 px-5 py-5">
-                {busiestChamber && (
-                  <div className="rounded-2xl border border-[#d8e2fb] bg-[#f6f8ff] px-4 py-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#4055A8]">Busiest Chamber</p>
-                        <p className="mt-1 text-base font-semibold text-[#2D3A74]">{busiestChamber.name}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-2xl font-semibold text-[#2D3A74]">{busiestChamber.count}</p>
-                        <p className="text-xs text-slate-500">appointments today</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <div className="space-y-3">
-                  {chamberSummary.map((chamber) => (
-                    <div key={chamber.name}>
-                      <div className="mb-1.5 flex items-center justify-between gap-3 text-sm">
-                        <div>
-                          <p className="font-medium text-slate-700">{chamber.name}</p>
-                          <p className="text-xs text-slate-400">{chamber.active} in progress • {chamber.awaiting} awaiting tests</p>
-                        </div>
-                        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">{chamber.count}</span>
-                      </div>
-                      <div className="h-2.5 overflow-hidden rounded-full bg-slate-100">
-                        <div
-                          className="h-full rounded-full bg-gradient-to-r from-[#4055A8] to-[#4aa5ec]"
-                          style={{ width: `${(chamber.count / chamberMax) * 100}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <DocEmptyState icon={Building2} title="No chamber activity today" description="Today's appointments will be grouped here once bookings are available." />
-            )}
-          </div>
-
-          <div className="surface-card rounded-3xl p-5">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-sm text-slate-500 mb-1">Awaiting Tests</p>
-                <p className="text-3xl font-semibold text-[#2D3A74]">{awaitingList.length}</p>
-              </div>
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-orange-50">
-                <FlaskConical className="h-5 w-5 text-[#FF7C00]" />
-              </div>
-            </div>
-            <p className="mt-4 text-xs text-slate-400">Patients waiting for reports or test completion.</p>
-            <div className="mt-4 space-y-2">
-              {awaitingList.slice(0, 3).map((appointment, index) => (
-                <div key={appointment.id || index} className="flex items-center justify-between gap-3 rounded-2xl bg-orange-50/60 px-3 py-2">
-                  <div className="min-w-0">
-                    <p className="truncate text-xs font-semibold text-slate-700">{getName(appointment)}</p>
-                    <p className="truncate text-[11px] text-slate-500">{getChamberName(appointment)}</p>
-                  </div>
-                  <span className="text-[11px] font-semibold text-orange-700">{fmtTime(appointment.appointment_time) || 'Pending'}</span>
-                </div>
-              ))}
-              {awaitingList.length === 0 && (
-                <div className="rounded-2xl bg-slate-50 px-3 py-2 text-xs text-slate-500">No patients are awaiting tests right now.</div>
-              )}
-            </div>
-          </div>
-
-          <div className="surface-card rounded-3xl p-5">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-sm text-slate-500 mb-1">Total Appointments Today</p>
-                <p className="text-3xl font-semibold text-[#2D3A74]">{todayAppointments.length}</p>
-              </div>
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-50">
-                <CalendarDays className="h-5 w-5 text-sky-600" />
-              </div>
-            </div>
-            <p className="mt-4 text-xs text-slate-400">All booked patients scheduled for the current day.</p>
-            <div className="mt-4 grid grid-cols-2 gap-2">
-              <div className="rounded-2xl bg-slate-50 px-3 py-2">
-                <p className="text-[11px] uppercase tracking-[0.12em] text-slate-400">In Queue</p>
-                <p className="mt-1 text-lg font-semibold text-slate-700">{defaultStats.waitingPatients}</p>
-              </div>
-              <div className="rounded-2xl bg-violet-50 px-3 py-2">
-                <p className="text-[11px] uppercase tracking-[0.12em] text-violet-400">In Progress</p>
-                <p className="mt-1 text-lg font-semibold text-violet-700">{activeCount}</p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-            <h3 className="text-sm font-semibold text-[#2D3A74]">Monthly Appointments</h3>
-            <svg viewBox={`0 0 ${monthlyChartWidth} ${monthlyChartHeight}`} className="mt-3 w-full">
-              {monthlyTicks.map((tick, index) => {
-                const y = monthlyPadTop + (1 - tick / Math.max(1, monthlyMax)) * monthlyUsableHeight;
-                return (
-                  <g key={`${tick}-${index}`}>
-                    <line x1={monthlyPadX} y1={y} x2={monthlyChartWidth - monthlyPadX} y2={y} stroke="#e5e7eb" strokeWidth="1" />
-                    <text x={monthlyPadX - 8} y={y + 4} textAnchor="end" className="fill-slate-400 text-[10px]">{tick}</text>
-                  </g>
-                );
-              })}
-
-              {monthLabels.map((label, index) => {
-                const x = monthlyPadX + monthlyBarGap * index + (monthlyBarGap - monthlyBarWidth) / 2;
-                const value = monthlyAppointments[index] || 0;
-                const barHeight = (value / Math.max(1, monthlyMax)) * monthlyUsableHeight;
-                const y = monthlyChartHeight - monthlyPadBottom - barHeight;
-                return (
-                  <g key={label}>
-                    <rect x={x} y={y} width={monthlyBarWidth} height={barHeight} rx="3" fill="#4aa5ec" />
-                    <text x={x + monthlyBarWidth / 2} y={monthlyChartHeight - 12} textAnchor="middle" className="fill-slate-500 text-[10px]">{label}</text>
-                  </g>
-                );
-              })}
-            </svg>
-            <div className="mt-1 inline-flex items-center gap-1.5 text-xs text-slate-500">
-              <span className="h-2.5 w-2.5 rounded-sm bg-[#4aa5ec]" />
-              Appointments
-            </div>
-          </div>
-
-          {/* <div className="rounded-2xl border border-slate-200 bg-white p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-[#2D3A74]">Today Status Mix</h3>
-              <span className="text-xs text-slate-500">{todayAppointments.length} total</span>
-            </div>
-            <div className="space-y-3">
-              {statusGraphItems.map((item) => {
-                const pct = Math.round((item.value / Math.max(1, todayAppointments.length)) * 100);
-                const width = (item.value / statusGraphMax) * 100;
-                return (
-                  <div key={item.key}>
-                    <div className="mb-1 flex items-center justify-between text-xs">
-                      <span className="font-medium text-slate-600">{item.label}</span>
-                      <span className="text-slate-500">{item.value} ({pct}%)</span>
-                    </div>
-                    <div className="h-2.5 overflow-hidden rounded-full bg-slate-100">
-                      <div
-                        className="h-full rounded-full transition-all duration-500"
-                        style={{ width: `${width}%`, backgroundColor: item.color }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div> */}
-          <div className="surface-card rounded-3xl overflow-hidden">
-            <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-              <div className="flex items-center gap-2">
-                <CalendarClock className="h-4 w-4 text-[#FF7C00]" />
-                <h3 className="text-sm font-semibold text-[#2D3A74]">Schedule</h3>
-              </div>
-              <Link href="/doctor/schedule" className="text-sm font-semibold text-[#4055A8] hover:text-[#2D3A74] transition-colors">
-                Manage
-              </Link>
-            </div>
-
-            <div className="border-b border-slate-100 px-5 pt-2">
-              <div className="flex gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => setScheduleTab('today')}
-                  className={`rounded-t-lg px-3 py-2 text-xs font-semibold transition-colors ${scheduleTab === 'today'
-                      ? 'bg-slate-100 text-[#2D3A74]'
-                      : 'text-slate-700 hover:bg-slate-50 hover:text-[#2D3A74]'
-                    }`}
-                >
-                  Today's Schedule
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setScheduleTab('unavailable')}
-                  className={`rounded-t-lg px-3 py-2 text-xs font-semibold transition-colors ${scheduleTab === 'unavailable'
-                      ? 'bg-orange-50 text-orange-700'
-                      : 'text-slate-700 hover:bg-slate-50 hover:text-orange-700'
-                    }`}
-                >
-                  Unavailable Dates
-                </button>
-              </div>
-            </div>
-
-            {scheduleTab === 'today' ? (
-              todayScheduleRows.length > 0 ? (
-                <div className="overflow-x-auto border-t border-slate-100">
-                  <table className="min-w-full text-sm">
-                    <thead className="bg-slate-50 text-slate-500 uppercase text-[11px] tracking-[0.1em]">
-                      <tr>
-                        <th className="px-5 py-3 text-left">#</th>
-                        <th className="px-5 py-3 text-left">Time Range</th>
-                        <th className="px-5 py-3 text-left">Chamber</th>
-                        <th className="px-5 py-3 text-left">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 bg-white">
-                      {todayScheduleRows.slice(0, 8).map((row) => (
-                        <tr key={row.id} className="hover:bg-slate-50/80 transition-colors">
-                          <td className="px-5 py-3 text-xs font-semibold text-slate-600">
-                            <span className="inline-flex items-center gap-1.5">
-                              <Hash className="h-3.5 w-3.5 text-slate-400" />
-                              {row.serial}
-                            </span>
-                          </td>
-                          <td className="px-5 py-3 text-xs font-medium text-slate-700">
-                            <span className="inline-flex items-center gap-1.5">
-                              <Clock className="h-3.5 w-3.5 text-slate-400" />
-                              {row.range}
-                            </span>
-                          </td>
-                          <td className="px-5 py-3 text-xs text-slate-600">
-                            <span className="inline-flex items-center gap-1.5">
-                              <Building2 className="h-3.5 w-3.5 text-slate-400" />
-                              {row.chamber}
-                            </span>
-                          </td>
-                          <td className="px-5 py-3 text-xs font-semibold text-emerald-700">
-                            <span className="inline-flex items-center gap-1.5">
-                              <CheckCircle className="h-3.5 w-3.5" />
-                              {row.slot}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <DocEmptyState icon={FileText} title={isScheduleClosedToday ? 'Today is marked closed' : 'No weekly schedule for today'} />
-              )
-            ) : (
-              unavailableDateRows.length > 0 ? (
-                <div className="overflow-x-auto border-t border-slate-100">
-                  <table className="min-w-full text-sm">
-                    <thead className="bg-orange-50/60 text-orange-700 uppercase text-[11px] tracking-[0.1em]">
-                      <tr>
-                        <th className="px-5 py-3 text-left">#</th>
-                        <th className="px-5 py-3 text-left">From</th>
-                        <th className="px-5 py-3 text-left">To</th>
-                        <th className="px-5 py-3 text-left">Note</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-orange-100 bg-white">
-                      {unavailableDateRows.slice(0, 8).map((row) => (
-                        <tr key={row.id} className="hover:bg-orange-50/40 transition-colors">
-                          <td className="px-5 py-3 text-xs font-semibold text-orange-700">
-                            <span className="inline-flex items-center gap-1.5">
-                              <Hash className="h-3.5 w-3.5" />
-                              {row.serial}
-                            </span>
-                          </td>
-                          <td className="px-5 py-3 text-xs font-medium text-slate-700">
-                            <span className="inline-flex items-center gap-1.5">
-                              <CalendarDays className="h-3.5 w-3.5 text-slate-400" />
-                              {row.from}
-                            </span>
-                          </td>
-                          <td className="px-5 py-3 text-xs font-medium text-slate-700">
-                            <span className="inline-flex items-center gap-1.5">
-                              <CalendarDays className="h-3.5 w-3.5 text-slate-400" />
-                              {row.to}
-                            </span>
-                          </td>
-                          <td className="px-5 py-3 text-xs text-orange-700">
-                            <span className="inline-flex items-center gap-1.5">
-                              <FileText className="h-3.5 w-3.5" />
-                              {row.note}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <DocEmptyState icon={CalendarClock} title="No upcoming unavailable dates" />
-              )
-            )}
-          </div>
-        </section>
-
-
-
-        {/* MAIN 2-COLUMN GRID */}
         <div className="grid gap-6 ">
 
           {/* LEFT (2/3) */}
@@ -976,6 +671,313 @@ export default function DoctorDashboard({
 
           </div>
         </div>
+        <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4">
+            <h3 className="text-sm font-semibold text-[#2D3A74]">Monthly Appointments</h3>
+            <svg viewBox={`0 0 ${monthlyChartWidth} ${monthlyChartHeight}`} className="mt-3 w-full">
+              {monthlyTicks.map((tick, index) => {
+                const y = monthlyPadTop + (1 - tick / Math.max(1, monthlyMax)) * monthlyUsableHeight;
+                return (
+                  <g key={`${tick}-${index}`}>
+                    <line x1={monthlyPadX} y1={y} x2={monthlyChartWidth - monthlyPadX} y2={y} stroke="#e5e7eb" strokeWidth="1" />
+                    <text x={monthlyPadX - 8} y={y + 4} textAnchor="end" className="fill-slate-400 text-[10px]">{tick}</text>
+                  </g>
+                );
+              })}
+
+              {monthLabels.map((label, index) => {
+                const x = monthlyPadX + monthlyBarGap * index + (monthlyBarGap - monthlyBarWidth) / 2;
+                const value = monthlyAppointments[index] || 0;
+                const barHeight = (value / Math.max(1, monthlyMax)) * monthlyUsableHeight;
+                const y = monthlyChartHeight - monthlyPadBottom - barHeight;
+                return (
+                  <g key={label}>
+                    <rect x={x} y={y} width={monthlyBarWidth} height={barHeight} rx="3" fill="#4aa5ec" />
+                    <text x={x + monthlyBarWidth / 2} y={monthlyChartHeight - 12} textAnchor="middle" className="fill-slate-500 text-[10px]">{label}</text>
+                  </g>
+                );
+              })}
+            </svg>
+            <div className="mt-1 inline-flex items-center gap-1.5 text-xs text-slate-500">
+              <span className="h-2.5 w-2.5 rounded-sm bg-[#4aa5ec]" />
+              Appointments
+            </div>
+          </div>
+
+          {/* <div className="rounded-2xl border border-slate-200 bg-white p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-[#2D3A74]">Today Status Mix</h3>
+              <span className="text-xs text-slate-500">{todayAppointments.length} total</span>
+            </div>
+            <div className="space-y-3">
+              {statusGraphItems.map((item) => {
+                const pct = Math.round((item.value / Math.max(1, todayAppointments.length)) * 100);
+                const width = (item.value / statusGraphMax) * 100;
+                return (
+                  <div key={item.key}>
+                    <div className="mb-1 flex items-center justify-between text-xs">
+                      <span className="font-medium text-slate-600">{item.label}</span>
+                      <span className="text-slate-500">{item.value} ({pct}%)</span>
+                    </div>
+                    <div className="h-2.5 overflow-hidden rounded-full bg-slate-100">
+                      <div
+                        className="h-full rounded-full transition-all duration-500"
+                        style={{ width: `${width}%`, backgroundColor: item.color }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div> */}
+          <div className="surface-card rounded-3xl overflow-hidden">
+            <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+              <div className="flex items-center gap-2">
+                <CalendarClock className="h-4 w-4 text-[#FF7C00]" />
+                <h3 className="text-sm font-semibold text-[#2D3A74]">Schedule</h3>
+              </div>
+              <Link href="/doctor/schedule" className="text-sm font-semibold text-[#4055A8] hover:text-[#2D3A74] transition-colors">
+                Manage
+              </Link>
+            </div>
+
+            <div className="border-b border-slate-100 px-5 pt-2">
+              <div className="flex gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setScheduleTab('today')}
+                  className={`rounded-t-lg px-3 py-2 text-xs font-semibold transition-colors ${scheduleTab === 'today'
+                    ? 'bg-slate-100 text-[#2D3A74]'
+                    : 'text-slate-700 hover:bg-slate-50 hover:text-[#2D3A74]'
+                    }`}
+                >
+                  Today's Schedule
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setScheduleTab('unavailable')}
+                  className={`rounded-t-lg px-3 py-2 text-xs font-semibold transition-colors ${scheduleTab === 'unavailable'
+                    ? 'bg-orange-50 text-orange-700'
+                    : 'text-slate-700 hover:bg-slate-50 hover:text-orange-700'
+                    }`}
+                >
+                  Unavailable Dates
+                </button>
+              </div>
+            </div>
+
+            {scheduleTab === 'today' ? (
+              todayScheduleRows.length > 0 ? (
+                <div className="overflow-x-auto border-t border-slate-100">
+                  <table className="min-w-full text-sm">
+                    <thead className="bg-slate-50 text-slate-500 uppercase text-[11px] tracking-[0.1em]">
+                      <tr>
+                        <th className="px-5 py-3 text-left">#</th>
+                        <th className="px-5 py-3 text-left">Time Range</th>
+                        <th className="px-5 py-3 text-left">Chamber</th>
+                        <th className="px-5 py-3 text-left">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 bg-white">
+                      {todayScheduleRows.slice(0, 8).map((row) => (
+                        <tr key={row.id} className="hover:bg-slate-50/80 transition-colors">
+                          <td className="px-5 py-3 text-xs font-semibold text-slate-600">
+                            <span className="inline-flex items-center gap-1.5">
+                              <Hash className="h-3.5 w-3.5 text-slate-400" />
+                              {row.serial}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3 text-xs font-medium text-slate-700">
+                            <span className="inline-flex items-center gap-1.5">
+                              <Clock className="h-3.5 w-3.5 text-slate-400" />
+                              {row.range}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3 text-xs text-slate-600">
+                            <span className="inline-flex items-center gap-1.5">
+                              <Building2 className="h-3.5 w-3.5 text-slate-400" />
+                              {row.chamber}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3 text-xs font-semibold text-emerald-700">
+                            <span className="inline-flex items-center gap-1.5">
+                              <CheckCircle className="h-3.5 w-3.5" />
+                              {row.slot}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <DocEmptyState icon={FileText} title={isScheduleClosedToday ? 'Today is marked closed' : 'No weekly schedule for today'} />
+              )
+            ) : (
+              unavailableDateRows.length > 0 ? (
+                <div className="overflow-x-auto border-t border-slate-100">
+                  <table className="min-w-full text-sm">
+                    <thead className="bg-orange-50/60 text-orange-700 uppercase text-[11px] tracking-[0.1em]">
+                      <tr>
+                        <th className="px-5 py-3 text-left">#</th>
+                        <th className="px-5 py-3 text-left">From</th>
+                        <th className="px-5 py-3 text-left">To</th>
+                        <th className="px-5 py-3 text-left">Note</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-orange-100 bg-white">
+                      {unavailableDateRows.slice(0, 8).map((row) => (
+                        <tr key={row.id} className="hover:bg-orange-50/40 transition-colors">
+                          <td className="px-5 py-3 text-xs font-semibold text-orange-700">
+                            <span className="inline-flex items-center gap-1.5">
+                              <Hash className="h-3.5 w-3.5" />
+                              {row.serial}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3 text-xs font-medium text-slate-700">
+                            <span className="inline-flex items-center gap-1.5">
+                              <CalendarDays className="h-3.5 w-3.5 text-slate-400" />
+                              {row.from}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3 text-xs font-medium text-slate-700">
+                            <span className="inline-flex items-center gap-1.5">
+                              <CalendarDays className="h-3.5 w-3.5 text-slate-400" />
+                              {row.to}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3 text-xs text-orange-700">
+                            <span className="inline-flex items-center gap-1.5">
+                              <FileText className="h-3.5 w-3.5" />
+                              {row.note}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <DocEmptyState icon={CalendarClock} title="No upcoming unavailable dates" />
+              )
+            )}
+          </div>
+        </section>
+
+        {/* <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="surface-card rounded-3xl overflow-hidden xl:col-span-2">
+            <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+              <div className="flex items-center gap-2">
+                <Building2 className="h-4 w-4 text-[#4055A8]" />
+                <div>
+                  <h3 className="text-sm font-semibold text-[#2D3A74]">Today by Chamber</h3>
+                  <p className="text-xs text-slate-500">Live appointment load across chambers.</p>
+                </div>
+              </div>
+              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
+                {todayAppointments.length} total
+              </span>
+            </div>
+
+            {chamberSummary.length > 0 ? (
+              <div className="space-y-4 px-5 py-5">
+                {busiestChamber && (
+                  <div className="rounded-2xl border border-[#d8e2fb] bg-[#f6f8ff] px-4 py-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#4055A8]">Busiest Chamber</p>
+                        <p className="mt-1 text-base font-semibold text-[#2D3A74]">{busiestChamber.name}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-semibold text-[#2D3A74]">{busiestChamber.count}</p>
+                        <p className="text-xs text-slate-500">appointments today</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-3">
+                  {chamberSummary.map((chamber) => (
+                    <div key={chamber.name}>
+                      <div className="mb-1.5 flex items-center justify-between gap-3 text-sm">
+                        <div>
+                          <p className="font-medium text-slate-700">{chamber.name}</p>
+                          <p className="text-xs text-slate-400">{chamber.active} in progress • {chamber.awaiting} awaiting tests</p>
+                        </div>
+                        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">{chamber.count}</span>
+                      </div>
+                      <div className="h-2.5 overflow-hidden rounded-full bg-slate-100">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-[#4055A8] to-[#4aa5ec]"
+                          style={{ width: `${(chamber.count / chamberMax) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <DocEmptyState icon={Building2} title="No chamber activity today" description="Today's appointments will be grouped here once bookings are available." />
+            )}
+          </div>
+
+          <div className="surface-card rounded-3xl p-5">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm text-slate-500 mb-1">Awaiting Tests</p>
+                <p className="text-3xl font-semibold text-[#2D3A74]">{awaitingList.length}</p>
+              </div>
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-orange-50">
+                <FlaskConical className="h-5 w-5 text-[#FF7C00]" />
+              </div>
+            </div>
+            <p className="mt-4 text-xs text-slate-400">Patients waiting for reports or test completion.</p>
+            <div className="mt-4 space-y-2">
+              {awaitingList.slice(0, 3).map((appointment, index) => (
+                <div key={appointment.id || index} className="flex items-center justify-between gap-3 rounded-2xl bg-orange-50/60 px-3 py-2">
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-semibold text-slate-700">{getName(appointment)}</p>
+                    <p className="truncate text-[11px] text-slate-500">{getChamberName(appointment)}</p>
+                  </div>
+                  <span className="text-[11px] font-semibold text-orange-700">{fmtTime(appointment.appointment_time) || 'Pending'}</span>
+                </div>
+              ))}
+              {awaitingList.length === 0 && (
+                <div className="rounded-2xl bg-slate-50 px-3 py-2 text-xs text-slate-500">No patients are awaiting tests right now.</div>
+              )}
+            </div>
+          </div>
+
+          <div className="surface-card rounded-3xl p-5">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm text-slate-500 mb-1">Total Appointments Today</p>
+                <p className="text-3xl font-semibold text-[#2D3A74]">{todayAppointments.length}</p>
+              </div>
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-50">
+                <CalendarDays className="h-5 w-5 text-sky-600" />
+              </div>
+            </div>
+            <p className="mt-4 text-xs text-slate-400">All booked patients scheduled for the current day.</p>
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <div className="rounded-2xl bg-slate-50 px-3 py-2">
+                <p className="text-[11px] uppercase tracking-[0.12em] text-slate-400">In Queue</p>
+                <p className="mt-1 text-lg font-semibold text-slate-700">{defaultStats.waitingPatients}</p>
+              </div>
+              <div className="rounded-2xl bg-violet-50 px-3 py-2">
+                <p className="text-[11px] uppercase tracking-[0.12em] text-violet-400">In Progress</p>
+                <p className="mt-1 text-lg font-semibold text-violet-700">{activeCount}</p>
+              </div>
+            </div>
+          </div>
+        </section> */}
+
+
+
+
+
+        {/* MAIN 2-COLUMN GRID */}
+
       </div>
 
       {/* PATIENT DETAIL MODAL */}
