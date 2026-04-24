@@ -4,12 +4,15 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\UserResource;
+use App\Models\Patient;
 use App\Models\Role;
 use App\Models\User;
+use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rules\Password;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Validation\Rules\Password as PasswordRule;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -24,8 +27,8 @@ class AuthController extends Controller
     public function login(Request $request): JsonResponse
     {
         $request->validate([
-            'username'    => ['required', 'string'],
-            'password'    => ['required', 'string'],
+            'username' => ['required', 'string'],
+            'password' => ['required', 'string'],
             'device_name' => ['nullable', 'string', 'max:255'],
         ]);
 
@@ -43,9 +46,9 @@ class AuthController extends Controller
         $token = $user->createToken($deviceName)->plainTextToken;
 
         return response()->json([
-            'token'      => $token,
+            'token' => $token,
             'token_type' => 'Bearer',
-            'user'       => new UserResource($user),
+            'user' => new UserResource($user),
         ]);
     }
 
@@ -67,13 +70,13 @@ class AuthController extends Controller
     public function register(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'name'        => ['required', 'string', 'max:255'],
-            'email'       => ['nullable', 'email:rfc,dns', 'max:255', 'unique:users,email', 'unique:users,username'],
-            'phone'       => ['nullable', 'string', 'max:50', 'unique:users,phone', 'unique:users,username'],
-            'password'    => [
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['nullable', 'email:rfc,dns', 'max:255', 'unique:users,email', 'unique:users,username'],
+            'phone' => ['nullable', 'string', 'max:50', 'unique:users,phone', 'unique:users,username'],
+            'password' => [
                 'required',
                 'confirmed',
-                Password::min(8)->mixedCase()->numbers(),
+                PasswordRule::min(8)->mixedCase()->numbers(),
             ],
             'device_name' => ['nullable', 'string', 'max:255'],
         ]);
@@ -87,17 +90,23 @@ class AuthController extends Controller
 
         // email takes priority as username; falls back to phone
         $username = $validated['email'] ?? $validated['phone'];
+        $isPhoneOnly = empty($validated['email']) && ! empty($validated['phone']);
 
         $patientRole = Role::where('name', 'patient')->firstOrFail();
 
         $user = User::create([
-            'name'     => $validated['name'],
+            'name' => $validated['name'],
             'username' => $username,
-            'email'    => $validated['email'] ?? null,
-            'phone'    => $validated['phone'] ?? null,
+            'email' => $validated['email'] ?? null,
+            'phone' => $validated['phone'] ?? null,
             'password' => $validated['password'],
-            'role_id'  => $patientRole->id,
+            'role_id' => $patientRole->id,
+            'email_verified_at' => $isPhoneOnly ? now() : null,
         ]);
+
+        Patient::create(['user_id' => $user->id]);
+
+        event(new Registered($user));
 
         $user->load('role');
 
@@ -105,11 +114,11 @@ class AuthController extends Controller
         $tokenResult = $user->createToken($deviceName);
 
         return response()->json([
-            'message'    => 'Account created successfully.',
-            'username'   => $username,
-            'token'      => $tokenResult->plainTextToken,
+            'message' => 'Account created successfully.',
+            'username' => $username,
+            'token' => $tokenResult->plainTextToken,
             'token_type' => 'Bearer',
-            'user'       => new UserResource($user),
+            'user' => new UserResource($user),
         ], 201);
     }
 
@@ -119,15 +128,15 @@ class AuthController extends Controller
      */
     public function bookingProfile(Request $request): JsonResponse
     {
-        $user    = $request->user();
+        $user = $request->user();
         $profile = $user->patientProfile;
 
         return response()->json([
-            'name'    => $user->name,
-            'phone'   => $user->phone,
-            'email'   => $user->email,
-            'age'     => $profile?->age,
-            'gender'  => $profile?->gender,
+            'name' => $user->name,
+            'phone' => $user->phone,
+            'email' => $user->email,
+            'age' => $profile?->age,
+            'gender' => $profile?->gender,
             'address' => $profile?->address,
         ]);
     }
@@ -138,6 +147,7 @@ class AuthController extends Controller
     public function me(Request $request): JsonResponse
     {
         $user = $request->user()->load('role');
+
         return response()->json(['user' => new UserResource($user)]);
     }
 
@@ -147,6 +157,85 @@ class AuthController extends Controller
     public function logout(Request $request): JsonResponse
     {
         $request->user()?->currentAccessToken()?->delete();
+
         return response()->json(['message' => 'Logged out successfully.']);
+    }
+
+    /**
+     * Request a password reset link (JSON). Uses the account email on file.
+     *
+     * POST /api/auth/forgot-password
+     * Body: { "username": "email@example.com" }  (email or registered username)
+     */
+    public function forgotPassword(Request $request): JsonResponse
+    {
+        $request->validate([
+            'username' => ['required', 'string', 'max:255'],
+        ]);
+
+        $user = User::query()
+            ->where('username', $request->username)
+            ->orWhere('email', $request->username)
+            ->first();
+
+        if ($user && $user->email) {
+            Password::sendResetLink(['email' => $user->email]);
+        }
+
+        return response()->json([
+            'message' => 'If an account with that email exists, a password reset link has been sent.',
+        ]);
+    }
+
+    /**
+     * Complete password reset with token from email.
+     *
+     * POST /api/auth/reset-password
+     * Body: { "email", "token", "password", "password_confirmation" }
+     */
+    public function resetPassword(Request $request): JsonResponse
+    {
+        $request->validate([
+            'token' => ['required', 'string'],
+            'email' => ['required', 'email'],
+            'password' => ['required', 'confirmed', PasswordRule::min(8)->mixedCase()->numbers()],
+        ]);
+
+        $status = Password::reset(
+            $request->only('email', 'password', 'password_confirmation', 'token'),
+            function (User $user, string $password): void {
+                $user->forceFill([
+                    'password' => $password,
+                ])->save();
+            }
+        );
+
+        if ($status === Password::PASSWORD_RESET) {
+            return response()->json(['message' => __($status)]);
+        }
+
+        return response()->json(['message' => __($status)], 422);
+    }
+
+    /**
+     * Resend email verification (authenticated).
+     *
+     * POST /api/auth/email/resend
+     */
+    public function resendVerificationEmail(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if ($user->hasVerifiedEmail()) {
+            return response()->json(['message' => 'Email already verified.']);
+        }
+
+        if (! $user->getEmailForVerification()) {
+            return response()->json(['message' => 'No email address on file to verify.'], 422);
+        }
+
+        $user->sendEmailVerificationNotification();
+
+        return response()->json(['message' => 'Verification link sent.']);
     }
 }
