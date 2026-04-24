@@ -44,7 +44,7 @@ export default function HeroSection({ doctor }) {
                         </div>
 
                         <motion.h1
-                            className="mt-6 text-4xl font-semibold leading-[1.02] tracking-tight sm:text-5xl lg:text-[72px]"
+                            className="mt-6 text-3xl font-semibold leading-[0.96] tracking-tight sm:text-4xl lg:text-5xl xl:text-[4.35rem]"
                             initial="hidden"
                             animate="visible"
                             variants={{
@@ -93,7 +93,7 @@ export default function HeroSection({ doctor }) {
                             ))}
                         </motion.h1>
 
-                        <p className="mt-6 max-w-lg text-base leading-8 text-[#d7e9e5] sm:text-[26px]">
+                        <p className="mt-6 max-w-lg text-base leading-8 text-[#d7e9e5] sm:text-lg">
                             {doctorName} provides calm consultations, clear treatment planning, and a polished appointment experience designed for modern patients.
                         </p>
 
@@ -104,7 +104,7 @@ export default function HeroSection({ doctor }) {
                         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                             <a
                                 href="/book-appointment"
-                                className="inline-flex items-center justify-center gap-3 rounded-full bg-[#b8ff4f] px-10 py-4 text-base font-semibold text-[#062128] shadow-[0_22px_55px_rgba(184,255,79,0.42)] ring-4 ring-[#dfffaa]/30 transition hover:bg-[#d2ff85] hover:shadow-[0_26px_65px_rgba(184,255,79,0.52)]"
+                                className="inline-flex items-center justify-center gap-3 rounded-full bg-[#b8ff4f] px-10 py-5 text-lg font-semibold text-[#062128] shadow-[0_22px_55px_rgba(184,255,79,0.42)] ring-4 ring-[#dfffaa]/30 transition hover:bg-[#d2ff85] hover:shadow-[0_26px_65px_rgba(184,255,79,0.52)]"
                             >
                                 Book appointment
                                 <ArrowRight className="h-5 w-5" />
