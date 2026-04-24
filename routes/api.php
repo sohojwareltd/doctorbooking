@@ -1,12 +1,13 @@
 <?php
 
+use App\Http\Controllers\Admin\SiteContentController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CompoundController;
 use App\Http\Controllers\Api\DoctorController;
+use App\Http\Controllers\Api\EmailVerificationController;
 use App\Http\Controllers\Api\PatientController;
 use App\Http\Controllers\Api\PrescriptionController as ApiPrescriptionController;
 use App\Http\Controllers\Api\PublicController;
-use App\Http\Controllers\Admin\SiteContentController;
 use App\Http\Controllers\DoctorScheduleController;
 use Illuminate\Support\Facades\Route;
 
@@ -19,10 +20,16 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('auth')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
     Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:password-reset');
+    Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:password-reset');
+    Route::get('/email/verify/{id}/{hash}', EmailVerificationController::class)
+        ->middleware(['signed', 'throttle:6,1'])
+        ->name('api.verification.verify');
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/me', [AuthController::class, 'me']);
         Route::post('/logout', [AuthController::class, 'logout']);
+        Route::post('/email/resend', [AuthController::class, 'resendVerificationEmail'])->middleware('throttle:6,1');
     });
 });
 
@@ -39,7 +46,8 @@ Route::prefix('public')->group(function () {
     Route::get('/unavailable-ranges', [PublicController::class, 'unavailableRanges']);
     Route::get('/slots/{date}', [PublicController::class, 'availableSlots']);
     Route::get('/booking-preview', [PublicController::class, 'bookingPreview']);
-    // captcha + book-appointment moved to web.php (need session middleware)
+    Route::middleware('throttle:captcha')->get('/captcha', [PublicController::class, 'captcha']);
+    Route::middleware('throttle:booking-submit')->post('/book-appointment', [PublicController::class, 'bookAppointment']);
     Route::get('/site-content/home', [App\Http\Controllers\Api\SiteContentApiController::class, 'home']);
 });
 
