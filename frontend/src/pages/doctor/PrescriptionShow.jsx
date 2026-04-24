@@ -1301,14 +1301,16 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
                                     <p className="mt-1 text-[11px] font-medium text-amber-700">No medicine match found.</p>
                                   ) : null} */}
                                 </div>
-                                <input
-                                  className="rounded border px-3 py-1.5 text-sm text-slate-900 doc-input-focus"
+                                <textarea
+                                  rows={1}
+                                  className="rounded border px-3 py-1.5 text-sm text-slate-900 doc-input-focus resize-none leading-tight"
                                   value={m.dosage}
                                   onChange={(e) => handleMedicineChange(idx, 'dosage', e.target.value)}
                                   placeholder="e.g. 1+0+1"
                                 />
-                                <input
-                                  className="rounded border px-3 py-1.5 text-sm text-slate-900 doc-input-focus"
+                                <textarea
+                                  rows={1}
+                                  className="rounded border px-3 py-1.5 text-sm text-slate-900 doc-input-focus resize-none leading-tight"
                                   value={m.duration}
                                   onChange={(e) => handleMedicineChange(idx, 'duration', e.target.value)}
                                   placeholder="Duration"
@@ -1554,6 +1556,15 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
             line-height: 1.15 !important;
             padding: 2px 6px !important;
             min-height: 22px !important;
+          }
+
+          .medicine-row textarea {
+            font-size: 10px !important;
+            line-height: 1.15 !important;
+            padding: 2px 6px !important;
+            min-height: 22px !important;
+            white-space: pre-wrap !important;
+            overflow-wrap: anywhere !important;
           }
 
           .medicine-timing {
