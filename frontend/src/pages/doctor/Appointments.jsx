@@ -892,6 +892,7 @@ export default function DoctorAppointments() {
               </div>
             ) : paginatedRows.map((appointment) => {
               const patientPhone = getPatientPhone(appointment);
+              const appointmentTimeLabel = formatDisplayTime12h(appointment.appointment_time) || appointment.appointment_time || 'N/A';
 
               return (
                 <div
@@ -916,9 +917,12 @@ export default function DoctorAppointments() {
                         <Phone className="h-3.5 w-3.5 text-slate-400" />
                         {renderHighlighted(patientPhone || 'N/A', searchTerm)}
                       </span>
-                      <span className="inline-flex items-center gap-1.5 text-slate-500">
+                      <span className="inline-flex flex-col items-end leading-tight text-slate-500">
+                        <span className="inline-flex items-center gap-1.5">
                         <Calendar className="h-3.5 w-3.5 text-slate-400" />
-                        {formatDisplayDateWithYearFromDateLike(appointment.appointment_date) || appointment.appointment_date}
+                          {(formatDisplayDateWithYearFromDateLike(appointment.appointment_date) || appointment.appointment_date)}
+                        </span>
+                        <span className="text-[11px] font-medium">{appointmentTimeLabel}</span>
                       </span>
                     </div>
                   </div>
@@ -1018,6 +1022,7 @@ export default function DoctorAppointments() {
                 ) : paginatedRows.map((appointment, index) => {
                   const serial = appointment.id;
                   const patientPhone = getPatientPhone(appointment);
+                  const appointmentTimeLabel = formatDisplayTime12h(appointment.appointment_time) || appointment.appointment_time || 'N/A';
 
                   return (
                     <tr key={appointment.id} className="cursor-pointer hover:bg-slate-50/80" onClick={() => setSelectedPatient(appointment)}>
@@ -1045,9 +1050,12 @@ export default function DoctorAppointments() {
                        
                       </td>
                       <td className="px-6 py-4 text-[13px] font-medium text-slate-700 text-center">
-                         <span className="inline-flex items-center justify-center gap-1.5">
+                         <span className="inline-flex flex-col items-center justify-center gap-0.5 leading-tight">
+                          <span className="inline-flex items-center justify-center gap-1.5">
                           <Calendar className="h-[18px] w-[18px] text-slate-600" />
-                          {formatDisplayDateWithYearFromDateLike(appointment.appointment_date) || appointment.appointment_date}
+                            {(formatDisplayDateWithYearFromDateLike(appointment.appointment_date) || appointment.appointment_date)}
+                          </span>
+                          <span className="text-xs text-slate-500">{appointmentTimeLabel}</span>
                         </span>
                        
                       </td>
