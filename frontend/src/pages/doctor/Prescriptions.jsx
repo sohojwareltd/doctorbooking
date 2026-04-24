@@ -697,8 +697,8 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
                   <th className="px-6 py-4 text-center">Patient</th>
                   <th className="px-6 py-4 text-center">Phone</th>
                   <th className="px-6 py-4 text-center">Diagnosis</th>
-                  <th className="px-6 py-4 text-center">Follow-up</th>
-                  <th className="px-6 py-4 text-center">Created</th>
+                  {/* <th className="px-6 py-4 text-center">Follow-up</th> */}
+                  <th className="px-6 py-4 text-center">Prescribed at</th>
                   <th className="px-6 py-4 text-center">Action</th>
                 </tr>
               </thead>
@@ -738,9 +738,9 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
                           {renderHighlighted(prescription.diagnosis || 'N/A', searchTerm)}
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-center text-[13px] font-medium text-slate-700">
+                      {/* <td className="px-6 py-4 text-center text-[13px] font-medium text-slate-700">
                         {getNextVisitLabel(prescription)}
-                      </td>
+                      </td> */}
                       <td className="px-6 py-4 text-center text-[13px] font-medium text-slate-700">
                         <div className="inline-flex items-center justify-center gap-2">
                           <span className="inline-flex items-center justify-center gap-1.5">
