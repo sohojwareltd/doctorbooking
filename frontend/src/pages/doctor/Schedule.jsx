@@ -727,11 +727,11 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
               </section>
             </div>
 
-            <div className="flex justify-end pt-1">
+            <div className="flex justify-start pt-1">
               <DocButton
                 onClick={save}
                 disabled={saving}
-                className="!rounded-2xl !bg-slate-900 !px-8 !py-3 !text-white hover:!bg-slate-800 disabled:!opacity-50"
+                className="!rounded-2xl !bg-slate-900 !px-8 !py-3 !text-white hover:!bg-slate-800 disabled:!opacity-50 bg-[#424E82]"
               >
                 {saving ? 'Saving...' : 'Save Schedule'}
               </DocButton>
@@ -884,19 +884,19 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
                   value={newUnavailableTitle}
                   onChange={(e) => setNewUnavailableTitle(e.target.value)}
                   placeholder="Casual Leave, Vacation, etc."
-                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:border-slate-400 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700  transition hover:border-slate-400 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
                 />
               </div>
               <div>
                 <div className="mb-4 mt-3 grid gap-4 lg:grid-cols-[minmax(0,1fr)_44px_minmax(0,1fr)] lg:items-end">
                   <div>
                     <div className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Start Date</div>
-                    <div className="flex min-h-[72px] items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-[0_6px_20px_rgba(15,23,42,0.06)]">
-                      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-[#d9e6fb] bg-[#edf4ff] text-[#4a67a1]">
+                    <div className="flex  items-center gap-3 rounded-2xl border border-slate-200 bg-white p-2  shadow-[0_6px_20px_rgba(15,23,42,0.06)]">
+                      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl border border-[#d9e6fb] bg-[#edf4ff] text-[#4a67a1]">
                         <Calendar className="h-4 w-4" />
                       </div>
                       <div className="min-w-0">
-                        <div className="text-base font-medium tracking-tight text-slate-800 ">
+                        <div className="text-[13px] font-medium tracking-tight text-slate-800 ">
                           {formatDatePreview(newUnavailableSelection.startDate)}
                         </div>
                       </div>
@@ -907,12 +907,12 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
                   </div>
                   <div>
                     <div className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">End Date</div>
-                    <div className="flex min-h-[72px] items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-[0_6px_20px_rgba(15,23,42,0.06)]">
-                      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-[#d9e6fb] bg-[#edf4ff] text-[#4a67a1]">
+                    <div className="flex  items-center gap-3 rounded-2xl border border-slate-200 bg-white px-2 py-2 shadow-[0_6px_20px_rgba(15,23,42,0.06)]">
+                      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl border border-[#d9e6fb] bg-[#edf4ff] text-[#4a67a1]">
                         <Calendar className="h-4 w-4" />
                       </div>
                       <div className="min-w-0">
-                        <div className="text-base font-medium tracking-tight text-slate-800 ">
+                        <div className="text-[13px] font-medium tracking-tight text-slate-800 ">
                           {formatDatePreview(newUnavailableSelection.endDate)}
                         </div>
                       </div>
@@ -1003,7 +1003,7 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
                       </div>
                     </div>
                   </div>
-                  <div className="hidden h-12 items-center justify-center text-slate-400 lg:flex">
+                  <div className="hidden h-14 items-center justify-center text-slate-400 lg:flex">
                     <ArrowRight className="h-5 w-5" />
                   </div>
                   <div>
