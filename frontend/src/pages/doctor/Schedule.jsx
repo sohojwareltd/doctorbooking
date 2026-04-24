@@ -187,10 +187,6 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
     }
   };
 
-  const updateUnavailable = (idx, patch) => {
-    setUnavailable((prev) => (Array.isArray(prev) ? prev.map((r, i) => (i === idx ? { ...r, ...patch } : r)) : prev));
-  };
-
   const removeUnavailable = (idx) => {
     setUnavailable((prev) => (Array.isArray(prev) ? prev.filter((_, i) => i !== idx) : prev));
   };
@@ -210,15 +206,34 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
     setShowEditUnavailableModal(true);
   };
 
-  const saveEditUnavailableModal = () => {
+  const saveEditUnavailableModal = async () => {
     if (editingUnavailableIndex === null) return;
-    updateUnavailable(editingUnavailableIndex, {
+
+    const updatedRange = {
       title: String(editUnavailableDraft.title || '').trim(),
       start_date: dateToISOString(editUnavailableDraft.selection.startDate),
       end_date: dateToISOString(editUnavailableDraft.selection.endDate),
-    });
-    setShowEditUnavailableModal(false);
-    setEditingUnavailableIndex(null);
+    };
+
+    const nextUnavailable = (Array.isArray(unavailable) ? unavailable : []).map((r, i) => (i === editingUnavailableIndex ? { ...r, ...updatedRange } : r));
+
+    setSaving(true);
+    try {
+      const result = await persistSchedule(nextUnavailable);
+      if (!result.ok) return;
+
+      setUnavailable(nextUnavailable);
+      toastSuccess(result.data?.message || 'Unavailable range updated.');
+      if (result.data?.warning) {
+        toastWarning(result.data.warning);
+      }
+      setShowEditUnavailableModal(false);
+      setEditingUnavailableIndex(null);
+    } catch {
+      toastError('Network error. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const selectedChamberId = String(current_chamber_id ?? (chambers[0]?.id ?? ''));
