@@ -63,7 +63,6 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
   const [saving, setSaving] = useState(false);
   const [chamberMenuOpen, setChamberMenuOpen] = useState(false);
   const [chamberMenuStyle, setChamberMenuStyle] = useState(null);
-  const [highlightUnavailableIndex, setHighlightUnavailableIndex] = useState(null);
   const [showAddUnavailableModal, setShowAddUnavailableModal] = useState(false);
   const [showEditUnavailableModal, setShowEditUnavailableModal] = useState(false);
   const [editingUnavailableIndex, setEditingUnavailableIndex] = useState(null);
@@ -84,8 +83,6 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
   const bannerOverlayRef = useRef(null);
   const chamberButtonRef = useRef(null);
   const chamberMenuRef = useRef(null);
-  const unavailableSectionRef = useRef(null);
-  const unavailableCardRefs = useRef([]);
 
   const updateRow = (idx, patch) => {
     setRows((prev) => prev.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
@@ -167,7 +164,6 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
     const end_date = dateToISOString(newUnavailableSelection.endDate);
     if (!start_date || !end_date) return;
 
-    const nextIndex = Array.isArray(unavailable) ? unavailable.length : 0;
     const nextUnavailable = [
       ...(Array.isArray(unavailable) ? unavailable : []),
       { title: String(newUnavailableTitle || '').trim(), start_date, end_date },
@@ -184,7 +180,6 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
         toastWarning(result.data.warning);
       }
       setShowAddUnavailableModal(false);
-      setHighlightUnavailableIndex(nextIndex);
     } catch {
       toastError('Network error. Please try again.');
     } finally {
@@ -194,17 +189,9 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
 
   const updateUnavailable = (idx, patch) => {
     setUnavailable((prev) => (Array.isArray(prev) ? prev.map((r, i) => (i === idx ? { ...r, ...patch } : r)) : prev));
-    if (idx === highlightUnavailableIndex) {
-      setHighlightUnavailableIndex(null);
-    }
   };
 
   const removeUnavailable = (idx) => {
-    setHighlightUnavailableIndex((prev) => {
-      if (prev === null) return prev;
-      if (prev === idx) return null;
-      return prev > idx ? prev - 1 : prev;
-    });
     setUnavailable((prev) => (Array.isArray(prev) ? prev.filter((_, i) => i !== idx) : prev));
   };
 
@@ -327,17 +314,6 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
       window.removeEventListener('scroll', updatePosition, true);
     };
   }, [chamberMenuOpen, syncChamberMenuPosition]);
-
-  useEffect(() => {
-    if (highlightUnavailableIndex === null) return undefined;
-
-    const timer = window.setTimeout(() => {
-      unavailableSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      unavailableCardRefs.current[highlightUnavailableIndex]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }, 80);
-
-    return () => window.clearTimeout(timer);
-  }, [unavailable, highlightUnavailableIndex]);
 
   const openSyncModal = useCallback((fromIdx) => {
     const selected = new Set();
@@ -628,7 +604,7 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
                   })}
                 </div>
               </section>
-              <section ref={unavailableSectionRef} className="surface-card overflow-hidden rounded-3xl border border-slate-200/80 bg-white flex-[2] min-w-0">
+              <section className="surface-card overflow-hidden rounded-3xl border border-slate-200/80 bg-white flex-[2] min-w-0">
                 <div className="flex flex-col gap-4 px-6 py-5 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <h3 className="text-[16px] font-semibold tracking-tight text-slate-900">Unavailable Date Ranges</h3>
@@ -657,10 +633,7 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
                       {unavailable.map((r, idx) => (
                         <div
                           key={`unavailable-${idx}`}
-                          ref={(element) => {
-                            unavailableCardRefs.current[idx] = element;
-                          }}
-                          className={`rounded-2xl border px-4 py-4 transition ${idx === highlightUnavailableIndex ? 'border-rose-200 bg-rose-50/70 shadow-sm' : 'border-slate-200 bg-white'}`}
+                          className="rounded-2xl border border-slate-200 bg-white px-4 py-4 transition"
                         >
                           <div className="mb-3 flex items-center justify-between">
                             <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">{String(r.title || '').trim() || `Blocked Period ${idx + 1}`}</span>
