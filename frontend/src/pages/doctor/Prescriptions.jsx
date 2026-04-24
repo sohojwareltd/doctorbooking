@@ -695,7 +695,7 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
                 <tr>
                   <th className="px-6 py-4 text-center">#</th>
                   <th className="px-6 py-4 text-center">Patient</th>
-                  <th className="px-6 py-4 text-center">Phone</th>
+                  {/* <th className="px-6 py-4 text-center">Phone</th> */}
                   <th className="px-6 py-4 text-center">Diagnosis</th>
                   {/* <th className="px-6 py-4 text-center">Follow-up</th> */}
                   <th className="px-6 py-4 text-center">Prescribed at</th>
@@ -723,16 +723,18 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
                           <GenderIconAvatar gender={getPatientGender(prescription)} />
                           <div>
                             <div className="font-semibold text-slate-900">{renderHighlighted(getPatientName(prescription), searchTerm)}</div>
+                            <div className="mt-0.5 text-xs font-medium text-slate-500">  {renderHighlighted(getPatientPhone(prescription) || 'N/A', searchTerm)}</div>
+
                             <div className="mt-0.5 text-xs font-medium text-slate-500">{getPatientAge(prescription) ? `${getPatientAge(prescription)}y` : 'Age N/A'}</div>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-center text-[13px] font-medium text-slate-700">
+                      {/* <td className="px-6 py-4 text-center text-[13px] font-medium text-slate-700">
                         <span className="inline-flex items-center justify-center gap-1.5">
                           <Phone className="h-3.5 w-3.5 text-slate-400" />
                           {renderHighlighted(getPatientPhone(prescription) || 'N/A', searchTerm)}
                         </span>
-                      </td>
+                      </td> */}
                       <td className="px-6 py-4 text-center text-[13px] font-medium text-slate-700">
                         <div className="mx-auto max-w-[220px] truncate" title={prescription.diagnosis || 'N/A'}>
                           {renderHighlighted(prescription.diagnosis || 'N/A', searchTerm)}
