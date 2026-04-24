@@ -293,6 +293,24 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
     return `${h12}:${String(m).padStart(2, '0')} ${period}`;
   };
 
+  const formatDateLabel = (dateStr) => {
+    if (!dateStr) return '';
+    const [year, month, day] = String(dateStr).split('-').map(Number);
+    if (!year || !month || !day) return dateStr;
+    const date = new Date(year, month - 1, day);
+    if (Number.isNaN(date.getTime())) return dateStr;
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
+  const getUnavailableDurationDays = (startDate, endDate) => {
+    if (!startDate || !endDate) return 0;
+    const start = ISOStringToDate(startDate);
+    const end = ISOStringToDate(endDate);
+    const diffMs = end.getTime() - start.getTime();
+    if (Number.isNaN(diffMs) || diffMs < 0) return 0;
+    return Math.floor(diffMs / (24 * 60 * 60 * 1000)) + 1;
+  };
+
   // Quick Sync modal state
   const [syncModal, setSyncModal] = useState(null); // { fromIdx, selectedDays: Set }
 
@@ -619,23 +637,23 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
                   })}
                 </div>
               </section>
-              <section className="surface-card overflow-hidden rounded-3xl border border-slate-200/80 bg-white flex-[2] min-w-0">
+              <section className="surface-card overflow-hidden rounded-3xl border border-slate-200/80 bg-white flex-[2] min-w-0 lg:flex lg:h-[580px] lg:flex-col lg:self-stretch">
                 <div className="flex flex-col gap-4 px-6 py-5 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <h3 className="text-[16px] font-semibold tracking-tight text-slate-900">Unavailable Date Ranges</h3>
-
+                    {/* <p className="mt-1 text-sm text-slate-500">Manage periods when this doctor is not available.</p> */}
                   </div>
                   <button
                     type="button"
-                    className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
+                    className="group inline-flex h-10 items-center justify-center  rounded-xl border border-transparent bg-[#424E82] px-4 py-4 text-sm font-semibold text-white shadow-[0_10px_22px_rgba(14,116,144,0.34)] transition duration-200 hover:-translate-y-0.5 hover:brightness-105 hover:shadow-[0_14px_30px_rgba(14,116,144,0.40)] active:translate-y-0"
                     onClick={addUnavailable}
                   >
-                    <Plus className="h-4 w-4" />
+                    <Plus className="h-4 w-4 text-white" />
                     Add Date Range
                   </button>
                 </div>
 
-                <div className="px-6 pb-5">
+                <div className="px-6 pb-5 lg:flex-1 lg:min-h-0 lg:overflow-y-auto">
                   {(!Array.isArray(unavailable) || unavailable.length === 0) && (
                     <div className="flex items-center gap-2 rounded-2xl bg-sky-50 px-4 py-3 text-sm text-sky-500">
                       <Calendar className="h-4 w-4" />
@@ -644,38 +662,56 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
                   )}
 
                   {Array.isArray(unavailable) && unavailable.length > 0 && (
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                       {unavailable.map((r, idx) => (
                         <div
                           key={`unavailable-${idx}`}
-                          className="rounded-2xl border border-slate-200 bg-white px-4 py-4 transition"
+                          className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-3.5 shadow-[0_8px_18px_rgba(15,23,42,0.05)] transition hover:-translate-y-0.5 hover:shadow-[0_12px_24px_rgba(15,23,42,0.08)] sm:p-4"
                         >
-                          <div className="mb-3 flex items-center justify-between">
-                            <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">{String(r.title || '').trim() || `Blocked Period ${idx + 1}`}</span>
-                            <div className="flex items-center gap-1">
-                              <button
-                                type="button"
-                                className="rounded-lg p-2 text-slate-300 transition hover:bg-slate-100 hover:text-slate-600"
-                                onClick={() => openEditUnavailableModal(idx)}
-                                title="Edit"
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </button>
-                              <button
-                                type="button"
-                                className="rounded-lg p-2 text-slate-300 transition hover:bg-rose-50 hover:text-rose-500"
-                                onClick={() => removeUnavailable(idx)}
-                                title="Remove"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
+                          <div className="pointer-events-none absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200" />
+
+                          <div className="flex items-start gap-3">
+                            <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl border border-[#d9e6fb] bg-[#eaf2ff] text-[#4a67a1] shadow-sm">
+                              <CalendarOff className="h-5 w-5" />
                             </div>
-                          </div>
-                          <div className="space-y-3">
-                            <div className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm">
-                              {r.start_date && r.end_date
-                                ? `${r.start_date} → ${r.end_date}`
-                                : 'Date range not set'}
+
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-start justify-between gap-3">
+                                <div>
+                                  <h4 className="text-sm font-semibold leading-tight text-slate-900 sm:text-[15px]">
+                                    {String(r.title || '').trim() || `Blocked Period ${idx + 1}`}
+                                  </h4>
+                                  <div className="mt-1.5 inline-flex items-center gap-1.5 rounded-full border border-[#d9e6fb] bg-[#edf4ff] px-2.5 py-1 text-[11px] font-medium text-[#4a67a1]">
+                                    <Calendar className="h-3.5 w-3.5 text-[#4a67a1]" />
+                                    Duration: {getUnavailableDurationDays(r.start_date, r.end_date)} Days
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-1.5">
+                                  <button
+                                    type="button"
+                                    className="rounded-xl border border-slate-200 p-2 text-slate-400 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-600"
+                                    onClick={() => openEditUnavailableModal(idx)}
+                                    title="Edit"
+                                  >
+                                    <Pencil className="h-3.5 w-3.5" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="rounded-xl border border-slate-200 p-2 text-rose-300 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-500"
+                                    onClick={() => removeUnavailable(idx)}
+                                    title="Remove"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              </div>
+
+                              <p className="mt-1.5 text-[13px] font-medium tracking-tight text-slate-700 sm:text-sm">
+                                {r.start_date && r.end_date
+                                  ? `${formatDateLabel(r.start_date)} - ${formatDateLabel(r.end_date)}`
+                                  : 'Date range not set'}
+                              </p>
                             </div>
                           </div>
                         </div>
@@ -846,22 +882,28 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
                   className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:border-slate-400 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
                 />
               </div>
-              <DateRange
-                ranges={[newUnavailableSelection]}
-                onChange={(item) => {
-                  const nextStart = item.selection.startDate || new Date();
-                  const nextEnd = item.selection.endDate || nextStart;
-                  setNewUnavailableSelection({
-                    startDate: nextStart,
-                    endDate: nextEnd,
-                    key: 'selection',
-                  });
-                }}
-                moveRangeOnFirstSelection={false}
-                months={2}
-                direction="horizontal"
-                className="text-sm"
-              />
+              <div>
+                <div className="mb-2 flex mt-3">
+                  <div className="flex-1  text-xs font-semibold uppercase tracking-wider text-slate-700 ms-3">Start Date</div>
+                  <div className="flex-1  text-xs font-semibold uppercase tracking-wider text-slate-700 ms-3">End Date</div>
+                </div>
+                <DateRange
+                  ranges={[newUnavailableSelection]}
+                  onChange={(item) => {
+                    const nextStart = item.selection.startDate || new Date();
+                    const nextEnd = item.selection.endDate || nextStart;
+                    setNewUnavailableSelection({
+                      startDate: nextStart,
+                      endDate: nextEnd,
+                      key: 'selection',
+                    });
+                  }}
+                  moveRangeOnFirstSelection={false}
+                  months={2}
+                  direction="horizontal"
+                  className="text-sm"
+                />
+              </div>
             </div>
 
             <div className="mt-5 flex items-center justify-end gap-3 border-t border-slate-100 pt-4">
@@ -914,25 +956,31 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
                   className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:border-slate-400 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
                 />
               </div>
-              <DateRange
-                ranges={[editUnavailableDraft.selection]}
-                onChange={(item) => {
-                  const nextStart = item.selection.startDate || new Date();
-                  const nextEnd = item.selection.endDate || nextStart;
-                  setEditUnavailableDraft((prev) => ({
-                    ...prev,
-                    selection: {
-                      startDate: nextStart,
-                      endDate: nextEnd,
-                      key: 'selection',
-                    },
-                  }));
-                }}
-                moveRangeOnFirstSelection={false}
-                months={2}
-                direction="horizontal"
-                className="text-sm"
-              />
+              <div>
+                <div className="mb-2 flex">
+                  <div className="flex-1  text-xs font-semibold uppercase tracking-wider text-slate-700">Start Date</div>
+                  <div className="flex-1  text-xs font-semibold uppercase tracking-wider text-slate-700">End Date</div>
+                </div>
+                <DateRange
+                  ranges={[editUnavailableDraft.selection]}
+                  onChange={(item) => {
+                    const nextStart = item.selection.startDate || new Date();
+                    const nextEnd = item.selection.endDate || nextStart;
+                    setEditUnavailableDraft((prev) => ({
+                      ...prev,
+                      selection: {
+                        startDate: nextStart,
+                        endDate: nextEnd,
+                        key: 'selection',
+                      },
+                    }));
+                  }}
+                  moveRangeOnFirstSelection={false}
+                  months={2}
+                  direction="horizontal"
+                  className="text-sm"
+                />
+              </div>
             </div>
 
             <div className="mt-5 flex items-center justify-end gap-3 border-t border-slate-100 pt-4">

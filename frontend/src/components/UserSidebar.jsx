@@ -1,15 +1,14 @@
 ﻿import { Link, usePage } from '@inertiajs/react';
 import {
-  CalendarDays, CalendarPlus, FileText, LayoutDashboard,
-  LogOut, ChevronDown, User, Activity,
+  CalendarDays, FileText, LayoutDashboard,
+  LogOut, ChevronDown, User, Stethoscope,
 } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 
-const ACCENT = '#4aa5ec';
-
 export default function UserSidebar({ currentPath }) {
-  const { auth } = usePage().props;
+  const { auth, publicDoctor } = usePage().props;
   const user = auth?.user;
+  const doctorName = publicDoctor?.name || 'MediCare';
 
   const isActive = (href) => currentPath === href || currentPath.startsWith(href + '/');
   const apptActive = isActive('/user/appointments') || isActive('/user/book-appointment');
@@ -34,11 +33,21 @@ export default function UserSidebar({ currentPath }) {
       {/* Logo */}
       <div className="flex-shrink-0 px-6 py-6 pb-8">
         <Link href="/user/dashboard" className="flex items-center gap-3 group">
-          <div className="rounded-lg p-2.5 flex-shrink-0 shadow-md" style={{ background: ACCENT }}>
-            <Activity className="text-white" style={{ width: 20, height: 20 }} />
+          <div className="rounded-lg bg-white p-1 transition group-hover:bg-slate-100 flex-shrink-0 shadow-md">
+            <img
+              src="/stethoscope-2.png"
+              alt="Medical logo"
+              className="h-10 w-10 object-contain"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+                const fallback = e.currentTarget.nextElementSibling;
+                if (fallback) fallback.style.display = 'block';
+              }}
+            />
+            <Stethoscope className="hidden text-[#2D3A74]" style={{ width: 20, height: 20 }} />
           </div>
           <div className="min-w-0">
-            <div className="text-base font-bold tracking-wide text-white">MediCare</div>
+            <div className="text-base font-bold tracking-wide text-white">{doctorName}</div>
             <div className="text-[11px] font-medium text-white/60">Patient Portal</div>
           </div>
         </Link>
@@ -90,7 +99,7 @@ export default function UserSidebar({ currentPath }) {
                 <ul>
                   {[
                     { href: '/user/appointments', label: 'My Appointments' },
-                    { href: '/user/book-appointment', label: 'Book Appointment' },
+                    { href: 'book-appointment', label: 'Book Appointment' },
                   ].map(({ href, label }) => (
                     <li key={href}>
                       <Link

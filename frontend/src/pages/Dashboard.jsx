@@ -271,7 +271,7 @@ export default function Dashboard({
             </div>
             <p className="text-base font-semibold mb-4">Need to see a doctor?</p>
             <Link
-              href="/user/book-appointment"
+              href="/book-appointment"
               className="inline-flex items-center gap-1.5 rounded-xl bg-white/20 border border-white/30 px-4 py-2.5 text-sm font-semibold text-white hover:bg-white/30 transition w-full justify-center"
             >
               <CalendarPlus className="h-4 w-4" /> Book Appointment
@@ -287,7 +287,7 @@ export default function Dashboard({
               {[
                 { href: '/user/appointments', icon: CalendarDays, label: 'My Appointments', desc: 'View appointment history', color: 'text-[#2D3A74]', bg: 'bg-[#2D3A74]/10' },
                 { href: '/user/prescriptions', icon: FileText, label: 'Prescriptions', desc: 'Download medical records', color: 'text-violet-600', bg: 'bg-violet-50' },
-                { href: '/user/book-appointment', icon: CalendarPlus, label: 'Book Appointment', desc: 'Schedule a new visit', color: 'text-[#FF7C00]', bg: 'bg-orange-50' },
+                { href: '/book-appointment', icon: CalendarPlus, label: 'Book Appointment', desc: 'Schedule a new visit', color: 'text-[#FF7C00]', bg: 'bg-orange-50' },
               ].map((item) => {
                 const Icon = item.icon;
                 return (

@@ -93,9 +93,12 @@ class DoctorScheduleController extends Controller
             ];
         }
 
+        $today = now()->toDateString();
+
         $unavailableRanges = DoctorUnavailableRange::where('doctor_id', $doctor->doctorId())
-            ->orderBy('start_date')
-            ->orderBy('end_date')
+            ->whereDate('end_date', '>=', $today)
+            ->orderByDesc('start_date')
+            ->orderByDesc('end_date')
             ->get(['title', 'start_date', 'end_date'])
             ->map(fn ($r) => [
                 'title' => (string) ($r->title ?? ''),

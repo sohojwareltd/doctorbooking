@@ -106,10 +106,6 @@ class PublicController extends Controller
             return redirect()->route('compounder.book-appointment');
         }
 
-        if ($user?->hasRole('patient')) {
-            return redirect()->route('patient.book-appointment');
-        }
-
         return Inertia::render('public/BookAppointment');
     }
 }
