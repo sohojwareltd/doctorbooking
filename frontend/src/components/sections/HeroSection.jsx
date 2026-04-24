@@ -30,8 +30,8 @@ export default function HeroSection({ doctor }) {
             <div className="absolute left-[-7rem] top-20 h-64 w-64 rounded-full bg-[#8ff4de]/14 blur-3xl" />
             <div className="absolute bottom-[-4rem] right-[-3rem] h-80 w-80 rounded-full bg-[#ffffff]/10 blur-3xl" />
 
-            <div className="relative mx-auto min-h-[calc(100vh-64px)] max-w-7xl px-4 pb-16 pt-14 sm:px-6 lg:px-8 lg:pb-24 lg:pt-20">
-                <div className="flex min-h-[calc(100vh-140px)] items-center">
+            <div className="relative mx-auto min-h-[660px] max-w-7xl px-4 pb-20 pt-14 sm:px-6 lg:px-8 lg:min-h-[720px] lg:pb-28 lg:pt-20">
+                <div className="flex min-h-[560px] items-center lg:min-h-[620px]">
                     <motion.div
                         initial={{ opacity: 0, y: 24 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -44,7 +44,7 @@ export default function HeroSection({ doctor }) {
                         </div>
 
                         <motion.h1
-                            className="mt-6 text-3xl font-semibold leading-[0.96] tracking-tight sm:text-4xl lg:text-5xl xl:text-[4.35rem]"
+                            className="mt-6 text-4xl font-semibold leading-[1.02] tracking-tight sm:text-5xl lg:text-[72px]"
                             initial="hidden"
                             animate="visible"
                             variants={{
@@ -93,7 +93,7 @@ export default function HeroSection({ doctor }) {
                             ))}
                         </motion.h1>
 
-                        <p className="mt-6 max-w-lg text-base leading-8 text-[#d7e9e5] sm:text-lg">
+                        <p className="mt-6 max-w-lg text-base leading-8 text-[#d7e9e5] sm:text-[26px]">
                             {doctorName} provides calm consultations, clear treatment planning, and a polished appointment experience designed for modern patients.
                         </p>
 
@@ -104,7 +104,7 @@ export default function HeroSection({ doctor }) {
                         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                             <a
                                 href="/book-appointment"
-                                className="inline-flex items-center justify-center gap-3 rounded-full bg-[#b8ff4f] px-10 py-5 text-lg font-semibold text-[#062128] shadow-[0_22px_55px_rgba(184,255,79,0.42)] ring-4 ring-[#dfffaa]/30 transition hover:bg-[#d2ff85] hover:shadow-[0_26px_65px_rgba(184,255,79,0.52)]"
+                                className="inline-flex items-center justify-center gap-3 rounded-full bg-[#b8ff4f] px-10 py-4 text-base font-semibold text-[#062128] shadow-[0_22px_55px_rgba(184,255,79,0.42)] ring-4 ring-[#dfffaa]/30 transition hover:bg-[#d2ff85] hover:shadow-[0_26px_65px_rgba(184,255,79,0.52)]"
                             >
                                 Book appointment
                                 <ArrowRight className="h-5 w-5" />
@@ -132,6 +132,12 @@ export default function HeroSection({ doctor }) {
                         </div> */}
                     </motion.div>
                 </div>
+            </div>
+
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 text-[#f7f8f8]">
+                <svg viewBox="0 0 1200 120" preserveAspectRatio="none" className="h-full w-full fill-current">
+                    <path d="M0,62 C240,18 420,92 600,70 C820,42 980,100 1200,64 L1200,120 L0,120 Z" />
+                </svg>
             </div>
         </section>
     );
