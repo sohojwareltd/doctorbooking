@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Link, usePage } from '@inertiajs/react';
 import {
   CalendarDays, ClipboardList, LayoutDashboard, Users, User, UserCog, UserPlus, X,
-  Stethoscope, Globe, CalendarClock, LogOut, ChevronLeft, ChevronRight, Activity, ChevronDown, Settings, Pill
+  Stethoscope, Globe, CalendarClock, LogOut, ChevronLeft, ChevronRight, ChevronDown, Settings, Pill
 } from 'lucide-react';
 
 export default function DoctorSidebar({ currentPath, onClose, collapsed = false, onToggleCollapse }) {
@@ -52,6 +52,7 @@ export default function DoctorSidebar({ currentPath, onClose, collapsed = false,
   ];
 
   const isActive = (href) => currentPath === href || currentPath.startsWith(href + '/');
+  const brandImageUrl = '/stethoscope-2.png';
 
   return (
     <div className="flex h-full flex-col bg-[#2D3A74] text-white">
@@ -65,8 +66,18 @@ export default function DoctorSidebar({ currentPath, onClose, collapsed = false,
       {/* Logo Area */}
       <div className={`flex-shrink-0 ${collapsed ? 'px-3 py-6 pb-8' : 'px-6 py-6 pb-8'} flex items-center justify-between`}>
         <Link href="/doctor/dashboard" className="flex items-center gap-3 group">
-          <div className="rounded-lg bg-[#FF7C00] p-2.5 transition group-hover:bg-[#E56D00] flex-shrink-0 shadow-md">
-            <Activity className="text-white" style={{ width: 20, height: 20 }} />
+          <div className="rounded-lg bg-white p-1 transition group-hover:bg-slate-100 flex-shrink-0 shadow-md">
+            <img
+              src={brandImageUrl}
+              alt="Medical logo"
+              className="h-10 w-10 object-contain"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+                const fallback = e.currentTarget.nextElementSibling;
+                if (fallback) fallback.style.display = 'block';
+              }}
+            />
+            <Stethoscope className="hidden text-[#2D3A74]" style={{ width: 20, height: 20 }} />
           </div>
           {!collapsed && (
             <div className="min-w-0">
