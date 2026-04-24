@@ -51,6 +51,7 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
     if (!Array.isArray(unavailable_ranges)) return [];
     return unavailable_ranges
       .map((r) => ({
+        title: r?.title || '',
         start_date: r?.start_date || '',
         end_date: r?.end_date || '',
       }))
@@ -63,7 +64,23 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
   const [chamberMenuOpen, setChamberMenuOpen] = useState(false);
   const [chamberMenuStyle, setChamberMenuStyle] = useState(null);
   const [highlightUnavailableIndex, setHighlightUnavailableIndex] = useState(null);
-  const [openDateRangeIdx, setOpenDateRangeIdx] = useState(null);
+  const [showAddUnavailableModal, setShowAddUnavailableModal] = useState(false);
+  const [showEditUnavailableModal, setShowEditUnavailableModal] = useState(false);
+  const [editingUnavailableIndex, setEditingUnavailableIndex] = useState(null);
+  const [newUnavailableTitle, setNewUnavailableTitle] = useState('');
+  const [newUnavailableSelection, setNewUnavailableSelection] = useState({
+    startDate: new Date(),
+    endDate: new Date(),
+    key: 'selection',
+  });
+  const [editUnavailableDraft, setEditUnavailableDraft] = useState({
+    title: '',
+    selection: {
+      startDate: new Date(),
+      endDate: new Date(),
+      key: 'selection',
+    },
+  });
   const bannerOverlayRef = useRef(null);
   const chamberButtonRef = useRef(null);
   const chamberMenuRef = useRef(null);
@@ -106,12 +123,23 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
   };
 
   const addUnavailable = () => {
+    const today = new Date();
+    setNewUnavailableTitle('');
+    setNewUnavailableSelection({ startDate: today, endDate: today, key: 'selection' });
+    setShowAddUnavailableModal(true);
+  };
+
+  const confirmAddUnavailable = () => {
+    const start_date = dateToISOString(newUnavailableSelection.startDate);
+    const end_date = dateToISOString(newUnavailableSelection.endDate);
+    if (!start_date || !end_date) return;
+
     const nextIndex = Array.isArray(unavailable) ? unavailable.length : 0;
-    setUnavailable((prev) => {
-      const next = [...(Array.isArray(prev) ? prev : [])];
-      next.push({ start_date: '', end_date: '' });
-      return next;
-    });
+    setUnavailable((prev) => [
+      ...(Array.isArray(prev) ? prev : []),
+      { title: String(newUnavailableTitle || '').trim(), start_date, end_date },
+    ]);
+    setShowAddUnavailableModal(false);
     setHighlightUnavailableIndex(nextIndex);
   };
 
@@ -129,6 +157,32 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
       return prev > idx ? prev - 1 : prev;
     });
     setUnavailable((prev) => (Array.isArray(prev) ? prev.filter((_, i) => i !== idx) : prev));
+  };
+
+  const openEditUnavailableModal = (idx) => {
+    const row = Array.isArray(unavailable) ? unavailable[idx] : null;
+    if (!row) return;
+    setEditingUnavailableIndex(idx);
+    setEditUnavailableDraft({
+      title: String(row.title || ''),
+      selection: {
+        startDate: ISOStringToDate(row.start_date),
+        endDate: ISOStringToDate(row.end_date),
+        key: 'selection',
+      },
+    });
+    setShowEditUnavailableModal(true);
+  };
+
+  const saveEditUnavailableModal = () => {
+    if (editingUnavailableIndex === null) return;
+    updateUnavailable(editingUnavailableIndex, {
+      title: String(editUnavailableDraft.title || '').trim(),
+      start_date: dateToISOString(editUnavailableDraft.selection.startDate),
+      end_date: dateToISOString(editUnavailableDraft.selection.endDate),
+    });
+    setShowEditUnavailableModal(false);
+    setEditingUnavailableIndex(null);
   };
 
   const selectedChamberId = String(current_chamber_id ?? (chambers[0]?.id ?? ''));
@@ -553,8 +607,8 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
               <section ref={unavailableSectionRef} className="surface-card overflow-hidden rounded-3xl border border-slate-200/80 bg-white flex-[2] min-w-0">
                 <div className="flex flex-col gap-4 px-6 py-5 sm:flex-row sm:items-start sm:justify-between">
                   <div>
-                    <h3 className="text-[18px] font-semibold tracking-tight text-slate-900">Unavailable Date Ranges</h3>
-                    <p className="mt-1 text-sm text-slate-500">Block dates when you're away to prevent bookings.</p>
+                    <h3 className="text-[16px] font-semibold tracking-tight text-slate-900">Unavailable Date Ranges</h3>
+
                   </div>
                   <button
                     type="button"
@@ -585,51 +639,32 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
                           className={`rounded-2xl border px-4 py-4 transition ${idx === highlightUnavailableIndex ? 'border-rose-200 bg-rose-50/70 shadow-sm' : 'border-slate-200 bg-white'}`}
                         >
                           <div className="mb-3 flex items-center justify-between">
-                            <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Blocked Period {idx + 1}</span>
-                            <button
-                              type="button"
-                              className="rounded-lg p-2 text-slate-300 transition hover:bg-rose-50 hover:text-rose-500"
-                              onClick={() => removeUnavailable(idx)}
-                              title="Remove"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
+                            <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">{String(r.title || '').trim() || `Blocked Period ${idx + 1}`}</span>
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                className="rounded-lg p-2 text-slate-300 transition hover:bg-slate-100 hover:text-slate-600"
+                                onClick={() => openEditUnavailableModal(idx)}
+                                title="Edit"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </button>
+                              <button
+                                type="button"
+                                className="rounded-lg p-2 text-slate-300 transition hover:bg-rose-50 hover:text-rose-500"
+                                onClick={() => removeUnavailable(idx)}
+                                title="Remove"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
                           </div>
                           <div className="space-y-3">
-                            <button
-                              type="button"
-                              onClick={() => setOpenDateRangeIdx(openDateRangeIdx === idx ? null : idx)}
-                              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-left text-sm font-medium text-slate-700 shadow-sm transition hover:border-slate-400 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-                            >
+                            <div className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm">
                               {r.start_date && r.end_date
                                 ? `${r.start_date} → ${r.end_date}`
-                                : 'Select date range'}
-                            </button>
-                            {openDateRangeIdx === idx && (
-                              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-lg">
-                                <DateRange
-                                  ranges={[
-                                    {
-                                      startDate: ISOStringToDate(r.start_date),
-                                      endDate: ISOStringToDate(r.end_date),
-                                      key: 'selection',
-                                    },
-                                  ]}
-                                  onChange={(item) => {
-                                    const startStr = dateToISOString(item.selection.startDate);
-                                    const endStr = dateToISOString(item.selection.endDate);
-                                    updateUnavailable(idx, {
-                                      start_date: startStr,
-                                      end_date: endStr,
-                                    });
-                                  }}
-                                  moveRangeOnFirstSelection={false}
-                                  months={2}
-                                  direction="horizontal"
-                                  className="text-sm"
-                                />
-                              </div>
-                            )}
+                                : 'Date range not set'}
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -768,6 +803,145 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
           </div>
         );
       })()}
+
+      {/* Add Unavailable Range Modal */}
+      {showAddUnavailableModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setShowAddUnavailableModal(false)} />
+          <div className="relative w-full max-w-3xl rounded-2xl bg-white p-6 shadow-xl mx-4">
+            <div className="mb-4 flex items-start justify-between">
+              <div>
+                <h3 className="text-xl font-bold text-slate-900">Add Unavailable Date Range</h3>
+                <p className="mt-1 text-sm text-slate-500">Select the start and end dates to block booking.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddUnavailableModal(false)}
+                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+              <div className="mb-3">
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500">Title</label>
+                <input
+                  type="text"
+                  value={newUnavailableTitle}
+                  onChange={(e) => setNewUnavailableTitle(e.target.value)}
+                  placeholder="Blocked Period"
+                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:border-slate-400 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                />
+              </div>
+              <DateRange
+                ranges={[newUnavailableSelection]}
+                onChange={(item) => {
+                  const nextStart = item.selection.startDate || new Date();
+                  const nextEnd = item.selection.endDate || nextStart;
+                  setNewUnavailableSelection({
+                    startDate: nextStart,
+                    endDate: nextEnd,
+                    key: 'selection',
+                  });
+                }}
+                moveRangeOnFirstSelection={false}
+                months={2}
+                direction="horizontal"
+                className="text-sm"
+              />
+            </div>
+
+            <div className="mt-5 flex items-center justify-end gap-3 border-t border-slate-100 pt-4">
+              <button
+                type="button"
+                onClick={() => setShowAddUnavailableModal(false)}
+                className="rounded-lg px-5 py-2.5 text-sm font-medium text-slate-600 hover:text-slate-800 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmAddUnavailable}
+                className="rounded-lg bg-sky-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-sky-700 transition"
+              >
+                Add Range
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Unavailable Range Modal */}
+      {showEditUnavailableModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setShowEditUnavailableModal(false)} />
+          <div className="relative w-full max-w-3xl rounded-2xl bg-white p-6 shadow-xl mx-4">
+            <div className="mb-4 flex items-start justify-between">
+              <div>
+                <h3 className="text-xl font-bold text-slate-900">Edit Unavailable Date Range</h3>
+                <p className="mt-1 text-sm text-slate-500">Update title and blocked date range.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowEditUnavailableModal(false)}
+                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+              <div className="mb-3">
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500">Title</label>
+                <input
+                  type="text"
+                  value={editUnavailableDraft.title}
+                  onChange={(e) => setEditUnavailableDraft((prev) => ({ ...prev, title: e.target.value }))}
+                  placeholder="Blocked Period"
+                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:border-slate-400 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                />
+              </div>
+              <DateRange
+                ranges={[editUnavailableDraft.selection]}
+                onChange={(item) => {
+                  const nextStart = item.selection.startDate || new Date();
+                  const nextEnd = item.selection.endDate || nextStart;
+                  setEditUnavailableDraft((prev) => ({
+                    ...prev,
+                    selection: {
+                      startDate: nextStart,
+                      endDate: nextEnd,
+                      key: 'selection',
+                    },
+                  }));
+                }}
+                moveRangeOnFirstSelection={false}
+                months={2}
+                direction="horizontal"
+                className="text-sm"
+              />
+            </div>
+
+            <div className="mt-5 flex items-center justify-end gap-3 border-t border-slate-100 pt-4">
+              <button
+                type="button"
+                onClick={() => setShowEditUnavailableModal(false)}
+                className="rounded-lg px-5 py-2.5 text-sm font-medium text-slate-600 hover:text-slate-800 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={saveEditUnavailableModal}
+                className="rounded-lg bg-sky-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-sky-700 transition"
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </DoctorLayout>
   );
 }
