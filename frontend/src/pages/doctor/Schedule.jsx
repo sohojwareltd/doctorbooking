@@ -170,8 +170,8 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
     if (!start_date || !end_date) return;
 
     const nextUnavailable = [
-      ...(Array.isArray(unavailable) ? unavailable : []),
       { title: String(newUnavailableTitle || '').trim(), start_date, end_date },
+      ...(Array.isArray(unavailable) ? unavailable : []),
     ];
 
     setSaving(true);
@@ -447,13 +447,13 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
                     </button>
                   </div>
                 )}
-                <button
+                {/* <button
                   type="button"
                   onClick={addUnavailable}
                   className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-100"
                 >
                   Add Vacation / Holiday
-                </button>
+                </button> */}
               </div>
             </div>
 
