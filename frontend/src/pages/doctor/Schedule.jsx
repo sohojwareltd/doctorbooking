@@ -1,5 +1,5 @@
 import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
-import { Calendar, Clock, X, Link2, CalendarOff, Plus, Trash2, Pencil, ChevronDown, Check } from 'lucide-react';
+import { Calendar, Clock, X, Link2, CalendarOff, Plus, Trash2, Pencil, ChevronDown, Check, ArrowRight } from 'lucide-react';
 import { DateRange } from 'react-date-range';
 import 'react-date-range/dist/styles.css';
 import 'react-date-range/dist/theme/default.css';
@@ -27,6 +27,11 @@ const ISOStringToDate = (dateStr) => {
   if (!dateStr) return new Date();
   const [year, month, day] = dateStr.split('-').map(Number);
   return new Date(year, month - 1, day);
+};
+
+const formatDatePreview = (date) => {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 };
 
 export default function DoctorSchedule({ schedule = [], unavailable_ranges = [], chambers = [], current_chamber_id = null }) {
@@ -883,9 +888,36 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
                 />
               </div>
               <div>
-                <div className="mb-2 flex mt-3">
-                  <div className="flex-1  text-xs font-semibold uppercase tracking-wider text-slate-700 ms-3">Start Date</div>
-                  <div className="flex-1  text-xs font-semibold uppercase tracking-wider text-slate-700 ms-3">End Date</div>
+                <div className="mb-4 mt-3 grid gap-4 lg:grid-cols-[minmax(0,1fr)_44px_minmax(0,1fr)] lg:items-end">
+                  <div>
+                    <div className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Start Date</div>
+                    <div className="flex min-h-[72px] items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-[0_6px_20px_rgba(15,23,42,0.06)]">
+                      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-[#d9e6fb] bg-[#edf4ff] text-[#4a67a1]">
+                        <Calendar className="h-4 w-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-base font-medium tracking-tight text-slate-800 ">
+                          {formatDatePreview(newUnavailableSelection.startDate)}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="hidden h-12 items-center justify-center text-slate-400 lg:flex">
+                    <ArrowRight className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <div className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">End Date</div>
+                    <div className="flex min-h-[72px] items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-[0_6px_20px_rgba(15,23,42,0.06)]">
+                      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-[#d9e6fb] bg-[#edf4ff] text-[#4a67a1]">
+                        <Calendar className="h-4 w-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-base font-medium tracking-tight text-slate-800 ">
+                          {formatDatePreview(newUnavailableSelection.endDate)}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
                 <DateRange
                   ranges={[newUnavailableSelection]}
@@ -957,9 +989,36 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
                 />
               </div>
               <div>
-                <div className="mb-2 flex">
-                  <div className="flex-1  text-xs font-semibold uppercase tracking-wider text-slate-700">Start Date</div>
-                  <div className="flex-1  text-xs font-semibold uppercase tracking-wider text-slate-700">End Date</div>
+                <div className="mb-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_44px_minmax(0,1fr)] lg:items-end">
+                  <div>
+                    <div className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Start Date</div>
+                    <div className="flex min-h-[72px] items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-[0_6px_20px_rgba(15,23,42,0.06)]">
+                      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-[#d9e6fb] bg-[#edf4ff] text-[#4a67a1]">
+                        <Calendar className="h-4 w-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-base font-medium tracking-tight text-slate-800 ">
+                          {formatDatePreview(editUnavailableDraft.selection.startDate)}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="hidden h-12 items-center justify-center text-slate-400 lg:flex">
+                    <ArrowRight className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <div className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">End Date</div>
+                    <div className="flex min-h-[72px] items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-[0_6px_20px_rgba(15,23,42,0.06)]">
+                      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-[#d9e6fb] bg-[#edf4ff] text-[#4a67a1]">
+                        <Calendar className="h-4 w-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-base font-medium tracking-tight text-slate-800 ">
+                          {formatDatePreview(editUnavailableDraft.selection.endDate)}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
                 <DateRange
                   ranges={[editUnavailableDraft.selection]}
