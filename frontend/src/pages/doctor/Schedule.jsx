@@ -520,7 +520,7 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
                               });
                               if (newClosed && editingDay === idx) setEditingDay(null);
                             }}
-                            className={`relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition-colors duration-200 ${isOpen ? 'bg-[#26c0b8]' : 'bg-slate-300'
+                            className={`relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition-colors duration-200 ${isOpen ? 'bg-[#424E82]' : 'bg-slate-300'
                               }`}
                           >
                             <span className={`inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${isOpen ? 'translate-x-[18px]' : 'translate-x-[2px]'}`} />
@@ -537,9 +537,9 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
                           {isOpen && !isEditing && (
                             <div className="flex flex-1 flex-wrap items-center gap-3">
                               {Array.isArray(r.ranges) && r.ranges.map((rg, j) => (
-                                <span key={j} className="inline-flex items-center gap-3 rounded-2xl bg-[#eefaf8] px-4 py-3 text-[15px] font-semibold text-slate-800">
+                                <span key={j} className="inline-flex items-center gap-3 rounded-2xl bg-[#eef1ff] px-4 py-2 text-[12px] font-semibold text-slate-800">
                                   {formatTime12h(rg.start_time)}
-                                  <span className="h-5 w-px bg-[#9be1db]" />
+                                  <span className="h-5 w-px bg-[#c7d0f3]" />
                                   {formatTime12h(rg.end_time)}
                                 </span>
                               ))}
@@ -561,7 +561,7 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
                             {isOpen && rangeCount > 0 && (
                               <button
                                 type="button"
-                                className="inline-flex items-center gap-1.5 rounded-xl px-2.5 py-2 text-sm font-semibold text-[#21b8b0] transition hover:bg-[#ecfbf8]"
+                                className="inline-flex items-center gap-1.5 rounded-xl px-2.5 py-2 text-sm font-semibold text-[#424E82] transition hover:bg-[#eef1ff]"
                                 onClick={(e) => { e.stopPropagation(); openSyncModal(idx); }}
                                 title="Quick Sync to other days"
                               >
