@@ -57,12 +57,7 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
       const dosage = parts[1] || '';
       const duration = parts[2] || '';
       const instruction = parts[3] || '';
-      // Extract common strength formats like "500mg", "120 mg/5 ml", "1 g", "2.5 mg/ml"
-      const strengthRx = /^(.*?)\s+(\d+(?:\.\d+)?\s*(?:mg|mcg|ml|g|iu|%)(?:\s*\/\s*\d+(?:\.\d+)?\s*(?:mg|mcg|ml|g|iu|%))?)\s*$/i;
-      const match = nameStrength.match(strengthRx);
-      return match
-        ? { name: match[1].trim(), strength: match[2].replace(/\s*\/\s*/g, '/').trim(), dosage, duration, instruction }
-        : { name: nameStrength.trim(), strength: '', dosage, duration, instruction };
+      return { name: nameStrength.trim(), strength: '', dosage, duration, instruction };
     });
     return rows.length ? rows : [emptyMedicine()];
   };
@@ -72,12 +67,10 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
     return (meds || []).map(m => {
       const name = String(m.name || '').trim();
       if (!name) return null;
-      const strength = String(m.strength || '').trim();
       const dosage = String(m.dosage || '').trim();
       const duration = String(m.duration || '').trim();
       const instruction = String(m.instruction || '').trim();
       const parts = [name];
-      if (strength) parts.push(strength);
       const details = [];
       if (dosage) details.push(dosage);
       if (duration) details.push(duration);
@@ -103,8 +96,12 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
     if (cached) {
       setMedicineMatchesByRow((prev) => ({ ...prev, [rowIndex]: cached }));
       const exactCached = cached.find((item) => normalizeMedicineName(item.name) === normalized);
-      if (exactCached?.strength) {
-        setMedicines((prev) => prev.map((m, i) => i === rowIndex ? { ...m, strength: exactCached.strength } : m));
+      if (exactCached) {
+        const fullName = [exactCached.name, exactCached.strength]
+          .map((v) => String(v || '').trim())
+          .filter(Boolean)
+          .join(' ');
+        setMedicines((prev) => prev.map((m, i) => i === rowIndex ? { ...m, name: fullName || rawName, strength: '' } : m));
       }
       return;
     }
@@ -133,8 +130,12 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
       medicineMatchCacheRef.current.set(normalized, matches);
       setMedicineMatchesByRow((prev) => ({ ...prev, [rowIndex]: matches }));
       const exact = matches.find((item) => normalizeMedicineName(item.name) === normalized);
-      if (exact?.strength) {
-        setMedicines((prev) => prev.map((m, i) => i === rowIndex ? { ...m, strength: exact.strength } : m));
+      if (exact) {
+        const fullName = [exact.name, exact.strength]
+          .map((v) => String(v || '').trim())
+          .filter(Boolean)
+          .join(' ');
+        setMedicines((prev) => prev.map((m, i) => i === rowIndex ? { ...m, name: fullName || rawName, strength: '' } : m));
       }
     } catch {
       if (medicineQuerySeqRef.current[rowIndex] !== seq) return;
@@ -312,6 +313,8 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
   const [reportText, setReportText] = useState('');
   const [showEditReportModal, setShowEditReportModal] = useState(false);
   const [editingReport, setEditingReport] = useState(null);
+  const [showViewReportModal, setShowViewReportModal] = useState(false);
+  const [viewingReport, setViewingReport] = useState(null);
   const [editReportNote, setEditReportNote] = useState('');
   const [editReportText, setEditReportText] = useState('');
   const [updatingReport, setUpdatingReport] = useState(false);
@@ -450,6 +453,11 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
     setEditReportNote(report?.note || '');
     setEditReportText(report?.report_text || '');
     setShowEditReportModal(true);
+  };
+
+  const openViewReportModal = (report) => {
+    setViewingReport(report || null);
+    setShowViewReportModal(true);
   };
 
   const handleUpdateReport = async (event) => {
@@ -630,6 +638,14 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
             </Link>
             <button
               type="button"
+              onClick={() => setShowReportUploadModal(true)}
+              className="inline-flex items-center gap-2 rounded-lg bg-[#2D3A74] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#243063]"
+            >
+              <Upload className="h-4 w-4" />
+              Upload Report
+            </button>
+            <button
+              type="button"
               onClick={handleDownloadPDF}
               disabled={downloadingPDF}
               className="flex items-center gap-2 rounded-lg border bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 disabled:opacity-50"
@@ -648,20 +664,11 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
           </div>
         </div>
 
+        {(loadingReports || reports.length > 0) && (
         <div className="print:hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-base font-bold text-slate-800">Test Report Upload</h2>
-            <span className="text-xs text-slate-400">Doctor and compounder can upload file or text report</span>
-          </div>
-          <div className="mt-3 flex justify-end">
-            <button
-              type="button"
-              onClick={() => setShowReportUploadModal(true)}
-              className="inline-flex items-center gap-2 rounded-lg bg-[#2D3A74] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#243063]"
-            >
-              <Upload className="h-4 w-4" />
-              Upload Report
-            </button>
+            <span className="text-xs text-slate-400">File, title/note and text report</span>
           </div>
 
           <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200">
@@ -707,15 +714,14 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
                     <td className="px-3 py-2 text-sm text-slate-500">{formatDisplayFromDateLike(report.created_at) || '-'}</td>
                     <td className="px-3 py-2 text-sm">
                       <div className="flex items-center gap-3">
-                        <a
-                          href={report.file_url}
-                          target="_blank"
-                          rel="noreferrer"
+                        <button
+                          type="button"
+                          onClick={() => openViewReportModal(report)}
                           className="inline-flex items-center gap-1 font-semibold text-[#2D3A74] hover:underline"
                         >
                           <FileUp className="h-3.5 w-3.5" />
                           View
-                        </a>
+                        </button>
                         <button
                           type="button"
                           onClick={() => openEditReportModal(report)}
@@ -732,6 +738,73 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
             </table>
           </div>
         </div>
+        )}
+
+        {showViewReportModal && typeof document !== 'undefined' ? createPortal(
+          <div className="fixed inset-0 z-[122] flex items-start justify-center overflow-y-auto bg-[rgba(2,6,23,0.78)] backdrop-blur-sm p-4 pt-6 sm:pt-10 print:hidden">
+            <div className="w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+              <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">
+                <h3 className="text-base font-bold text-slate-800">Report Details</h3>
+                <button
+                  type="button"
+                  onClick={() => setShowViewReportModal(false)}
+                  className="rounded-md border border-slate-200 bg-white p-1.5 text-slate-600 transition hover:bg-slate-50"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="space-y-4 px-5 py-4">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                    <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Title / Note</div>
+                    <div className="mt-1 text-sm text-slate-800">{viewingReport?.note || '-'}</div>
+                  </div>
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                    <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Uploaded</div>
+                    <div className="mt-1 text-sm text-slate-800">{formatDisplayFromDateLike(viewingReport?.created_at) || '-'}</div>
+                  </div>
+                </div>
+
+                <div className="rounded-lg border border-slate-200 bg-white p-3">
+                  <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Report File</div>
+                  <div className="flex flex-wrap items-center gap-2 text-sm text-slate-700">
+                    <span className="font-medium">{viewingReport?.original_name || 'No file'}</span>
+                    <span className="text-slate-400">{formatBytes(viewingReport?.file_size)}</span>
+                    {viewingReport?.file_url ? (
+                      <a
+                        href={viewingReport.file_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-xs font-semibold text-sky-700 hover:bg-sky-100"
+                      >
+                        Open File
+                      </a>
+                    ) : null}
+                  </div>
+                </div>
+
+                <div className="rounded-lg border border-slate-200 bg-white p-3">
+                  <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Text Report</div>
+                  <div className="max-h-[320px] overflow-auto whitespace-pre-wrap rounded border border-slate-100 bg-slate-50 p-3 text-sm text-slate-800">
+                    {String(viewingReport?.report_text || '').trim() || '-'}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end border-t border-slate-100 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowViewReportModal(false)}
+                    className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        ) : null}
 
         {showEditReportModal && typeof document !== 'undefined' ? createPortal(
           <div className="fixed inset-0 z-[121] flex items-start justify-center overflow-y-auto bg-[rgba(2,6,23,0.78)] backdrop-blur-sm p-4 pt-6 sm:pt-10 print:hidden">
@@ -1066,18 +1139,22 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
                   </select>
                 </div>
               )} */}
-                {/* Contact — edit mode only */}
-                {!isPrintMode && (
-                  <div className="flex items-end gap-1.5">
-                    <Phone className="h-3 w-3 shrink-0 text-slate-400 mb-1" />
+                {/* Contact */}
+                <div className="flex items-end gap-1.5">
+                  <Phone className="h-3 w-3 shrink-0 text-slate-400 mb-1" />
+                  {isPrintMode ? (
+                    <span className="w-28 border-b border-slate-400 pb-0.5 text-sm font-semibold text-slate-900">
+                      {form.patient_contact || '\u00a0'}
+                    </span>
+                  ) : (
                     <input
                       className="w-32 border-b border-slate-300 bg-transparent px-0 pb-0.5 text-sm text-slate-900 placeholder-slate-300 focus:border-[#2D3A74] focus:outline-none"
                       value={form.patient_contact || ''}
                       onChange={(e) => handleChange('patient_contact', e.target.value)}
                       placeholder="Contact"
                     />
-                  </div>
-                )}
+                  )}
+                </div>
                 {/* Date — right-aligned */}
 
               </div>
@@ -1191,7 +1268,7 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
                                       handleMedicineChange(idx, 'name', val);
                                       void queryMedicineMatches(val, idx);
                                     }}
-                                    placeholder="Search medicine name"
+                                    placeholder="e.g. Algecal C Plus 100mg+327mg+500mg"
                                   />
                                   {showMedicineMatchDropdown ? (
                                     <div className="absolute left-0 right-0 z-20 mt-1 rounded-md border border-[#c7d6f7] bg-white shadow-lg">
@@ -1202,8 +1279,15 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
                                           className="flex w-full items-center justify-between border-b border-slate-100 px-3 py-2 text-left text-xs last:border-b-0 hover:bg-[#edf2ff]"
                                           onMouseDown={(e) => {
                                             e.preventDefault();
-                                            handleMedicineChange(idx, 'name', med.name);
-                                            if (med.strength) handleMedicineChange(idx, 'strength', med.strength);
+                                            handleMedicineChange(
+                                              idx,
+                                              'name',
+                                              [med.name, med.strength]
+                                                .map((v) => String(v || '').trim())
+                                                .filter(Boolean)
+                                                .join(' '),
+                                            );
+                                            handleMedicineChange(idx, 'strength', '');
                                             setFocusedMedicineIndex(null);
                                           }}
                                         >
@@ -1216,11 +1300,6 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
                                   {/* {normalizedMedicineName && !hasMedicineMatches ? (
                                     <p className="mt-1 text-[11px] font-medium text-amber-700">No medicine match found.</p>
                                   ) : null} */}
-                                  {m.strength ? (
-                                    <div className="mt-1 inline-flex rounded-full border border-[#cddaf7] bg-[#f3f7ff] px-2 py-0.5 text-[11px] font-semibold text-[#3556a6]">
-                                      Strength: {m.strength}
-                                    </div>
-                                  ) : null}
                                 </div>
                                 <input
                                   className="rounded border px-3 py-1.5 text-sm text-slate-900 doc-input-focus"
@@ -1236,30 +1315,15 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
                                 />
                               </div>
                               <div className="medicine-timing mt-0.5 flex min-w-[175px] flex-col gap-1 text-xs text-slate-600 flex-shrink-0">
-                                <span className="font-semibold text-[10px]">Timing</span>
-                                <div className="flex flex-wrap items-center gap-2.5">
-                                  <label className="inline-flex items-center gap-1 cursor-pointer">
-                                    <input type="radio" className="h-3 w-3" value=""
-                                      checked={!m.instruction}
-                                      onChange={() => handleMedicineChange(idx, 'instruction', '')}
-                                    />
-                                    <span>None</span>
-                                  </label>
-                                  <label className="inline-flex items-center gap-1 cursor-pointer">
-                                    <input type="radio" className="h-3 w-3" value="After meal"
-                                      checked={m.instruction === 'After meal'}
-                                      onChange={() => handleMedicineChange(idx, 'instruction', 'After meal')}
-                                    />
-                                    <span>After meal</span>
-                                  </label>
-                                  <label className="inline-flex items-center gap-1 cursor-pointer">
-                                    <input type="radio" className="h-3 w-3" value="Before meal"
-                                      checked={m.instruction === 'Before meal'}
-                                      onChange={() => handleMedicineChange(idx, 'instruction', 'Before meal')}
-                                    />
-                                    <span>Before meal</span>
-                                  </label>
-                                </div>
+                                <select
+                                  className="rounded border border-slate-200 bg-slate-50/50 px-2 py-1 text-xs text-slate-900 doc-input-focus"
+                                  value={m.instruction || ''}
+                                  onChange={(e) => handleMedicineChange(idx, 'instruction', e.target.value)}
+                                >
+                                  <option value="">None</option>
+                                  <option value="After meal">After meal</option>
+                                  <option value="Before meal">Before meal</option>
+                                </select>
                               </div>
                               <button
                                 type="button"
@@ -1439,8 +1503,23 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
           .patient-info-section {
             padding: 8px 32px !important;
           }
+          .patient-info-section > div {
+            display: flex !important;
+            flex-wrap: nowrap !important;
+            align-items: flex-end !important;
+            gap: 12px !important;
+          }
+          .patient-info-section > div > div {
+            min-width: 0 !important;
+            flex: 0 0 auto !important;
+          }
+          .patient-info-section > div > div:first-child {
+            flex: 1 1 auto !important;
+            min-width: 220px !important;
+          }
           .patient-info-section span,
-          .patient-info-section select {
+          .patient-info-section select,
+          .patient-info-section input {
             font-size: 11px !important;
           }
 
@@ -1454,14 +1533,16 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
           .medicine-row {
             padding: 4px 6px !important;
             gap: 6px !important;
-            display: block !important;
+            display: flex !important;
+            align-items: flex-start !important;
           }
 
           .medicine-fields {
             display: grid !important;
-            grid-template-columns: minmax(0, 2fr) repeat(2, minmax(42px, 56px)) !important;
+            grid-template-columns: minmax(0, 2.6fr) repeat(2, minmax(46px, 64px)) !important;
             gap: 4px !important;
             width: 100% !important;
+            flex: 1 1 auto !important;
           }
 
           .medicine-fields .col-span-4 {
@@ -1478,12 +1559,18 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
           .medicine-timing {
             font-size: 9px !important;
             line-height: 1.1 !important;
-            margin-top: 4px !important;
-            display: flex !important;
-            flex-direction: row !important;
-            align-items: center !important;
-            gap: 6px !important;
-            flex-wrap: wrap !important;
+            margin-top: 0 !important;
+            min-width: 90px !important;
+            max-width: 110px !important;
+            flex: 0 0 100px !important;
+          }
+
+          .medicine-timing select {
+            font-size: 10px !important;
+            line-height: 1.1 !important;
+            padding: 2px 4px !important;
+            min-height: 22px !important;
+            width: 100% !important;
           }
 
           .medicine-timing .text-\\[10px\\] {
