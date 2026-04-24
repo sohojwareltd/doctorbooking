@@ -78,16 +78,23 @@
   height: 32px;
   width: 32px;
   margin: 2px;
+  border-radius: 8px;
+  transition: background-color 0.16s ease, color 0.16s ease;
 }
 
 .rdrDayNumber {
   font-size: 13px;
+  position: absolute;
+  top: 5px;
+  bottom: 5px;
+  left: 0;
+  right: 0;
+  z-index: 3;
 }
 
 .rdrDayNumber span {
   color: #334155;
 }
-
 .rdrDayToday .rdrDayNumber span {
   color: #22b8b0;
 }
@@ -121,13 +128,23 @@
 }
 
 .rdrDayStartPreview .rdrDayNumber span,
-.rdrDayEndPreview .rdrDayNumber span,
-.rdrDayInPreview .rdrDayNumber span {
+.rdrDayEndPreview .rdrDayNumber span {
   color: white;
 }
 
+.rdrDayInPreview .rdrDayNumber span {
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.rdrDay:not(.rdrDayPassive):not(.rdrDayDisabled):hover {
+  background: #ecfeff;
+}
+
+.rdrDay:not(.rdrDayPassive):not(.rdrDayDisabled):hover .rdrDayNumber span,
+.rdrDay:not(.rdrDayPassive):not(.rdrDayDisabled).rdrDayHovered .rdrDayNumber span,
 .rdrDayHovered .rdrDayNumber span {
-  color: #22b8b0;
+  color: #0f172a;
   font-weight: 600;
 }
 
