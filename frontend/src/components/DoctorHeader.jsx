@@ -39,10 +39,10 @@ export default function DoctorHeader({ title = '', onMenuClick, collapsed = fals
 
       <div className="flex items-center gap-6">
         {/* Notification Bell */}
-        <button className="text-[#6A6A6A] hover:text-[#2D3A74] transition-colors relative" aria-label="Notifications">
+        {/* <button className="text-[#6A6A6A] hover:text-[#2D3A74] transition-colors relative" aria-label="Notifications">
           <Bell className="h-5 w-5" />
           <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
-        </button>
+        </button> */}
 
         {/* Admin Profile */}
         <div className="relative" ref={dropdownRef}>

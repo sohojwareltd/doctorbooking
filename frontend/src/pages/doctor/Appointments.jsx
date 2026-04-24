@@ -289,6 +289,7 @@ export default function DoctorAppointments() {
   const getPatientPhone = (appointment) => appointment?.patient_phone || appointment?.user?.phone || null;
   const getPatientAge = (appointment) => appointment?.patient_age || appointment?.user?.age || '';
   const getPatientAddress = (appointment) => appointment?.address || appointment?.patient_address || '';
+  const getChamberName = (appointment) => appointment?.chamber_name || appointment?.chamber?.name || 'N/A';
   const getPatientGender = (appointment) => {
     return appointment?.patient_gender || appointment?.user?.gender || '';
   };
@@ -1004,6 +1005,7 @@ export default function DoctorAppointments() {
                   <th className="px-6 py-4 text-center">#</th>
                   <th className="px-6 py-4 text-center">Patient</th>
                   <th className="px-6 py-4 text-center">Phone</th>
+                  <th className="px-6 py-4 text-center">Chamber</th>
                   <th className="px-6 py-4 text-center">Date</th>
                   <th className="px-6 py-4 text-center">Update Status</th>
                   <th className="px-6 py-4 text-center">Action</th>
@@ -1012,7 +1014,7 @@ export default function DoctorAppointments() {
               <tbody className="divide-y divide-slate-100 bg-white">
                 {loading ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-14">
+                    <td colSpan={7} className="px-6 py-14">
                       <div className="flex flex-col items-center justify-center gap-3 text-sm text-slate-500">
                         <Loader2 className="h-6 w-6 animate-spin text-[#2D3A74]" />
                         <span>Loading appointments...</span>
@@ -1048,6 +1050,9 @@ export default function DoctorAppointments() {
                           {renderHighlighted(patientPhone || 'N/A', searchTerm)}
                         </span>
                        
+                      </td>
+                      <td className="px-6 py-4 text-[13px] font-medium text-slate-700 text-center">
+                        {getChamberName(appointment)}
                       </td>
                       <td className="px-6 py-4 text-[13px] font-medium text-slate-700 text-center">
                          <span className="inline-flex flex-col items-center justify-center gap-0.5 leading-tight">
