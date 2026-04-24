@@ -129,18 +129,67 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
     setShowAddUnavailableModal(true);
   };
 
-  const confirmAddUnavailable = () => {
+  const persistSchedule = async (nextUnavailable) => {
+    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    if (!token) {
+      const message = 'Missing CSRF token. Please refresh the page and try again.';
+      toastError(message);
+      return { ok: false };
+    }
+
+    const res = await fetch('/doctor/schedule', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-CSRF-TOKEN': token,
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({
+        chamber_id: current_chamber_id ?? null,
+        schedule: rows,
+        unavailable_ranges: nextUnavailable,
+      }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      toastError(data?.message || 'Failed to save schedule.');
+      return { ok: false, data };
+    }
+
+    return { ok: true, data };
+  };
+
+  const confirmAddUnavailable = async () => {
     const start_date = dateToISOString(newUnavailableSelection.startDate);
     const end_date = dateToISOString(newUnavailableSelection.endDate);
     if (!start_date || !end_date) return;
 
     const nextIndex = Array.isArray(unavailable) ? unavailable.length : 0;
-    setUnavailable((prev) => [
-      ...(Array.isArray(prev) ? prev : []),
+    const nextUnavailable = [
+      ...(Array.isArray(unavailable) ? unavailable : []),
       { title: String(newUnavailableTitle || '').trim(), start_date, end_date },
-    ]);
-    setShowAddUnavailableModal(false);
-    setHighlightUnavailableIndex(nextIndex);
+    ];
+
+    setSaving(true);
+    try {
+      const result = await persistSchedule(nextUnavailable);
+      if (!result.ok) return;
+
+      setUnavailable(nextUnavailable);
+      toastSuccess(result.data?.message || 'Unavailable range added.');
+      if (result.data?.warning) {
+        toastWarning(result.data.warning);
+      }
+      setShowAddUnavailableModal(false);
+      setHighlightUnavailableIndex(nextIndex);
+    } catch {
+      toastError('Network error. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const updateUnavailable = (idx, patch) => {
@@ -191,39 +240,14 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
     setSaving(true);
 
     try {
-      const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-      if (!token) {
-        const message = 'Missing CSRF token. Please refresh the page and try again.';
-        toastError(message);
-        return;
-      }
-      const res = await fetch('/doctor/schedule', {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Requested-With': 'XMLHttpRequest',
-          'X-CSRF-TOKEN': token,
-          Accept: 'application/json',
-        },
-        body: JSON.stringify({
-          chamber_id: current_chamber_id ?? null,
-          schedule: rows,
-          unavailable_ranges: unavailable,
-        }),
-      });
-
-      if (res.ok) {
-        const data = await res.json().catch(() => ({}));
+      const result = await persistSchedule(unavailable);
+      if (result.ok) {
+        const data = result.data || {};
         const successMessage = data?.message || 'Schedule saved.';
         toastSuccess(successMessage);
         if (data?.warning) {
           toastWarning(data.warning);
         }
-      } else {
-        const data = await res.json().catch(() => ({}));
-        const msg = data?.message || 'Failed to save schedule.';
-        toastError(msg);
       }
     } catch {
       const message = 'Network error. Please try again.';
@@ -830,7 +854,7 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
                   type="text"
                   value={newUnavailableTitle}
                   onChange={(e) => setNewUnavailableTitle(e.target.value)}
-                  placeholder="Blocked Period"
+                  placeholder="Casual Leave, Vacation, etc."
                   className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:border-slate-400 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
                 />
               </div>

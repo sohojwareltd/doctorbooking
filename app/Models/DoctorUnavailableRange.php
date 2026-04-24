@@ -9,6 +9,7 @@ class DoctorUnavailableRange extends Model
 {
     protected $fillable = [
         'doctor_id',
+        'title',
         'start_date',
         'end_date',
     ];

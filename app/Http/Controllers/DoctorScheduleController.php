@@ -96,8 +96,9 @@ class DoctorScheduleController extends Controller
         $unavailableRanges = DoctorUnavailableRange::where('doctor_id', $doctor->doctorId())
             ->orderBy('start_date')
             ->orderBy('end_date')
-            ->get(['start_date', 'end_date'])
+            ->get(['title', 'start_date', 'end_date'])
             ->map(fn ($r) => [
+                'title' => (string) ($r->title ?? ''),
                 'start_date' => $r->start_date?->toDateString(),
                 'end_date' => $r->end_date?->toDateString(),
             ])
@@ -126,6 +127,7 @@ class DoctorScheduleController extends Controller
             'schedule.*.ranges.*.end_time' => ['required_with:schedule.*.ranges', 'date_format:H:i'],
 
             'unavailable_ranges' => ['nullable', 'array'],
+            'unavailable_ranges.*.title' => ['nullable', 'string', 'max:255'],
             'unavailable_ranges.*.start_date' => ['required_with:unavailable_ranges', 'date_format:Y-m-d'],
             'unavailable_ranges.*.end_date' => ['required_with:unavailable_ranges', 'date_format:Y-m-d'],
         ]);
@@ -244,6 +246,7 @@ class DoctorScheduleController extends Controller
         foreach ($incomingUnavailable as $range) {
             DoctorUnavailableRange::create([
                 'doctor_id' => $doctor->doctorId(),
+                'title' => isset($range['title']) ? trim((string) $range['title']) : '',
                 'start_date' => $range['start_date'],
                 'end_date' => $range['end_date'],
             ]);
