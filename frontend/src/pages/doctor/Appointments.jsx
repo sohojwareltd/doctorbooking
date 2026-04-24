@@ -906,7 +906,12 @@ export default function DoctorAppointments() {
                       <GenderIconAvatar gender={getPatientGender(appointment)} />
                       <div>
                         <div className="text-sm font-semibold text-slate-900 leading-tight">{renderHighlighted(getPatientName(appointment), searchTerm)}</div>
+                        <div className="mt-0.5 inline-flex items-center gap-1.5 text-xs text-slate-500">
+                          {/* <Phone className="h-3.5 w-3.5 text-slate-400" /> */}
+                          {renderHighlighted(patientPhone || 'N/A', searchTerm)}
+                        </div>
                         <div className="mt-0.5 text-xs text-slate-500">{formatAgeGender(appointment)}</div>
+
                       </div>
                     </div>
                     <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-slate-500">#{appointment.id}</span>
@@ -914,13 +919,10 @@ export default function DoctorAppointments() {
 
                   <div className="rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2">
                     <div className="flex items-center justify-between gap-2 text-xs text-slate-600">
-                      <span className="inline-flex items-center gap-1.5">
-                        <Phone className="h-3.5 w-3.5 text-slate-400" />
-                        {renderHighlighted(patientPhone || 'N/A', searchTerm)}
-                      </span>
+                      <span />
                       <span className="inline-flex flex-col items-end leading-tight text-slate-500">
                         <span className="inline-flex items-center gap-1.5">
-                        <Calendar className="h-3.5 w-3.5 text-slate-400" />
+                          <Calendar className="h-3.5 w-3.5 text-slate-400" />
                           {(formatDisplayDateWithYearFromDateLike(appointment.appointment_date) || appointment.appointment_date)}
                         </span>
                         <span className="text-[11px] font-medium">{appointmentTimeLabel}</span>
@@ -1004,7 +1006,6 @@ export default function DoctorAppointments() {
                 <tr>
                   <th className="px-6 py-4 text-center">#</th>
                   <th className="px-6 py-4 text-center">Patient</th>
-                  <th className="px-6 py-4 text-center">Phone</th>
                   <th className="px-6 py-4 text-center">Chamber</th>
                   <th className="px-6 py-4 text-center">Date</th>
                   <th className="px-6 py-4 text-center">Update Status</th>
@@ -1014,7 +1015,7 @@ export default function DoctorAppointments() {
               <tbody className="divide-y divide-slate-100 bg-white">
                 {loading ? (
                   <tr>
-                    <td colSpan={7} className="px-6 py-14">
+                    <td colSpan={6} className="px-6 py-14">
                       <div className="flex flex-col items-center justify-center gap-3 text-sm text-slate-500">
                         <Loader2 className="h-6 w-6 animate-spin text-[#2D3A74]" />
                         <span>Loading appointments...</span>
@@ -1039,30 +1040,27 @@ export default function DoctorAppointments() {
                           <GenderIconAvatar gender={getPatientGender(appointment)} />
                           <div>
                             <div className="font-semibold text-slate-900">{renderHighlighted(getPatientName(appointment), searchTerm)}</div>
+
+                            <div className="mt-0.5 inline-flex items-center gap-1.5 text-xs font-medium text-slate-500">
+                              {/* <Phone className="h-3.5 w-3.5 text-slate-400" /> */}
+                              {renderHighlighted(patientPhone || 'N/A', searchTerm)}
+                            </div>
                             <div className="mt-0.5 text-xs font-medium text-slate-500">{formatAgeGender(appointment)}</div>
-                            
                           </div>
                         </div>
-                      </td>
-                      <td className="px-6 py-4 text-[13px] font-medium text-slate-700 text-center">
-                        <span className="inline-flex items-center justify-center gap-1.5">
-                          <Phone className="h-3.5 w-3.5 text-slate-400" />
-                          {renderHighlighted(patientPhone || 'N/A', searchTerm)}
-                        </span>
-                       
                       </td>
                       <td className="px-6 py-4 text-[13px] font-medium text-slate-700 text-center">
                         {getChamberName(appointment)}
                       </td>
                       <td className="px-6 py-4 text-[13px] font-medium text-slate-700 text-center">
-                         <span className="inline-flex flex-col items-center justify-center gap-0.5 leading-tight">
+                        <span className="inline-flex flex-col items-center justify-center gap-0.5 leading-tight">
                           <span className="inline-flex items-center justify-center gap-1.5">
-                          <Calendar className="h-[18px] w-[18px] text-slate-600" />
+                            <Calendar className="h-[18px] w-[18px] text-slate-600" />
                             {(formatDisplayDateWithYearFromDateLike(appointment.appointment_date) || appointment.appointment_date)}
                           </span>
                           <span className="text-xs text-slate-500">{appointmentTimeLabel}</span>
                         </span>
-                       
+
                       </td>
                       <td className="px-6 py-4 text-center">
                         <select
@@ -1179,8 +1177,8 @@ export default function DoctorAppointments() {
                     type="button"
                     onClick={() => setCurrentPage(page)}
                     className={`min-w-8 rounded-lg px-2.5 py-1.5 text-sm font-semibold transition ${page === safeCurrentPage
-                        ? 'bg-[#2D3A74] text-white shadow-sm'
-                        : 'border border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-100'
+                      ? 'bg-[#2D3A74] text-white shadow-sm'
+                      : 'border border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-100'
                       }`}
                   >
                     {page}
@@ -1327,8 +1325,8 @@ export default function DoctorAppointments() {
                     setApptForm((prev) => ({ ...prev, patient_name: '', patient_phone: '', patient_age: '', patient_gender: '' }));
                   }}
                   className={`flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2.5 text-xs font-semibold transition ${apptMode === value
-                      ? 'border-[#2D3A74] bg-[#2D3A74] text-white'
-                      : 'border-slate-200 bg-white text-slate-600 hover:border-[#2D3A74]/30 hover:bg-slate-50'
+                    ? 'border-[#2D3A74] bg-[#2D3A74] text-white'
+                    : 'border-slate-200 bg-white text-slate-600 hover:border-[#2D3A74]/30 hover:bg-slate-50'
                     }`}
                 >
                   <ModeIcon className="h-3.5 w-3.5" />
