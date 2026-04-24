@@ -1,5 +1,5 @@
 import { Head, Link } from '@inertiajs/react';
-import { ArrowRight, Mail, MapPin, Phone } from 'lucide-react';
+import { ArrowRight, Clock3, Mail, MapPin, Phone, ShieldCheck } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import HeroSection from '../components/sections/HeroSection';
 
@@ -234,80 +234,92 @@ export default function Welcome({ home, doctor, chambers = [] }) {
                     </div>
                 </section>
 
-                <section id="about" className="px-4 pb-10">
-                    <div className="mx-auto max-w-6xl rounded-[32px]  sm:p-10 lg:p-12">
-                        <div className="mb-8">
-                            <div className="inline-flex items-center rounded-full border border-[#dce7e3] bg-[#f9fbfa] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#115e59]">
-                                About Us
-                            </div>
-                        </div>
-
-                        <div className="grid gap-8 lg:grid-cols-[minmax(0,1.22fr)_minmax(280px,0.78fr)] lg:items-start">
-                            <div className="space-y-6">
-                                <div>
-                                    {/* <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#115e59]">
-                                        Portfolio profile
-                                    </div> */}
-                                    <h2 className="max-w-2xl text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl lg:text-[2.85rem]">
-                                        {doctorName}
-                                    </h2>
-                                    <p className="mt-3 text-base font-medium text-[#115e59]">{doctorTitle}</p>
-                                    <p className="mt-5 max-w-3xl text-sm font-medium uppercase tracking-[0.18em] text-slate-400">
-                                        {aboutSubtitle}
-                                    </p>
-                                    <div className="mt-5 max-w-3xl space-y-4 text-base leading-8 text-slate-600">
-                                        {aboutParagraphs.map((paragraph, index) => (
-                                            <p key={`${paragraph}-${index}`}>{paragraph}</p>
-                                        ))}
-                                    </div>
+                <section id="about" className="px-4 pb-12 sm:px-6 lg:px-8 lg:pb-16">
+                    <div className="mx-auto max-w-6xl rounded-[36px] border border-[#e6ece9] bg-[#fbfcfb] p-5 shadow-[0_22px_60px_rgba(15,23,42,0.06)] sm:p-8 lg:p-10">
+                        <div className="grid gap-7 lg:grid-cols-[minmax(0,1.7fr)_minmax(300px,0.9fr)] lg:items-stretch">
+                            <div className="">
+                                <div className="inline-flex items-center rounded-full border border-[#dce7e3] bg-[#f4f9f7] px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#4f716e]">
+                                    Contact
                                 </div>
+                                <h2 className="mt-5 text-3xl font-semibold tracking-tight text-[#1e2b42] sm:text-4xl lg:text-[35px]">Get In Touch</h2>
+                                <p className="mt-3 max-w-xl text-base leading-7 text-slate-500">
+                                    We&apos;re here to help. Reach out for appointments, inquiries,
+                                    or any assistance you need.
+                                </p>
 
-                                <div className="space-y-5 ">
-                                   
-
-                                    {credentialLines.length ? (
-                                        <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-slate-700">
-                                            {credentialLines.map((item) => (
-                                                <div key={item} className="inline-flex items-center gap-2">
-                                                    <span className="h-1.5 w-1.5 rounded-full bg-[#115e59]" />
-                                                    <span>{item}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : null}
-                                </div>
-
-                                {aboutStats.length ? (
-                                    <div className="grid gap-4 border-t border-[#e7eeeb] pt-5 sm:grid-cols-2">
-                                        {aboutStats.map((item) => (
-                                            <div key={item.label} className="grid gap-1">
-                                                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                                                    {item.label}
-                                                </div>
-                                                <div className="text-sm leading-7 text-slate-700">
-                                                    {item.value}
-                                                </div>
+                                <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(210px,0.9fr)_minmax(0,1.4fr)] lg:gap-7">
+                                    <div className="space-y-6">
+                                        <div className="flex items-start gap-4">
+                                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#edf6f2] text-[#2f7f79]">
+                                                <Phone className="h-5 w-5" />
                                             </div>
-                                        ))}
-                                    </div>
-                                ) : null}
-
-                                <div className="grid gap-4 border-t border-[#e7eeeb] pt-5 sm:grid-cols-2">
-                                    {profileDetails.map((item) => (
-                                        <div key={item.label} className="grid gap-1">
-                                            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                                                {item.label}
-                                            </div>
-                                            <div className="text-sm leading-7 text-slate-700">
-                                                {item.value}
+                                            <div>
+                                                <div className="text-base font-semibold text-slate-700">Phone</div>
+                                                <div className="mt-1 text-sm text-slate-600">{doctor?.phone || '+880 1712-345678'}</div>
+                                                <div className="mt-1 text-sm text-slate-500">9:00 AM - 8:00 PM (Sat - Thu)</div>
                                             </div>
                                         </div>
-                                    ))}
+
+                                        <div className="flex items-start gap-4">
+                                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#edf6f2] text-[#2f7f79]">
+                                                <Mail className="h-5 w-5" />
+                                            </div>
+                                            <div>
+                                                <div className="text-base font-semibold text-slate-700">Email</div>
+                                                <div className="mt-1 text-sm text-slate-600">{doctor?.email || 'doctor@example.com'}</div>
+                                                <div className="mt-1 text-sm text-slate-500">We&apos;ll respond within 24 hours</div>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-start gap-4">
+                                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#edf6f2] text-[#2f7f79]">
+                                                <MapPin className="h-5 w-5" />
+                                            </div>
+                                            <div>
+                                                <div className="text-base font-semibold text-slate-700">Head Office</div>
+                                                <div className="mt-1 text-sm leading-7 text-slate-600">
+                                                    {chamberCards[0]?.location || '123 Main Street, Demo Clinic, Dhaka, Bangladesh'}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-start gap-4">
+                                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#edf6f2] text-[#2f7f79]">
+                                                <Clock3 className="h-5 w-5" />
+                                            </div>
+                                            <div>
+                                                <div className="text-base font-semibold text-slate-700">Chamber Hours</div>
+                                                <div className="mt-1 text-sm text-slate-600">Sat - Thu: 4:00 PM - 9:00 PM</div>
+                                                <div className="mt-1 text-sm text-slate-600">Friday: Closed</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="rounded-[24px] border border-[#e6ece9] bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.05)] sm:p-5">
+                                        <h3 className="text-2xl font-semibold tracking-tight text-[#2a3446] sm:text-[28px]">Send a Message</h3>
+                                        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                                            <input type="text" placeholder="Full Name" className="h-11 rounded-xl border border-[#dfe7e3] bg-white px-4 text-[15px] text-slate-700 placeholder:text-slate-400 focus:border-[#b8cbc4] focus:outline-none" />
+                                            <input type="text" placeholder="Phone Number" className="h-11 rounded-xl border border-[#dfe7e3] bg-white px-4 text-[15px] text-slate-700 placeholder:text-slate-400 focus:border-[#b8cbc4] focus:outline-none" />
+                                        </div>
+                                        <div className="mt-3 space-y-3">
+                                            <input type="email" placeholder="Email Address" className="h-11 w-full rounded-xl border border-[#dfe7e3] bg-white px-4 text-[15px] text-slate-700 placeholder:text-slate-400 focus:border-[#b8cbc4] focus:outline-none" />
+                                            <input type="text" placeholder="Subject" className="h-11 w-full rounded-xl border border-[#dfe7e3] bg-white px-4 text-[15px] text-slate-700 placeholder:text-slate-400 focus:border-[#b8cbc4] focus:outline-none" />
+                                            <textarea placeholder="Message" rows={4} className="w-full resize-none rounded-xl border border-[#dfe7e3] bg-white px-4 py-3 text-[15px] text-slate-700 placeholder:text-slate-400 focus:border-[#b8cbc4] focus:outline-none" />
+                                        </div>
+                                        <button type="button" className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#bbf53d] px-4 text-sm font-semibold text-[#2a3a24] transition hover:brightness-95">
+                                            Send Message
+                                            <ArrowRight className="h-4 w-4" />
+                                        </button>
+                                        <div className="mt-3 inline-flex items-center gap-2 text-[13px] text-slate-500">
+                                            <ShieldCheck className="h-4 w-4 text-[#2f7f79]" />
+                                            Your information is safe and secure.
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="overflow-hidden rounded-[28px] border border-[#e1eae7] bg-[#f8fbfa] lg:sticky lg:top-24">
-                                <div className="flex aspect-[4/5] items-center justify-center overflow-hidden bg-[#f3f8f6]">
+                            <div className="overflow-hidden rounded-[28px] border border-[#dce4e0] bg-[#f3f8f6]">
+                                <div className="relative h-full min-h-[540px]">
                                     {profileImageUrl ? (
                                         <img
                                             src={profileImageUrl}
@@ -315,15 +327,28 @@ export default function Welcome({ home, doctor, chambers = [] }) {
                                             className="h-full w-full object-cover"
                                         />
                                     ) : (
-                                        <div className="flex h-full w-full items-center justify-center text-5xl font-semibold tracking-tight text-[#123c46]">
+                                        <div className="flex h-full w-full items-center justify-center bg-[#e7f0ed] text-5xl font-semibold tracking-tight text-[#123c46]">
                                             {doctorInitials}
                                         </div>
                                     )}
+                                    <div className="absolute inset-x-4 bottom-4 rounded-[18px] border border-white/20 bg-[linear-gradient(135deg,rgba(23,52,64,0.92)_0%,rgba(21,61,75,0.88)_100%)] p-5 text-white shadow-xl">
+                                        <div className="text-2xl font-semibold">Book Your Consultation</div>
+                                        <p className="mt-2 text-base leading-6 text-white/85">
+                                            Appointments available at
+                                            {' '}
+                                            {chamberCount}
+                                            {' '}
+                                            active chambers.
+                                        </p>
+                                        <Link
+                                            href="/book-appointment"
+                                            className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#bbf53d] px-4 text-sm font-semibold text-[#2a3a24] transition hover:brightness-95"
+                                        >
+                                            Book Appointment
+                                            <ArrowRight className="h-4 w-4" />
+                                        </Link>
+                                    </div>
                                 </div>
-                                {/* <div className="border-t border-[#e1eae7] px-5 py-4">
-                                    <div className="text-sm font-semibold text-slate-900">{doctorName}</div>
-                                    <div className="mt-1 text-sm text-slate-600">{doctorTitle}</div>
-                                </div> */}
                             </div>
                         </div>
                     </div>
