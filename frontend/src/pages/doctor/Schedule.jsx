@@ -192,8 +192,25 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
     }
   };
 
-  const removeUnavailable = (idx) => {
-    setUnavailable((prev) => (Array.isArray(prev) ? prev.filter((_, i) => i !== idx) : prev));
+  const removeUnavailable = async (idx) => {
+    const current = Array.isArray(unavailable) ? unavailable : [];
+    const nextUnavailable = current.filter((_, i) => i !== idx);
+
+    setSaving(true);
+    try {
+      const result = await persistSchedule(nextUnavailable);
+      if (!result.ok) return;
+
+      setUnavailable(nextUnavailable);
+      toastSuccess('Unavailable date range deleted successfully.');
+      if (result.data?.warning) {
+        toastWarning(result.data.warning);
+      }
+    } catch {
+      toastError('Network error. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const openEditUnavailableModal = (idx) => {
@@ -704,7 +721,10 @@ export default function DoctorSchedule({ schedule = [], unavailable_ranges = [],
                                   <button
                                     type="button"
                                     className="rounded-xl border border-slate-200 p-2 text-rose-300 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-500"
-                                    onClick={() => removeUnavailable(idx)}
+                                    onClick={() => {
+                                      void removeUnavailable(idx);
+                                    }}
+                                    disabled={saving}
                                     title="Remove"
                                   >
                                     <Trash2 className="h-3.5 w-3.5" />

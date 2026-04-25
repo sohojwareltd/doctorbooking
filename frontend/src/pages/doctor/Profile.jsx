@@ -13,6 +13,9 @@ import {
     Trash2,
     Upload,
     User,
+    KeyRound,
+    Eye,
+    EyeOff,
     X,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
@@ -56,6 +59,24 @@ export default function DoctorProfile({ doctor = {} }) {
         about_stats_patient_satisfaction: doctor.about_stats_patient_satisfaction || '',
         about_stats_medical_cases: doctor.about_stats_medical_cases || '',
     });
+    const {
+        data: passwordData,
+        setData: setPasswordData,
+        put: putPassword,
+        processing: passwordProcessing,
+        errors: passwordErrors,
+        reset: resetPasswordForm,
+    } = useForm({
+        current_password: '',
+        password: '',
+        password_confirmation: '',
+    });
+    const [passwordSaved, setPasswordSaved] = useState(false);
+    const [showPasswords, setShowPasswords] = useState({
+        current_password: false,
+        password: false,
+        password_confirmation: false,
+    });
 
     useEffect(() => {
         if (flash?.success) {
@@ -82,6 +103,27 @@ export default function DoctorProfile({ doctor = {} }) {
                 toastError('Failed to update profile. Please check the form.');
             },
         });
+    };
+
+    const handlePasswordSubmit = (e) => {
+        e.preventDefault();
+        setPasswordSaved(false);
+
+        putPassword('/settings/password', {
+            preserveScroll: true,
+            onSuccess: () => {
+                resetPasswordForm();
+                setPasswordSaved(true);
+                toastSuccess('Password changed successfully.');
+            },
+            onError: () => {
+                toastError('Failed to change password. Please check the form.');
+            },
+        });
+    };
+
+    const togglePasswordVisibility = (key) => {
+        setShowPasswords((prev) => ({ ...prev, [key]: !prev[key] }));
     };
 
     const handlePhotoSelect = (e) => {
@@ -891,6 +933,105 @@ export default function DoctorProfile({ doctor = {} }) {
                     >
                         <Save className="h-5 w-5" />
                         {processing ? 'Saving...' : 'Save Profile'}
+                    </button>
+                </div>
+            </form>
+
+            <form onSubmit={handlePasswordSubmit} className="surface-card rounded-3xl border border-slate-200 p-7 shadow-sm">
+                <div className="mb-6 flex items-center gap-3">
+                    <div className="rounded-xl bg-[#edf1fb] p-3">
+                        <KeyRound className="h-6 w-6 text-[#3556a6]" />
+                    </div>
+                    <div>
+                        <h2 className="text-lg font-semibold text-slate-800">Change Password</h2>
+                        <p className="text-sm text-slate-500">Update your account password securely.</p>
+                    </div>
+                </div>
+
+                <div className="grid gap-5 md:grid-cols-3">
+                    <div>
+                        <label className={labelClass}>Current Password</label>
+                        <div className="relative">
+                            <input
+                                type={showPasswords.current_password ? 'text' : 'password'}
+                                className={`${inputClass} pr-11`}
+                                value={passwordData.current_password}
+                                onChange={(e) => setPasswordData('current_password', e.target.value)}
+                                autoComplete="current-password"
+                                required
+                            />
+                            <button
+                                type="button"
+                                onClick={() => togglePasswordVisibility('current_password')}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700"
+                                aria-label={showPasswords.current_password ? 'Hide current password' : 'Show current password'}
+                            >
+                                {showPasswords.current_password ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </button>
+                        </div>
+                        {passwordErrors.current_password && <p className={errorClass}>{passwordErrors.current_password}</p>}
+                    </div>
+
+                    <div>
+                        <label className={labelClass}>New Password</label>
+                        <div className="relative">
+                            <input
+                                type={showPasswords.password ? 'text' : 'password'}
+                                className={`${inputClass} pr-11`}
+                                value={passwordData.password}
+                                onChange={(e) => setPasswordData('password', e.target.value)}
+                                autoComplete="new-password"
+                                required
+                            />
+                            <button
+                                type="button"
+                                onClick={() => togglePasswordVisibility('password')}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700"
+                                aria-label={showPasswords.password ? 'Hide new password' : 'Show new password'}
+                            >
+                                {showPasswords.password ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </button>
+                        </div>
+                        {passwordErrors.password && <p className={errorClass}>{passwordErrors.password}</p>}
+                    </div>
+
+                    <div>
+                        <label className={labelClass}>Confirm New Password</label>
+                        <div className="relative">
+                            <input
+                                type={showPasswords.password_confirmation ? 'text' : 'password'}
+                                className={`${inputClass} pr-11`}
+                                value={passwordData.password_confirmation}
+                                onChange={(e) => setPasswordData('password_confirmation', e.target.value)}
+                                autoComplete="new-password"
+                                required
+                            />
+                            <button
+                                type="button"
+                                onClick={() => togglePasswordVisibility('password_confirmation')}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700"
+                                aria-label={showPasswords.password_confirmation ? 'Hide password confirmation' : 'Show password confirmation'}
+                            >
+                                {showPasswords.password_confirmation ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {passwordSaved && (
+                    <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
+                        Password changed successfully.
+                    </div>
+                )}
+
+                <div className="mt-5 flex justify-end">
+                    <button
+                        type="submit"
+                        disabled={passwordProcessing}
+                        className="flex items-center gap-3 rounded-xl bg-[#3556a6] px-8 py-3.5 font-semibold text-white shadow-sm transition hover:bg-[#2a488f] disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        <KeyRound className="h-5 w-5" />
+                        {passwordProcessing ? 'Changing...' : 'Change Password'}
                     </button>
                 </div>
             </form>

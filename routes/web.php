@@ -35,7 +35,7 @@ Route::middleware('auth')->get('/user/booking-profile', [\App\Http\Controllers\A
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth', 'verified'])->get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+Route::middleware(['auth'])->get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
 /*
 |--------------------------------------------------------------------------
@@ -43,7 +43,7 @@ Route::middleware(['auth', 'verified'])->get('/dashboard', [DashboardController:
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth', 'verified', 'role:patient'])
+Route::middleware(['auth', 'role:patient'])
     ->prefix('patient')
     ->name('patient.')
     ->group(function () {
@@ -69,7 +69,7 @@ Route::middleware(['auth', 'role:patient'])
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth', 'verified', 'role:doctor,compounder'])
+Route::middleware(['auth', 'role:doctor,compounder'])
     ->prefix('doctor')
     ->name('doctor.')
     ->group(function () {
@@ -117,7 +117,7 @@ Route::middleware(['auth', 'verified', 'role:doctor,compounder'])
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth', 'verified', 'role:doctor'])
+Route::middleware(['auth', 'role:doctor'])
     ->prefix('doctor')
     ->name('doctor.')
     ->group(function () {
@@ -135,7 +135,7 @@ Route::middleware(['auth', 'verified', 'role:doctor'])
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth', 'verified', 'role:patient'])
+Route::middleware(['auth', 'role:patient'])
     ->prefix('user')
     ->name('user.')
     ->group(function () {

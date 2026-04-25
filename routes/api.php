@@ -4,7 +4,6 @@ use App\Http\Controllers\Admin\SiteContentController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CompoundController;
 use App\Http\Controllers\Api\DoctorController;
-use App\Http\Controllers\Api\EmailVerificationController;
 use App\Http\Controllers\Api\PatientController;
 use App\Http\Controllers\Api\PrescriptionController as ApiPrescriptionController;
 use App\Http\Controllers\Api\PublicController;
@@ -22,14 +21,10 @@ Route::prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:password-reset');
     Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:password-reset');
-    Route::get('/email/verify/{id}/{hash}', EmailVerificationController::class)
-        ->middleware(['signed', 'throttle:6,1'])
-        ->name('api.verification.verify');
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/me', [AuthController::class, 'me']);
         Route::post('/logout', [AuthController::class, 'logout']);
-        Route::post('/email/resend', [AuthController::class, 'resendVerificationEmail'])->middleware('throttle:6,1');
     });
 });
 

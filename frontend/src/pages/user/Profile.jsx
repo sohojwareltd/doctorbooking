@@ -1,14 +1,12 @@
-import { usePage, Link } from '@inertiajs/react';
-import { useEffect, useState } from 'react';
+import { Link } from '@inertiajs/react';
+import { useState } from 'react';
 import {
   User, Mail, Phone, Calendar, Weight, MapPin,
-  CheckCircle, Save, ArrowRight, Sparkles,
+  CheckCircle, Save, ArrowRight, Sparkles, KeyRound, Eye, EyeOff,
 } from 'lucide-react';
 import UserLayout from '../../layouts/UserLayout';
 
 export default function Profile({ userData = {}, profile = null, isSetup = false }) {
-  const { auth } = usePage().props;
-
   const [form, setForm] = useState({
     name:          userData.name          ?? '',
     phone:         userData.phone         ?? '',
@@ -21,8 +19,25 @@ export default function Profile({ userData = {}, profile = null, isSetup = false
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
+  const [passwordForm, setPasswordForm] = useState({
+    current_password: '',
+    password: '',
+    password_confirmation: '',
+  });
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [passwordSaved, setPasswordSaved] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const [showPasswords, setShowPasswords] = useState({
+    current_password: false,
+    password: false,
+    password_confirmation: false,
+  });
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
+  const setPassword = (key) => (e) => setPasswordForm((f) => ({ ...f, [key]: e.target.value }));
+  const togglePasswordVisibility = (key) => {
+    setShowPasswords((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
 
   // Read the freshest CSRF token — prefer the XSRF-TOKEN cookie (always current,
   // even after Inertia client-side navigations) and fall back to the meta tag.
@@ -67,6 +82,45 @@ export default function Profile({ userData = {}, profile = null, isSetup = false
       setError('Network error. Please try again.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handlePasswordSubmit = async (e) => {
+    e.preventDefault();
+    setPasswordSaving(true);
+    setPasswordSaved(false);
+    setPasswordError('');
+
+    try {
+      const res = await fetch('/settings/password', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          'X-XSRF-TOKEN': getCsrfToken(),
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify(passwordForm),
+      });
+
+      if (res.ok) {
+        setPasswordSaved(true);
+        setPasswordForm({
+          current_password: '',
+          password: '',
+          password_confirmation: '',
+        });
+      } else {
+        const data = await res.json().catch(() => ({}));
+        const firstValidationError = data?.errors
+          ? Object.values(data.errors)[0]?.[0]
+          : null;
+        setPasswordError(firstValidationError || data.message || 'Failed to change password. Please try again.');
+      }
+    } catch {
+      setPasswordError('Network error. Please try again.');
+    } finally {
+      setPasswordSaving(false);
     }
   };
 
@@ -325,6 +379,104 @@ export default function Profile({ userData = {}, profile = null, isSetup = false
           </div>
         </div>
 
+      </form>
+
+      <form onSubmit={handlePasswordSubmit} className="surface-card rounded-3xl p-6">
+        <h2 className="text-base font-semibold text-[#2D3A74] mb-5 flex items-center gap-2">
+          <KeyRound className="h-4 w-4 text-[#4055A8]" />
+          Change Password
+        </h2>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <label className={labelClass}>Current Password</label>
+            <div className="relative">
+              <input
+                type={showPasswords.current_password ? 'text' : 'password'}
+                value={passwordForm.current_password}
+                onChange={setPassword('current_password')}
+                className={`${inputClass} pr-11`}
+                autoComplete="current-password"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => togglePasswordVisibility('current_password')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700"
+                aria-label={showPasswords.current_password ? 'Hide current password' : 'Show current password'}
+              >
+                {showPasswords.current_password ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className={labelClass}>New Password</label>
+            <div className="relative">
+              <input
+                type={showPasswords.password ? 'text' : 'password'}
+                value={passwordForm.password}
+                onChange={setPassword('password')}
+                className={`${inputClass} pr-11`}
+                autoComplete="new-password"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => togglePasswordVisibility('password')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700"
+                aria-label={showPasswords.password ? 'Hide new password' : 'Show new password'}
+              >
+                {showPasswords.password ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className={labelClass}>Confirm New Password</label>
+            <div className="relative">
+              <input
+                type={showPasswords.password_confirmation ? 'text' : 'password'}
+                value={passwordForm.password_confirmation}
+                onChange={setPassword('password_confirmation')}
+                className={`${inputClass} pr-11`}
+                autoComplete="new-password"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => togglePasswordVisibility('password_confirmation')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700"
+                aria-label={showPasswords.password_confirmation ? 'Hide password confirmation' : 'Show password confirmation'}
+              >
+                {showPasswords.password_confirmation ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {passwordError && (
+          <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+            {passwordError}
+          </div>
+        )}
+
+        {passwordSaved && (
+          <div className="mt-4 flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
+            <CheckCircle className="h-4 w-4 flex-shrink-0" />
+            Password changed successfully.
+          </div>
+        )}
+
+        <div className="mt-4 flex justify-end">
+          <button
+            type="submit"
+            disabled={passwordSaving}
+            className="inline-flex items-center gap-2 rounded-xl bg-[#2D3A74] px-6 py-2.5 text-sm font-semibold text-white hover:bg-[#1e2a5a] disabled:opacity-60 transition"
+          >
+            {passwordSaving ? 'Changing...' : 'Change Password'}
+          </button>
+        </div>
       </form>
     </div>
   );
