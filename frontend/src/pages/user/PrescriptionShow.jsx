@@ -625,9 +625,9 @@ export default function UserPrescriptionShow({ prescription = {}, doctorInfo = {
                                   <div className="col-span-2 rounded border border-slate-200 bg-slate-50/50 px-3 py-1.5 text-sm text-slate-900 font-medium">
                                     {m.name || '—'}
                                   </div>
-                                  <div className="rounded border border-slate-200 bg-slate-50/50 px-3 py-1.5 text-sm text-slate-900">
+                                  {/* <div className="rounded border border-slate-200 bg-slate-50/50 px-3 py-1.5 text-sm text-slate-900">
                                     {m.strength || '—'}
-                                  </div>
+                                  </div> */}
                                   <div className="rounded border border-slate-200 bg-slate-50/50 px-3 py-1.5 text-sm text-slate-900">
                                     {m.dosage || '—'}
                                   </div>

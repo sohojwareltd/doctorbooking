@@ -8,6 +8,15 @@ import PublicLayout from '../layouts/PublicLayout';
 export default function Welcome({ home, doctor, chambers = [] }) {
     const [apiChambers, setApiChambers] = useState(Array.isArray(chambers) ? chambers : []);
     const [chambersLoading, setChambersLoading] = useState(!Array.isArray(chambers) || chambers.length === 0);
+    const [contactForm, setContactForm] = useState({
+        name: '',
+        phone: '',
+        email: '',
+        subject: '',
+        message: '',
+    });
+    const [contactSubmitting, setContactSubmitting] = useState(false);
+    const [contactStatus, setContactStatus] = useState({ type: '', message: '' });
     const meta = home?.meta || {};
     const doctorName = doctor?.name || 'Dr. Sarah Johnson';
     const doctorInitials = doctorName
@@ -127,6 +136,75 @@ export default function Welcome({ home, doctor, chambers = [] }) {
             ignore = true;
         };
     }, []);
+
+    const handleContactChange = (field) => (event) => {
+        setContactForm((prev) => ({
+            ...prev,
+            [field]: event.target.value,
+        }));
+    };
+
+    const getCsrfToken = () => {
+        const cookie = document.cookie
+            .split('; ')
+            .find((row) => row.startsWith('XSRF-TOKEN='))
+            ?.split('=')[1];
+
+        if (cookie) return decodeURIComponent(cookie);
+
+        return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    };
+
+    const handleContactSubmit = async (event) => {
+        event.preventDefault();
+        setContactSubmitting(true);
+        setContactStatus({ type: '', message: '' });
+
+        try {
+            const response = await fetch('/api/public/contact', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                    'X-XSRF-TOKEN': getCsrfToken(),
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify(contactForm),
+            });
+
+            const data = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                const firstValidationError = data?.errors
+                    ? Object.values(data.errors)[0]?.[0]
+                    : null;
+                setContactStatus({
+                    type: 'error',
+                    message: firstValidationError || data?.message || 'Could not send your message right now.',
+                });
+                return;
+            }
+
+            setContactStatus({
+                type: 'success',
+                message: data?.message || 'Your message has been sent successfully.',
+            });
+            setContactForm({
+                name: '',
+                phone: '',
+                email: '',
+                subject: '',
+                message: '',
+            });
+        } catch {
+            setContactStatus({
+                type: 'error',
+                message: 'Network error. Please try again.',
+            });
+        } finally {
+            setContactSubmitting(false);
+        }
+    };
 
     return (
         <>
@@ -266,7 +344,7 @@ export default function Welcome({ home, doctor, chambers = [] }) {
                                     <div>
                                         <div className="text-base font-semibold text-white">Phone</div>
                                         <div className="mt-1 text-sm text-[#d6e6e4]">{doctor?.phone || '+880 1712-345678'}</div>
-                                        <div className="mt-1 text-[15px] text-[#c0d6d3]">9:00 AM - 8:00 PM (Sat - Thu)</div>
+                                        {/* <div className="mt-1 text-[15px] text-[#c0d6d3]">9:00 AM - 8:00 PM (Sat - Thu)</div> */}
                                     </div>
                                 </div>
 
@@ -286,9 +364,11 @@ export default function Welcome({ home, doctor, chambers = [] }) {
                                         <MapPin className="h-5 w-5" />
                                     </div>
                                     <div>
-                                        <div className="text-base font-semibold text-white">Head Office</div>
+                                        <div className="text-base font-semibold text-white">Consultation Locations</div>
                                         <div className="mt-1 max-w-[260px] text-sm leading-7 text-[#d6e6e4]">
-                                            {chamberCards[0]?.location || 'Demo Clinic, 123 Main Street, Dhaka, Bangladesh'}
+                                            {chamberCount > 1
+                                                ? `${chamberCount} active chambers available. Choose your preferred location from the chamber list above.`
+                                                : chamberCards[0]?.location || 'Location details will be shared during appointment confirmation.'}
                                         </div>
                                     </div>
                                 </div>
@@ -298,34 +378,77 @@ export default function Welcome({ home, doctor, chambers = [] }) {
                                         <Clock3 className="h-5 w-5" />
                                     </div>
                                     <div>
-                                        <div className="text-base font-semibold text-white">Chamber Hours</div>
-                                        <div className="mt-1 text-sm text-[#d6e6e4]">Sat - Thu: 4:00 PM - 9:00 PM</div>
-                                        <div className="mt-1 text-sm text-[#d6e6e4]">Friday: Closed</div>
+                                        <div className="text-base font-semibold text-white">Booking Availability</div>
+                                        <div className="mt-1 text-sm text-[#d6e6e4]">Available slots are updated by chamber and consultation date.</div>
+                                        <div className="mt-1 text-sm text-[#d6e6e4]">Select your chamber to view the latest appointment times instantly.</div>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="rounded-[30px] bg-white p-5 shadow-[0_24px_48px_rgba(1,16,20,0.25)] sm:p-6 lg:self-end">
+                        <form onSubmit={handleContactSubmit} className="rounded-[30px] bg-white p-5 shadow-[0_24px_48px_rgba(1,16,20,0.25)] sm:p-6 lg:self-end">
                             <h3 className="text-3xl font-semibold tracking-tight text-[#2a3446]">Send a Message</h3>
                             <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                                <input type="text" placeholder="Full Name" className="h-11 rounded-xl border border-[#dfe7e3] bg-white px-4 text-[15px] text-slate-700 placeholder:text-slate-400 focus:border-[#b8cbc4] focus:outline-none" />
-                                <input type="text" placeholder="Phone Number" className="h-11 rounded-xl border border-[#dfe7e3] bg-white px-4 text-[15px] text-slate-700 placeholder:text-slate-400 focus:border-[#b8cbc4] focus:outline-none" />
+                                <input
+                                    type="text"
+                                    value={contactForm.name}
+                                    onChange={handleContactChange('name')}
+                                    placeholder="Full Name"
+                                    className="h-11 rounded-xl border border-[#dfe7e3] bg-white px-4 text-[15px] text-slate-700 placeholder:text-slate-400 focus:border-[#b8cbc4] focus:outline-none"
+                                    required
+                                />
+                                <input
+                                    type="text"
+                                    value={contactForm.phone}
+                                    onChange={handleContactChange('phone')}
+                                    placeholder="Phone Number"
+                                    className="h-11 rounded-xl border border-[#dfe7e3] bg-white px-4 text-[15px] text-slate-700 placeholder:text-slate-400 focus:border-[#b8cbc4] focus:outline-none"
+                                    required
+                                />
                             </div>
                             <div className="mt-3 space-y-3">
-                                <input type="email" placeholder="Email Address" className="h-11 w-full rounded-xl border border-[#dfe7e3] bg-white px-4 text-[15px] text-slate-700 placeholder:text-slate-400 focus:border-[#b8cbc4] focus:outline-none" />
-                                <input type="text" placeholder="Subject" className="h-11 w-full rounded-xl border border-[#dfe7e3] bg-white px-4 text-[15px] text-slate-700 placeholder:text-slate-400 focus:border-[#b8cbc4] focus:outline-none" />
-                                <textarea placeholder="Message" rows={4} className="w-full resize-none rounded-xl border border-[#dfe7e3] bg-white px-4 py-3 text-[15px] text-slate-700 placeholder:text-slate-400 focus:border-[#b8cbc4] focus:outline-none" />
+                                <input
+                                    type="email"
+                                    value={contactForm.email}
+                                    onChange={handleContactChange('email')}
+                                    placeholder="Email Address"
+                                    className="h-11 w-full rounded-xl border border-[#dfe7e3] bg-white px-4 text-[15px] text-slate-700 placeholder:text-slate-400 focus:border-[#b8cbc4] focus:outline-none"
+                                />
+                                <input
+                                    type="text"
+                                    value={contactForm.subject}
+                                    onChange={handleContactChange('subject')}
+                                    placeholder="Subject"
+                                    className="h-11 w-full rounded-xl border border-[#dfe7e3] bg-white px-4 text-[15px] text-slate-700 placeholder:text-slate-400 focus:border-[#b8cbc4] focus:outline-none"
+                                    required
+                                />
+                                <textarea
+                                    value={contactForm.message}
+                                    onChange={handleContactChange('message')}
+                                    placeholder="Message"
+                                    rows={4}
+                                    className="w-full resize-none rounded-xl border border-[#dfe7e3] bg-white px-4 py-3 text-[15px] text-slate-700 placeholder:text-slate-400 focus:border-[#b8cbc4] focus:outline-none"
+                                    required
+                                />
                             </div>
-                            <button type="button" className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#b8f23c] px-4 text-sm font-semibold text-[#2a3a24] transition hover:brightness-95">
-                                Send Message
+                            {contactStatus.message && (
+                                <div className={`mt-3 rounded-xl px-4 py-2.5 text-sm ${contactStatus.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
+                                    {contactStatus.message}
+                                </div>
+                            )}
+                            <button
+                                type="submit"
+                                disabled={contactSubmitting}
+                                className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#b8f23c] px-4 text-sm font-semibold text-[#2a3a24] transition hover:brightness-95 disabled:opacity-60"
+                            >
+                                {contactSubmitting ? 'Sending...' : 'Send Message'}
                                 <ArrowRight className="h-4 w-4" />
                             </button>
                             <div className="mt-3 inline-flex items-center gap-2 text-[13px] text-slate-500">
                                 <ShieldCheck className="h-4 w-4 text-[#2f7f79]" />
                                 Your information is safe and secure.
                             </div>
-                        </div>
+                        </form>
 
                         <div className="relative lg:min-h-[640px]">
                             <div className="overflow-hidden rounded-[26px] border border-white/10 bg-[#f3f8f6] h-full min-h-[520px] lg:min-h-[640px]">

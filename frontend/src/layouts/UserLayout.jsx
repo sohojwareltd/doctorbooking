@@ -47,7 +47,7 @@ export default function UserLayout({ children, title = "" }) {
                 <Settings className="h-4 w-4" />
               </button> */}
               <div className="w-px h-5 bg-gray-200 mx-1" />
-              <Link href="/user/profile" className="flex items-center gap-2">
+              <Link href="/patient/profile" className="flex items-center gap-2">
                 <div className="h-7 w-7 rounded-full overflow-hidden bg-gradient-to-br from-[#005963] to-[#00acb1] flex items-center justify-center shrink-0">
                   {user?.profile_picture ? (
                     <img src={user.profile_picture.startsWith("http") ? user.profile_picture : `/storage/${user.profile_picture}`} alt={user.name} className="h-full w-full object-cover" />

@@ -5,13 +5,15 @@ import {
 } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 
+const ACCENT = '#FF7C00';
+
 export default function UserSidebar({ currentPath }) {
   const { auth, publicDoctor } = usePage().props;
   const user = auth?.user;
   const doctorName = publicDoctor?.name || 'MediCare';
 
   const isActive = (href) => currentPath === href || currentPath.startsWith(href + '/');
-  const apptActive = isActive('/user/appointments') || isActive('/user/book-appointment');
+  const apptActive = isActive('/patient/appointments') || isActive('/book-appointment');
 
   const [apptOpen, setApptOpen] = useState(apptActive);
   const dropRef = useRef(null);
@@ -22,9 +24,9 @@ export default function UserSidebar({ currentPath }) {
   }, [apptOpen]);
 
   const mainNav = [
-    { href: '/user/dashboard', label: 'Dashboard', Icon: LayoutDashboard },
-    { href: '/user/prescriptions', label: 'Prescriptions', Icon: FileText },
-    { href: '/user/profile', label: 'My Profile', Icon: User },
+    { href: '/patient/dashboard', label: 'Dashboard', Icon: LayoutDashboard },
+    { href: '/patient/prescriptions', label: 'Prescriptions', Icon: FileText },
+    { href: '/patient/profile', label: 'My Profile', Icon: User },
   ];
 
   return (
@@ -32,7 +34,7 @@ export default function UserSidebar({ currentPath }) {
 
       {/* Logo */}
       <div className="flex-shrink-0 px-6 py-6 pb-8">
-        <Link href="/user/dashboard" className="flex items-center gap-3 group">
+        <Link href="/patient/dashboard" className="flex items-center gap-3 group">
           <div className="rounded-lg bg-white p-1 transition group-hover:bg-slate-100 flex-shrink-0 shadow-md">
             <img
               src="/stethoscope-2.png"
@@ -62,15 +64,15 @@ export default function UserSidebar({ currentPath }) {
             {/* Dashboard */}
             <li>
               <Link
-                href="/user/dashboard"
+                href="/patient/dashboard"
                 className={`flex items-center text-white text-sm py-3 transition-colors ${
-                  isActive('/user/dashboard') ? 'font-semibold' : 'hover:bg-white/10'
+                  isActive('/patient/dashboard') ? 'font-semibold' : 'hover:bg-white/10'
                 }`}
-                style={isActive('/user/dashboard')
+                style={isActive('/patient/dashboard')
                   ? { background: 'rgba(255,255,255,0.15)', borderLeft: `4px solid ${ACCENT}`, paddingLeft: '20px' }
                   : { paddingLeft: '24px' }}
               >
-                <LayoutDashboard className={`w-5 h-5 mr-3 flex-shrink-0 ${isActive('/user/dashboard') ? 'text-white' : 'text-white/70'}`} />
+                <LayoutDashboard className={`w-5 h-5 mr-3 flex-shrink-0 ${isActive('/patient/dashboard') ? 'text-white' : 'text-white/70'}`} />
                 Dashboard
               </Link>
             </li>
@@ -98,8 +100,8 @@ export default function UserSidebar({ currentPath }) {
               >
                 <ul>
                   {[
-                    { href: '/user/appointments', label: 'My Appointments' },
-                    { href: 'book-appointment', label: 'Book Appointment' },
+                    { href: '/patient/appointments', label: 'My Appointments' },
+                    { href: '/book-appointment', label: 'Book Appointment' },
                   ].map(({ href, label }) => (
                     <li key={href}>
                       <Link
@@ -122,15 +124,15 @@ export default function UserSidebar({ currentPath }) {
             {/* Prescriptions */}
             <li>
               <Link
-                href="/user/prescriptions"
+                href="/patient/prescriptions"
                 className={`flex items-center text-white text-sm py-3 transition-colors ${
-                  isActive('/user/prescriptions') ? 'font-semibold' : 'hover:bg-white/10'
+                  isActive('/patient/prescriptions') ? 'font-semibold' : 'hover:bg-white/10'
                 }`}
-                style={isActive('/user/prescriptions')
+                style={isActive('/patient/prescriptions')
                   ? { background: 'rgba(255,255,255,0.15)', borderLeft: `4px solid ${ACCENT}`, paddingLeft: '20px' }
                   : { paddingLeft: '24px' }}
               >
-                <FileText className={`w-5 h-5 mr-3 flex-shrink-0 ${isActive('/user/prescriptions') ? 'text-white' : 'text-white/70'}`} />
+                <FileText className={`w-5 h-5 mr-3 flex-shrink-0 ${isActive('/patient/prescriptions') ? 'text-white' : 'text-white/70'}`} />
                 Prescriptions
               </Link>
             </li>
@@ -138,15 +140,15 @@ export default function UserSidebar({ currentPath }) {
             {/* My Profile */}
             <li>
               <Link
-                href="/user/profile"
+                href="/patient/profile"
                 className={`flex items-center text-white text-sm py-3 transition-colors ${
-                  isActive('/user/profile') ? 'font-semibold' : 'hover:bg-white/10'
+                  isActive('/patient/profile') ? 'font-semibold' : 'hover:bg-white/10'
                 }`}
-                style={isActive('/user/profile')
+                style={isActive('/patient/profile')
                   ? { background: 'rgba(255,255,255,0.15)', borderLeft: `4px solid ${ACCENT}`, paddingLeft: '20px' }
                   : { paddingLeft: '24px' }}
               >
-                <User className={`w-5 h-5 mr-3 flex-shrink-0 ${isActive('/user/profile') ? 'text-white' : 'text-white/70'}`} />
+                <User className={`w-5 h-5 mr-3 flex-shrink-0 ${isActive('/patient/profile') ? 'text-white' : 'text-white/70'}`} />
                 My Profile
               </Link>
             </li>
@@ -158,7 +160,7 @@ export default function UserSidebar({ currentPath }) {
       {/* Profile + Logout */}
       <div className="flex-shrink-0 border-t border-white/10 p-3">
         <Link
-          href="/user/profile"
+          href="/patient/profile"
           className="group flex items-center gap-3 rounded-xl p-2.5 transition hover:bg-white/10"
         >
           <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-white/20 bg-white/10 flex-shrink-0">

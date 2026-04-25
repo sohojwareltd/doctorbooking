@@ -11,6 +11,8 @@ use App\Models\DoctorUnavailableRange;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\PersonalAccessToken;
 
@@ -20,6 +22,56 @@ use Laravel\Sanctum\PersonalAccessToken;
  */
 class PublicController extends Controller
 {
+    /** POST /api/public/contact */
+    public function contact(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'phone' => ['required', 'string', 'max:50'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'subject' => ['required', 'string', 'max:255'],
+            'message' => ['required', 'string', 'max:3000'],
+        ]);
+
+        $doctor = User::whereHas('role', fn ($q) => $q->where('name', 'doctor'))->first();
+        $recipientEmail = $doctor?->email;
+
+        if (! $recipientEmail) {
+            return response()->json([
+                'message' => 'Doctor email is not configured yet.',
+            ], 422);
+        }
+
+        try {
+            Mail::send('emails.contact-doctor', [
+                'sender_name' => $validated['name'],
+                'sender_phone' => $validated['phone'],
+                'sender_email' => $validated['email'] ?? null,
+                'subject_text' => $validated['subject'],
+                'message_text' => $validated['message'],
+            ], function ($mail) use ($validated, $recipientEmail) {
+                $mail->to($recipientEmail)
+                    ->subject('New contact message: ' . Str::limit((string) $validated['subject'], 120));
+
+                if (! empty($validated['email'])) {
+                    $mail->replyTo($validated['email'], $validated['name']);
+                }
+            });
+        } catch (\Throwable $exception) {
+            Log::error('Failed to send doctor contact email', [
+                'error' => $exception->getMessage(),
+            ]);
+
+            return response()->json([
+                'message' => 'Could not send message right now. Please try again later.',
+            ], 500);
+        }
+
+        return response()->json([
+            'message' => 'Your message has been sent successfully.',
+        ]);
+    }
+
     /** GET /api/public/doctor */
     public function doctor(): JsonResponse
     {

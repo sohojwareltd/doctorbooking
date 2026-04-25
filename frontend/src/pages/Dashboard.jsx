@@ -79,7 +79,7 @@ export default function Dashboard({
           </div>
 
           <div className="grid grid-cols-2 gap-3 md:min-w-[360px]">
-            <Link href="/user/appointments" className="glass-card rounded-2xl p-4 transition hover:bg-white/[0.18]">
+            <Link href="/patient/appointments" className="glass-card rounded-2xl p-4 transition hover:bg-white/[0.18]">
               <p className="text-xs uppercase tracking-[0.18em] text-white/60 mb-1">Upcoming</p>
               <p className="text-3xl font-semibold">{stats.upcomingAppointments ?? 0}</p>
             </Link>
@@ -143,14 +143,14 @@ export default function Dashboard({
                   </div>
                   <div className="flex flex-col gap-2 flex-shrink-0">
                     <Link
-                      href="/user/appointments"
+                      href="/patient/appointments"
                       className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#2D3A74] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1e2a5a] transition"
                     >
                       <CalendarDays className="h-3.5 w-3.5" /> View Details
                     </Link>
                     {upcomingAppointment.prescription_id && (
                       <Link
-                        href={'/user/prescriptions/' + upcomingAppointment.prescription_id}
+                        href={'/patient/prescriptions/' + upcomingAppointment.prescription_id}
                         className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition"
                       >
                         <FileText className="h-3.5 w-3.5" /> View Rx
@@ -172,7 +172,7 @@ export default function Dashboard({
                 </h2>
                 <p className="text-sm text-slate-500">Your latest appointment activity.</p>
               </div>
-              <Link href="/user/appointments" className="text-sm font-semibold text-[#4055A8] hover:text-[#2D3A74]">View all</Link>
+              <Link href="/patient/appointments" className="text-sm font-semibold text-[#4055A8] hover:text-[#2D3A74]">View all</Link>
             </div>
 
             {/* Tabs */}
@@ -232,14 +232,14 @@ export default function Dashboard({
                         <td className="px-6 py-4">
                           {a.prescription_id ? (
                             <Link
-                              href={'/user/prescriptions/' + a.prescription_id}
+                              href={'/patient/prescriptions/' + a.prescription_id}
                               className="inline-flex items-center gap-1 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-700 transition"
                             >
                               <FileText className="h-3 w-3" /> View Rx
                             </Link>
                           ) : (
                             <Link
-                              href="/user/appointments"
+                              href="/patient/appointments"
                               className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 transition"
                             >
                               Details
@@ -285,8 +285,8 @@ export default function Dashboard({
             </div>
             <div className="divide-y divide-slate-100">
               {[
-                { href: '/user/appointments', icon: CalendarDays, label: 'My Appointments', desc: 'View appointment history', color: 'text-[#2D3A74]', bg: 'bg-[#2D3A74]/10' },
-                { href: '/user/prescriptions', icon: FileText, label: 'Prescriptions', desc: 'Download medical records', color: 'text-violet-600', bg: 'bg-violet-50' },
+                { href: '/patient/appointments', icon: CalendarDays, label: 'My Appointments', desc: 'View appointment history', color: 'text-[#2D3A74]', bg: 'bg-[#2D3A74]/10' },
+                { href: '/patient/prescriptions', icon: FileText, label: 'Prescriptions', desc: 'Download medical records', color: 'text-violet-600', bg: 'bg-violet-50' },
                 { href: '/book-appointment', icon: CalendarPlus, label: 'Book Appointment', desc: 'Schedule a new visit', color: 'text-[#FF7C00]', bg: 'bg-orange-50' },
               ].map((item) => {
                 const Icon = item.icon;

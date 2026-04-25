@@ -166,7 +166,11 @@ class PatientController extends Controller
     {
         $user = $request->user();
 
-        $appointments = Appointment::with(['prescription:id,appointment_id'])
+        $appointments = Appointment::with([
+            'prescription:id,appointment_id',
+            'chamber:id,name',
+            'user:id,name,email,phone',
+        ])
             ->where(fn ($q) => $q->where('user_id', $user->id)
                 ->orWhere('email', $user->email))
             ->orderByDesc('appointment_date')

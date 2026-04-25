@@ -42,6 +42,7 @@ Route::prefix('public')->group(function () {
     Route::get('/slots/{date}', [PublicController::class, 'availableSlots']);
     Route::get('/booking-preview', [PublicController::class, 'bookingPreview']);
     Route::middleware('throttle:captcha')->get('/captcha', [PublicController::class, 'captcha']);
+    Route::middleware('throttle:booking-submit')->post('/contact', [PublicController::class, 'contact']);
     Route::middleware('throttle:booking-submit')->post('/book-appointment', [PublicController::class, 'bookAppointment']);
     Route::get('/site-content/home', [App\Http\Controllers\Api\SiteContentApiController::class, 'home']);
 });
