@@ -13,6 +13,7 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
@@ -25,11 +26,22 @@ class PatientController extends Controller
     public function dashboardMobile(Request $request): JsonResponse
     {
         $user = $request->user();
+        $userEmail = strtolower((string) ($user->email ?? ''));
 
         $upcomingAppointment = Appointment::query()
             ->with(['chamber:id,name,location'])
-            ->where(fn ($q) => $q->where('user_id', $user->id)
-                ->orWhere('email', $user->email))
+            ->where(function ($q) use ($user, $userEmail) {
+                $q->where('user_id', $user->id);
+
+                if ($userEmail !== '') {
+                    $q->orWhere(function ($guest) use ($userEmail) {
+                        $guest->whereNull('user_id')
+                            ->where('is_guest', true)
+                            ->whereNotNull('email')
+                            ->whereRaw('LOWER(email) = ?', [$userEmail]);
+                    });
+                }
+            })
             ->whereDate('appointment_date', '>=', now()->toDateString())
             ->orderBy('appointment_date')
             ->orderBy('appointment_time')
@@ -165,14 +177,25 @@ class PatientController extends Controller
     public function appointments(Request $request): JsonResponse
     {
         $user = $request->user();
+        $userEmail = strtolower((string) ($user->email ?? ''));
 
         $appointments = Appointment::with([
             'prescription:id,appointment_id',
             'chamber:id,name',
             'user:id,name,email,phone',
         ])
-            ->where(fn ($q) => $q->where('user_id', $user->id)
-                ->orWhere('email', $user->email))
+            ->where(function ($q) use ($user, $userEmail) {
+                $q->where('user_id', $user->id);
+
+                if ($userEmail !== '') {
+                    $q->orWhere(function ($guest) use ($userEmail) {
+                        $guest->whereNull('user_id')
+                            ->where('is_guest', true)
+                            ->whereNotNull('email')
+                            ->whereRaw('LOWER(email) = ?', [$userEmail]);
+                    });
+                }
+            })
             ->orderByDesc('appointment_date')
             ->orderByDesc('appointment_time')
             ->paginate($request->integer('per_page', 10))
@@ -192,6 +215,7 @@ class PatientController extends Controller
     public function appointmentsMobile(Request $request): JsonResponse
     {
         $user = $request->user();
+        $userEmail = strtolower((string) ($user->email ?? ''));
 
         $rows = Appointment::query()
             ->with([
@@ -199,8 +223,18 @@ class PatientController extends Controller
                 'doctor:id,user_id,specialization',
                 'prescription:id,appointment_id,diagnosis,medications,tests',
             ])
-            ->where(fn ($q) => $q->where('user_id', $user->id)
-                ->orWhere('email', $user->email))
+            ->where(function ($q) use ($user, $userEmail) {
+                $q->where('user_id', $user->id);
+
+                if ($userEmail !== '') {
+                    $q->orWhere(function ($guest) use ($userEmail) {
+                        $guest->whereNull('user_id')
+                            ->where('is_guest', true)
+                            ->whereNotNull('email')
+                            ->whereRaw('LOWER(email) = ?', [$userEmail]);
+                    });
+                }
+            })
             ->orderBy('appointment_date')
             ->orderBy('appointment_time')
             ->get();
@@ -254,10 +288,15 @@ class PatientController extends Controller
     public function appointmentShow(Request $request, Appointment $appointment): JsonResponse
     {
         $user = $request->user();
-        abort_unless(
-            $appointment->user_id === $user->id || $appointment->email === $user->email,
-            403
-        );
+        $userEmail = strtolower((string) ($user->email ?? ''));
+
+        $isOwner = $appointment->user_id === $user->id;
+        $isLinkedGuest = $userEmail !== ''
+            && is_null($appointment->user_id)
+            && (bool) $appointment->is_guest
+            && strtolower((string) ($appointment->email ?? '')) === $userEmail;
+
+        abort_unless($isOwner || $isLinkedGuest, 403);
 
         $appointment->load(['prescription']);
 
@@ -317,6 +356,7 @@ class PatientController extends Controller
                 'mime_type' => $report->mime_type,
                 'file_size' => $report->file_size,
                 'note' => $report->note,
+                'report_text' => $report->report_text,
                 'created_at' => $report->created_at?->toDateTimeString(),
             ]);
 
@@ -330,22 +370,51 @@ class PatientController extends Controller
         abort_unless($prescription->user_id === $user->id, 403);
 
         $validated = $request->validate([
-            'report_file' => ['required', 'file', 'max:10240', 'mimes:pdf,jpg,jpeg,png,webp'],
+            'report_file' => ['nullable', 'file', 'max:10240', 'mimes:pdf,jpg,jpeg,png,webp'],
+            'report_text' => ['nullable', 'string', 'max:20000'],
             'note' => ['nullable', 'string', 'max:255'],
         ]);
 
-        $file = $validated['report_file'];
-        $path = $file->store("patient-reports/{$user->id}", 'public');
+        $reportText = trim((string) ($validated['report_text'] ?? ''));
+        $hasFile = $request->hasFile('report_file');
+
+        if (! $hasFile && $reportText === '') {
+            return response()->json([
+                'message' => 'Please upload a file or write a text report.',
+            ], 422);
+        }
+
+        if ($hasFile) {
+            $file = $validated['report_file'];
+            $path = $file->store("patient-reports/{$user->id}", 'public');
+            $originalName = $file->getClientOriginalName();
+            $mimeType = $file->getClientMimeType();
+            $fileSize = $file->getSize();
+        } else {
+            $baseName = trim((string) ($validated['note'] ?? ''));
+            $slug = Str::slug($baseName) ?: 'text-report';
+            $fileName = now()->format('Ymd_His').'_'.$slug.'_'.Str::lower(Str::random(6)).'.txt';
+            $path = "patient-reports/{$user->id}/{$fileName}";
+            Storage::disk('public')->put($path, $reportText);
+            $originalName = $fileName;
+            $mimeType = 'text/plain';
+            $fileSize = strlen($reportText);
+        }
 
         $report = PatientReport::create([
             'user_id' => $user->id,
             'prescription_id' => $prescription->id,
-            'original_name' => $file->getClientOriginalName(),
+            'original_name' => $originalName,
             'file_path' => $path,
-            'mime_type' => $file->getClientMimeType(),
-            'file_size' => $file->getSize(),
+            'mime_type' => $mimeType,
+            'file_size' => $fileSize,
             'note' => $validated['note'] ?? null,
+            'report_text' => $reportText !== '' ? $reportText : null,
         ]);
+
+        if ($prescription->appointment && ! in_array((string) $prescription->appointment->status, ['cancelled', 'prescribed'], true)) {
+            $prescription->appointment->update(['status' => 'test_registered']);
+        }
 
         return response()->json([
             'message' => 'Report uploaded successfully.',
@@ -356,9 +425,63 @@ class PatientController extends Controller
                 'mime_type' => $report->mime_type,
                 'file_size' => $report->file_size,
                 'note' => $report->note,
+                'report_text' => $report->report_text,
                 'created_at' => $report->created_at?->toDateTimeString(),
             ],
         ], 201);
+    }
+
+    /** PUT /api/patient/prescriptions/{prescription}/reports/{report} */
+    public function updatePrescriptionReport(Request $request, Prescription $prescription, PatientReport $report): JsonResponse
+    {
+        $user = $request->user();
+        abort_unless($prescription->user_id === $user->id, 403);
+        abort_unless((int) $report->prescription_id === (int) $prescription->id, 404);
+        abort_unless((int) $report->user_id === (int) $user->id, 403);
+
+        $validated = $request->validate([
+            'report_text' => ['nullable', 'string', 'max:20000'],
+            'note' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $hasNote = array_key_exists('note', $validated);
+        $hasText = array_key_exists('report_text', $validated);
+        if (! $hasNote && ! $hasText) {
+            return response()->json([
+                'message' => 'Please provide note or text report to update.',
+            ], 422);
+        }
+
+        if ($hasNote) {
+            $note = trim((string) ($validated['note'] ?? ''));
+            $report->note = $note !== '' ? $note : null;
+        }
+
+        if ($hasText) {
+            $reportText = trim((string) ($validated['report_text'] ?? ''));
+            $report->report_text = $reportText !== '' ? $reportText : null;
+
+            if (Str::startsWith((string) $report->mime_type, 'text/')) {
+                Storage::disk('public')->put($report->file_path, $reportText);
+                $report->file_size = strlen($reportText);
+            }
+        }
+
+        $report->save();
+
+        return response()->json([
+            'message' => 'Report updated successfully.',
+            'report' => [
+                'id' => $report->id,
+                'original_name' => $report->original_name,
+                'file_url' => asset('storage/'.$report->file_path),
+                'mime_type' => $report->mime_type,
+                'file_size' => $report->file_size,
+                'note' => $report->note,
+                'report_text' => $report->report_text,
+                'created_at' => $report->created_at?->toDateTimeString(),
+            ],
+        ]);
     }
 
     /** POST /api/patient/link-guest-appointments */
@@ -406,7 +529,7 @@ class PatientController extends Controller
         $normalized = strtolower(trim($status));
 
         return match ($normalized) {
-            'approved', 'pending', 'arrived', 'in_consultation', 'awaiting_tests', 'prescribed' => 'Upcoming',
+            'approved', 'pending', 'arrived', 'in_consultation', 'test_registered', 'awaiting_tests', 'prescribed' => 'Upcoming',
             'cancelled' => 'Cancelled',
             'completed' => 'Completed',
             default => 'Past',

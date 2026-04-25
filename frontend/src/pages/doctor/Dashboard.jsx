@@ -34,7 +34,7 @@ export default function DoctorDashboard({
     const opts = { headers: { Accept: 'application/json' }, credentials: 'same-origin' };
     const [statsRes, todayRes, yearRes] = await Promise.all([
       fetch('/api/doctor/stats', opts),
-      fetch('/api/doctor/appointments?date_filter=today&per_page=500', opts),
+      fetch('/api/doctor/appointments?date_filter=all&per_page=500', opts),
       fetch(`/api/doctor/appointments?date_from=${yr}-01-01&date_to=${yr}-12-31&per_page=1000`, opts),
     ]);
     if (statsRes.ok) setApiStats(await statsRes.json());
@@ -91,7 +91,7 @@ export default function DoctorDashboard({
     prescribedThisMonth: apiStats?.prescribed_this_month ?? 0,
     inConsultation: apiStats?.in_consultation ?? 0,
     waitingPatients: apiStats?.waiting_patients ?? 0,
-    followUpsDue: todayAppts.filter((a) => a.status === 'awaiting_tests').length,
+    followUpsDue: todayAppts.filter((a) => ['awaiting_tests', 'test_registered'].includes(a.status)).length,
   };
 
   const fmt = (d) => {
@@ -139,7 +139,7 @@ export default function DoctorDashboard({
   };
 
   const inVisitAppointments = todayAppts.filter((a) => a.status === 'in_consultation');
-  const awaitingTestsAppointments = todayAppts.filter((a) => a.status === 'awaiting_tests');
+  const awaitingTestsAppointments = todayAppts.filter((a) => ['awaiting_tests', 'test_registered'].includes(a.status));
   const inVisitAppointment = inVisitAppointments[0] ?? null;
   const upcomingAppointment = todayAppts.find((a) => a.status === 'scheduled' || a.status === 'arrived') ?? null;
   const visitPatient = activeVisitPatient || inVisitAppointment;
@@ -190,7 +190,7 @@ export default function DoctorDashboard({
   }));
 
   const TABS = [
-    { key: 'today', label: 'All Today', count: todayAppointments.length },
+    { key: 'today', label: 'All Appointments', count: todayAppointments.length },
     { key: 'scheduled', label: 'Scheduled', count: todayAppointments.filter((a) => a.status === 'scheduled').length },
     { key: 'in_consultation', label: 'In Progress', count: todayAppointments.filter((a) => a.status === 'in_consultation').length },
     { key: 'awaiting', label: 'Awaiting Tests', count: awaitingList.length },
@@ -298,7 +298,7 @@ export default function DoctorDashboard({
   const statusGraphItems = [
     { key: 'scheduled', label: 'Scheduled', color: '#64748b', value: todayAppointments.filter((a) => a.status === 'scheduled').length },
     { key: 'in_consultation', label: 'In Progress', color: '#7c3aed', value: todayAppointments.filter((a) => a.status === 'in_consultation').length },
-    { key: 'awaiting_tests', label: 'Awaiting Tests', color: '#ea580c', value: todayAppointments.filter((a) => a.status === 'awaiting_tests').length },
+    { key: 'awaiting_tests', label: 'Awaiting Tests', color: '#ea580c', value: todayAppointments.filter((a) => ['awaiting_tests', 'test_registered'].includes(a.status)).length },
     { key: 'prescribed', label: 'Completed', color: '#059669', value: todayAppointments.filter((a) => a.status === 'prescribed').length },
   ];
   const statusGraphMax = Math.max(1, ...statusGraphItems.map((item) => item.value));
@@ -315,7 +315,7 @@ export default function DoctorDashboard({
       }
 
       acc[name].count += 1;
-      if (appointment.status === 'awaiting_tests') acc[name].awaiting += 1;
+      if (['awaiting_tests', 'test_registered'].includes(appointment.status)) acc[name].awaiting += 1;
       if (appointment.status === 'in_consultation') acc[name].active += 1;
 
       return acc;

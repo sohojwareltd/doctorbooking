@@ -608,13 +608,7 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
             }
 
             toastSuccess('Prescription saved successfully.');
-            const data = await res.json().catch(() => ({}));
-            const prescriptionId = data?.prescription_id;
-            if (prescriptionId) {
-                setTimeout(() => router.visit(`/doctor/prescriptions/${prescriptionId}`), 400);
-            } else {
-                setTimeout(() => router.visit('/doctor/prescriptions'), 400);
-            }
+            setTimeout(() => router.visit('/doctor/appointments'), 400);
         } catch {
             const message = 'Network error. Please try again.';
             toastError(message);

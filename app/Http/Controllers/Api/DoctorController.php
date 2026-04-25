@@ -117,11 +117,22 @@ class DoctorController extends Controller
 
         $appointments = $query
             ->orderByRaw("CASE
-                WHEN appointment_date = ? THEN 0
-                WHEN appointment_date > ? THEN 1
-                ELSE 2
-            END", [$today, $today])
+                WHEN appointment_date >= ? THEN 0
+                ELSE 1
+            END", [$today])
             ->orderBy('appointment_date')
+            ->orderByRaw("CASE status
+                WHEN 'in_consultation' THEN 0
+                WHEN 'arrived' THEN 1
+                WHEN 'scheduled' THEN 2
+                WHEN 'test_registered' THEN 3
+                WHEN 'awaiting_tests' THEN 4
+                WHEN 'prescribed' THEN 5
+                WHEN 'cancelled' THEN 6
+                ELSE 7
+            END")
+            ->orderByRaw('CASE WHEN appointment_time IS NULL THEN 1 ELSE 0 END')
+            ->orderBy('appointment_time')
             ->orderBy('serial_no')
             ->paginate($request->integer('per_page', 15))
             ->withQueryString();
@@ -162,7 +173,7 @@ class DoctorController extends Controller
         $validated = $request->validate([
             'status' => ['required', Rule::in([
                 'scheduled', 'arrived', 'in_consultation',
-                'awaiting_tests', 'prescribed', 'cancelled',
+                'test_registered', 'awaiting_tests', 'prescribed', 'cancelled',
             ])],
         ]);
 
@@ -742,7 +753,7 @@ class DoctorController extends Controller
             'appointment_date' => ['required', 'date'],
             'appointment_time' => ['required', 'string'],
             'symptoms'         => ['nullable', 'string', 'max:2000'],
-            'status'           => ['nullable', 'in:scheduled,arrived,in_consultation,awaiting_tests,prescribed,cancelled'],
+            'status'           => ['nullable', 'in:scheduled,arrived,in_consultation,test_registered,awaiting_tests,prescribed,cancelled'],
         ]);
 
         $mode            = $validated['mode'] ?? 'walkin';

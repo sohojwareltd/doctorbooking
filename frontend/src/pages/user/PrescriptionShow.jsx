@@ -1,6 +1,7 @@
 import { Link, router } from '@inertiajs/react';
-import { Calendar, FileText, FlaskConical, Mail, MapPin, MessageCircle, Phone, Printer, ArrowLeft, Download, Share2, Stethoscope, User } from 'lucide-react';
+import { Calendar, FileText, FlaskConical, Mail, MessageCircle, Phone, Printer, ArrowLeft, Download, Share2, Stethoscope, Upload, FileUp, Pencil, X } from 'lucide-react';
 import { useMemo, useRef, useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import UserLayout from '../../layouts/UserLayout';
 import EyePrescriptionSection, { isEyeSpecialist } from '../../components/prescription/EyePrescriptionSection';
 import { formatDisplayDate, formatDisplayFromDateLike, formatTime12hFromDateTime } from '../../utils/dateFormat';
@@ -48,11 +49,16 @@ export default function UserPrescriptionShow({ prescription = {}, doctorInfo = {
   const [uploadingReport, setUploadingReport] = useState(false);
   const [reportFile, setReportFile] = useState(null);
   const [reportNote, setReportNote] = useState('');
-  const [reportPreviewUrl, setReportPreviewUrl] = useState('');
-  const [activeReportPreview, setActiveReportPreview] = useState(null);
-
-  const isImageReport = (report) => (report?.mime_type || '').startsWith('image/');
-  const isPdfReport = (report) => (report?.mime_type || '').includes('pdf');
+  const [reportText, setReportText] = useState('');
+  const [showEditReportModal, setShowEditReportModal] = useState(false);
+  const [editingReport, setEditingReport] = useState(null);
+  const [showViewReportModal, setShowViewReportModal] = useState(false);
+  const [viewingReport, setViewingReport] = useState(null);
+  const [editReportNote, setEditReportNote] = useState('');
+  const [editReportText, setEditReportText] = useState('');
+  const [updatingReport, setUpdatingReport] = useState(false);
+  const [showReportUploadModal, setShowReportUploadModal] = useState(false);
+  const reportEditorRef = useRef(null);
 
   const loadReports = async () => {
     if (!prescription?.id) return;
@@ -82,32 +88,24 @@ export default function UserPrescriptionShow({ prescription = {}, doctorInfo = {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prescription?.id]);
 
-  useEffect(() => {
-    if (!reportFile) {
-      setReportPreviewUrl('');
-      return;
-    }
-
-    if (!reportFile.type?.startsWith('image/')) {
-      setReportPreviewUrl('');
-      return;
-    }
-
-    const url = URL.createObjectURL(reportFile);
-    setReportPreviewUrl(url);
-
-    return () => URL.revokeObjectURL(url);
-  }, [reportFile]);
-
   const handleUploadReport = async (e) => {
     e?.preventDefault?.();
-    if (!reportFile || !prescription?.id) {
-      toastError('Please choose a report file first.');
+
+    if (!prescription?.id) {
+      toastError('Prescription not found for report upload.');
+      return;
+    }
+
+    const plainText = String(reportEditorRef.current?.innerText || reportText || '').trim();
+    const trimmedText = plainText;
+    if (!reportFile && !trimmedText) {
+      toastError('Please choose a file or write a text report.');
       return;
     }
 
     const formData = new FormData();
-    formData.append('report_file', reportFile);
+    if (reportFile) formData.append('report_file', reportFile);
+    if (trimmedText) formData.append('report_text', trimmedText);
     if (reportNote.trim()) formData.append('note', reportNote.trim());
 
     try {
@@ -133,14 +131,91 @@ export default function UserPrescriptionShow({ prescription = {}, doctorInfo = {
       toastSuccess(data?.message || 'Report uploaded successfully.');
       setReportFile(null);
       setReportNote('');
-      setReportPreviewUrl('');
-      const input = document.getElementById('report-upload-input');
+      setReportText('');
+      setShowReportUploadModal(false);
+      if (reportEditorRef.current) reportEditorRef.current.innerHTML = '';
+      const input = document.getElementById('user-report-upload-input');
       if (input) input.value = '';
       await loadReports();
     } catch {
       toastError('Network error while uploading report.');
     } finally {
       setUploadingReport(false);
+    }
+  };
+
+  const openEditReportModal = (report) => {
+    setEditingReport(report);
+    setEditReportNote(report?.note || '');
+    setEditReportText(report?.report_text || '');
+    setShowEditReportModal(true);
+  };
+
+  const openViewReportModal = (report) => {
+    setViewingReport(report || null);
+    setShowViewReportModal(true);
+  };
+
+  const handleUpdateReport = async (event) => {
+    event?.preventDefault?.();
+    const id = prescription?.id;
+    const reportId = editingReport?.id;
+    if (!id || !reportId) {
+      toastError('Report not found for edit.');
+      return;
+    }
+
+    try {
+      setUpdatingReport(true);
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+      const payload = {
+        note: String(editReportNote || '').trim(),
+        report_text: editReportText,
+      };
+
+      const res = await fetch(`/api/patient/prescriptions/${id}/reports/${reportId}`, {
+        method: 'PUT',
+        credentials: 'same-origin',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          ...(csrfToken ? { 'X-CSRF-TOKEN': csrfToken } : {}),
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toastError(body?.message || 'Failed to update report.');
+        return;
+      }
+
+      toastSuccess(body?.message || 'Report updated successfully.');
+      setShowEditReportModal(false);
+      setEditingReport(null);
+      await loadReports();
+    } catch {
+      toastError('Network error while updating report.');
+    } finally {
+      setUpdatingReport(false);
+    }
+  };
+
+  const formatBytes = (bytes) => {
+    const value = Number(bytes || 0);
+    if (!value || Number.isNaN(value)) return 'N/A';
+    if (value < 1024) return `${value} B`;
+    if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
+    return `${(value / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const applyReportFormat = (command) => {
+    try {
+      document.execCommand(command, false);
+      reportEditorRef.current?.focus();
+    } catch {
+      // keep editor usable even if formatting command fails
     }
   };
 
@@ -254,6 +329,14 @@ export default function UserPrescriptionShow({ prescription = {}, doctorInfo = {
               <ArrowLeft className="h-4 w-4" />
               Back
             </Link>
+            <button
+              type="button"
+              onClick={() => setShowReportUploadModal(true)}
+              className="inline-flex items-center gap-2 rounded-lg bg-[#2D3A74] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#243063]"
+            >
+              <Upload className="h-4 w-4" />
+              Upload Report
+            </button>
             <div className="relative">
               <button
                 type="button"
@@ -297,69 +380,21 @@ export default function UserPrescriptionShow({ prescription = {}, doctorInfo = {
           </div>
         </div>
 
+        {(loadingReports || reports.length > 0) && (
         <div className="print:hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-base font-bold text-slate-800">Upload Reports</h2>
-            <span className="text-xs text-slate-400">Linked to your patient ID and this prescription</span>
+            <h2 className="text-base font-bold text-slate-800">Test Report Upload</h2>
+            <span className="text-xs text-slate-400">File, title/note and text report</span>
           </div>
-
-          <form onSubmit={handleUploadReport} className="mt-3 grid gap-3 md:grid-cols-[1fr_220px_auto] md:items-end">
-            <div>
-              <label className="mb-1 block text-xs font-semibold text-slate-600">Report File (PDF/JPG/PNG)</label>
-              <input
-                id="report-upload-input"
-                type="file"
-                accept=".pdf,.jpg,.jpeg,.png,.webp"
-                onChange={(e) => setReportFile(e.target.files?.[0] ?? null)}
-                className="block w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-semibold text-slate-600">Note (optional)</label>
-              <input
-                type="text"
-                value={reportNote}
-                onChange={(e) => setReportNote(e.target.value)}
-                placeholder="e.g. CBC report"
-                className="block w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={uploadingReport || !reportFile}
-              className="rounded-lg bg-[#2D3A74] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#243063] disabled:opacity-60"
-            >
-              {uploadingReport ? 'Uploading...' : 'Upload'}
-            </button>
-          </form>
-
-          {reportFile && (
-            <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
-              <div className="text-xs font-semibold text-slate-600">Live preview</div>
-              <div className="mt-1 text-sm text-slate-700">
-                {reportFile.name} ({Math.max(1, Math.round(reportFile.size / 1024))} KB)
-              </div>
-              {reportPreviewUrl ? (
-                <img
-                  src={reportPreviewUrl}
-                  alt="Report preview"
-                  className="mt-3 max-h-52 rounded-lg border border-slate-200 object-contain bg-white"
-                />
-              ) : (
-                <div className="mt-2 text-xs text-slate-500">
-                  Preview is available for image files. PDF preview will be available after upload via View action.
-                </div>
-              )}
-            </div>
-          )}
 
           <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200">
             <table className="min-w-full">
               <thead>
                 <tr className="bg-slate-50 text-left">
-                  <th className="px-3 py-2 text-xs font-semibold text-slate-500">Preview</th>
                   <th className="px-3 py-2 text-xs font-semibold text-slate-500">File</th>
                   <th className="px-3 py-2 text-xs font-semibold text-slate-500">Note</th>
+                  <th className="px-3 py-2 text-xs font-semibold text-slate-500">Text Report</th>
+                  <th className="px-3 py-2 text-xs font-semibold text-slate-500">Size</th>
                   <th className="px-3 py-2 text-xs font-semibold text-slate-500">Uploaded</th>
                   <th className="px-3 py-2 text-xs font-semibold text-slate-500">Action</th>
                 </tr>
@@ -367,102 +402,273 @@ export default function UserPrescriptionShow({ prescription = {}, doctorInfo = {
               <tbody>
                 {loadingReports ? (
                   <tr>
-                    <td colSpan={5} className="px-3 py-5 text-center text-sm text-slate-400">Loading reports...</td>
+                    <td colSpan={6} className="px-3 py-5 text-center text-sm text-slate-400">Loading reports...</td>
                   </tr>
                 ) : reports.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-3 py-5 text-center text-sm text-slate-400">No report uploaded yet.</td>
+                    <td colSpan={6} className="px-3 py-5 text-center text-sm text-slate-400">No report uploaded yet.</td>
                   </tr>
-                ) : reports.map((r) => (
-                  <tr key={r.id} className="border-t border-slate-100">
-                    <td className="px-3 py-2 text-sm text-slate-700">
-                      {isImageReport(r) ? (
-                        <button
-                          type="button"
-                          onClick={() => setActiveReportPreview(r)}
-                          className="overflow-hidden rounded-md border border-slate-200 bg-white"
-                          title="Preview image"
+                ) : reports.map((report) => (
+                  <tr key={report.id} className="border-t border-slate-100">
+                    <td className="px-3 py-2 text-sm text-slate-700">{report.original_name}</td>
+                    <td className="px-3 py-2 text-sm text-slate-600">{report.note || '-'}</td>
+                    <td className="px-3 py-2 text-sm text-slate-600">
+                      {String(report.mime_type || '').startsWith('text/') ? (
+                        <a
+                          href={report.file_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-xs font-semibold text-sky-700 hover:bg-sky-100"
                         >
-                          <img
-                            src={r.file_url}
-                            alt={r.original_name}
-                            className="h-12 w-12 object-cover"
-                          />
-                        </button>
-                      ) : isPdfReport(r) ? (
-                        <button
-                          type="button"
-                          onClick={() => setActiveReportPreview(r)}
-                          className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] font-semibold text-slate-600"
-                        >
-                          PDF
-                        </button>
+                          View Text
+                        </a>
                       ) : (
-                        <span className="text-xs text-slate-400">-</span>
+                        <span className="text-slate-400">-</span>
                       )}
                     </td>
-                    <td className="px-3 py-2 text-sm text-slate-700">{r.original_name}</td>
-                    <td className="px-3 py-2 text-sm text-slate-600">{r.note || '-'}</td>
-                    <td className="px-3 py-2 text-sm text-slate-500">{formatDisplayFromDateLike(r.created_at) || '-'}</td>
-                    <td className="px-3 py-2 text-sm space-x-2">
-                      {/* <button
-                        type="button"
-                        onClick={() => setActiveReportPreview(r)}
-                        className="font-semibold text-[#0c7b79] hover:underline"
-                      >
-                        Preview
-                      </button> */}
-                      <a
-                        href={r.file_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="font-semibold text-[#2D3A74] hover:underline"
-                      >
-                        View
-                      </a>
+                    <td className="px-3 py-2 text-sm text-slate-600">{formatBytes(report.file_size)}</td>
+                    <td className="px-3 py-2 text-sm text-slate-500">{formatDisplayFromDateLike(report.created_at) || '-'}</td>
+                    <td className="px-3 py-2 text-sm">
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => openViewReportModal(report)}
+                          className="inline-flex items-center gap-1 font-semibold text-[#2D3A74] hover:underline"
+                        >
+                          <FileUp className="h-3.5 w-3.5" />
+                          View
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openEditReportModal(report)}
+                          className="inline-flex items-center gap-1 font-semibold text-amber-700 hover:underline"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                          Edit
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+        </div>
+        )}
 
-          {activeReportPreview && (
-            <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/60 p-4">
-              <div className="max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-xl bg-white shadow-2xl">
-                <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
-                  <div className="text-sm font-semibold text-slate-800">{activeReportPreview.original_name}</div>
+        {showViewReportModal && typeof document !== 'undefined' ? createPortal(
+          <div className="fixed inset-0 z-[122] flex items-start justify-center overflow-y-auto bg-[rgba(2,6,23,0.78)] backdrop-blur-sm p-4 pt-6 sm:pt-10 print:hidden">
+            <div className="w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+              <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">
+                <h3 className="text-base font-bold text-slate-800">Report Details</h3>
+                <button
+                  type="button"
+                  onClick={() => setShowViewReportModal(false)}
+                  className="rounded-md border border-slate-200 bg-white p-1.5 text-slate-600 transition hover:bg-slate-50"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="space-y-4 px-5 py-4">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                    <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Title / Note</div>
+                    <div className="mt-1 text-sm text-slate-800">{viewingReport?.note || '-'}</div>
+                  </div>
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                    <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Uploaded</div>
+                    <div className="mt-1 text-sm text-slate-800">{formatDisplayFromDateLike(viewingReport?.created_at) || '-'}</div>
+                  </div>
+                </div>
+
+                <div className="rounded-lg border border-slate-200 bg-white p-3">
+                  <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Report File</div>
+                  <div className="flex flex-wrap items-center gap-2 text-sm text-slate-700">
+                    <span className="font-medium">{viewingReport?.original_name || 'No file'}</span>
+                    <span className="text-slate-400">{formatBytes(viewingReport?.file_size)}</span>
+                    {viewingReport?.file_url ? (
+                      <a
+                        href={viewingReport.file_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-xs font-semibold text-sky-700 hover:bg-sky-100"
+                      >
+                        Open File
+                      </a>
+                    ) : null}
+                  </div>
+                </div>
+
+                <div className="rounded-lg border border-slate-200 bg-white p-3">
+                  <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Text Report</div>
+                  <div className="max-h-[320px] overflow-auto whitespace-pre-wrap rounded border border-slate-100 bg-slate-50 p-3 text-sm text-slate-800">
+                    {String(viewingReport?.report_text || '').trim() || '-'}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end border-t border-slate-100 pt-3">
                   <button
                     type="button"
-                    onClick={() => setActiveReportPreview(null)}
-                    className="rounded-md border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                    onClick={() => setShowViewReportModal(false)}
+                    className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                   >
                     Close
                   </button>
                 </div>
-                <div className="max-h-[78vh] overflow-auto bg-slate-50 p-3">
-                  {isImageReport(activeReportPreview) ? (
-                    <img
-                      src={activeReportPreview.file_url}
-                      alt={activeReportPreview.original_name}
-                      className="mx-auto max-h-[72vh] w-auto rounded-lg border border-slate-200 bg-white"
-                    />
-                  ) : isPdfReport(activeReportPreview) ? (
-                    <iframe
-                      src={activeReportPreview.file_url}
-                      title={activeReportPreview.original_name}
-                      className="h-[72vh] w-full rounded-lg border border-slate-200 bg-white"
-                    />
-                  ) : (
-                    <div className="p-6 text-center text-sm text-slate-500">
-                      Preview is not available for this file type.
-                    </div>
-                  )}
-                </div>
               </div>
             </div>
-          )}
-        </div>
+          </div>,
+          document.body,
+        ) : null}
+
+        {showEditReportModal && typeof document !== 'undefined' ? createPortal(
+          <div className="fixed inset-0 z-[121] flex items-start justify-center overflow-y-auto bg-[rgba(2,6,23,0.78)] backdrop-blur-sm p-4 pt-6 sm:pt-10 print:hidden">
+            <div className="w-full max-w-2xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+              <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">
+                <h3 className="text-base font-bold text-slate-800">Edit Report</h3>
+                <button
+                  type="button"
+                  onClick={() => setShowEditReportModal(false)}
+                  className="rounded-md border border-slate-200 bg-white p-1.5 text-slate-600 transition hover:bg-slate-50"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleUpdateReport} className="space-y-4 px-5 py-4">
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-slate-600">Title / Note</label>
+                  <input
+                    type="text"
+                    value={editReportNote}
+                    onChange={(e) => setEditReportNote(e.target.value)}
+                    placeholder="e.g. CBC report"
+                    className="block w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-slate-600">Text Report</label>
+                  <textarea
+                    rows={8}
+                    value={editReportText}
+                    onChange={(e) => setEditReportText(e.target.value)}
+                    placeholder="Edit text report content"
+                    className="block w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                  />
+                </div>
+
+                <div className="flex items-center justify-end gap-2 border-t border-slate-100 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowEditReportModal(false)}
+                    className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={updatingReport}
+                    className="inline-flex items-center gap-2 rounded-lg bg-[#2D3A74] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#243063] disabled:opacity-60"
+                  >
+                    {updatingReport ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" /> : <Pencil className="h-4 w-4" />}
+                    {updatingReport ? 'Updating...' : 'Update Report'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>,
+          document.body,
+        ) : null}
+
+        {showReportUploadModal && typeof document !== 'undefined' ? createPortal(
+          <div className="fixed inset-0 z-[120] flex items-start justify-center overflow-y-auto bg-[rgba(2,6,23,0.78)] backdrop-blur-sm p-4 pt-6 sm:pt-10 print:hidden">
+            <div className="w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+              <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">
+                <h3 className="text-base font-bold text-slate-800">Upload Test Report</h3>
+                <button
+                  type="button"
+                  onClick={() => setShowReportUploadModal(false)}
+                  className="rounded-md border border-slate-200 bg-white p-1.5 text-slate-600 transition hover:bg-slate-50"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleUploadReport} className="space-y-4 px-5 py-4">
+                <div className="grid gap-3 md:grid-cols-[1fr_220px]">
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold text-slate-600">Report File (PDF/JPG/PNG)</label>
+                    <input
+                      id="user-report-upload-input"
+                      type="file"
+                      accept=".pdf,.jpg,.jpeg,.png,.webp"
+                      onChange={(e) => setReportFile(e.target.files?.[0] ?? null)}
+                      className="block w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold text-slate-600">Title / Note</label>
+                    <input
+                      type="text"
+                      value={reportNote}
+                      onChange={(e) => setReportNote(e.target.value)}
+                      placeholder="e.g. CBC report"
+                      className="block w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-slate-600">Text Report</label>
+                  <div className="rounded-lg border border-slate-200 bg-white">
+                    <div className="flex flex-wrap items-center gap-1 border-b border-slate-200 px-2 py-1.5">
+                      <button type="button" onClick={() => applyReportFormat('bold')} className="rounded border border-slate-200 px-2 py-0.5 text-xs font-bold text-slate-700 hover:bg-slate-50">B</button>
+                      <button type="button" onClick={() => applyReportFormat('italic')} className="rounded border border-slate-200 px-2 py-0.5 text-xs italic text-slate-700 hover:bg-slate-50">I</button>
+                      <button type="button" onClick={() => applyReportFormat('underline')} className="rounded border border-slate-200 px-2 py-0.5 text-xs underline text-slate-700 hover:bg-slate-50">U</button>
+                      <button type="button" onClick={() => applyReportFormat('insertUnorderedList')} className="rounded border border-slate-200 px-2 py-0.5 text-xs text-slate-700 hover:bg-slate-50">• List</button>
+                      <button type="button" onClick={() => applyReportFormat('insertOrderedList')} className="rounded border border-slate-200 px-2 py-0.5 text-xs text-slate-700 hover:bg-slate-50">1. List</button>
+                    </div>
+                    <div className="relative">
+                      {!reportText ? (
+                        <span className="pointer-events-none absolute left-3 top-2 text-sm text-slate-400">
+                          Write report details here...
+                        </span>
+                      ) : null}
+                      <div
+                        ref={reportEditorRef}
+                        contentEditable
+                        suppressContentEditableWarning
+                        onInput={(e) => setReportText(e.currentTarget.innerHTML)}
+                        className="min-h-[170px] px-3 py-2 text-sm text-slate-800 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 border-t border-slate-100 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowReportUploadModal(false)}
+                    className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={uploadingReport || (!reportFile && !String(reportEditorRef.current?.innerText || reportText || '').trim())}
+                    className="inline-flex items-center gap-2 rounded-lg bg-[#2D3A74] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#243063] disabled:opacity-60"
+                  >
+                    {uploadingReport ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" /> : <Upload className="h-4 w-4" />}
+                    {uploadingReport ? 'Uploading...' : 'Upload Report'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>,
+          document.body,
+        ) : null}
 
         {/* Prescription Layout */}
         <div ref={prescriptionRef}>

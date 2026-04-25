@@ -519,7 +519,7 @@ class AppointmentController extends Controller
     public function updateStatus(Request $request, Appointment $appointment): JsonResponse
     {
         $validated = $request->validate([
-            'status' => ['required', Rule::in(['scheduled', 'arrived', 'in_consultation', 'awaiting_tests', 'prescribed', 'cancelled'])],
+            'status' => ['required', Rule::in(['scheduled', 'arrived', 'in_consultation', 'test_registered', 'awaiting_tests', 'prescribed', 'cancelled'])],
         ]);
 
         $user = $request->user();

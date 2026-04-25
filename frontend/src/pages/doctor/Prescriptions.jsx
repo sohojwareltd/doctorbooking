@@ -507,6 +507,7 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
       setReportText('');
       setShowReportUploadModal(false);
       toastSuccess(data?.message || 'Report uploaded successfully.');
+      router.visit('/doctor/appointments');
     } catch {
       toastError('Failed to upload report.');
     } finally {

@@ -49,10 +49,16 @@ class DashboardController extends Controller
     {
         $user  = Auth::user();
         $today = now()->toDateString();
+        $userEmail = strtolower((string) ($user->email ?? ''));
 
         $base = fn () => Appointment::where(fn ($q) => $q
             ->where('user_id', $user->id)
-            ->orWhere('email', $user->email)
+            ->when($userEmail !== '', fn ($inner) => $inner->orWhere(function ($guest) use ($userEmail) {
+                $guest->whereNull('user_id')
+                    ->where('is_guest', true)
+                    ->whereNotNull('email')
+                    ->whereRaw('LOWER(email) = ?', [$userEmail]);
+            }))
         );
 
         $upcomingCount = $base()->whereDate('appointment_date', '>=', $today)->count();

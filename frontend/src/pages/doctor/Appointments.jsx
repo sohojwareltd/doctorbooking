@@ -13,10 +13,11 @@ import { toastError, toastSuccess } from '../../utils/toast';
 
 const STATUS_OPTIONS = [
   { value: 'all', label: 'All status' },
-  { value: 'scheduled', label: 'Scheduled' },
-  { value: 'arrived', label: 'Arrived' },
   { value: 'in_consultation', label: 'In consultation' },
-  { value: 'awaiting_tests', label: 'Awaiting tests' },
+  { value: 'arrived', label: 'Arrived' },
+  { value: 'scheduled', label: 'Scheduled' },
+  { value: 'test_registered', label: 'Report Submitted' },
+  { value: 'awaiting_tests', label: 'Awaiting Report' },
   { value: 'prescribed', label: 'Prescribed' },
   { value: 'cancelled', label: 'Cancelled' },
 ];
@@ -63,6 +64,7 @@ function getStatusSelectTone(status) {
     scheduled: 'border-slate-200 bg-white text-slate-700',
     arrived: 'border-amber-200 bg-white text-amber-700',
     in_consultation: 'border-violet-200 bg-white text-violet-700',
+    test_registered: 'border-cyan-200 bg-white text-cyan-700',
     awaiting_tests: 'border-orange-200 bg-white text-orange-700',
     prescribed: 'border-emerald-200 bg-white text-emerald-700',
     cancelled: 'border-rose-200 bg-white text-rose-700',
@@ -79,6 +81,7 @@ function getStatusSummaryTone(status) {
     scheduled: 'border-slate-200 bg-slate-50 text-slate-700',
     arrived: 'border-amber-200 bg-amber-50 text-amber-700',
     in_consultation: 'border-violet-200 bg-violet-50 text-violet-700',
+    test_registered: 'border-cyan-200 bg-cyan-50 text-cyan-700',
     awaiting_tests: 'border-orange-200 bg-orange-50 text-orange-700',
     prescribed: 'border-emerald-200 bg-emerald-50 text-emerald-700',
     cancelled: 'border-rose-200 bg-rose-50 text-rose-700',
@@ -326,7 +329,8 @@ export default function DoctorAppointments() {
     });
 
     if (response.ok) {
-      setRows((prev) => prev.map((row) => (row.id === id ? { ...row, status } : row)));
+      setSelectedPatient((prev) => (prev?.id === id ? { ...prev, status } : prev));
+      await fetchAppointments(buildParams(currentPage));
       toastSuccess('Appointment status updated.');
       return;
     }
@@ -941,10 +945,11 @@ export default function DoctorAppointments() {
                         onChange={(e) => updateStatus(appointment.id, e.target.value)}
                         className={`w-full rounded-lg border bg-white px-2.5 py-2 text-xs font-semibold transition-colors hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-200 ${getStatusSelectTone(appointment.status)}`}
                       >
-                        <option value="scheduled">Scheduled</option>
-                        <option value="arrived">Arrived</option>
                         <option value="in_consultation">In consultation</option>
-                        <option value="awaiting_tests">Awaiting tests</option>
+                        <option value="arrived">Arrived</option>
+                        <option value="scheduled">Scheduled</option>
+                        <option value="test_registered">Report Submitted</option>
+                                        <option value="awaiting_tests">Awaiting Report</option>
                         <option value="prescribed">Prescribed</option>
                         <option value="cancelled">Cancelled</option>
                       </select>
@@ -1069,10 +1074,11 @@ export default function DoctorAppointments() {
                           onChange={(e) => updateStatus(appointment.id, e.target.value)}
                           className={`w-[136px] min-w-0 rounded-lg border px-2.5 py-2 text-xs font-semibold transition-colors hover:border-slate-300 hover:bg-white focus:outline-none focus:ring-2 focus:ring-slate-200 ${getStatusSelectTone(appointment.status)}`}
                         >
-                          <option value="scheduled">Scheduled</option>
-                          <option value="arrived">Arrived</option>
                           <option value="in_consultation">In consultation</option>
-                          <option value="awaiting_tests">Awaiting tests</option>
+                          <option value="arrived">Arrived</option>
+                          <option value="scheduled">Scheduled</option>
+                          <option value="test_registered">Report Submitted</option>
+                          <option value="awaiting_tests">Awaiting Report</option>
                           <option value="prescribed">Prescribed</option>
                           <option value="cancelled">Cancelled</option>
                         </select>
