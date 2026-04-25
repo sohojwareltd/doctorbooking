@@ -350,6 +350,74 @@ class DoctorController extends Controller
         ]);
     }
 
+    /** PUT /api/doctor/patients/{user} */
+    public function updatePatient(Request $request, User $user): JsonResponse
+    {
+        $doctor = $request->user();
+        $doctorId = $doctor->doctorId();
+
+        abort_unless(
+            $user->role?->name === 'patient',
+            422,
+            'Selected user is not a patient.'
+        );
+
+        if ($doctorId) {
+            abort_unless(
+                $user->appointments()->where('doctor_id', $doctorId)->exists(),
+                403,
+                'This patient has no appointments with you.'
+            );
+        }
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:20', Rule::unique('users', 'phone')->ignore($user->id), Rule::unique('users', 'username')->ignore($user->id)],
+            'gender' => ['nullable', Rule::in(['male', 'female', 'other'])],
+            'age' => ['nullable', 'integer', 'min:1', 'max:150'],
+            'address' => ['nullable', 'string', 'max:500'],
+            'password' => ['nullable', 'string', 'min:8', 'confirmed'],
+        ]);
+
+        $phone = $validated['phone'] ?? null;
+
+        $user->update([
+            'name' => $validated['name'],
+            'phone' => $phone,
+            'username' => $phone ?: $user->username,
+        ]);
+
+        if (!empty($validated['password'])) {
+            $user->forceFill([
+                'password' => Hash::make($validated['password']),
+            ])->save();
+        }
+
+        $user->patientProfile()->updateOrCreate(
+            ['user_id' => $user->id],
+            [
+                'gender' => $validated['gender'] ?? null,
+                'age' => $validated['age'] ?? null,
+                'address' => $validated['address'] ?? null,
+            ]
+        );
+
+        $user->load('patientProfile');
+
+        return response()->json([
+            'message' => 'Patient profile updated successfully.',
+            'patient' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'phone' => $user->phone,
+                'gender' => $user->patientProfile?->gender,
+                'age' => $user->patientProfile?->age,
+                'address' => $user->patientProfile?->address,
+            ],
+        ]);
+    }
+
     /** PUT /api/doctor/patients/{user}/password */
     public function updatePatientPassword(Request $request, User $user): JsonResponse
     {

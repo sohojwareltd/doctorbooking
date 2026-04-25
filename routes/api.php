@@ -91,6 +91,7 @@ Route::middleware(['auth:sanctum', 'role:doctor,compounder'])
         Route::get('/patients', [DoctorController::class, 'patients']);
         Route::post('/patients', [DoctorController::class, 'createPatient']);
         Route::get('/patients/{user}', [DoctorController::class, 'patientShow']);
+        Route::put('/patients/{user}', [DoctorController::class, 'updatePatient']);
         Route::put('/patients/{user}/password', [DoctorController::class, 'updatePatientPassword']);
 
         // Prescriptions

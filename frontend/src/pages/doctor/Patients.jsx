@@ -1,9 +1,9 @@
 ﻿import { router } from '@inertiajs/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Calendar, ChevronDown, Eye, FileText,
-  EyeOff, Hash, KeyRound, Mail, Mars, Phone, RotateCcw,
-  Search, SlidersHorizontal, User, Users, Venus, X,
+  Calendar, ChevronDown, Eye, EyeOff, FileText,
+  Hash, Mail, Mars, Phone, RotateCcw,
+  Pencil, Search, SlidersHorizontal, User, Users, Venus, X,
 } from 'lucide-react';
 import DoctorLayout from '../../layouts/DoctorLayout';
 import DocModal from '../../components/doctor/DocModal';
@@ -104,16 +104,21 @@ export default function Patients() {
   // ui
   const [prescriptionModal, setPrescriptionModal] = useState(null);
   const [filterOpen, setFilterOpen] = useState(false);
-  const [passwordPatient, setPasswordPatient] = useState(null);
-  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
-  const [passwordForm, setPasswordForm] = useState({
+  const [editPatient, setEditPatient] = useState(null);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: '',
+    phone: '',
+    gender: '',
+    age: '',
+    address: '',
     password: '',
     password_confirmation: '',
   });
-  const [passwordSaving, setPasswordSaving] = useState(false);
-  const [passwordSaved, setPasswordSaved] = useState(false);
-  const [passwordError, setPasswordError] = useState('');
-  const [showPasswords, setShowPasswords] = useState({
+  const [editSaving, setEditSaving] = useState(false);
+  const [editSaved, setEditSaved] = useState(false);
+  const [editError, setEditError] = useState('');
+  const [showEditPasswords, setShowEditPasswords] = useState({
     password: false,
     password_confirmation: false,
   });
@@ -129,9 +134,9 @@ export default function Patients() {
 
   const debounceTimer = useRef(null);
 
-  const setPassword = (key) => (e) => setPasswordForm((f) => ({ ...f, [key]: e.target.value }));
-  const togglePasswordVisibility = (key) => {
-    setShowPasswords((prev) => ({ ...prev, [key]: !prev[key] }));
+  const setEdit = (key) => (e) => setEditForm((f) => ({ ...f, [key]: e.target.value }));
+  const toggleEditPasswordVisibility = (key) => {
+    setShowEditPasswords((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
   const getCsrfToken = () => {
@@ -219,36 +224,38 @@ export default function Patients() {
     setPrescriptionModal(p);
   };
 
-  const handleOpenPatientPasswordModal = (patient) => {
-    setPasswordPatient(patient);
-    setPasswordForm({
+  const handleOpenPatientEditModal = (patient) => {
+    setEditPatient(patient);
+    setEditForm({
+      name: patient?.name ?? '',
+      phone: patient?.phone ?? '',
+      gender: patient?.gender ?? '',
+      age: patient?.age ?? '',
+      address: patient?.address ?? '',
       password: '',
       password_confirmation: '',
     });
-    setShowPasswords({
-      password: false,
-      password_confirmation: false,
-    });
-    setPasswordError('');
-    setPasswordSaved(false);
-    setPasswordModalOpen(true);
+    setShowEditPasswords({ password: false, password_confirmation: false });
+    setEditError('');
+    setEditSaved(false);
+    setEditModalOpen(true);
   };
 
-  const handleClosePasswordModal = () => {
-    if (passwordSaving) return;
-    setPasswordModalOpen(false);
-    setPasswordPatient(null);
+  const handleCloseEditModal = () => {
+    if (editSaving) return;
+    setEditModalOpen(false);
+    setEditPatient(null);
   };
 
-  const handlePasswordSubmit = async (e) => {
+  const handleEditSubmit = async (e) => {
     e.preventDefault();
-    if (!passwordPatient?.id) return;
-    setPasswordSaving(true);
-    setPasswordSaved(false);
-    setPasswordError('');
+    if (!editPatient?.id) return;
+    setEditSaving(true);
+    setEditSaved(false);
+    setEditError('');
 
     try {
-      const res = await fetch(`/api/doctor/patients/${passwordPatient?.id}/password`, {
+      const res = await fetch(`/api/doctor/patients/${editPatient.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -256,30 +263,41 @@ export default function Patients() {
           'X-XSRF-TOKEN': getCsrfToken(),
         },
         credentials: 'same-origin',
-        body: JSON.stringify(passwordForm),
+        body: JSON.stringify({
+          name: editForm.name,
+          phone: editForm.phone || null,
+          gender: editForm.gender || null,
+          age: editForm.age === '' ? null : Number(editForm.age),
+          address: editForm.address || null,
+          ...(editForm.password
+            ? {
+                password: editForm.password,
+                password_confirmation: editForm.password_confirmation,
+              }
+            : {}),
+        }),
       });
 
       if (res.ok) {
-        setPasswordSaved(true);
-        setPasswordForm({
+        setEditSaved(true);
+        setEditForm((prev) => ({
+          ...prev,
           password: '',
           password_confirmation: '',
-        });
-        setShowPasswords({
-          password: false,
-          password_confirmation: false,
-        });
+        }));
+        setShowEditPasswords({ password: false, password_confirmation: false });
+        await fetchPatients();
       } else {
         const data = await res.json().catch(() => ({}));
         const firstValidationError = data?.errors
           ? Object.values(data.errors)[0]?.[0]
           : null;
-        setPasswordError(firstValidationError || data.message || 'Failed to change password. Please try again.');
+        setEditError(firstValidationError || data.message || 'Failed to update profile. Please try again.');
       }
     } catch {
-      setPasswordError('Network error. Please try again.');
+      setEditError('Network error. Please try again.');
     } finally {
-      setPasswordSaving(false);
+      setEditSaving(false);
     }
   };
 
@@ -502,13 +520,21 @@ export default function Patients() {
                       >
                         <Eye className="h-4 w-4" />
                       </ActionBtn>
-                      <ActionBtn
+                       <ActionBtn
+                        label="Edit"
+                        className="border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                        onClick={() => handleOpenPatientEditModal(p)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </ActionBtn>
+                      {/* <ActionBtn
                         label="Prescriptions"
                         className="border-violet-300 bg-violet-100 text-violet-800 hover:bg-violet-200"
                         onClick={() => handlePrescriptionClick(p)}
                       >
                         <FileText className="h-4 w-4" />
-                      </ActionBtn>
+                      </ActionBtn> */}
+                      
                       {p.email && (
                         <ActionBtn
                           label="Email"
@@ -518,13 +544,7 @@ export default function Patients() {
                           <Mail className="h-4 w-4" />
                         </ActionBtn>
                       )}
-                      <ActionBtn
-                        label="Password"
-                        className="border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
-                        onClick={() => handleOpenPatientPasswordModal(p)}
-                      >
-                        <KeyRound className="h-4 w-4" />
-                      </ActionBtn>
+                     
                       {p.phone && (
                         <ActionBtn
                           label="Call"
@@ -638,12 +658,19 @@ export default function Patients() {
                             >
                               <Eye className="h-4 w-4" />
                             </ActionBtn>
-                            <ActionBtn
+                            {/* <ActionBtn
                               label="Prescriptions"
                               className="border-violet-300 bg-violet-100 text-violet-800 hover:bg-violet-200"
                               onClick={() => handlePrescriptionClick(p)}
                             >
                               <FileText className="h-4 w-4" />
+                            </ActionBtn> */}
+                               <ActionBtn
+                              label="Edit"
+                              className="border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                              onClick={() => handleOpenPatientEditModal(p)}
+                            >
+                              <Pencil className="h-4 w-4" />
                             </ActionBtn>
                             {p.email && (
                               <ActionBtn
@@ -654,13 +681,7 @@ export default function Patients() {
                                 <Mail className="h-4 w-4" />
                               </ActionBtn>
                             )}
-                            <ActionBtn
-                              label="Password"
-                              className="border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
-                              onClick={() => handleOpenPatientPasswordModal(p)}
-                            >
-                              <KeyRound className="h-4 w-4" />
-                            </ActionBtn>
+                         
                             {p.phone && (
                               <ActionBtn
                                 label="Call"
@@ -766,76 +787,138 @@ export default function Patients() {
       </DocModal>
 
       <DocModal
-        open={passwordModalOpen}
-        onClose={handleClosePasswordModal}
-        title={passwordPatient ? `Change Password - ${passwordPatient.name}` : 'Change Password'}
-        icon={KeyRound}
+        open={editModalOpen}
+        onClose={handleCloseEditModal}
+        title={editPatient ? `Edit Profile - ${editPatient.name}` : 'Edit Profile'}
+        icon={Pencil}
         size="md"
         footer={(
           <>
-            <DocButton variant="secondary" size="sm" onClick={handleClosePasswordModal} disabled={passwordSaving}>
+            <DocButton variant="secondary" size="sm" onClick={handleCloseEditModal} disabled={editSaving}>
               Cancel
             </DocButton>
-            <DocButton size="sm" type="submit" form="doctor-change-password-form" disabled={passwordSaving}>
-              {passwordSaving ? 'Changing...' : 'Change Password'}
+            <DocButton size="sm" type="submit" form="doctor-edit-patient-form" disabled={editSaving}>
+              {editSaving ? 'Saving...' : 'Save Changes'}
             </DocButton>
           </>
         )}
       >
-        <form id="doctor-change-password-form" onSubmit={handlePasswordSubmit} className="space-y-4">
+        <form id="doctor-edit-patient-form" onSubmit={handleEditSubmit} className="space-y-4">
           <div>
-            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500">New Password</label>
-            <div className="relative">
+            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500">Full Name</label>
+            <input
+              type="text"
+              value={editForm.name}
+              onChange={setEdit('name')}
+              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 transition focus:border-[#2D3A74] focus:outline-none focus:ring-2 focus:ring-[#2D3A74]/20"
+              required
+            />
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500">Phone</label>
               <input
-                type={showPasswords.password ? 'text' : 'password'}
-                value={passwordForm.password}
-                onChange={setPassword('password')}
-                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 pr-11 text-sm text-slate-900 placeholder-slate-400 transition focus:border-[#2D3A74] focus:outline-none focus:ring-2 focus:ring-[#2D3A74]/20"
-                autoComplete="new-password"
-                required
+                type="text"
+                value={editForm.phone}
+                onChange={setEdit('phone')}
+                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 transition focus:border-[#2D3A74] focus:outline-none focus:ring-2 focus:ring-[#2D3A74]/20"
+                placeholder="Patient phone"
               />
-              <button
-                type="button"
-                onClick={() => togglePasswordVisibility('password')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-slate-600"
-                aria-label={showPasswords.password ? 'Hide new password' : 'Show new password'}
-              >
-                {showPasswords.password ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500">Age</label>
+              <input
+                type="number"
+                min="1"
+                max="150"
+                value={editForm.age}
+                onChange={setEdit('age')}
+                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 transition focus:border-[#2D3A74] focus:outline-none focus:ring-2 focus:ring-[#2D3A74]/20"
+                placeholder="Age"
+              />
             </div>
           </div>
 
           <div>
-            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500">Confirm New Password</label>
-            <div className="relative">
-              <input
-                type={showPasswords.password_confirmation ? 'text' : 'password'}
-                value={passwordForm.password_confirmation}
-                onChange={setPassword('password_confirmation')}
-                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 pr-11 text-sm text-slate-900 placeholder-slate-400 transition focus:border-[#2D3A74] focus:outline-none focus:ring-2 focus:ring-[#2D3A74]/20"
-                autoComplete="new-password"
-                required
-              />
-              <button
-                type="button"
-                onClick={() => togglePasswordVisibility('password_confirmation')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-slate-600"
-                aria-label={showPasswords.password_confirmation ? 'Hide password confirmation' : 'Show password confirmation'}
-              >
-                {showPasswords.password_confirmation ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
+            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500">Gender</label>
+            <select
+              value={editForm.gender}
+              onChange={setEdit('gender')}
+              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 transition focus:border-[#2D3A74] focus:outline-none focus:ring-2 focus:ring-[#2D3A74]/20"
+            >
+              <option value="">Select gender</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500">Address</label>
+            <textarea
+              value={editForm.address}
+              onChange={setEdit('address')}
+              rows={3}
+              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 transition focus:border-[#2D3A74] focus:outline-none focus:ring-2 focus:ring-[#2D3A74]/20"
+              placeholder="Patient address"
+            />
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500">New Password (Optional)</label>
+              <div className="relative">
+                <input
+                  type={showEditPasswords.password ? 'text' : 'password'}
+                  value={editForm.password}
+                  onChange={setEdit('password')}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 pr-11 text-sm text-slate-900 placeholder-slate-400 transition focus:border-[#2D3A74] focus:outline-none focus:ring-2 focus:ring-[#2D3A74]/20"
+                  autoComplete="new-password"
+                  placeholder="Leave blank to keep current"
+                />
+                <button
+                  type="button"
+                  onClick={() => toggleEditPasswordVisibility('password')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-slate-600"
+                  aria-label={showEditPasswords.password ? 'Hide new password' : 'Show new password'}
+                >
+                  {showEditPasswords.password ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500">Confirm Password</label>
+              <div className="relative">
+                <input
+                  type={showEditPasswords.password_confirmation ? 'text' : 'password'}
+                  value={editForm.password_confirmation}
+                  onChange={setEdit('password_confirmation')}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 pr-11 text-sm text-slate-900 placeholder-slate-400 transition focus:border-[#2D3A74] focus:outline-none focus:ring-2 focus:ring-[#2D3A74]/20"
+                  autoComplete="new-password"
+                  placeholder="Repeat new password"
+                />
+                <button
+                  type="button"
+                  onClick={() => toggleEditPasswordVisibility('password_confirmation')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-slate-600"
+                  aria-label={showEditPasswords.password_confirmation ? 'Hide password confirmation' : 'Show password confirmation'}
+                >
+                  {showEditPasswords.password_confirmation ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
           </div>
 
-          {passwordError && (
+          {editError && (
             <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
-              {passwordError}
+              {editError}
             </div>
           )}
 
-          {passwordSaved && (
+          {editSaved && (
             <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-              Password changed successfully.
+              Profile updated successfully.
             </div>
           )}
         </form>
