@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Calendar, ChevronDown, Eye, FileText,
-  Hash, Mail, Mars, Phone, RotateCcw,
+  EyeOff, Hash, KeyRound, Mail, Mars, Phone, RotateCcw,
   Search, SlidersHorizontal, User, Users, Venus, X,
 } from 'lucide-react';
 import DoctorLayout from '../../layouts/DoctorLayout';
@@ -104,6 +104,19 @@ export default function Patients() {
   // ui
   const [prescriptionModal, setPrescriptionModal] = useState(null);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [passwordPatient, setPasswordPatient] = useState(null);
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({
+    password: '',
+    password_confirmation: '',
+  });
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [passwordSaved, setPasswordSaved] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const [showPasswords, setShowPasswords] = useState({
+    password: false,
+    password_confirmation: false,
+  });
 
   // filters
   const [search, setSearch]                       = useState('');
@@ -115,6 +128,20 @@ export default function Patients() {
   const [page, setPage]                           = useState(1);
 
   const debounceTimer = useRef(null);
+
+  const setPassword = (key) => (e) => setPasswordForm((f) => ({ ...f, [key]: e.target.value }));
+  const togglePasswordVisibility = (key) => {
+    setShowPasswords((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const getCsrfToken = () => {
+    const cookie = document.cookie
+      .split('; ')
+      .find((r) => r.startsWith('XSRF-TOKEN='))
+      ?.split('=')[1];
+    if (cookie) return decodeURIComponent(cookie);
+    return document.querySelector('meta[name="csrf-token"]')?.content ?? '';
+  };
 
   const activeFilterCount = useMemo(() => {
     let n = 0;
@@ -190,6 +217,70 @@ export default function Patients() {
       return;
     }
     setPrescriptionModal(p);
+  };
+
+  const handleOpenPatientPasswordModal = (patient) => {
+    setPasswordPatient(patient);
+    setPasswordForm({
+      password: '',
+      password_confirmation: '',
+    });
+    setShowPasswords({
+      password: false,
+      password_confirmation: false,
+    });
+    setPasswordError('');
+    setPasswordSaved(false);
+    setPasswordModalOpen(true);
+  };
+
+  const handleClosePasswordModal = () => {
+    if (passwordSaving) return;
+    setPasswordModalOpen(false);
+    setPasswordPatient(null);
+  };
+
+  const handlePasswordSubmit = async (e) => {
+    e.preventDefault();
+    if (!passwordPatient?.id) return;
+    setPasswordSaving(true);
+    setPasswordSaved(false);
+    setPasswordError('');
+
+    try {
+      const res = await fetch(`/api/doctor/patients/${passwordPatient?.id}/password`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          'X-XSRF-TOKEN': getCsrfToken(),
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify(passwordForm),
+      });
+
+      if (res.ok) {
+        setPasswordSaved(true);
+        setPasswordForm({
+          password: '',
+          password_confirmation: '',
+        });
+        setShowPasswords({
+          password: false,
+          password_confirmation: false,
+        });
+      } else {
+        const data = await res.json().catch(() => ({}));
+        const firstValidationError = data?.errors
+          ? Object.values(data.errors)[0]?.[0]
+          : null;
+        setPasswordError(firstValidationError || data.message || 'Failed to change password. Please try again.');
+      }
+    } catch {
+      setPasswordError('Network error. Please try again.');
+    } finally {
+      setPasswordSaving(false);
+    }
   };
 
   // ── render ────────────────────────────────────────────────────────────────────
@@ -427,6 +518,13 @@ export default function Patients() {
                           <Mail className="h-4 w-4" />
                         </ActionBtn>
                       )}
+                      <ActionBtn
+                        label="Password"
+                        className="border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                        onClick={() => handleOpenPatientPasswordModal(p)}
+                      >
+                        <KeyRound className="h-4 w-4" />
+                      </ActionBtn>
                       {p.phone && (
                         <ActionBtn
                           label="Call"
@@ -556,6 +654,13 @@ export default function Patients() {
                                 <Mail className="h-4 w-4" />
                               </ActionBtn>
                             )}
+                            <ActionBtn
+                              label="Password"
+                              className="border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                              onClick={() => handleOpenPatientPasswordModal(p)}
+                            >
+                              <KeyRound className="h-4 w-4" />
+                            </ActionBtn>
                             {p.phone && (
                               <ActionBtn
                                 label="Call"
@@ -658,6 +763,82 @@ export default function Patients() {
             </div>
           </div>
         )}
+      </DocModal>
+
+      <DocModal
+        open={passwordModalOpen}
+        onClose={handleClosePasswordModal}
+        title={passwordPatient ? `Change Password - ${passwordPatient.name}` : 'Change Password'}
+        icon={KeyRound}
+        size="md"
+        footer={(
+          <>
+            <DocButton variant="secondary" size="sm" onClick={handleClosePasswordModal} disabled={passwordSaving}>
+              Cancel
+            </DocButton>
+            <DocButton size="sm" type="submit" form="doctor-change-password-form" disabled={passwordSaving}>
+              {passwordSaving ? 'Changing...' : 'Change Password'}
+            </DocButton>
+          </>
+        )}
+      >
+        <form id="doctor-change-password-form" onSubmit={handlePasswordSubmit} className="space-y-4">
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500">New Password</label>
+            <div className="relative">
+              <input
+                type={showPasswords.password ? 'text' : 'password'}
+                value={passwordForm.password}
+                onChange={setPassword('password')}
+                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 pr-11 text-sm text-slate-900 placeholder-slate-400 transition focus:border-[#2D3A74] focus:outline-none focus:ring-2 focus:ring-[#2D3A74]/20"
+                autoComplete="new-password"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => togglePasswordVisibility('password')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-slate-600"
+                aria-label={showPasswords.password ? 'Hide new password' : 'Show new password'}
+              >
+                {showPasswords.password ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500">Confirm New Password</label>
+            <div className="relative">
+              <input
+                type={showPasswords.password_confirmation ? 'text' : 'password'}
+                value={passwordForm.password_confirmation}
+                onChange={setPassword('password_confirmation')}
+                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 pr-11 text-sm text-slate-900 placeholder-slate-400 transition focus:border-[#2D3A74] focus:outline-none focus:ring-2 focus:ring-[#2D3A74]/20"
+                autoComplete="new-password"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => togglePasswordVisibility('password_confirmation')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-slate-600"
+                aria-label={showPasswords.password_confirmation ? 'Hide password confirmation' : 'Show password confirmation'}
+              >
+                {showPasswords.password_confirmation ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+          </div>
+
+          {passwordError && (
+            <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+              {passwordError}
+            </div>
+          )}
+
+          {passwordSaved && (
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+              Password changed successfully.
+            </div>
+          )}
+        </form>
       </DocModal>
     </DoctorLayout>
   );

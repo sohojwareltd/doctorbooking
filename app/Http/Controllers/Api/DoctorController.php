@@ -350,6 +350,39 @@ class DoctorController extends Controller
         ]);
     }
 
+    /** PUT /api/doctor/patients/{user}/password */
+    public function updatePatientPassword(Request $request, User $user): JsonResponse
+    {
+        $doctor = $request->user();
+        $doctorId = $doctor->doctorId();
+
+        abort_unless(
+            $user->role?->name === 'patient',
+            422,
+            'Selected user is not a patient.'
+        );
+
+        if ($doctorId) {
+            abort_unless(
+                $user->appointments()->where('doctor_id', $doctorId)->exists(),
+                403,
+                'This patient has no appointments with you.'
+            );
+        }
+
+        $validated = $request->validate([
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ]);
+
+        $user->forceFill([
+            'password' => Hash::make($validated['password']),
+        ])->save();
+
+        return response()->json([
+            'message' => 'Patient password updated successfully.',
+        ]);
+    }
+
     // ── Prescriptions ─────────────────────────────────────────────────────────
 
     /** GET /api/doctor/prescriptions */
