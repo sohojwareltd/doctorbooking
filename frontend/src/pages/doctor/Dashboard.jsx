@@ -192,10 +192,18 @@ export default function DoctorDashboard({
   const doctorName = (user?.name || '').trim() || 'Doctor';
   const doctorDisplayName = /^dr\.?\s/i.test(doctorName) ? doctorName : `Dr. ${doctorName}`;
 
+  const STATUS_ORDER = ['in_consultation', 'arrived', 'scheduled', 'test_registered', 'awaiting_tests', 'prescribed', 'cancelled'];
+  const sortByStatusOrder = (list) =>
+    [...list].sort((a, b) => {
+      const ai = STATUS_ORDER.indexOf(a.status);
+      const bi = STATUS_ORDER.indexOf(b.status);
+      return (ai === -1 ? STATUS_ORDER.length : ai) - (bi === -1 ? STATUS_ORDER.length : bi);
+    });
+
   const tabAppointments =
-    activeTab === 'today' ? todayAppointments :
-      activeTab === 'awaiting' ? awaitingList :
-        todayAppointments.filter((a) => a.status === activeTab);
+    activeTab === 'today' ? sortByStatusOrder(todayAppointments).slice(0, 10) :
+      activeTab === 'awaiting' ? sortByStatusOrder(awaitingList) :
+        sortByStatusOrder(todayAppointments.filter((a) => a.status === activeTab));
 
   const formatRangeTime = (start, end) => {
     const startLabel = start ? fmtTime(start) : '-';
