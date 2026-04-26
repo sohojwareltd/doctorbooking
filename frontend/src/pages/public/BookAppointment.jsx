@@ -540,85 +540,140 @@ export default function PublicBookAppointment() {
                                   : 'border-[#e3e8ef] bg-white hover:border-[#0c7b79]/20 hover:bg-[#f7fdfb] hover:shadow-[0_2px_12px_rgba(12,123,121,0.07)]'
                                   }`}
                               >
-                                <div className="flex items-center justify-between gap-3.5 sm:gap-4">
-
-                                  {/* Icon badge */}
-
-
-                                  {/* Name + Location */}
-                                  <div className="flex min-w-0 gap-5 sm:w-[45%] sm:max-w-[45%] sm:shrink-0">
-                                    <span className={`inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border transition-colors duration-200 ${isActive ? 'border-[#0c7b79]/25 bg-[#0c7b79]/10 text-[#0c7b79]' : 'border-[#dbe9ec] bg-[#eaf4f3] text-[#0c7b79]'}`}>
-                                      <Building2 className="h-5 w-5" />
-                                    </span>
-                                    <div className="min-w-0">
-                                      <p className="truncate text-[15px] font-semibold leading-snug text-[#1a2f44]">
-                                        {ch.name}
-                                      </p>
-                                      <div className="mt-0.5 flex items-start gap-1 text-[13px] text-slate-500">
-                                        <MapPin className="mt-[3px] h-3.5 w-3.5 shrink-0 text-[#0c7b79]" />
-                                        <span className="line-clamp-1">{ch.location || 'Location details shared during confirmation.'}</span>
+                                <>
+                                  <div className="sm:hidden">
+                                    <div className="flex items-start gap-3">
+                                      <div className="flex min-w-0 items-start gap-3">
+                                        <span className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border transition-colors duration-200 ${isActive ? 'border-[#0c7b79]/25 bg-[#0c7b79]/10 text-[#0c7b79]' : 'border-[#dbe9ec] bg-[#eaf4f3] text-[#0c7b79]'}`}>
+                                          <Building2 className="h-5 w-5" />
+                                        </span>
+                                        <div className="min-w-0">
+                                          <p className="truncate text-[17px] font-semibold leading-snug text-[#1a2f44]">
+                                            {ch.name}
+                                          </p>
+                                          <p className="mt-1 text-[14px] leading-snug text-slate-500 line-clamp-2">
+                                            {ch.location || 'Location details shared during confirmation.'}
+                                          </p>
+                                        </div>
                                       </div>
                                     </div>
-                                  </div>
 
-                                  {/* Divider between left and middle column */}
-                                  <div className="hidden h-10 w-px shrink-0 bg-slate-400/40 sm:block" />
+                                    <div className="mt-4 flex items-center justify-between gap-3">
+                                      <div className="flex items-center gap-2 text-[15px] text-[#4b5563]">
+                                        <Phone className="h-4 w-4 shrink-0" />
+                                        <span>{ch.phone || 'Call for schedule information'}</span>
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          selectChamberAndContinue(ch);
+                                        }}
+                                        className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white transition ${isActive ? 'bg-[#0a6664]' : 'bg-[#0c7b79] hover:bg-[#0a6664]'}`}
+                                        aria-label={`Select chamber ${ch.name}`}
+                                      >
+                                        <ArrowRight className="h-4 w-4" />
+                                      </button>
+                                    </div>
 
-                                  {/* Phone + View on map + Call */}
-                                  <div className="hidden shrink-0 flex-col items-end gap-1.5 sm:flex">
-                                    {ch.phone && (
-                                      <span className="flex items-center gap-1.5 text-[13px] text-slate-500">
-                                        <Phone className="h-3.5 w-3.5 shrink-0" />
-                                        {ch.phone}
-                                      </span>
-                                    )}
-                                    <div className="flex items-center gap-2.5">
-                                      {mapsUrl && (
+                                    <div className="mt-4 border-t border-slate-200 pt-3">
+                                      <div className="grid grid-cols-2 divide-x divide-slate-200 text-[#0c7b79]">
                                         <button
                                           type="button"
                                           onClick={(e) => {
                                             e.stopPropagation();
-                                            window.open(mapsUrl, '_blank', 'noopener,noreferrer');
+                                            if (mapsUrl) window.open(mapsUrl, '_blank', 'noopener,noreferrer');
                                           }}
-                                          className="flex items-center gap-1 text-[12px] font-medium text-[#0c7b79] transition hover:text-[#0a6664] hover:underline"
+                                          className="flex items-center justify-center gap-2 py-1.5 text-[15px] font-medium"
                                         >
-                                          <MapPin className="h-3 w-3" />
-                                          View on map
+                                          <MapPin className="h-4 w-4" />
+                                          Map
                                         </button>
-                                      )}
-                                      {ch.phone && (
                                         <a
-                                          href={`tel:${ch.phone}`}
-                                          onClick={(e) => e.stopPropagation()}
-                                          className="flex items-center gap-1 text-[12px] font-medium text-[#0c7b79] transition hover:text-[#0a6664] hover:underline"
+                                          href={ch.phone ? `tel:${ch.phone}` : undefined}
+                                          onClick={(e) => {
+                                            if (!ch.phone) e.preventDefault();
+                                            e.stopPropagation();
+                                          }}
+                                          className="flex items-center justify-center gap-2 py-1.5 text-[15px] font-medium"
                                         >
-                                          <Phone className="h-3 w-3" />
+                                          <Phone className="h-4 w-4" />
                                           Call
                                         </a>
-                                      )}
+                                      </div>
                                     </div>
                                   </div>
 
-                                  {/* Divider between middle and right column */}
-                                  <div className="hidden h-10 w-px shrink-0 bg-slate-400/40 sm:block" />
+                                  <div className="hidden items-center justify-between gap-3.5 sm:flex sm:gap-4">
+                                    <div className="flex min-w-0 gap-5 sm:w-[45%] sm:max-w-[45%] sm:shrink-0">
+                                      <span className={`inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border transition-colors duration-200 ${isActive ? 'border-[#0c7b79]/25 bg-[#0c7b79]/10 text-[#0c7b79]' : 'border-[#dbe9ec] bg-[#eaf4f3] text-[#0c7b79]'}`}>
+                                        <Building2 className="h-5 w-5" />
+                                      </span>
+                                      <div className="min-w-0">
+                                        <p className="truncate text-[15px] font-semibold leading-snug text-[#1a2f44]">
+                                          {ch.name}
+                                        </p>
+                                        <div className="mt-0.5 flex items-start gap-1 text-[13px] text-slate-500">
+                                          <MapPin className="mt-[3px] h-3.5 w-3.5 shrink-0 text-[#0c7b79]" />
+                                          <span className="line-clamp-1">{ch.location || 'Location details shared during confirmation.'}</span>
+                                        </div>
+                                      </div>
+                                    </div>
 
-                                  {/* Select button */}
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      selectChamberAndContinue(ch);
-                                    }}
-                                    className={`inline-flex h-9 shrink-0 items-center gap-1.5 rounded-xl px-4 text-[13px] font-semibold text-white transition-all duration-150 ${isActive
-                                      ? 'bg-[#0a6664] shadow-[0_2px_8px_rgba(10,102,100,0.30)]'
-                                      : 'bg-[#0c7b79] hover:bg-[#0a6664] hover:shadow-[0_2px_8px_rgba(10,102,100,0.22)]'
-                                      }`}
-                                  >
-                                    Select
-                                    <ArrowRight className="h-3.5 w-3.5" />
-                                  </button>
+                                    <div className="hidden h-10 w-px shrink-0 bg-slate-400/40 sm:block" />
 
-                                </div>
+                                    <div className="hidden shrink-0 flex-col items-end gap-1.5 sm:flex">
+                                      {ch.phone && (
+                                        <span className="flex items-center gap-1.5 text-[13px] text-slate-500">
+                                          <Phone className="h-3.5 w-3.5 shrink-0" />
+                                          {ch.phone}
+                                        </span>
+                                      )}
+                                      <div className="flex items-center gap-2.5">
+                                        {mapsUrl && (
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              window.open(mapsUrl, '_blank', 'noopener,noreferrer');
+                                            }}
+                                            className="flex items-center gap-1 text-[12px] font-medium text-[#0c7b79] transition hover:text-[#0a6664] hover:underline"
+                                          >
+                                            <MapPin className="h-3 w-3" />
+                                            View on map
+                                          </button>
+                                        )}
+                                        {ch.phone && (
+                                          <a
+                                            href={`tel:${ch.phone}`}
+                                            onClick={(e) => e.stopPropagation()}
+                                            className="flex items-center gap-1 text-[12px] font-medium text-[#0c7b79] transition hover:text-[#0a6664] hover:underline"
+                                          >
+                                            <Phone className="h-3 w-3" />
+                                            Call
+                                          </a>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    <div className="hidden h-10 w-px shrink-0 bg-slate-400/40 sm:block" />
+
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        selectChamberAndContinue(ch);
+                                      }}
+                                      className={`inline-flex h-9 shrink-0 items-center gap-1.5 rounded-xl px-4 text-[13px] font-semibold text-white transition-all duration-150 ${isActive
+                                        ? 'bg-[#0a6664] shadow-[0_2px_8px_rgba(10,102,100,0.30)]'
+                                        : 'bg-[#0c7b79] hover:bg-[#0a6664] hover:shadow-[0_2px_8px_rgba(10,102,100,0.22)]'
+                                        }`}
+                                    >
+                                      Select
+                                      <ArrowRight className="h-3.5 w-3.5" />
+                                    </button>
+                                  </div>
+                                </>
                               </motion.div>
                             );
                           })}

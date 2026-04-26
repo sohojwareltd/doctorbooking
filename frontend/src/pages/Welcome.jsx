@@ -210,6 +210,9 @@ export default function Welcome({ home, doctor, chambers = [] }) {
     return (
         <>
             <Head title={meta.title || `${doctorName} - Doctor Portfolio`}>
+                <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+                <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+                <link rel="shortcut icon" href="/favicon.ico" />
                 <meta
                     name="description"
                     content={
