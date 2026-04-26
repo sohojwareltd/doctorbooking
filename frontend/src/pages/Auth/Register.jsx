@@ -49,6 +49,29 @@ const getFieldError = (errorObject, field) => {
     return nestedError?.[field] || null;
 };
 
+const getIdentifierErrorMessage = (message, identifierType) => {
+    if (!message) {
+        return null;
+    }
+
+    const normalized = String(message).toLowerCase();
+    const isTakenMessage = normalized.includes('taken') || normalized.includes('already exists');
+
+    if (isTakenMessage) {
+        return identifierType === 'email'
+            ? 'The email has already been taken.'
+            : 'The phone number has already been taken.';
+    }
+
+    if (normalized.includes('username')) {
+        return identifierType === 'email'
+            ? message.replace(/username/gi, 'email')
+            : message.replace(/username/gi, 'phone number');
+    }
+
+    return message;
+};
+
 export default function Register() {
     const [identifierType, setIdentifierType] = useState('email'); // 'email' | 'phone'
 
@@ -72,9 +95,10 @@ export default function Register() {
     const emailError = getFieldError(errors, 'email');
     const phoneError = getFieldError(errors, 'phone');
     const usernameError = getFieldError(errors, 'username');
-    const identifierError = identifierType === 'email'
+    const rawIdentifierError = identifierType === 'email'
         ? (emailError || usernameError)
         : (phoneError || usernameError);
+    const identifierError = getIdentifierErrorMessage(rawIdentifierError, identifierType);
     const passwordError = getFieldError(errors, 'password');
     const passwordConfirmationError = getFieldError(errors, 'password_confirmation');
 
