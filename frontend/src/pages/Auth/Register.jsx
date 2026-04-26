@@ -1,11 +1,53 @@
 import { Head, Link, useForm } from '@inertiajs/react';
-import { Mail, Lock, User, Phone, AtSign } from 'lucide-react';
-import { useState } from 'react';
+import { Mail, Lock, User, Phone } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import GlassCard from '../../components/GlassCard';
 import ParticlesBackground from '../../components/ParticlesBackground';
 import PrimaryButton from '../../components/PrimaryButton';
 import DoctorLogo from '../../components/DoctorLogo';
 import PublicLayout from '../../layouts/PublicLayout';
+import { toastError } from '../../utils/toast';
+
+const extractErrorMessages = (errorObject) => {
+    const messages = [];
+
+    const walk = (value) => {
+        if (!value) {
+            return;
+        }
+
+        if (typeof value === 'string') {
+            messages.push(value);
+            return;
+        }
+
+        if (Array.isArray(value)) {
+            value.forEach(walk);
+            return;
+        }
+
+        if (typeof value === 'object') {
+            Object.values(value).forEach(walk);
+        }
+    };
+
+    walk(errorObject);
+    return [...new Set(messages)];
+};
+
+const getFieldError = (errorObject, field) => {
+    const direct = errorObject?.[field];
+
+    if (typeof direct === 'string') {
+        return direct;
+    }
+
+    const nestedError = Object.values(errorObject || {}).find(
+        (value) => value && typeof value === 'object' && typeof value[field] === 'string',
+    );
+
+    return nestedError?.[field] || null;
+};
 
 export default function Register() {
     const [identifierType, setIdentifierType] = useState('email'); // 'email' | 'phone'
@@ -23,8 +65,26 @@ export default function Register() {
         post('/register');
     };
 
-    // Show any validation error
-    const anyError = errors.name || errors.email || errors.phone || errors.password || errors.password_confirmation;
+    const errorMessages = extractErrorMessages(errors);
+    const errorKey = useMemo(() => errorMessages.join('|'), [errorMessages]);
+
+    const nameError = getFieldError(errors, 'name');
+    const emailError = getFieldError(errors, 'email');
+    const phoneError = getFieldError(errors, 'phone');
+    const usernameError = getFieldError(errors, 'username');
+    const identifierError = identifierType === 'email'
+        ? (emailError || usernameError)
+        : (phoneError || usernameError);
+    const passwordError = getFieldError(errors, 'password');
+    const passwordConfirmationError = getFieldError(errors, 'password_confirmation');
+
+    useEffect(() => {
+        if (errorMessages.length === 0) {
+            return;
+        }
+
+        toastError(errorMessages[0]);
+    }, [errorKey]);
 
     const inputClass = "w-full rounded-2xl border-2 border-[#00acb1]/30 bg-white px-4 py-3 pl-12 text-gray-900 shadow-sm focus:border-[#00acb1] focus:outline-none focus:ring-4 focus:ring-[#00acb1]/30";
 
@@ -49,12 +109,6 @@ export default function Register() {
                             </div>
                         </div>
 
-                        {anyError && (
-                            <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
-                                {anyError}
-                            </div>
-                        )}
-
                         <form onSubmit={submit} className="space-y-5">
                             {/* Full Name */}
                             <div>
@@ -74,6 +128,7 @@ export default function Register() {
                                         required
                                     />
                                 </div>
+                                {nameError && <div className="mt-2 text-sm text-red-600">{nameError}</div>}
                             </div>
 
                             {/* Email / Phone toggle */}
@@ -96,35 +151,41 @@ export default function Register() {
                                 </div>
 
                                 {identifierType === 'email' ? (
-                                    <div className="relative">
-                                        <Mail className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#005963]" />
-                                        <input
-                                            id="email"
-                                            type="email"
-                                            name="email"
-                                            value={data.email}
-                                            className={inputClass}
-                                            autoComplete="email"
-                                            placeholder="you@example.com"
-                                            onChange={(e) => setData('email', e.target.value)}
-                                            required
-                                        />
-                                    </div>
+                                    <>
+                                        <div className="relative">
+                                            <Mail className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#005963]" />
+                                            <input
+                                                id="email"
+                                                type="email"
+                                                name="email"
+                                                value={data.email}
+                                                className={inputClass}
+                                                autoComplete="email"
+                                                placeholder="you@example.com"
+                                                onChange={(e) => setData('email', e.target.value)}
+                                                required
+                                            />
+                                        </div>
+                                        {identifierError && <div className="mt-2 text-sm text-red-600">{identifierError}</div>}
+                                    </>
                                 ) : (
-                                    <div className="relative">
-                                        <Phone className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#005963]" />
-                                        <input
-                                            id="phone"
-                                            type="tel"
-                                            name="phone"
-                                            value={data.phone}
-                                            className={inputClass}
-                                            autoComplete="tel"
-                                            placeholder="+8801..."
-                                            onChange={(e) => setData('phone', e.target.value)}
-                                            required
-                                        />
-                                    </div>
+                                    <>
+                                        <div className="relative">
+                                            <Phone className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#005963]" />
+                                            <input
+                                                id="phone"
+                                                type="tel"
+                                                name="phone"
+                                                value={data.phone}
+                                                className={inputClass}
+                                                autoComplete="tel"
+                                                placeholder="+8801..."
+                                                onChange={(e) => setData('phone', e.target.value)}
+                                                required
+                                            />
+                                        </div>
+                                        {identifierError && <div className="mt-2 text-sm text-red-600">{identifierError}</div>}
+                                    </>
                                 )}
 
                                 <p className="mt-1.5 text-xs text-gray-400">
@@ -151,6 +212,7 @@ export default function Register() {
                                         required
                                     />
                                 </div>
+                                {passwordError && <div className="mt-2 text-sm text-red-600">{passwordError}</div>}
                             </div>
 
                             {/* Confirm Password */}
@@ -172,6 +234,7 @@ export default function Register() {
                                         required
                                     />
                                 </div>
+                                {passwordConfirmationError && <div className="mt-2 text-sm text-red-600">{passwordConfirmationError}</div>}
                             </div>
 
                             <PrimaryButton type="submit" className="w-full" disabled={processing}>
