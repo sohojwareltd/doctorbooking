@@ -929,6 +929,41 @@ html {
     50% { transform: translateY(-0.5px); }
 }
 
+@keyframes consultation-bounce {
+    0%, 100% {
+        transform: translateY(0);
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.18), 0 2px 8px rgba(16, 185, 129, 0.10);
+        border-color: rgb(110, 231, 183);
+    }
+    40% {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 20px 0 rgba(16, 185, 129, 0.28), 0 0 0 4px rgba(16, 185, 129, 0.10);
+        border-color: rgb(52, 211, 153);
+    }
+    60% {
+        transform: translateY(-1.5px);
+        box-shadow: 0 4px 12px 0 rgba(16, 185, 129, 0.18), 0 0 0 2px rgba(16, 185, 129, 0.07);
+    }
+}
+
+@keyframes consultation-row-pulse {
+    0%, 100% { background-color: rgb(236 253 245 / 0.8); }
+    50% { background-color: rgb(209 250 229 / 0.95); }
+}
+
+@keyframes widget-bounce-in {
+    0%   { opacity: 0; transform: translateY(28px) scale(0.94); }
+    60%  { opacity: 1; transform: translateY(-6px) scale(1.02); }
+    80%  { transform: translateY(3px) scale(0.99); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* In-consultation table row highlight */
+tr.consultation-active {
+    background-color: rgb(236 253 245 / 0.85);
+    box-shadow: inset 3px 0 0 0 rgb(16, 185, 129);
+}
+
 @keyframes docTitleSheen {
     0% { background-position: 160% 50%; }
     100% { background-position: -40% 50%; }

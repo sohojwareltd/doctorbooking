@@ -809,7 +809,7 @@ export default function DoctorAppointments() {
           </div>
 
           <div className="grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-4">
-            {topWidgets.map((widget) => {
+            {topWidgets.map((widget, widgetIndex) => {
               const Icon = widget.icon;
               const active = isWidgetActive(widget);
 
@@ -818,7 +818,8 @@ export default function DoctorAppointments() {
                   key={widget.key}
                   type="button"
                   onClick={() => applyWidgetFilter(widget)}
-                  className={`surface-card rounded-2xl p-3.5 text-left transition sm:rounded-3xl sm:p-5 ${active
+                  style={{ animationDelay: `${widgetIndex * 120}ms` }}
+                  className={`surface-card rounded-2xl p-3.5 text-left transition animate-[widget-bounce-in_0.55s_cubic-bezier(0.34,1.56,0.64,1)_both] sm:rounded-3xl sm:p-5 ${active
                     ? 'ring-2 ring-[#2D3A74]/35 shadow-[0_14px_34px_-18px_rgba(45,58,116,0.7)]'
                     : 'hover:-translate-y-0.5 hover:shadow-[0_14px_34px_-20px_rgba(15,23,42,0.5)]'
                     }`}
@@ -938,11 +939,16 @@ export default function DoctorAppointments() {
             ) : paginatedRows.map((appointment) => {
               const patientPhone = getPatientPhone(appointment);
               const appointmentTimeLabel = formatDisplayTime12h(appointment.appointment_time) || appointment.appointment_time || 'N/A';
+              const isInConsultation = appointment.status === 'in_consultation';
 
               return (
                 <div
                   key={appointment.id}
-                  className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3 shadow-sm cursor-pointer transition active:scale-[0.995]"
+                  className={`rounded-2xl border p-4 space-y-3 shadow-sm cursor-pointer transition active:scale-[0.995] ${
+                    isInConsultation
+                      ? 'border-emerald-300 bg-emerald-50/60 shadow-emerald-100 animate-[consultation-bounce_1.8s_ease-in-out_infinite]'
+                      : 'border-slate-200 bg-white'
+                  }`}
                   onClick={() => setSelectedPatient(appointment)}
                 >
                   <div className="flex items-start justify-between gap-2">
@@ -1072,8 +1078,17 @@ export default function DoctorAppointments() {
                   const patientPhone = getPatientPhone(appointment);
                   const appointmentTimeLabel = formatDisplayTime12h(appointment.appointment_time) || appointment.appointment_time || 'N/A';
 
+                  const isInConsultation = appointment.status === 'in_consultation';
                   return (
-                    <tr key={appointment.id} className="cursor-pointer hover:bg-slate-50/80" onClick={() => setSelectedPatient(appointment)}>
+                    <tr
+                      key={appointment.id}
+                      className={`cursor-pointer transition-colors ${
+                        isInConsultation
+                          ? 'consultation-active animate-[consultation-bounce_1.8s_ease-in-out_infinite]'
+                          : 'hover:bg-slate-50/80'
+                      }`}
+                      onClick={() => setSelectedPatient(appointment)}
+                    >
                       <td className="px-6 py-4 font-medium text-slate-600 text-center">
                         <span className="inline-flex items-center justify-center gap-1.5">
                           <Hash className="h-3.5 w-3.5 text-slate-400" />
