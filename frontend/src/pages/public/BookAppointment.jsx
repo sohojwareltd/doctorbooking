@@ -50,6 +50,7 @@ export default function PublicBookAppointment() {
   const [error, setError] = useState('');
   const [unavailableRanges, setUnavailableRanges] = useState([]);
   const [closedWeekdays, setClosedWeekdays] = useState([]);
+  const [fullyBookedDates, setFullyBookedDates] = useState([]);
   const [captchaQuestion, setCaptchaQuestion] = useState('');
   const [captchaToken, setCaptchaToken] = useState('');
   const [loadingCaptcha, setLoadingCaptcha] = useState(false);
@@ -76,11 +77,14 @@ export default function PublicBookAppointment() {
   const isUnavailableDate = (dateStr) => {
     if (!dateStr) return false;
     if (isClosedByWeekday(dateStr)) return true;
+    if (Array.isArray(fullyBookedDates) && fullyBookedDates.includes(dateStr)) return true;
     if (!Array.isArray(unavailableRanges) || unavailableRanges.length === 0) return false;
     return unavailableRanges.some(
       (r) => r?.start_date && r?.end_date && r.start_date <= dateStr && dateStr <= r.end_date
     );
   };
+
+  const isFullyBookedDate = (dateStr) => Array.isArray(fullyBookedDates) && fullyBookedDates.includes(dateStr);
 
   const normalizeCalendarDate = (arg) => {
     if (arg?.dateStr) return arg.dateStr;
@@ -135,10 +139,12 @@ export default function PublicBookAppointment() {
         if (!mounted) return;
         setUnavailableRanges(Array.isArray(data?.ranges) ? data.ranges : []);
         setClosedWeekdays(Array.isArray(data?.closed_weekdays) ? data.closed_weekdays : []);
+        setFullyBookedDates(Array.isArray(data?.fully_booked_dates) ? data.fully_booked_dates : []);
       } catch {
         if (!mounted) return;
         setUnavailableRanges([]);
         setClosedWeekdays([]);
+        setFullyBookedDates([]);
       }
     };
     run();
@@ -257,6 +263,13 @@ export default function PublicBookAppointment() {
 
   const handleDateClick = (info) => {
     const clickedDate = info.dateStr;
+
+    if (isFullyBookedDate(clickedDate)) {
+      const message = 'All slots are already booked on the selected date. Please choose another date.';
+      setError(message);
+      toastError(message);
+      return;
+    }
 
     if (isUnavailableDate(clickedDate)) {
       const message = 'Doctor is unavailable on the selected date. Please choose another date.';

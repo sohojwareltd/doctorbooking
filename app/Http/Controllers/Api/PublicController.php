@@ -9,6 +9,7 @@ use App\Models\DoctorSchedule;
 use App\Models\DoctorScheduleRange;
 use App\Models\DoctorUnavailableRange;
 use App\Models\User;
+use App\Services\AppointmentSlotService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -22,6 +23,10 @@ use Laravel\Sanctum\PersonalAccessToken;
  */
 class PublicController extends Controller
 {
+    public function __construct(private readonly AppointmentSlotService $slotService)
+    {
+    }
+
     /** POST /api/public/contact */
     public function contact(Request $request): JsonResponse
     {
@@ -173,7 +178,7 @@ class PublicController extends Controller
     {
         $doctor = User::whereHas('role', fn ($q) => $q->where('name', 'doctor'))->first();
         if (! $doctor) {
-            return response()->json(['ranges' => [], 'closed_weekdays' => range(0, 6)]);
+            return response()->json(['ranges' => [], 'closed_weekdays' => range(0, 6), 'fully_booked_dates' => []]);
         }
 
         $chamberId = $request->integer('chamber_id') ?: null;
@@ -221,7 +226,7 @@ class PublicController extends Controller
                 }
             }
 
-            return response()->json(['ranges' => $ranges, 'closed_weekdays' => $closedWeekdays]);
+            return response()->json(['ranges' => $ranges, 'closed_weekdays' => $closedWeekdays, 'fully_booked_dates' => []]);
         }
 
         $closedWeekdays = [];
@@ -232,7 +237,23 @@ class PublicController extends Controller
             }
         }
 
-        return response()->json(['ranges' => $ranges, 'closed_weekdays' => $closedWeekdays]);
+        // Also mark days that have schedule but no remaining slots as disabled.
+        $fullyBookedDates = [];
+        $today = now()->startOfDay();
+        $until = now()->copy()->addDays(45)->startOfDay();
+        for ($cursor = $today->copy(); $cursor->lte($until); $cursor->addDay()) {
+            $dateString = $cursor->toDateString();
+            $availability = $this->slotService->getAvailabilityForDate($doctor, $dateString, $chamberId);
+            if (! $availability['is_closed'] && $availability['slots']->isEmpty()) {
+                $fullyBookedDates[] = $dateString;
+            }
+        }
+
+        return response()->json([
+            'ranges' => $ranges,
+            'closed_weekdays' => $closedWeekdays,
+            'fully_booked_dates' => $fullyBookedDates,
+        ]);
     }
 
     /** GET /api/public/slots/{date} */
@@ -248,76 +269,27 @@ class PublicController extends Controller
         }
 
         $dateString = now()->parse($date)->toDateString();
-        $dow = now()->parse($dateString)->dayOfWeek;
         $chamberId = $request->integer('chamber_id') ?: null;
 
-        $scheduleQuery = DoctorSchedule::where('doctor_id', $doctor->doctorId())->where('day_of_week', $dow);
-        $rangeQuery = DoctorScheduleRange::where('doctor_id', $doctor->doctorId())->where('day_of_week', $dow);
+        $availability = $this->slotService->getAvailabilityForDate($doctor, $dateString, $chamberId);
 
-        if ($chamberId) {
-            $schedule = (clone $scheduleQuery)->where('chamber_id', $chamberId)->first()
-                ?: (clone $scheduleQuery)->whereNull('chamber_id')->first();
-            $ranges = (clone $rangeQuery)->where('chamber_id', $chamberId)->orderBy('start_time')->get();
-            if ($ranges->isEmpty()) {
-                $ranges = (clone $rangeQuery)->whereNull('chamber_id')->orderBy('start_time')->get();
-            }
-        } else {
-            $schedule = $scheduleQuery->whereNull('chamber_id')->first();
-            $ranges = $rangeQuery->whereNull('chamber_id')->orderBy('start_time')->get();
+        if ($availability['is_closed']) {
+            return response()->json([
+                'slots' => [],
+                'is_closed' => true,
+                'closed' => true,
+                'message' => 'Doctor is unavailable on the selected date. Please choose another date.',
+            ]);
         }
 
-        if ($schedule?->is_closed || ($ranges->isEmpty() && ! $schedule)) {
-            return response()->json(['slots' => [], 'is_closed' => true]);
-        }
+        $slots = $availability['slots']->values();
 
-        $slotMinutes = $schedule?->slot_minutes ?? 30;
-
-        // Build all possible slots across all ranges
-        $allSlots = collect();
-        foreach ($ranges as $range) {
-            $start = now()->parse($dateString.' '.$range->start_time);
-            $end = now()->parse($dateString.' '.$range->end_time);
-            while ($start->lt($end)) {
-                $allSlots->push($start->format('H:i'));
-                $start->addMinutes($slotMinutes);
-            }
-        }
-
-        if ($allSlots->isEmpty() && $schedule?->start_time && $schedule?->end_time) {
-            $start = now()->parse($dateString.' '.$schedule->start_time);
-            $end = now()->parse($dateString.' '.$schedule->end_time);
-            while ($start->lt($end)) {
-                $allSlots->push($start->format('H:i'));
-                $start->addMinutes($slotMinutes);
-            }
-        }
-
-        // Remove already-booked slots
-        $bookedQuery = Appointment::where('doctor_id', $doctor->doctorId())
-            ->whereDate('appointment_date', $dateString)
-            ->whereNotIn('status', ['cancelled']);
-        if ($chamberId) {
-            $bookedQuery->where('chamber_id', $chamberId);
-        }
-
-        $bookedTimes = $bookedQuery->pluck('appointment_time')
-            ->map(fn ($t) => substr((string) $t, 0, 5))
-            ->toArray();
-
-        // If today, remove past slots
-        $now = now();
-        $availableSlots = $allSlots->filter(function ($slot) use ($dateString, $now, $bookedTimes) {
-            if (in_array($slot, $bookedTimes, true)) {
-                return false;
-            }
-            if ($dateString === $now->toDateString()) {
-                return now()->parse($dateString.' '.$slot)->gt($now);
-            }
-
-            return true;
-        })->values();
-
-        return response()->json(['slots' => $availableSlots, 'is_closed' => false]);
+        return response()->json([
+            'slots' => $slots,
+            'is_closed' => false,
+            'closed' => false,
+            'message' => $slots->isEmpty() ? 'No slots are available on the selected date. Please choose another date.' : null,
+        ]);
     }
 
     /** GET /api/public/booking-preview */
@@ -338,15 +310,24 @@ class PublicController extends Controller
         $chamberId = $request->integer('chamber_id') ?: null;
 
         $countQuery = Appointment::where('doctor_id', $doctor->doctorId())
-            ->whereDate('appointment_date', $dateString);
+            ->whereDate('appointment_date', $dateString)
+            ->whereNotIn('status', ['cancelled']);
         if ($chamberId) {
             $countQuery->where('chamber_id', $chamberId);
         }
         $serial = $countQuery->count() + 1;
 
-        [$appointmentTime, $estimatedAt] = $this->resolveTime(
-            $doctor, $dateString, $request->time, $chamberId, $serial
-        );
+        try {
+            [$appointmentTime, $estimatedAt] = $this->slotService->resolveTime(
+                $doctor, $dateString, $request->time, $chamberId
+            );
+        } catch (\RuntimeException $exception) {
+            return response()->json([
+                'serial_no' => null,
+                'estimated_time' => null,
+                'message' => $exception->getMessage(),
+            ]);
+        }
 
         return response()->json([
             'serial_no' => $serial,
@@ -428,15 +409,20 @@ class PublicController extends Controller
         }
 
         $countQuery = Appointment::where('doctor_id', $doctor->doctorId())
-            ->whereDate('appointment_date', $dateString);
+            ->whereDate('appointment_date', $dateString)
+            ->whereNotIn('status', ['cancelled']);
         if ($chamber) {
             $countQuery->where('chamber_id', $chamber->id);
         }
         $serial = $countQuery->count() + 1;
 
-        [$appointmentTime, $estimatedAt] = $this->resolveTime(
-            $doctor, $dateString, $validated['time'] ?? null, $chamber?->id, $serial
-        );
+        try {
+            [$appointmentTime, $estimatedAt] = $this->slotService->resolveTime(
+                $doctor, $dateString, $validated['time'] ?? null, $chamber?->id
+            );
+        } catch (\RuntimeException $exception) {
+            return response()->json(['message' => $exception->getMessage()], 422);
+        }
 
         $appointment = Appointment::create([
             'user_id' => $linkedUser?->id,
@@ -480,45 +466,4 @@ class PublicController extends Controller
         ]);
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
-
-    private function resolveTime(User $doctor, string $dateString, ?string $rawTime, ?int $chamberId, int $serial): array
-    {
-        if ($rawTime && preg_match('/^\d{2}:\d{2}$/', $rawTime)) {
-            $rawTime .= ':00';
-        }
-
-        if ($rawTime) {
-            $estimatedAt = now()->parse($dateString.' '.$rawTime);
-            $appointmentTime = $estimatedAt->format('H:i:s');
-
-            return [$appointmentTime, $estimatedAt];
-        }
-
-        $dow = now()->parse($dateString)->dayOfWeek;
-        $schedQ = DoctorSchedule::where('doctor_id', $doctor->doctorId())->where('day_of_week', $dow);
-        $rangeQ = DoctorScheduleRange::where('doctor_id', $doctor->doctorId())->where('day_of_week', $dow);
-
-        if ($chamberId) {
-            $schedule = (clone $schedQ)->where('chamber_id', $chamberId)->first()
-                ?: (clone $schedQ)->whereNull('chamber_id')->first();
-            $ranges = (clone $rangeQ)->where('chamber_id', $chamberId)->orderBy('start_time')->get();
-            if ($ranges->isEmpty()) {
-                $ranges = (clone $rangeQ)->whereNull('chamber_id')->orderBy('start_time')->get();
-            }
-        } else {
-            $schedule = $schedQ->whereNull('chamber_id')->first();
-            $ranges = $rangeQ->whereNull('chamber_id')->orderBy('start_time')->get();
-        }
-
-        $slotMinutes = $schedule?->slot_minutes ?? 30;
-        $startBase = $ranges->isNotEmpty()
-            ? substr((string) $ranges->first()->start_time, 0, 5)
-            : ($schedule?->start_time ? substr((string) $schedule->start_time, 0, 5) : '09:00');
-
-        $estimatedAt = now()->parse($dateString.' '.$startBase.':00')
-            ->addMinutes($slotMinutes * ($serial - 1));
-
-        return [$estimatedAt->format('H:i:s'), $estimatedAt];
-    }
 }
