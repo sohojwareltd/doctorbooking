@@ -6,29 +6,36 @@ import UserLayout from '../../layouts/UserLayout';
 import { formatDisplayDateWithYearFromDateLike, formatDisplayTime12h } from '../../utils/dateFormat';
 
 export default function UserAppointments() {
+  const PER_PAGE = 10;
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState(null);
   const [viewRow, setViewRow] = useState(null);
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     (async () => {
+      setLoading(true);
       try {
-        const res = await fetch('/api/patient/appointments?per_page=50', {
+        const res = await fetch(`/api/patient/appointments?per_page=${PER_PAGE}&page=${page}`, {
           headers: { Accept: 'application/json' },
           credentials: 'same-origin',
         });
         if (res.ok) {
           const data = await res.json();
-          const items = Array.isArray(data.appointments) ? data.appointments : (data.appointments?.data ?? []);
+          const payload = data?.appointments ?? data;
+          const items = Array.isArray(payload) ? payload : (Array.isArray(payload?.data) ? payload.data : []);
+          const meta = payload?.meta ?? data?.meta ?? null;
+          const links = payload?.links ?? data?.links ?? null;
+
           setRows(items);
-          setPagination(data.meta ?? null);
+          setPagination(meta ? { ...meta, links } : null);
         }
       } finally {
         setLoading(false);
       }
     })();
-  }, []);
+  }, [page]);
 
   const statusBadge = (status) => {
     const s = (status || '').toLowerCase();
@@ -51,6 +58,19 @@ export default function UserAppointments() {
     activeTab ? rows.filter((a) => (a.status || '').toLowerCase() === activeTab) : rows
   ), [rows, activeTab]);
 
+  const currentPage = pagination?.current_page ?? page;
+  const lastPage = pagination?.last_page ?? 1;
+  const canGoPrev = currentPage > 1;
+  const canGoNext = currentPage < lastPage;
+
+  const visiblePages = useMemo(() => {
+    if (!lastPage || lastPage <= 1) return [1];
+    const start = Math.max(1, currentPage - 2);
+    const end = Math.min(lastPage, start + 4);
+    const adjustedStart = Math.max(1, end - 4);
+    return Array.from({ length: end - adjustedStart + 1 }, (_, i) => adjustedStart + i);
+  }, [currentPage, lastPage]);
+
   const formatLastUpdated = (updatedAt) => {
     if (!updatedAt) return '-';
     const d = new Date(updatedAt);
@@ -66,7 +86,7 @@ export default function UserAppointments() {
 
   const hasPrescription = (a) => Boolean(a?.prescription_id || a?.has_prescription);
 
-  const totalCount = rows.length;
+  const totalCount = pagination?.total ?? rows.length;
   const scheduledCount = rows.filter((a) => ['approved', 'scheduled', 'arrived'].includes(String(a.status || '').toLowerCase())).length;
   const completedCount = rows.filter((a) => ['completed', 'prescribed'].includes(String(a.status || '').toLowerCase())).length;
   const cancelledCount = rows.filter((a) => String(a.status || '').toLowerCase() === 'cancelled').length;
@@ -296,26 +316,54 @@ export default function UserAppointments() {
             </table>
           </div>
 
-          {pagination?.data && typeof pagination.current_page === 'number' ? (
+          {pagination && typeof pagination.current_page === 'number' && pagination.last_page > 1 ? (
             <div className="border-t border-[#e7f1f0] px-5 py-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div className="text-xs text-gray-400">
                 Page <span className="font-semibold text-gray-700">{pagination.current_page}</span> of{' '}
                 <span className="font-semibold text-gray-700">{pagination.last_page}</span>
               </div>
               <div className="flex items-center gap-2">
-                {(() => {
-                  const prev = (pagination.links || []).find((l) => String(l.label).toLowerCase().includes('previous'));
-                  const next = (pagination.links || []).find((l) => String(l.label).toLowerCase().includes('next'));
-                  const base = 'inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-xs font-medium border transition';
-                  const on = 'border-gray-200 text-gray-700 bg-white hover:bg-gray-50';
-                  const off = 'border-gray-100 text-gray-300 bg-white cursor-not-allowed';
-                  return (
-                    <>
-                      {prev?.url ? <Link href={prev.url} className={`${base} ${on}`}>Previous</Link> : <span className={`${base} ${off}`}>Previous</span>}
-                      {next?.url ? <Link href={next.url} className={`${base} ${on}`}>Next</Link> : <span className={`${base} ${off}`}>Next</span>}
-                    </>
-                  );
-                })()}
+                <button
+                  type="button"
+                  onClick={() => canGoPrev && setPage((p) => p - 1)}
+                  disabled={!canGoPrev || loading}
+                  className={`inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-xs font-medium border transition ${
+                    canGoPrev && !loading
+                      ? 'border-gray-200 text-gray-700 bg-white hover:bg-gray-50'
+                      : 'border-gray-100 text-gray-300 bg-white cursor-not-allowed'
+                  }`}
+                >
+                  Previous
+                </button>
+
+                {visiblePages.map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setPage(p)}
+                    disabled={loading}
+                    className={`inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-xs font-medium border transition ${
+                      p === currentPage
+                        ? 'border-[#0c7b79] bg-[#0c7b79] text-white'
+                        : 'border-gray-200 text-gray-700 bg-white hover:bg-gray-50'
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ))}
+
+                <button
+                  type="button"
+                  onClick={() => canGoNext && setPage((p) => p + 1)}
+                  disabled={!canGoNext || loading}
+                  className={`inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-xs font-medium border transition ${
+                    canGoNext && !loading
+                      ? 'border-gray-200 text-gray-700 bg-white hover:bg-gray-50'
+                      : 'border-gray-100 text-gray-300 bg-white cursor-not-allowed'
+                  }`}
+                >
+                  Next
+                </button>
               </div>
             </div>
           ) : null}
