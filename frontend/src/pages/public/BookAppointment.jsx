@@ -446,7 +446,7 @@ export default function PublicBookAppointment() {
 
           </div>
 
-          <div className="mb-7 grid md:grid-cols-3">
+          <div className="mb-7 grid grid-cols-3">
             {steps.map((item) => {
               const active = step === item.id;
               const done = step > item.id;
@@ -535,7 +535,7 @@ export default function PublicBookAppointment() {
                                 role="button"
                                 tabIndex={0}
                                 aria-label={`Select chamber ${ch.name}`}
-                                className={`w-full cursor-pointer rounded-2xl border px-4 py-4 transition-all duration-200 sm:px-5 sm:py-4 ${isActive
+                                className={`w-full cursor-pointer rounded-2xl border px-4 pb-2 py-4 transition-all duration-200 sm:px-5 sm:py-4 ${isActive
                                   ? 'border-[#0c7b79]/30 bg-[#f0faf9] shadow-[0_4px_20px_rgba(12,123,121,0.12)]'
                                   : 'border-[#e3e8ef] bg-white hover:border-[#0c7b79]/20 hover:bg-[#f7fdfb] hover:shadow-[0_2px_12px_rgba(12,123,121,0.07)]'
                                   }`}
@@ -576,7 +576,7 @@ export default function PublicBookAppointment() {
                                       </button>
                                     </div>
 
-                                    <div className="mt-4 border-t border-slate-200 pt-3">
+                                    <div className="mt-4 border-t border-slate-200 pt-1">
                                       <div className="grid grid-cols-2 divide-x divide-slate-200 text-[#0c7b79]">
                                         <button
                                           type="button"
