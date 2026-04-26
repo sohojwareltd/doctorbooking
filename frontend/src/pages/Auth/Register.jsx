@@ -101,13 +101,20 @@ export default function Register() {
     const identifierError = getIdentifierErrorMessage(rawIdentifierError, identifierType);
     const passwordError = getFieldError(errors, 'password');
     const passwordConfirmationError = getFieldError(errors, 'password_confirmation');
+    const toastMessage = identifierError
+        || nameError
+        || passwordError
+        || passwordConfirmationError
+        || getIdentifierErrorMessage(errorMessages[0], identifierType)
+        || errorMessages[0]
+        || null;
 
     useEffect(() => {
-        if (errorMessages.length === 0) {
+        if (!toastMessage) {
             return;
         }
 
-        toastError(errorMessages[0]);
+        toastError(toastMessage);
     }, [errorKey]);
 
     const inputClass = "w-full rounded-2xl border-2 border-[#00acb1]/30 bg-white px-4 py-3 pl-12 text-gray-900 shadow-sm focus:border-[#00acb1] focus:outline-none focus:ring-4 focus:ring-[#00acb1]/30";
