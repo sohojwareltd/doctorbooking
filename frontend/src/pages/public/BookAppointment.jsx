@@ -404,6 +404,15 @@ export default function PublicBookAppointment() {
     { id: 3, label: 'Details', hint: 'Confirm info' },
   ];
 
+  const selectChamberAndContinue = (ch) => {
+    setSelectedChamberId(ch.id);
+    setSelectedChamber(ch);
+    setFormData((p) => ({ ...p, date: '' }));
+    setSelectedDate(null);
+    selectedDateRef.current = null;
+    setStep(2);
+  };
+
   const stepCardMotion = {
     initial: { opacity: 0, y: 18 },
     animate: { opacity: 1, y: 0 },
@@ -516,10 +525,16 @@ export default function PublicBookAppointment() {
                                 initial={{ opacity: 0, y: 12 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.28, delay: index * 0.05 }}
-                                onClick={() => {
-                                  setSelectedChamberId(ch.id);
-                                  setSelectedChamber(ch);
+                                onClick={() => selectChamberAndContinue(ch)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    selectChamberAndContinue(ch);
+                                  }
                                 }}
+                                role="button"
+                                tabIndex={0}
+                                aria-label={`Select chamber ${ch.name}`}
                                 className={`w-full cursor-pointer rounded-2xl border px-4 py-4 transition-all duration-200 sm:px-5 sm:py-4 ${isActive
                                   ? 'border-[#0c7b79]/30 bg-[#f0faf9] shadow-[0_4px_20px_rgba(12,123,121,0.12)]'
                                   : 'border-[#e3e8ef] bg-white hover:border-[#0c7b79]/20 hover:bg-[#f7fdfb] hover:shadow-[0_2px_12px_rgba(12,123,121,0.07)]'
@@ -592,12 +607,7 @@ export default function PublicBookAppointment() {
                                     type="button"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      setSelectedChamberId(ch.id);
-                                      setSelectedChamber(ch);
-                                      setFormData((p) => ({ ...p, date: '' }));
-                                      setSelectedDate(null);
-                                      selectedDateRef.current = null;
-                                      setStep(2);
+                                      selectChamberAndContinue(ch);
                                     }}
                                     className={`inline-flex h-9 shrink-0 items-center gap-1.5 rounded-xl px-4 text-[13px] font-semibold text-white transition-all duration-150 ${isActive
                                       ? 'bg-[#0a6664] shadow-[0_2px_8px_rgba(10,102,100,0.30)]'
