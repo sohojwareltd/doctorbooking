@@ -232,7 +232,7 @@ export default function DoctorDashboard({
     { key: 'scheduled', label: 'Scheduled', count: todayAppointments.filter((a) => a.status === 'scheduled').length },
     { key: 'in_consultation', label: 'In Progress', count: todayAppointments.filter((a) => a.status === 'in_consultation').length },
     { key: 'awaiting', label: 'Awaiting Tests', count: awaitingList.length },
-    { key: 'prescribed', label: 'Report Submitted', count: todayAppointments.filter((a) => a.status === 'prescribed').length },
+    { key: 'test_registered', label: 'Report Submitted', count: todayAppointments.filter((a) => a.status === 'test_registered').length },
   ];
 
   const getTabTone = (key) => {
@@ -260,6 +260,12 @@ export default function DoctorDashboard({
         idle: 'text-orange-600 hover:text-orange-700',
         badgeActive: 'bg-orange-100 text-orange-700',
         badgeIdle: 'bg-orange-50 text-orange-600',
+      },
+      test_registered: {
+        active: 'border-cyan-500 text-cyan-700',
+        idle: 'text-cyan-600 hover:text-cyan-700',
+        badgeActive: 'bg-cyan-100 text-cyan-700',
+        badgeIdle: 'bg-cyan-50 text-cyan-600',
       },
       prescribed: {
         active: 'border-emerald-500 text-emerald-700',
@@ -462,7 +468,7 @@ export default function DoctorDashboard({
                       </DocButton>
                       {user?.role !== 'compounder' && (visitPatient.prescription_id ? (
                         <Link
-                          href={'/doctor/prescriptions/' + visitPatient.prescription_id}
+                          href={'/doctor/prescriptions/' + (visitPatient.prescription_uuid || visitPatient.prescription_id)}
                           className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 active:scale-[0.97] transition"
                         >
                           <FileText className="h-3.5 w-3.5" /> Edit Rx
@@ -640,7 +646,7 @@ export default function DoctorDashboard({
                             )}
                             {a.status === 'in_consultation' && user?.role !== 'compounder' && (
                               <Link
-                                href={a.prescription_id ? '/doctor/prescriptions/' + a.prescription_id : '/doctor/prescriptions/create?appointment_id=' + a.id}
+                                href={a.prescription_id ? '/doctor/prescriptions/' + (a.prescription_uuid || a.prescription_id) : '/doctor/prescriptions/create?appointment_id=' + a.id}
                                 className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 transition"
                               >
                                 <FileText className="h-3 w-3" /> Prescribe
@@ -648,7 +654,7 @@ export default function DoctorDashboard({
                             )}
                             {a.status === 'awaiting_tests' && a.prescription_id && (
                               <Link
-                                href={'/doctor/prescriptions/' + a.prescription_id + '?from=dashboard'}
+                                href={'/doctor/prescriptions/' + (a.prescription_uuid || a.prescription_id) + '?from=dashboard'}
                                 className="inline-flex items-center gap-1 rounded-lg bg-orange-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-orange-700 transition"
                               >
                                 <FlaskConical className="h-3 w-3" /> Complete
@@ -693,7 +699,7 @@ export default function DoctorDashboard({
                       </div>
                       {a.prescription_id && (
                         <Link
-                          href={'/doctor/prescriptions/' + a.prescription_id + '?from=dashboard'}
+                          href={'/doctor/prescriptions/' + (a.prescription_uuid || a.prescription_id) + '?from=dashboard'}
                           className="rounded-lg bg-[#FF7C00] px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-[#E56D00] transition whitespace-nowrap flex-shrink-0"
                         >
                           Complete

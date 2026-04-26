@@ -177,7 +177,7 @@ export default function UserAppointments() {
       <Head title="My Appointments" />
 
       <div className="mx-auto w-full max-w-[1400px] space-y-5">
-        <section className="relative overflow-hidden ">
+        <section className="">
           <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
               {/* <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Patient Portal</div> */}

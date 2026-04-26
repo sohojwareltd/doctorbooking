@@ -39,6 +39,7 @@ class PrescriptionController extends Controller
             ->paginate(10)
             ->through(fn ($p) => [
                 'id'              => $p->id,
+                'uuid'            => $p->uuid,
                 'user_id'         => $p->user_id,
                 'patient_name'    => $p->patient_name ?? $p->user?->name ?? $p->appointment?->name,
                 'patient_age'     => $p->patient_age ?? $p->appointment?->age,
@@ -174,6 +175,7 @@ class PrescriptionController extends Controller
         return Inertia::render('doctor/PrescriptionShow', [
             'prescription' => [
                 'id'               => $prescription->id,
+                'uuid'             => $prescription->uuid,
                 'appointment_id'   => $prescription->appointment_id,
                 'created_at'       => $prescription->created_at?->toDateTimeString(),
                 'diagnosis'        => $prescription->diagnosis,
@@ -252,6 +254,7 @@ class PrescriptionController extends Controller
         return Inertia::render('user/Prescriptions', [
             'prescriptions' => $prescriptions->through(fn ($p) => [
                 'id'              => $p->id,
+                'uuid'            => $p->uuid,
                 'user_id'         => $p->user_id,
                 'patient_name'    => $p->patient_name ?? $p->user?->name ?? $p->appointment?->name,
                 'patient_age'     => $p->patient_age ?? $p->appointment?->age,
@@ -296,6 +299,7 @@ class PrescriptionController extends Controller
         return Inertia::render('user/PrescriptionShow', [
             'prescription' => [
                 'id'               => $prescription->id,
+                'uuid'             => $prescription->uuid,
                 'created_at'       => $prescription->created_at?->toDateTimeString(),
                 'diagnosis'        => $prescription->diagnosis,
                 'medications'      => $prescription->medications,

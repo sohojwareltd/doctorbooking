@@ -2,7 +2,7 @@ import { Head, Link } from '@inertiajs/react';
 import { Activity, ArrowLeft, Calendar, ClipboardList, FileText, IdCard, Mail, MapPin, Phone, Scale, ShieldCheck, Stethoscope, User } from 'lucide-react';
 import { useMemo } from 'react';
 import DoctorLayout from '../../layouts/DoctorLayout';
-import { formatDisplayDate, formatDisplayTime12h } from '../../utils/dateFormat';
+import { formatDisplayDate, formatDisplayDateWithYearFromDateLike, formatDisplayTime12h } from '../../utils/dateFormat';
 import PatientAvatar from '../../components/doctor/PatientAvatar';
 import { DocEmptyState } from '../../components/doctor/DocUI';
 import {
@@ -52,7 +52,7 @@ export default function PatientShow({ patient, appointments = [], prescriptions 
     { icon: MapPin, label: 'Address', value: patient.address },
   ];
 
-  const memberSince = patient.created_at ? formatDisplayDate(patient.created_at) : 'Not available';
+  const memberSince = formatDisplayDateWithYearFromDateLike(patient.created_at) || 'Not available';
 
   return (
     <>
@@ -99,7 +99,7 @@ export default function PatientShow({ patient, appointments = [], prescriptions 
                   <div className="grid gap-3 sm:grid-cols-2 lg:max-w-3xl">
                     <InfoCard icon={Mail} label="Primary Email" value={patient.email} />
                     <InfoCard icon={Phone} label="Direct Line" value={patient.phone} />
-                    <InfoCard icon={Calendar} label="Member Since" value={memberSince} />
+                    <InfoCard icon={Calendar} label="Created Date" value={memberSince} />
                     <InfoCard icon={ShieldCheck} label="Profile Status" value="Ready for consultation" />
                   </div>
 

@@ -54,6 +54,10 @@ class AppointmentResource extends JsonResource
                 $this->relationLoaded('prescription'),
                 fn () => $this->prescription?->id
             ),
+            'prescription_uuid' => $this->when(
+                $this->relationLoaded('prescription'),
+                fn () => $this->prescription?->uuid
+            ),
             'created_at'       => $this->created_at?->toDateTimeString(),
         ];
     }

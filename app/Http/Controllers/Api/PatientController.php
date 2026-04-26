@@ -180,7 +180,7 @@ class PatientController extends Controller
         $userEmail = strtolower((string) ($user->email ?? ''));
 
         $appointments = Appointment::with([
-            'prescription:id,appointment_id',
+            'prescription:id,uuid,appointment_id',
             'chamber:id,name',
             'user:id,name,email,phone',
         ])
@@ -221,7 +221,7 @@ class PatientController extends Controller
             ->with([
                 'chamber:id,name,location',
                 'doctor:id,user_id,specialization',
-                'prescription:id,appointment_id,diagnosis,medications,tests',
+                'prescription:id,uuid,appointment_id,diagnosis,medications,tests',
             ])
             ->where(function ($q) use ($user, $userEmail) {
                 $q->where('user_id', $user->id);

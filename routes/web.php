@@ -52,7 +52,7 @@ Route::middleware(['auth', 'role:patient'])
         Route::get('/appointments', [WebAppointmentController::class, 'patientIndex'])->name('appointments');
         Route::get('/book-appointment', [WebAppointmentController::class, 'patientBookView'])->name('book-appointment');
         Route::get('/prescriptions', [WebPrescriptionController::class, 'patientIndex'])->name('prescriptions');
-        Route::get('/prescriptions/{prescription}', [WebPrescriptionController::class, 'patientShow'])->whereNumber('prescription')->name('prescriptions.show');
+        Route::get('/prescriptions/{prescription}', [WebPrescriptionController::class, 'patientShow'])->name('prescriptions.show');
     });
 
 // Profile accessible without email-verification (supports phone-only accounts)
@@ -87,8 +87,8 @@ Route::middleware(['auth', 'role:doctor,compounder'])
         Route::get('/prescriptions', [WebPrescriptionController::class, 'doctorIndex'])->name('prescriptions');
         Route::get('/prescriptions/create', [WebPrescriptionController::class, 'doctorCreate'])->name('prescriptions.create');
         Route::post('/prescriptions', [WebPrescriptionController::class, 'doctorStore'])->name('prescriptions.store');
-        Route::get('/prescriptions/{prescription}', [WebPrescriptionController::class, 'doctorShow'])->whereNumber('prescription')->name('prescriptions.show');
-        Route::put('/prescriptions/{prescription}', [WebPrescriptionController::class, 'doctorUpdate'])->whereNumber('prescription')->name('prescriptions.update');
+        Route::get('/prescriptions/{prescription}', [WebPrescriptionController::class, 'doctorShow'])->name('prescriptions.show');
+        Route::put('/prescriptions/{prescription}', [WebPrescriptionController::class, 'doctorUpdate'])->name('prescriptions.update');
 
         // Schedule
         Route::get('/schedule', [DoctorScheduleController::class, 'show'])->name('schedule');

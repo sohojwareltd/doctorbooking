@@ -8,6 +8,7 @@ import {
   Hash,
   Loader2,
   Mars,
+  MessageSquare,
   Phone,
   Plus,
   Printer,
@@ -130,6 +131,11 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
   const [reportNote, setReportNote] = useState('');
   const [reportText, setReportText] = useState('');
   const [showReportUploadModal, setShowReportUploadModal] = useState(false);
+  const [messageTarget, setMessageTarget] = useState(null);
+  const [showMessageModal, setShowMessageModal] = useState(false);
+  const [messagePhone, setMessagePhone] = useState('');
+  const [messageText, setMessageText] = useState('');
+  const [sendingMessage, setSendingMessage] = useState(false);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showCreatePatientModal, setShowCreatePatientModal] = useState(false);
@@ -439,7 +445,8 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
   };
 
   const handlePrintPrescription = (prescription) => {
-    const printWindow = window.open(`/doctor/prescriptions/${prescription.id}?action=print`, '_blank');
+    const routeParam = prescription?.uuid || prescription?.id;
+    const printWindow = window.open(`/doctor/prescriptions/${routeParam}?action=print`, '_blank');
 
     if (printWindow) {
       toastSuccess('Opening prescription for printing...');
@@ -447,6 +454,64 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
     }
 
     toastError('Unable to open the print view right now.');
+  };
+
+  const openMessageModal = (prescription) => {
+    const routeParam = prescription?.uuid || prescription?.id;
+    const patientName = getPatientName(prescription);
+    const prescriptionUrl = routeParam ? `${window.location.origin}/patient/prescriptions/${routeParam}` : '';
+    const defaultMessage = `Dear Mr. ${patientName},\n\nYour prescription has been successfully prepared by the doctor.\nPlease review it at your convenience using the link below:\n\n${prescriptionUrl}\n\nIf you have any questions or need further assistance, feel free to reach out.\n\nThank you.`;
+
+    setMessageTarget(prescription);
+    setMessagePhone(getPatientPhone(prescription) || '');
+    setMessageText(defaultMessage);
+    setShowMessageModal(true);
+  };
+
+  const handleSaveMessage = async () => {
+    const routeParam = messageTarget?.uuid || messageTarget?.id;
+    if (!routeParam || sendingMessage) return;
+
+    if (!String(messagePhone || '').trim()) {
+      toastError('Phone is required.');
+      return;
+    }
+
+    if (!String(messageText || '').trim()) {
+      toastError('Message is required.');
+      return;
+    }
+
+    setSendingMessage(true);
+    try {
+      const res = await fetch(`/api/doctor/prescriptions/${routeParam}/messages`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          phone: messagePhone.trim(),
+          message: messageText.trim(),
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toastError(data?.message || 'Failed to save message.');
+        return;
+      }
+
+      toastSuccess(data?.message || 'Message saved successfully.');
+      setShowMessageModal(false);
+      setMessageTarget(null);
+    } catch {
+      toastError('Failed to save message.');
+    } finally {
+      setSendingMessage(false);
+    }
   };
 
   const formatFileSize = (value) => {
@@ -669,7 +734,7 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
                       <Eye className="h-3.5 w-3.5" />
                     </button>
                     <Link
-                      href={`/doctor/prescriptions/${prescription.id}`}
+                      href={`/doctor/prescriptions/${prescription.uuid || prescription.id}`}
                       className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
                       aria-label="Open prescription"
                     >
@@ -755,7 +820,7 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
                       </td>
                       <td className="px-6 py-4 text-center" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-center gap-1.5">
-                          <button
+                          {/* <button
                             type="button"
                             onClick={() => setSelectedPrescription(prescription)}
                             className="group relative inline-flex h-7 w-7 items-center justify-center rounded-md border border-sky-200 bg-sky-50 text-sky-700 transition hover:border-sky-300 hover:bg-sky-100 hover:text-sky-800"
@@ -765,10 +830,10 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
                             <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-[10px] font-medium text-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
                               View Details
                             </span>
-                          </button>
+                          </button> */}
 
                           <Link
-                            href={`/doctor/prescriptions/${prescription.id}`}
+                            href={`/doctor/prescriptions/${prescription.uuid || prescription.id}`}
                             className="group relative inline-flex h-7 w-7 items-center justify-center rounded-md border border-emerald-200 bg-emerald-50 text-emerald-700 transition hover:border-emerald-300 hover:text-emerald-800"
                             aria-label="Open prescription"
                           >
@@ -787,6 +852,18 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
                             <Printer className="h-3.5 w-3.5" />
                             <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-[10px] font-medium text-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
                               Print
+                            </span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => openMessageModal(prescription)}
+                            className="group relative inline-flex h-7 w-7 items-center justify-center rounded-md border border-violet-200 bg-violet-50 text-violet-700 transition hover:border-violet-300 hover:bg-violet-100 hover:text-violet-800"
+                            aria-label="Message patient"
+                          >
+                            <MessageSquare className="h-3.5 w-3.5" />
+                            <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-[10px] font-medium text-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
+                              Message Patient
                             </span>
                           </button>
                         </div>
@@ -868,7 +945,7 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
                 Close
               </button>
               <Link
-                href={`/doctor/prescriptions/${selectedPrescription.id}`}
+                href={`/doctor/prescriptions/${selectedPrescription.uuid || selectedPrescription.id}`}
                 className="inline-flex items-center rounded-lg bg-[#2D3A74] px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-[#243063]"
               >
                 Open Prescription
@@ -973,6 +1050,63 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
             </div>
           </div>
         ) : null}
+      </DocModal>
+
+      <DocModal
+        open={showMessageModal && !!messageTarget}
+        onClose={() => {
+          setShowMessageModal(false);
+          setMessageTarget(null);
+        }}
+        title="Message Patient"
+        icon={MessageSquare}
+        size="md"
+        footer={(
+          <>
+            <button
+              type="button"
+              onClick={() => {
+                setShowMessageModal(false);
+                setMessageTarget(null);
+              }}
+              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleSaveMessage}
+              disabled={sendingMessage}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[#2D3A74] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#243063] disabled:opacity-60"
+            >
+              {sendingMessage ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MessageSquare className="h-3.5 w-3.5" />}
+              {sendingMessage ? 'Saving...' : 'Save Message'}
+            </button>
+          </>
+        )}
+      >
+        <div className="space-y-3">
+          <div>
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Phone</label>
+            <input
+              type="text"
+              value={messagePhone}
+              onChange={(e) => setMessagePhone(e.target.value)}
+              placeholder="Patient phone"
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Message</label>
+            <textarea
+              value={messageText}
+              onChange={(e) => setMessageText(e.target.value)}
+              rows={4}
+              placeholder="Write a message for the patient"
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800"
+            />
+          </div>
+        </div>
       </DocModal>
 
       <DocModal

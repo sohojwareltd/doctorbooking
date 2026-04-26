@@ -1,6 +1,6 @@
 import { Link, router } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
-import { Calendar, ClipboardList, Eye, FileText, Hash, Mars, Phone, Printer, Search, Share2, Stethoscope, User, Venus } from 'lucide-react';
+import { Calendar, Eye, FilePlus, FileText, Hash, Mars, Phone, Printer, Search, Share2, Stethoscope, User, Venus } from 'lucide-react';
 import UserLayout from '../../layouts/UserLayout';
 import { DocEmptyState } from '../../components/doctor/DocUI';
 import { formatDisplayDateWithYearFromDateLike } from '../../utils/dateFormat';
@@ -31,17 +31,6 @@ function renderHighlighted(value, query) {
       {text.slice(end)}
     </>
   );
-}
-
-function getPrescriptionSummaryTone(key) {
-  const tones = {
-    today: 'border-[#CBD5E1] bg-slate-50 text-slate-700',
-    withFollowUp: 'border-violet-200 bg-violet-50 text-violet-700',
-    upcoming: 'border-sky-200 bg-sky-50 text-sky-700',
-    withoutFollowUp: 'border-orange-200 bg-orange-50 text-orange-700',
-  };
-
-  return tones[key] || tones.today;
 }
 
 function GenderIconAvatar({ gender }) {
@@ -83,6 +72,7 @@ export default function UserPrescriptions({ prescriptions = [], stats = {} }) {
   const [rows, setRows] = useState(pageRows);
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState('all');
+  const [genderFilter, setGenderFilter] = useState('all');
 
   useEffect(() => {
     setRows(pageRows);
@@ -121,6 +111,12 @@ export default function UserPrescriptions({ prescriptions = [], stats = {} }) {
   const getPatientPhone = (prescription) => prescription?.patient_contact || prescription?.user?.phone || null;
   const getPatientGender = (prescription) => prescription?.patient_gender || prescription?.user?.gender || 'N/A';
 
+  const getNextVisitLabel = (prescription) => (
+    prescription?.follow_up_date
+      ? formatDisplayDateWithYearFromDateLike(prescription.follow_up_date)
+      : 'No follow-up'
+  );
+
   const formatAgeLabel = (prescription) => {
     const age = resolvePatientAge(prescription);
     return age ? `${age}y` : 'Age N/A';
@@ -139,6 +135,11 @@ export default function UserPrescriptions({ prescriptions = [], stats = {} }) {
         return false;
       }
 
+      const genderValue = String(getPatientGender(p) || '').trim().toLowerCase();
+      if (genderFilter !== 'all' && genderValue !== genderFilter) {
+        return false;
+      }
+
       if (!needle) {
         return true;
       }
@@ -146,7 +147,7 @@ export default function UserPrescriptions({ prescriptions = [], stats = {} }) {
       const haystack = `${p.id || ''} ${getPatientName(p)} ${getPatientPhone(p) || ''} ${p.diagnosis || ''} ${p.instructions || ''} ${p.symptoms || ''} ${p.patient_gender || p.user?.gender || ''}`.toLowerCase();
       return haystack.includes(needle);
     });
-  }, [rows, searchTerm, dateFilter, todayIso]);
+  }, [rows, searchTerm, dateFilter, todayIso, genderFilter]);
 
   const statsView = useMemo(() => ({
     visible: filteredRows.length,
@@ -159,8 +160,44 @@ export default function UserPrescriptions({ prescriptions = [], stats = {} }) {
     withoutFollowUp: stats?.withoutFollowUp ?? rows.filter((item) => !item.follow_up_date).length,
   }), [filteredRows.length, rows, stats, todayIso]);
 
+  const topWidgets = [
+    {
+      key: 'today',
+      label: 'Today Prescriptions',
+      value: statsView.today,
+      helper: `${statsView.visible} visible after filters`,
+      icon: Calendar,
+      tone: 'bg-sky-50 text-sky-700',
+    },
+    {
+      key: 'followup',
+      label: 'With Follow-up',
+      value: statsView.withFollowUp,
+      helper: 'Prescriptions with revisit date',
+      icon: FileText,
+      tone: 'bg-violet-50 text-violet-700',
+    },
+    {
+      key: 'upcoming',
+      label: 'Upcoming Visits',
+      value: statsView.upcoming,
+      helper: 'Follow-up dates from today',
+      icon: Stethoscope,
+      tone: 'bg-emerald-50 text-emerald-700',
+    },
+    {
+      key: 'nofollowup',
+      label: 'No Follow-up',
+      value: statsView.withoutFollowUp,
+      helper: 'Need manual revisit plan',
+      icon: FilePlus,
+      tone: 'bg-orange-50 text-orange-700',
+    },
+  ];
+
   const handlePrintPrescription = (prescription) => {
-    const printWindow = window.open(`/patient/prescriptions/${prescription.id}?action=print`, '_blank');
+    const routeParam = prescription?.uuid || prescription?.id;
+    const printWindow = window.open(`/patient/prescriptions/${routeParam}?action=print`, '_blank');
 
     if (printWindow) {
       toastSuccess('Opening prescription for printing...');
@@ -171,7 +208,8 @@ export default function UserPrescriptions({ prescriptions = [], stats = {} }) {
   };
 
   const handleSharePrescription = async (prescription) => {
-    const shareUrl = `${window.location.origin}/patient/prescriptions/${prescription.id}`;
+    const routeParam = prescription?.uuid || prescription?.id;
+    const shareUrl = `${window.location.origin}/patient/prescriptions/${routeParam}`;
 
     try {
       if (navigator.share) {
@@ -198,73 +236,166 @@ export default function UserPrescriptions({ prescriptions = [], stats = {} }) {
   return (
     <UserLayout title="My Prescriptions">
       <div className="mx-auto max-w-[1400px]">
-        <section className="surface-card rounded-3xl overflow-hidden">
-          <div className="px-6 py-5 border-b border-slate-100">
-            <div className="flex flex-col justify-between gap-3 md:flex-row md:items-center">
+        <section className="mb-4 space-y-4">
+          <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
+            <div>
               <div className="flex items-center gap-3">
-                <h2 className="text-xl font-semibold text-[#2D3A74]">My Prescriptions</h2>
+                <h2 className="text-2xl font-semibold text-[#2D3A74]">My Prescriptions</h2>
                 <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
                   {statsView.visible}
                 </span>
               </div>
-              <div className="grid grid-cols-2 gap-2 text-xs sm:flex sm:flex-wrap sm:items-center sm:gap-2.5">
-                <div className={`rounded-xl border px-2.5 py-1.5 ${getPrescriptionSummaryTone('today')}`}>
-                  Today: <span className="font-semibold">{statsView.today}</span>
-                </div>
-                <div className={`rounded-xl border px-2.5 py-1.5 ${getPrescriptionSummaryTone('withFollowUp')}`}>
-                  With Follow-up: <span className="font-semibold">{statsView.withFollowUp}</span>
-                </div>
-                <div className={`rounded-xl border px-2.5 py-1.5 ${getPrescriptionSummaryTone('upcoming')}`}>
-                  Upcoming Visits: <span className="font-semibold">{statsView.upcoming}</span>
-                </div>
-                <div className={`rounded-xl border px-2.5 py-1.5 ${getPrescriptionSummaryTone('withoutFollowUp')}`}>
-                  No Follow-up: <span className="font-semibold">{statsView.withoutFollowUp}</span>
-                </div>
-              </div>
+              <p className="mt-1 text-sm text-slate-500">Track your prescriptions, revisit dates, and quickly open, print, or share records.</p>
             </div>
+          </div>
 
-            <div className="mt-4 flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,320px)_180px] xl:items-end">
-                <div className="xl:w-[320px]">
-                  <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Search</label>
-                  <div className="relative">
-                    <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                    <input
-                      type="text"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      placeholder="Patient, phone, diagnosis or id"
-                      className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-900 placeholder-slate-400 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
-                    />
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {topWidgets.map((widget) => {
+              const Icon = widget.icon;
+
+              return (
+                <div key={widget.key} className="surface-card rounded-3xl p-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="mb-1 text-sm text-slate-500">{widget.label}</p>
+                      <p className="text-3xl font-semibold text-[#2D3A74]">{widget.value}</p>
+                    </div>
+                    <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${widget.tone}`}>
+                      <Icon className="h-5 w-5" />
+                    </div>
+                  </div>
+                  <p className="mt-4 text-xs text-slate-400">{widget.helper}</p>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        <section className="surface-card overflow-hidden rounded-3xl">
+          <div className="border-b border-slate-100 px-6 py-5">
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,360px)_180px_180px] lg:items-end">
+                  <div>
+                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Search</label>
+                    <div className="relative">
+                      <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                      <input
+                        type="text"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        placeholder="Patient, phone, diagnosis or id"
+                        className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-900 placeholder-slate-400 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="sm:max-w-[190px] lg:w-[180px]">
+                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Created date</label>
+                    <select
+                      value={dateFilter}
+                      onChange={(e) => setDateFilter(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-700 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+                    >
+                      <option value="all">All dates</option>
+                      <option value="today">Today</option>
+                    </select>
+                  </div>
+
+                  <div className="sm:max-w-[190px] lg:w-[180px]">
+                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Gender</label>
+                    <select
+                      value={genderFilter}
+                      onChange={(e) => setGenderFilter(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-700 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+                    >
+                      <option value="all">All gender</option>
+                      <option value="male">Male</option>
+                      <option value="female">Female</option>
+                      <option value="other">Other</option>
+                    </select>
                   </div>
                 </div>
 
-                <div className="sm:max-w-[190px] xl:w-[180px]">
-                  <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Created date</label>
-                  <select
-                    value={dateFilter}
-                    onChange={(e) => setDateFilter(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-700 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
-                  >
-                    <option value="all">All dates</option>
-                    <option value="today">Today</option>
-                  </select>
-                </div>
+                <div className="hidden lg:block" />
               </div>
             </div>
           </div>
 
-          <div className="overflow-x-auto border-t border-slate-100">
+          <div className="md:hidden divide-y divide-slate-100 border-t border-slate-100">
+            {filteredRows.length === 0 ? (
+              <div className="p-5">
+                <DocEmptyState icon={FileText} title="No prescriptions found" description="Try another filter or search keyword." />
+              </div>
+            ) : filteredRows.map((p, index) => {
+              const serial = p.serial_no || (((pagination?.current_page || 1) - 1) * (pagination?.per_page || 15) + index + 1);
+
+              return (
+                <div
+                  key={p.id || index}
+                  className="cursor-pointer space-y-2 p-4 active:bg-slate-50"
+                  onClick={() => router.visit(`/patient/prescriptions/${p.uuid || p.id}`)}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2.5">
+                      <GenderIconAvatar gender={getPatientGender(p)} />
+                      <div>
+                        <div className="text-sm font-semibold text-slate-900">{renderHighlighted(getPatientName(p), searchTerm)}</div>
+                        <div className="text-xs text-slate-500">
+                          {formatAgeLabel(p)}
+                          {getPatientPhone(p) ? ` · ${getPatientPhone(p)}` : ''}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="shrink-0 text-right text-xs text-slate-400">
+                      <div>{formatDisplayDateWithYearFromDateLike(p.created_at) || p.created_at}</div>
+                      <div className="mt-0.5">#{serial}</div>
+                    </div>
+                  </div>
+
+                  <div className="text-xs text-slate-600 line-clamp-2">{p.diagnosis || p.instructions || 'N/A'}</div>
+                  <div className="text-xs text-slate-400">Follow-up: {getNextVisitLabel(p)}</div>
+
+                  <div className="flex items-center gap-1.5 pt-1" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      onClick={() => router.visit(`/patient/prescriptions/${p.uuid || p.id}`)}
+                      className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100"
+                      aria-label="View prescription"
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handlePrintPrescription(p)}
+                      className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                      aria-label="Print"
+                    >
+                      <Printer className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSharePrescription(p)}
+                      className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                      aria-label="Share"
+                    >
+                      <Share2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="hidden md:block overflow-x-auto border-t border-slate-100">
             <table className="min-w-full text-sm">
-              <thead className="bg-slate-50 text-slate-500 uppercase text-xs tracking-[0.12em]">
+              <thead className="bg-slate-50 text-xs uppercase tracking-[0.12em] text-slate-500">
                 <tr>
-                  <th className="px-4 py-3.5 text-left">#</th>
-                  <th className="px-4 py-3.5 text-left">Patient</th>
-                  <th className="px-4 py-3.5 text-left">Contact</th>
-                  <th className="px-4 py-3.5 text-left">Symptoms</th>
-                  <th className="px-4 py-3.5 text-left">Diagnosis / Advice</th>
-                  <th className="px-4 py-3.5 text-left">Created</th>
-                  <th className="px-4 py-3.5 text-center">Action</th>
+                  <th className="px-6 py-4 text-center">#</th>
+                  <th className="px-6 py-4 text-center">Patient</th>
+                  <th className="px-6 py-4 text-center">Diagnosis</th>
+                  <th className="px-6 py-4 text-center">Prescribed at</th>
+                  <th className="px-6 py-4 text-center">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white">
@@ -274,54 +405,47 @@ export default function UserPrescriptions({ prescriptions = [], stats = {} }) {
                   return (
                     <tr
                       key={p.id || index}
-                      className="cursor-pointer hover:bg-slate-50/80 transition-colors"
-                      onClick={() => router.visit(`/patient/prescriptions/${p.id}`)}
+                      className="cursor-pointer hover:bg-slate-50/80"
+                      onClick={() => router.visit(`/patient/prescriptions/${p.uuid || p.id}`)}
                     >
-                      <td className="px-4 py-3.5 font-medium text-slate-600">
-                        <span className="inline-flex items-center gap-1.5">
+                      <td className="px-6 py-4 text-center font-medium text-slate-600">
+                        <span className="inline-flex items-center justify-center gap-1.5">
                           <Hash className="h-3.5 w-3.5 text-slate-400" />
                           {renderHighlighted(serial, searchTerm)}
                         </span>
                       </td>
-                      <td className="px-4 py-3.5">
-                        <div className="flex items-center gap-2.5 text-left">
+
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-start gap-2.5 text-start">
                           <GenderIconAvatar gender={getPatientGender(p)} />
                           <div>
                             <div className="font-semibold text-slate-900">{renderHighlighted(getPatientName(p), searchTerm)}</div>
-                            <div className="mt-0.5 text-xs font-medium text-slate-500">Prescription #{p.id}</div>
-                            <div className="text-xs font-medium text-slate-500">{formatAgeLabel(p)}</div>
+                            <div className="mt-0.5 text-xs font-medium text-slate-500">{renderHighlighted(getPatientPhone(p) || 'N/A', searchTerm)}</div>
+                            <div className="mt-0.5 text-xs font-medium text-slate-500">{formatAgeLabel(p)}</div>
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3.5 text-[13px] font-medium text-slate-700 whitespace-nowrap">
-                        <span className="inline-flex items-center gap-1.5">
-                          <Phone className="h-3.5 w-3.5 text-slate-400" />
-                          {renderHighlighted(getPatientPhone(p) || 'N/A', searchTerm)}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3.5 text-[13px] font-medium text-slate-700">
-                        <div className="max-w-[180px] truncate inline-flex items-center gap-1.5" title={p.symptoms || 'N/A'}>
-                          <ClipboardList className="h-3.5 w-3.5 flex-shrink-0 text-slate-400" />
-                          {renderHighlighted(p.symptoms || 'N/A', searchTerm)}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3.5 text-[13px] font-medium text-slate-700">
-                        <div className="max-w-[200px] truncate inline-flex items-center gap-1.5" title={p.diagnosis || p.instructions || 'N/A'}>
-                          <Stethoscope className="h-3.5 w-3.5 flex-shrink-0 text-slate-400" />
+
+                      <td className="px-6 py-4 text-center text-[13px] font-medium text-slate-700">
+                        <div className="mx-auto max-w-[220px] truncate" title={p.diagnosis || p.instructions || 'N/A'}>
                           {renderHighlighted(p.diagnosis || p.instructions || 'N/A', searchTerm)}
                         </div>
                       </td>
-                      <td className="px-4 py-3.5 text-[13px] font-medium text-slate-700">
-                        <span className="inline-flex items-center gap-1.5">
-                          <Calendar className="h-3.5 w-3.5 text-slate-400" />
-                          {formatDisplayDateWithYearFromDateLike(p.created_at) || p.created_at}
-                        </span>
+
+                      <td className="px-6 py-4 text-center text-[13px] font-medium text-slate-700">
+                        <div className="inline-flex items-center justify-center gap-2">
+                          <span className="inline-flex items-center justify-center gap-1.5">
+                            <Calendar className="h-3.5 w-3.5 text-slate-400" />
+                            {formatDisplayDateWithYearFromDateLike(p.created_at) || p.created_at}
+                          </span>
+                        </div>
                       </td>
-                      <td className="px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
+
+                      <td className="px-6 py-4 text-center" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-center gap-1.5">
                           <button
                             type="button"
-                            onClick={() => router.visit(`/patient/prescriptions/${p.id}`)}
+                            onClick={() => router.visit(`/patient/prescriptions/${p.uuid || p.id}`)}
                             className="group relative inline-flex h-8 w-8 items-center justify-center rounded-md border border-sky-200 bg-sky-50 text-sky-700 transition hover:border-sky-300 hover:bg-sky-100 hover:text-sky-800"
                             aria-label="View prescription"
                           >
@@ -364,11 +488,11 @@ export default function UserPrescriptions({ prescriptions = [], stats = {} }) {
           </div>
 
           {filteredRows.length === 0 ? (
-            <div className="p-5">
+            <div className="hidden p-5 md:block">
               <DocEmptyState
                 icon={FileText}
                 title="No prescriptions found"
-                description="Try another date filter or keyword."
+                description="Try another filter or search keyword."
               />
             </div>
           ) : null}
@@ -386,7 +510,7 @@ export default function UserPrescriptions({ prescriptions = [], stats = {} }) {
                   return (
                     <>
                       {prev?.url ? (
-                        <Link href={prev.url} className="rounded-lg bg-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-300">Previous</Link>
+                        <Link href={prev.url} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-100">Previous</Link>
                       ) : (
                         <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-400">Previous</span>
                       )}

@@ -74,7 +74,7 @@ class DashboardController extends Controller
         $cancelledCount     = $base()->where('status', 'cancelled')->count();
 
         $recentAppointments = $base()
-            ->with(['prescription:id,appointment_id'])
+            ->with(['prescription:id,uuid,appointment_id'])
             ->orderByDesc('appointment_date')
             ->orderByDesc('appointment_time')
             ->limit(5)
@@ -86,6 +86,7 @@ class DashboardController extends Controller
                 'status'           => $a->status,
                 'symptoms'         => $a->symptoms,
                 'prescription_id'  => $a->prescription?->id ?? null,
+                'prescription_uuid'=> $a->prescription?->uuid ?? null,
             ])->values();
 
         $upcomingRaw = $base()
@@ -93,7 +94,7 @@ class DashboardController extends Controller
             ->whereIn('status', ['scheduled', 'arrived'])
             ->orderBy('appointment_date')
             ->orderBy('appointment_time')
-            ->with(['prescription:id,appointment_id'])
+            ->with(['prescription:id,uuid,appointment_id'])
             ->first();
 
         $upcoming = $upcomingRaw ? [
@@ -103,6 +104,7 @@ class DashboardController extends Controller
             'status'           => $upcomingRaw->status,
             'symptoms'         => $upcomingRaw->symptoms,
             'prescription_id'  => $upcomingRaw->prescription?->id ?? null,
+            'prescription_uuid'=> $upcomingRaw->prescription?->uuid ?? null,
         ] : null;
 
         return Inertia::render('Dashboard', [
@@ -140,7 +142,7 @@ class DashboardController extends Controller
 
         // In-consultation appointments (auto-heal if already have prescription)
         $inVisitCollection = $scope(
-            Appointment::with(['user:id,name,email,phone', 'prescription:id,appointment_id'])
+            Appointment::with(['user:id,name,email,phone', 'prescription:id,uuid,appointment_id'])
         )->where('status', 'in_consultation')
             ->whereDate('appointment_date', $today)
             ->orderBy('appointment_time')
@@ -160,7 +162,7 @@ class DashboardController extends Controller
 
         // Awaiting tests
         $awaitingTestsAppointments = $scope(
-            Appointment::with(['user:id,name,email,phone', 'prescription:id,appointment_id'])
+            Appointment::with(['user:id,name,email,phone', 'prescription:id,uuid,appointment_id'])
         )->where('status', 'awaiting_tests')
             ->whereDate('appointment_date', $today)
             ->orderBy('appointment_time')
@@ -173,6 +175,7 @@ class DashboardController extends Controller
                 'appointment_time' => substr((string) $a->appointment_time, 0, 5),
                 'symptoms'       => $a->symptoms,
                 'prescription_id'=> $a->prescription?->id,
+                'prescription_uuid'=> $a->prescription?->uuid,
             ])->values();
 
         // Scheduled today
@@ -309,7 +312,7 @@ class DashboardController extends Controller
             ->whereMonth('appointment_date', now()->month)->count();
 
         // In-consultation appointments today
-        $inVisitAppointments = Appointment::with(['user:id,name,email,phone', 'prescription:id,appointment_id'])
+        $inVisitAppointments = Appointment::with(['user:id,name,email,phone', 'prescription:id,uuid,appointment_id'])
             ->whereDate('appointment_date', $today)
             ->where('status', 'in_consultation')
             ->orderBy('appointment_time')
@@ -318,7 +321,7 @@ class DashboardController extends Controller
             ->values();
 
         // Awaiting tests today
-        $awaitingTestsAppointments = Appointment::with(['user:id,name,email,phone', 'prescription:id,appointment_id'])
+        $awaitingTestsAppointments = Appointment::with(['user:id,name,email,phone', 'prescription:id,uuid,appointment_id'])
             ->whereDate('appointment_date', $today)
             ->where('status', 'awaiting_tests')
             ->orderBy('appointment_time')
@@ -331,6 +334,7 @@ class DashboardController extends Controller
                 'appointment_time' => substr((string) $a->appointment_time, 0, 5),
                 'symptoms'         => $a->symptoms,
                 'prescription_id'  => $a->prescription?->id,
+                'prescription_uuid'=> $a->prescription?->uuid,
             ])->values();
 
         // Scheduled today
@@ -405,6 +409,7 @@ class DashboardController extends Controller
             'type'             => $a->type ?? null,
             'is_video'         => $a->is_video ?? false,
             'prescription_id'  => $a->prescription?->id ?? null,
+            'prescription_uuid'=> $a->prescription?->uuid ?? null,
         ];
     }
 }

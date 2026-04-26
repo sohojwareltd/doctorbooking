@@ -8,6 +8,7 @@ use App\Models\Appointment;
 use App\Models\PatientReport;
 use App\Models\Patient;
 use App\Models\Prescription;
+use App\Models\PrescriptionMessage;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -130,6 +131,41 @@ class PrescriptionController extends Controller
                 : 'Prescription created.',
             'user_created'    => $userCreated,
             'prescription_id' => $prescription->id,
+            'prescription_uuid' => $prescription->uuid,
+        ], 201);
+    }
+
+    /** POST /api/doctor/prescriptions/{prescription}/messages */
+    public function storeMessage(Request $request, Prescription $prescription): JsonResponse
+    {
+        $doctor = $request->user();
+        abort_unless($doctor->hasRole('doctor') || $doctor->hasRole('compounder'), 403);
+
+        if ($doctor->hasRole('doctor')) {
+            abort_unless($prescription->doctor_id === $doctor->doctorId(), 403);
+        }
+
+        $validated = $request->validate([
+            'phone' => ['required', 'string', 'max:50'],
+            'message' => ['required', 'string', 'max:2000'],
+        ]);
+
+        $saved = PrescriptionMessage::create([
+            'prescription_id' => $prescription->id,
+            'doctor_id' => $prescription->doctor_id,
+            'phone' => trim($validated['phone']),
+            'message' => trim($validated['message']),
+        ]);
+
+        return response()->json([
+            'message' => 'Prescription message saved successfully.',
+            'saved' => [
+                'id' => $saved->id,
+                'prescription_id' => $saved->prescription_id,
+                'phone' => $saved->phone,
+                'message' => $saved->message,
+                'created_at' => $saved->created_at?->toDateTimeString(),
+            ],
         ], 201);
     }
 

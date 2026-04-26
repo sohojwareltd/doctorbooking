@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 /**
  * @property int $id
@@ -23,6 +24,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Prescription extends Model
 {
     protected $fillable = [
+        'uuid',
         'appointment_id',
         'user_id',
         'doctor_id',
@@ -52,6 +54,29 @@ class Prescription extends Model
         'specialty_data' => 'array',
     ];
 
+    protected static function booted(): void
+    {
+        static::creating(function (self $prescription): void {
+            if (empty($prescription->uuid)) {
+                $prescription->uuid = (string) Str::uuid();
+            }
+        });
+    }
+
+    public function resolveRouteBinding($value, $field = null): ?Model
+    {
+        $resolvedField = $field ?? $this->getRouteKeyName();
+
+        if ($resolvedField === $this->getRouteKeyName()) {
+            return $this->newQuery()
+                ->where('uuid', $value)
+                ->orWhere($this->getRouteKeyName(), $value)
+                ->firstOrFail();
+        }
+
+        return parent::resolveRouteBinding($value, $field);
+    }
+
     public function appointment(): BelongsTo
     {
         return $this->belongsTo(Appointment::class);
@@ -70,5 +95,10 @@ class Prescription extends Model
     public function reports(): HasMany
     {
         return $this->hasMany(PatientReport::class);
+    }
+
+    public function messages(): HasMany
+    {
+        return $this->hasMany(PrescriptionMessage::class);
     }
 }

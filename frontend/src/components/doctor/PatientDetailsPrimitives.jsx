@@ -92,13 +92,13 @@ export function TimelineItem({ appointment, dateLabel, timeLabel, symptoms, acti
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-700">{symptoms}</p>
             </div>
           </div>
-          <Link
+          {/* <Link
             href={actionHref}
             className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 transition hover:border-[#c9d2f0] hover:bg-[#f6f8fe] hover:text-[#2D3A74]"
           >
             View
             <ChevronRight className="h-4 w-4" />
-          </Link>
+          </Link> */}
         </div>
       </div>
     </div>
