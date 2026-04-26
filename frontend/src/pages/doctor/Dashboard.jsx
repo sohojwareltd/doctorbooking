@@ -125,7 +125,6 @@ export default function DoctorDashboard({
   const getGender = (a) => String(a?.patient_gender || a?.user?.gender || '').toLowerCase();
   const getAge = (a) => a?.patient_age || a?.user?.age || null;
   const getEmail = (a) => a?.patient_email || a?.user?.email || null;
-  const getSerial = (a, fallback) => a?.serial_no || fallback;
   const getChamberName = (a) => a?.chamber?.name || 'Unassigned chamber';
   const formatGender = (value) => {
     if (!value) return 'N/A';
@@ -172,6 +171,17 @@ export default function DoctorDashboard({
     const bt = (b.appointment_date || '') + ' ' + (b.appointment_time || '');
     return new Date(at) - new Date(bt);
   });
+  const getSerial = (appointment, fallback) => {
+    const stableIndexByRef = todayAppointments.indexOf(appointment);
+    if (stableIndexByRef >= 0) return stableIndexByRef + 1;
+
+    const hasId = appointment?.id !== null && appointment?.id !== undefined;
+    const stableIndexById = hasId
+      ? todayAppointments.findIndex((item) => item?.id === appointment.id)
+      : -1;
+
+    return stableIndexById >= 0 ? stableIndexById + 1 : fallback;
+  };
   const awaitingList = awaitingTestsAppointments;
   const activeCount = defaultStats.inConsultation || inVisitAppointments.length || (visitPatient ? 1 : 0);
 
@@ -577,7 +587,7 @@ export default function DoctorDashboard({
                           <td className="px-6 py-4">
                             <span className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-600">
                               <Hash className="h-3.5 w-3.5 text-slate-400" />
-                              {getSerial(a, i + 1)}
+                              {i + 1}
                             </span>
                           </td>
                           <td className="px-6 py-4">
