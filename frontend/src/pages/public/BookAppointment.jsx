@@ -67,6 +67,7 @@ export default function PublicBookAppointment() {
     const rawStep = Number(params.get('step'));
     return Number.isInteger(rawStep) && rawStep >= 1 && rawStep <= 3 ? rawStep : null;
   });
+  const captchaRequestSeq = useRef(0);
 
   const isClosedByWeekday = (dateStr) => {
     if (!dateStr || !Array.isArray(closedWeekdays) || closedWeekdays.length === 0) return false;
@@ -202,17 +203,27 @@ export default function PublicBookAppointment() {
 
   // Load a simple math captcha
   const loadCaptcha = async () => {
+    const seq = ++captchaRequestSeq.current;
     setLoadingCaptcha(true);
     try {
-      const res = await fetch('/api/public/captcha');
+      const res = await fetch('/api/public/captcha', {
+        credentials: 'same-origin',
+        headers: {
+          Accept: 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+      });
       const data = await res.json().catch(() => ({}));
+      if (seq !== captchaRequestSeq.current) return;
       setCaptchaQuestion(data?.question || '');
       setCaptchaToken(data?.token || '');
       setFormData((prev) => ({ ...prev, captcha_answer: '' }));
     } catch {
+      if (seq !== captchaRequestSeq.current) return;
       setCaptchaQuestion('');
       setCaptchaToken('');
     } finally {
+      if (seq !== captchaRequestSeq.current) return;
       setLoadingCaptcha(false);
     }
   };
@@ -221,6 +232,26 @@ export default function PublicBookAppointment() {
     loadCaptcha();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const resetBookingFlow = async () => {
+    setStep(1);
+    setError('');
+    setSuccess('');
+    setSuccessDetails(null);
+    setSelectedDate(null);
+    selectedDateRef.current = null;
+    setPreviewSerial(null);
+    setPreviewTime(null);
+    setFormData((prev) => ({
+      ...initial,
+      name: prev.name || authUser?.name || '',
+      phone: prev.phone || authUser?.phone || '',
+      age: prev.age || '',
+      gender: prev.gender || '',
+      address: prev.address || '',
+    }));
+    await loadCaptcha();
+  };
 
   // Preview serial & estimated time whenever date and chamber are selected
   useEffect(() => {
@@ -243,8 +274,17 @@ export default function PublicBookAppointment() {
         const res = await fetch(`/api/public/booking-preview?${params.toString()}`);
         const data = await res.json().catch(() => ({}));
         if (cancelled) return;
-        setPreviewSerial(data?.serial_no ?? null);
-        setPreviewTime(data?.estimated_time ?? null);
+        if (data?.serial_no && data?.estimated_time) {
+          setPreviewSerial(data.serial_no);
+          setPreviewTime(data.estimated_time);
+          setError('');
+        } else {
+          setPreviewSerial(null);
+          setPreviewTime(null);
+          if (data?.message) {
+            setError(data.message);
+          }
+        }
       } catch {
         if (cancelled) return;
         setPreviewSerial(null);
@@ -325,6 +365,30 @@ export default function PublicBookAppointment() {
 
   const handleSubmit = async (e) => {
     if (e?.preventDefault) e.preventDefault();
+    if (submitting) return;
+
+    if (!selectedChamberId || !formData.date || !formData.name || !formData.phone) {
+      const message = 'Please complete required fields (chamber, date, name, and phone) before confirming.';
+      setError(message);
+      toastError(message);
+      return;
+    }
+
+    if (!captchaToken) {
+      const message = 'Captcha expired. Reloading a new captcha now. Please answer and submit again.';
+      setError(message);
+      toastError(message);
+      await loadCaptcha();
+      return;
+    }
+
+    if (!formData.captcha_answer) {
+      const message = 'Please answer the captcha before confirming booking.';
+      setError(message);
+      toastError(message);
+      return;
+    }
+
     setSubmitting(true);
     setSuccess('');
     setSuccessDetails(null);
@@ -401,10 +465,6 @@ export default function PublicBookAppointment() {
 
   const isStep1Complete = Boolean(selectedChamberId);
   const isStep2Complete = Boolean(selectedChamberId && formData.date);
-  const isStep3Complete =
-    Boolean(formData.name && formData.phone) &&
-    Boolean(formData.date && selectedChamberId) &&
-    Boolean(captchaToken && formData.captcha_answer);
 
   const calendarRenderKey = useMemo(
     () => `${closedWeekdays.join(',')}|${unavailableRanges.map((r) => `${r?.start_date || ''}-${r?.end_date || ''}`).join(',')}`,
@@ -989,8 +1049,8 @@ export default function PublicBookAppointment() {
                         <PrimaryButton
                           type="button"
                           onClick={handleSubmit}
-                          disabled={submitting || !isStep3Complete}
-                          className={`rounded-full px-6 py-3 ${!isStep3Complete ? 'opacity-60' : ''}`}
+                          disabled={submitting}
+                          className="rounded-full px-6 py-3"
                         >
                           {submitting ? 'Confirming…' : 'Confirm Booking'}
                         </PrimaryButton>
@@ -1031,7 +1091,7 @@ export default function PublicBookAppointment() {
                       )}
 
                       <div className="mt-6">
-                        <PrimaryButton type="button" onClick={() => setStep(1)} className="rounded-full px-6 py-3">
+                        <PrimaryButton type="button" onClick={resetBookingFlow} className="rounded-full px-6 py-3">
                           Back to Booking
                         </PrimaryButton>
                       </div>

@@ -29,7 +29,7 @@ class AppointmentSlotService
             ];
         }
 
-        $slotMinutes = (int) ($schedule?->slot_minutes ?? 30);
+        $slotMinutes = max(1, (int) ($schedule?->slot_minutes ?? 30));
         $allSlots = $this->buildAllSlots($date, $schedule?->start_time, $schedule?->end_time, $ranges, $slotMinutes);
 
         if ($allSlots->isEmpty()) {
@@ -43,17 +43,37 @@ class AppointmentSlotService
         $bookedTimes = $this->bookedTimes($doctor, $date, $chamberId);
         $now = now();
 
-        // Queue-based booking: once a later slot is booked, earlier gaps are not reused.
-        // Only slots after the latest booked schedule slot remain available.
-        $lastBookedIndex = -1;
-        foreach ($bookedTimes as $booked) {
-            $idx = $allSlots->search($booked);
-            if ($idx !== false && $idx > $lastBookedIndex) {
-                $lastBookedIndex = $idx;
-            }
+        // Queue-based booking by clock time.
+        // If latest appointment has reached the day end, no more slots remain.
+        $lastBookedMinutes = $bookedTimes
+            ->map(fn (string $time) => $this->timeToMinutes($time))
+            ->filter(fn ($minutes) => $minutes !== null)
+            ->max();
+
+        $dayEndTime = $ranges->isNotEmpty()
+            ? $ranges->max('end_time')
+            : $schedule?->end_time;
+        $dayEndMinutes = $dayEndTime ? $this->timeToMinutes((string) $dayEndTime) : null;
+
+        if ($lastBookedMinutes !== null && $dayEndMinutes !== null && $lastBookedMinutes >= $dayEndMinutes) {
+            return [
+                'is_closed' => false,
+                'slots' => collect(),
+                'all_slots' => $allSlots->values(),
+            ];
         }
 
-        $queueSlots = $allSlots->slice($lastBookedIndex + 1)->values();
+        $queueSlots = $allSlots
+            ->filter(function (string $slot) use ($lastBookedMinutes) {
+                if ($lastBookedMinutes === null) {
+                    return true;
+                }
+
+                $slotMinutes = $this->timeToMinutes($slot);
+
+                return $slotMinutes !== null && $slotMinutes > $lastBookedMinutes;
+            })
+            ->values();
 
         $availableSlots = $queueSlots->filter(function (string $slot) use ($bookedTimes, $date, $now) {
             if ($bookedTimes->contains($slot)) {
@@ -155,7 +175,7 @@ class AppointmentSlotService
             $start = Carbon::parse($dateString.' '.$range->start_time);
             $end = Carbon::parse($dateString.' '.$range->end_time);
 
-            while ($start->lt($end)) {
+            while ($start->lte($end)) {
                 $allSlots->push($start->format('H:i'));
                 $start->addMinutes($slotMinutes);
             }
@@ -165,13 +185,13 @@ class AppointmentSlotService
             $start = Carbon::parse($dateString.' '.$scheduleStart);
             $end = Carbon::parse($dateString.' '.$scheduleEnd);
 
-            while ($start->lt($end)) {
+            while ($start->lte($end)) {
                 $allSlots->push($start->format('H:i'));
                 $start->addMinutes($slotMinutes);
             }
         }
 
-        return $allSlots;
+        return $allSlots->unique()->values();
     }
 
     private function bookedTimes(User $doctor, string $dateString, ?int $chamberId)
@@ -181,11 +201,47 @@ class AppointmentSlotService
             ->whereNotIn('status', ['cancelled']);
 
         if ($chamberId) {
-            $query->where('chamber_id', $chamberId);
+            $query->where(function ($sub) use ($chamberId) {
+                $sub->where('chamber_id', $chamberId)
+                    ->orWhereNull('chamber_id');
+            });
         }
 
         return $query->pluck('appointment_time')
-            ->map(fn ($time) => substr((string) $time, 0, 5))
+            ->map(fn ($time) => $this->normalizeTimeToHm($time))
+            ->filter()
             ->values();
+    }
+
+    private function normalizeTimeToHm(mixed $time): ?string
+    {
+        $value = trim((string) ($time ?? ''));
+        if ($value === '') {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($value)->format('H:i');
+        } catch (\Throwable) {
+            // Fallback parser for odd-but-valid values without seconds.
+            if (preg_match('/^(\d{1,2}):(\d{2})/', $value, $m)) {
+                $h = str_pad((string) ((int) $m[1]), 2, '0', STR_PAD_LEFT);
+                return $h.':'.$m[2];
+            }
+
+            return null;
+        }
+    }
+
+    private function timeToMinutes(string $time): ?int
+    {
+        $hm = $this->normalizeTimeToHm($time);
+        if (! $hm) {
+            return null;
+        }
+
+        [$h, $m] = explode(':', $hm);
+
+        return ((int) $h * 60) + (int) $m;
     }
 }

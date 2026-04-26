@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Services\AppointmentSlotService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
@@ -373,7 +374,14 @@ class PublicController extends Controller
 
         // Captcha (optional — web form only)
         if (! empty($validated['captcha_token'])) {
-            $expected = session('booking_captcha_'.$validated['captcha_token']);
+            $cacheKey = 'booking_captcha:'.$validated['captcha_token'];
+            $expected = Cache::pull($cacheKey);
+
+            // Backward-compatible fallback while older tokens may still be in session.
+            if ($expected === null) {
+                $expected = session('booking_captcha_'.$validated['captcha_token']);
+            }
+
             session()->forget('booking_captcha_'.$validated['captcha_token']);
             if ($expected === null || trim((string) $validated['captcha_answer']) !== (string) $expected) {
                 return response()->json(['message' => 'Captcha answer is incorrect.'], 422);
@@ -458,7 +466,13 @@ class PublicController extends Controller
         $a = random_int(1, 9);
         $b = random_int(1, 9);
         $token = Str::random(32);
-        session(['booking_captcha_'.$token => $a + $b]);
+        $answer = (string) ($a + $b);
+
+        // Primary store: cache token with short TTL (independent of session middleware behavior).
+        Cache::put('booking_captcha:'.$token, $answer, now()->addMinutes(10));
+
+        // Keep session copy as fallback for compatibility.
+        session(['booking_captcha_'.$token => $answer]);
 
         return response()->json([
             'token' => $token,
