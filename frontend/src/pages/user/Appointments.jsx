@@ -1,5 +1,5 @@
 import { Head, Link } from '@inertiajs/react';
-import { CalendarDays, Eye, FileText, Mail, UserRound, X } from 'lucide-react';
+import { CalendarCheck2, CalendarDays, CheckCircle2, Eye, FileText, Mail, Search, SlidersHorizontal, UserCheck, UserRound, X, XCircle } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import UserLayout from '../../layouts/UserLayout';
@@ -12,6 +12,9 @@ export default function UserAppointments() {
   const [pagination, setPagination] = useState(null);
   const [viewRow, setViewRow] = useState(null);
   const [page, setPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -39,24 +42,54 @@ export default function UserAppointments() {
 
   const statusBadge = (status) => {
     const s = (status || '').toLowerCase();
-    if (s === 'approved' || s === 'scheduled' || s === 'arrived') return 'border-emerald-200 bg-emerald-50 text-emerald-700';
+    if (s === 'scheduled' || s === 'arrived') return 'border-emerald-200 bg-emerald-50 text-emerald-700';
     if (s === 'completed' || s === 'prescribed') return 'border-sky-200 bg-sky-50 text-sky-700';
     if (s === 'cancelled') return 'border-rose-200 bg-rose-50 text-rose-600';
     return 'border-amber-200 bg-amber-50 text-amber-700';
   };
 
-  const tabs = [
-    { label: 'All', value: null },
-    { label: 'Approved', value: 'approved' },
-    { label: 'Completed', value: 'completed' },
-    // { label: 'Cancelled', value: 'cancelled' },
-  ];
+  const formatStatusLabel = (status) => {
+    const value = String(status || '').trim();
+    if (!value) return 'Pending';
+    return value
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, (char) => char.toUpperCase());
+  };
 
-  const [activeTab, setActiveTab] = useState(null);
+  const filteredRows = useMemo(() => {
+    const needle = searchTerm.trim().toLowerCase();
 
-  const filteredRows = useMemo(() => (
-    activeTab ? rows.filter((a) => (a.status || '').toLowerCase() === activeTab) : rows
-  ), [rows, activeTab]);
+    return rows.filter((a) => {
+      const status = String(a.status || '').toLowerCase();
+      const statusOk = statusFilter === 'all'
+        || (statusFilter === 'scheduled' && ['scheduled', 'arrived'].includes(status))
+        || (statusFilter === 'completed' && ['completed', 'prescribed'].includes(status))
+        || status === statusFilter;
+
+      if (!statusOk) return false;
+
+      if (!needle) return true;
+
+      const haystack = [
+        a?.patient_name,
+        a?.user?.name,
+        a?.patient_email,
+        a?.user?.email,
+        a?.patient_phone,
+        a?.user?.phone,
+        a?.chamber?.name,
+        a?.appointment_date,
+        a?.appointment_time,
+        a?.status,
+        a?.symptoms,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+
+      return haystack.includes(needle);
+    });
+  }, [rows, searchTerm, statusFilter]);
 
   const currentPage = pagination?.current_page ?? page;
   const lastPage = pagination?.last_page ?? 1;
@@ -100,35 +133,67 @@ export default function UserAppointments() {
   const hasPrescription = (a) => Boolean(a?.prescription_id || a?.has_prescription);
 
   const totalCount = pagination?.total ?? rows.length;
-  const scheduledCount = rows.filter((a) => ['approved', 'scheduled', 'arrived'].includes(String(a.status || '').toLowerCase())).length;
+  const scheduledCount = rows.filter((a) => ['scheduled', 'arrived'].includes(String(a.status || '').toLowerCase())).length;
   const completedCount = rows.filter((a) => ['completed', 'prescribed'].includes(String(a.status || '').toLowerCase())).length;
   const cancelledCount = rows.filter((a) => String(a.status || '').toLowerCase() === 'cancelled').length;
+
+  const topWidgets = [
+    {
+      key: 'total',
+      label: 'Total Appointments',
+      value: totalCount,
+      helper: `${pagination?.total ?? rows.length} total appointments found`,
+      icon: CalendarCheck2,
+      tone: 'bg-sky-50 text-sky-700',
+    },
+    {
+      key: 'scheduled',
+      label: 'Scheduled',
+      value: scheduledCount,
+      helper: 'Appointments currently scheduled',
+      icon: UserCheck,
+      tone: 'bg-emerald-50 text-emerald-700',
+    },
+    {
+      key: 'completed',
+      label: 'Completed',
+      value: completedCount,
+      helper: 'Visits completed or prescribed',
+      icon: CheckCircle2,
+      tone: 'bg-violet-50 text-violet-700',
+    },
+    {
+      key: 'cancelled',
+      label: 'Cancelled',
+      value: cancelledCount,
+      helper: 'Appointments marked cancelled',
+      icon: XCircle,
+      tone: 'bg-orange-50 text-orange-700',
+    },
+  ];
 
   return (
     <>
       <Head title="My Appointments" />
 
-      <div className="mx-auto w-full max-w-6xl space-y-5">
-        <section className="relative overflow-hidden rounded-3xl border border-[#d7eeeb] bg-[linear-gradient(145deg,#f7fcfb_0%,#eef8f6_52%,#fbfefd_100%)] p-5 shadow-[0_18px_45px_rgba(12,123,121,0.08)] sm:p-6">
-          <div className="pointer-events-none absolute -top-24 -right-16 h-48 w-48 rounded-full bg-[#0c7b79]/10 blur-2xl" />
-          <div className="pointer-events-none absolute -bottom-20 -left-16 h-44 w-44 rounded-full bg-[#3d8bff]/10 blur-2xl" />
-
+      <div className="mx-auto w-full max-w-[1400px] space-y-5">
+        <section className="relative overflow-hidden ">
           <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-[#cde7e4] bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-[#25656b]">Patient Portal</div>
-              <h1 className="mt-2 text-xl font-bold text-[#11383d] sm:text-2xl">My Appointments</h1>
+              {/* <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Patient Portal</div> */}
+              <h1 className="mt-2 text-xl font-bold text-[#2D3A74] sm:text-2xl">My Appointments</h1>
               <p className="mt-1 text-sm text-slate-600">Track your visit history, status changes, and latest updates.</p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <Link
                 href="/patient/prescriptions"
-                className="inline-flex items-center gap-1.5 rounded-xl border border-[#cfe8e5] bg-white px-3.5 py-2 text-sm font-medium text-[#22535a] shadow-sm transition hover:bg-[#f4fbfa]"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
               >
                 View Prescriptions
               </Link>
               <Link
                 href="/book-appointment"
-                className="inline-flex items-center gap-1.5 rounded-xl bg-[#0c7b79] px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0a6664]"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-[#2D3A74] px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#243063]"
               >
                 <CalendarDays className="h-3.5 w-3.5" />
                 Book Appointment
@@ -136,49 +201,79 @@ export default function UserAppointments() {
             </div>
           </div>
 
-          <div className="relative z-10 mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-            <div className="rounded-2xl border border-[#d7ece9] bg-white/95 px-3 py-2.5">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">Total</div>
-              <div className="mt-1 text-lg font-bold text-[#12373d]">{totalCount}</div>
-            </div>
-            <div className="rounded-2xl border border-emerald-100 bg-white/95 px-3 py-2.5">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">Scheduled</div>
-              <div className="mt-1 text-lg font-bold text-emerald-600">{scheduledCount}</div>
-            </div>
-            <div className="rounded-2xl border border-sky-100 bg-white/95 px-3 py-2.5">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">Completed</div>
-              <div className="mt-1 text-lg font-bold text-sky-600">{completedCount}</div>
-            </div>
-            <div className="rounded-2xl border border-rose-100 bg-white/95 px-3 py-2.5">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">Cancelled</div>
-              <div className="mt-1 text-lg font-bold text-rose-600">{cancelledCount}</div>
-            </div>
+          <div className="relative z-10 mt-4 grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-4">
+            {topWidgets.map((widget) => {
+              const Icon = widget.icon;
+
+              return (
+                <div key={widget.key} className="surface-card rounded-2xl p-3.5 sm:rounded-3xl sm:p-5">
+                  <div className="flex items-start justify-between gap-3 sm:gap-4">
+                    <div>
+                      <p className="mb-1 text-xs text-slate-500 sm:text-sm">{widget.label}</p>
+                      <p className="text-2xl font-semibold text-[#2D3A74] sm:text-3xl">{widget.value}</p>
+                    </div>
+                    <div className={`flex h-9 w-9 items-center justify-center rounded-xl sm:h-11 sm:w-11 sm:rounded-2xl ${widget.tone}`}>
+                      <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
+                    </div>
+                  </div>
+                  <p className="mt-2.5 line-clamp-2 text-[11px] text-slate-400 sm:mt-4 sm:text-xs">{widget.helper}</p>
+                </div>
+              );
+            })}
           </div>
         </section>
 
-        <section className="overflow-hidden rounded-3xl border border-[#d9e9e7] bg-white shadow-[0_20px_40px_rgba(15,23,42,0.05)]">
-          <div className="flex flex-col gap-3 border-b border-[#e7f1f0] px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
-            <div className="flex flex-wrap items-center gap-2">
-              {tabs.map((t) => (
+        <section className="surface-card overflow-hidden rounded-3xl">
+          <div className="border-b border-slate-100 px-4 py-4 sm:px-5">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+              <div className="hidden md:grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,360px)_200px] lg:items-end">
+                <div className="min-w-0 lg:w-[360px]">
+                  <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Search</label>
+                  <div className="relative">
+                    <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="text"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      placeholder="Name, phone, chamber, status"
+                      className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-900 placeholder-slate-400 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+                    />
+                  </div>
+                </div>
+
+                <div className="min-w-0 sm:max-w-[220px] lg:w-[200px]">
+                  <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Status</label>
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-700 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+                  >
+                    <option value="all">All status</option>
+                    <option value="scheduled">Scheduled</option>
+                    <option value="completed">Completed</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex md:hidden items-center justify-end">
                 <button
-                  key={String(t.value)}
-                  onClick={() => setActiveTab(t.value)}
-                  className={`rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] transition ${
-                    activeTab === t.value
-                      ? 'border-[#0c7b79] bg-[#0c7b79] text-white shadow-sm'
-                      : 'border-[#d8ece9] bg-[#f1f7f6] text-slate-600 hover:bg-[#e7f3f1]'
-                  }`}
+                  type="button"
+                  onClick={() => setShowMobileFilters(true)}
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+                  title="Filters"
+                  aria-label="Open filters"
                 >
-                  {t.label}
+                  <SlidersHorizontal className="h-4.5 w-4.5" />
                 </button>
-              ))}
+              </div>
+
+              {/* <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-500">
+                {pagination?.total ?? rows.length} records
+              </div> */}
             </div>
-            <div className="rounded-full border border-[#dcefed] bg-[#f5fbfa] px-3 py-1 text-xs font-medium text-slate-500">{pagination?.total ?? rows.length} records</div>
           </div>
 
-          <div className="px-5 py-3 border-b border-[#edf4f3]">
-            <span className="text-sm font-semibold text-[#244b50]">Appointments</span>
-          </div>
 
           {/* Mobile cards */}
           <div className="divide-y divide-[#edf4f3] md:hidden">
@@ -188,35 +283,53 @@ export default function UserAppointments() {
 
             {!loading && filteredRows.map((a) => (
               <article key={a.id} className="px-4 py-4">
-                <div className="rounded-2xl border border-[#e6f0ef] bg-[#fbfefd] p-4 shadow-[0_8px_20px_rgba(15,23,42,0.04)]">
+                <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_10px_22px_rgba(15,23,42,0.05)]">
                   <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">Appointment Date</p>
-                      <p className="mt-1 text-sm font-semibold text-[#1b3f44]">
-                        {formatDisplayDateWithYearFromDateLike(a.appointment_date) || a.appointment_date}
-                      </p>
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#d8ece9] bg-[#eef8f6] text-xs font-bold text-[#1b5b61]">
+                        {getPatientInitials(a)}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-slate-900">{getPatientName(a)}</p>
+                        <p className="truncate text-xs text-slate-500">{getPatientContact(a)}</p>
+                      </div>
                     </div>
-                    <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold capitalize ${statusBadge(a.status)}`}>
-                      {a.status || 'Pending'}
+                    <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold ${statusBadge(a.status)}`}>
+                      {formatStatusLabel(a.status)}
                     </span>
                   </div>
 
-                  <div className="mt-3 space-y-2">
-                    <p className="text-xs text-slate-500">Patient: <span className="font-medium text-slate-700">{getPatientName(a)}</span></p>
-                    <p className="text-xs text-slate-500">Email: <span className="font-medium text-slate-700">{getPatientEmail(a)}</span></p>
-                    <p className="text-xs text-slate-500">Age: <span className="font-medium text-slate-700">{getPatientAge(a)}</span></p>
-                    <p className="text-xs text-slate-500">Time: <span className="font-medium text-slate-700">{formatTime(a)}</span></p>
-                    <p className="text-xs text-slate-500">Chamber: <span className="font-medium text-slate-700">{getChamberName(a)}</span></p>
-                    <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">Details</p>
-                      <p className="mt-1 text-sm text-slate-600">{a.symptoms || 'No notes added'}</p>
+                  <div className="mt-3 grid grid-cols-2 gap-2.5 text-xs">
+                    <div className="rounded-lg border border-slate-100 bg-slate-50 px-2.5 py-2">
+                      <p className="text-[10px] uppercase tracking-[0.08em] text-slate-400">Date</p>
+                      <p className="mt-0.5 font-semibold text-slate-700">{formatDisplayDateWithYearFromDateLike(a.appointment_date) || a.appointment_date}</p>
                     </div>
-                    <p className="text-xs text-slate-400">Updated: {formatLastUpdated(a.updated_at)}</p>
-                    <div className="mt-2 flex items-center gap-2">
+                    <div className="rounded-lg border border-slate-100 bg-slate-50 px-2.5 py-2">
+                      <p className="text-[10px] uppercase tracking-[0.08em] text-slate-400">Time</p>
+                      <p className="mt-0.5 font-semibold text-slate-700">{formatTime(a)}</p>
+                    </div>
+                    <div className="rounded-lg border border-slate-100 bg-slate-50 px-2.5 py-2">
+                      <p className="text-[10px] uppercase tracking-[0.08em] text-slate-400">Chamber</p>
+                      <p className="mt-0.5 truncate font-semibold text-slate-700">{getChamberName(a)}</p>
+                    </div>
+                    <div className="rounded-lg border border-slate-100 bg-slate-50 px-2.5 py-2">
+                      <p className="text-[10px] uppercase tracking-[0.08em] text-slate-400">Age</p>
+                      <p className="mt-0.5 font-semibold text-slate-700">{getPatientAge(a)}</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 rounded-lg border border-slate-100 bg-slate-50 px-2.5 py-2">
+                    <p className="text-[10px] uppercase tracking-[0.08em] text-slate-400">Notes</p>
+                    <p className="mt-0.5 line-clamp-2 text-xs text-slate-700">{a.symptoms || 'No notes added'}</p>
+                  </div>
+
+                  <div className="mt-3 flex items-center justify-between gap-2">
+                    <p className="text-[11px] text-slate-400">Updated: {formatLastUpdated(a.updated_at)}</p>
+                    <div className="flex items-center gap-1.5">
                       <button
                         type="button"
                         onClick={() => setViewRow(a)}
-                        className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-sky-200 bg-sky-50 text-sky-700 transition hover:border-sky-300 hover:bg-sky-100"
                         title="View"
                       >
                         <Eye className="h-4 w-4" />
@@ -224,14 +337,14 @@ export default function UserAppointments() {
                       {hasPrescription(a) ? (
                         <Link
                           href={`/patient/prescriptions/${a.prescription_id}`}
-                          className="inline-flex items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100"
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-emerald-200 bg-emerald-50 text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100"
                           title="Prescription"
                         >
                           <FileText className="h-4 w-4" />
                         </Link>
                       ) : (
                         <span
-                          className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-slate-100 px-2.5 py-1.5 text-slate-400"
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 bg-slate-100 text-slate-300"
                           title="Prescription not available"
                         >
                           <FileText className="h-4 w-4" />
@@ -251,28 +364,28 @@ export default function UserAppointments() {
           </div>
 
           {/* Desktop table */}
-          <div className="hidden overflow-x-auto md:block">
-            <table className="min-w-full">
+          <div className="hidden md:block overflow-x-auto border-t border-slate-100">
+            <table className="min-w-full text-sm">
               <thead>
-                <tr className="border-b border-[#edf4f3] bg-[#f8fcfb]">
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Patient</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Chamber</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Date</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Time</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Status</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Actions</th>
+                <tr className="bg-slate-50 text-slate-500 uppercase text-xs tracking-[0.12em]">
+                  <th className="px-6 py-4 text-center">Patient</th>
+                  <th className="px-6 py-4 text-center">Chamber</th>
+                  <th className="px-6 py-4 text-center">Date</th>
+                  <th className="px-6 py-4 text-center">Time</th>
+                  <th className="px-6 py-4 text-center">Status</th>
+                  <th className="px-6 py-4 text-center">Actions</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-slate-100 bg-white">
                 {loading ? (
                   <tr>
-                    <td colSpan={6} className="px-5 py-16 text-center text-sm text-gray-400">Loading appointments...</td>
+                    <td colSpan={6} className="px-6 py-14 text-center text-sm text-slate-500">Loading appointments...</td>
                   </tr>
                 ) : null}
 
                 {!loading && filteredRows.map((a) => (
-                  <tr key={a.id} className="border-b border-[#f1f5f4] transition-colors odd:bg-white even:bg-[#fcfefd] hover:bg-[#f2faf9]">
-                    <td className="px-4 py-3.5 text-sm text-slate-700">
+                  <tr key={a.id} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="px-6 py-4 text-sm text-slate-700">
                       <div className="flex min-w-[220px] items-center gap-3">
                         <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#d8ece9] bg-[#eef8f6] text-xs font-bold text-[#1b5b61]">
                           {getPatientInitials(a)}
@@ -284,40 +397,40 @@ export default function UserAppointments() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3.5 text-sm text-slate-600 whitespace-nowrap">{getChamberName(a)}</td>
-                    <td className="px-4 py-3.5 text-sm font-medium text-[#1b3f44] whitespace-nowrap">
+                    <td className="px-6 py-4 text-[13px] font-medium text-slate-700 text-center whitespace-nowrap">{getChamberName(a)}</td>
+                    <td className="px-6 py-4 text-[13px] font-medium text-slate-700 text-center whitespace-nowrap">
                       {formatDisplayDateWithYearFromDateLike(a.appointment_date) || a.appointment_date}
                     </td>
-                    <td className="px-4 py-3.5 text-sm text-slate-600 whitespace-nowrap">{formatTime(a)}</td>
-                    <td className="px-4 py-3.5">
-                      <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold capitalize ${statusBadge(a.status)}`}>
-                        {a.status || 'Pending'}
+                    <td className="px-6 py-4 text-[13px] font-medium text-slate-700 text-center whitespace-nowrap">{formatTime(a)}</td>
+                    <td className="px-6 py-4 text-center">
+                      <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${statusBadge(a.status)}`}>
+                        {formatStatusLabel(a.status)}
                       </span>
                     </td>
-                    <td className="px-4 py-3.5 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
+                    <td className="px-6 py-4 text-center whitespace-nowrap">
+                      <div className="flex items-center justify-center gap-1.5">
                         <button
                           type="button"
                           onClick={() => setViewRow(a)}
-                          className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white p-1.5 text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+                          className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-sky-200 bg-sky-50 text-sky-700 transition hover:border-sky-300 hover:bg-sky-100 hover:text-sky-800"
                           title="View"
                         >
-                          <Eye className="h-4 w-4" />
+                          <Eye className="h-3.5 w-3.5" />
                         </button>
                         {hasPrescription(a) ? (
                           <Link
                             href={`/patient/prescriptions/${a.prescription_id}`}
-                            className="inline-flex items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 p-1.5 text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100"
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-emerald-200 bg-emerald-50 text-emerald-700 transition hover:border-emerald-300 hover:text-emerald-800"
                             title="Prescription"
                           >
-                            <FileText className="h-4 w-4" />
+                            <FileText className="h-3.5 w-3.5" />
                           </Link>
                         ) : (
                           <span
-                            className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-slate-100 p-1.5 text-slate-400"
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-slate-300"
                             title="Prescription not available"
                           >
-                            <FileText className="h-4 w-4" />
+                            <FileText className="h-3.5 w-3.5" />
                           </span>
                         )}
                       </div>
@@ -327,8 +440,8 @@ export default function UserAppointments() {
 
                 {filteredRows.length === 0 && !loading ? (
                   <tr>
-                    <td colSpan={6} className="px-5 py-16 text-center">
-                      <p className="text-sm text-gray-400">No appointments found.</p>
+                    <td colSpan={6} className="px-6 py-14 text-center">
+                      <p className="text-sm text-slate-400">No appointments found.</p>
                     </td>
                   </tr>
                 ) : null}
@@ -337,7 +450,7 @@ export default function UserAppointments() {
           </div>
 
           {pagination && typeof pagination.current_page === 'number' && pagination.last_page > 1 ? (
-            <div className="border-t border-[#e7f1f0] px-5 py-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="border-t border-slate-100 px-5 py-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div className="text-xs text-gray-400">
                 Page <span className="font-semibold text-gray-700">{pagination.current_page}</span> of{' '}
                 <span className="font-semibold text-gray-700">{pagination.last_page}</span>
@@ -364,7 +477,7 @@ export default function UserAppointments() {
                     disabled={loading}
                     className={`inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-xs font-medium border transition ${
                       p === currentPage
-                        ? 'border-[#0c7b79] bg-[#0c7b79] text-white'
+                        ? 'border-[#2D3A74] bg-[#2D3A74] text-white'
                         : 'border-gray-200 text-gray-700 bg-white hover:bg-gray-50'
                     }`}
                   >
@@ -388,6 +501,69 @@ export default function UserAppointments() {
             </div>
           ) : null}
         </section>
+
+        {/* Mobile filters modal */}
+        {showMobileFilters && typeof document !== 'undefined'
+          ? createPortal(
+            <div className="fixed inset-0 z-[110] flex items-start bg-black/40 backdrop-blur-[1px]" onClick={() => setShowMobileFilters(false)}>
+              <div
+                className="w-full rounded-b-3xl border border-slate-200 bg-white p-4 shadow-[0_14px_40px_rgba(15,23,42,0.15)]"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="mb-3 flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-[#2D3A74]">Filters</h3>
+                  <button
+                    type="button"
+                    onClick={() => setShowMobileFilters(false)}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500"
+                    aria-label="Close filters"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Search</label>
+                    <div className="relative">
+                      <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                      <input
+                        type="text"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        placeholder="Name, phone, chamber, status"
+                        className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-900 placeholder-slate-400 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Status</label>
+                    <select
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-700 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+                    >
+                      <option value="all">All status</option>
+                      <option value="scheduled">Scheduled</option>
+                      <option value="completed">Completed</option>
+                      <option value="cancelled">Cancelled</option>
+                    </select>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowMobileFilters(false)}
+                    className="w-full rounded-xl bg-[#2D3A74] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#243063]"
+                  >
+                    Apply Filters
+                  </button>
+                </div>
+              </div>
+            </div>,
+            document.body
+          )
+          : null}
 
         {/* View details modal */}
         {viewRow && typeof document !== 'undefined'
@@ -440,8 +616,8 @@ export default function UserAppointments() {
 
                 <div className="mt-3 rounded-xl border border-[#e8f1f0] bg-[#fbfefd] p-3 text-sm">
                   <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">Status</div>
-                  <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold capitalize ${statusBadge(viewRow.status)}`}>
-                    {viewRow.status || 'Pending'}
+                  <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${statusBadge(viewRow.status)}`}>
+                    {formatStatusLabel(viewRow.status)}
                   </span>
                 </div>
 

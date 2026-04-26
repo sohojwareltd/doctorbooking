@@ -103,6 +103,7 @@
     position: absolute;
     border-radius: 9999px;
     background: rgba(255, 255, 255, 0.08);
+    pointer-events: none;
 }
 
 .hero-panel::before {

@@ -1,9 +1,8 @@
 ﻿import { Link, usePage } from '@inertiajs/react';
 import {
   CalendarDays, FileText, LayoutDashboard,
-  LogOut, ChevronDown, User, Stethoscope,
+  LogOut, User, Stethoscope,
 } from 'lucide-react';
-import { useState, useRef, useEffect } from 'react';
 
 const ACCENT = '#FF7C00';
 
@@ -13,21 +12,7 @@ export default function UserSidebar({ currentPath }) {
   const doctorName = publicDoctor?.name || 'MediCare';
 
   const isActive = (href) => currentPath === href || currentPath.startsWith(href + '/');
-  const apptActive = isActive('/patient/appointments') || isActive('/book-appointment');
-
-  const [apptOpen, setApptOpen] = useState(apptActive);
-  const dropRef = useRef(null);
-  const [dropH, setDropH] = useState(0);
-
-  useEffect(() => {
-    if (dropRef.current) setDropH(dropRef.current.scrollHeight);
-  }, [apptOpen]);
-
-  const mainNav = [
-    { href: '/patient/dashboard', label: 'Dashboard', Icon: LayoutDashboard },
-    { href: '/patient/prescriptions', label: 'Prescriptions', Icon: FileText },
-    { href: '/patient/profile', label: 'My Profile', Icon: User },
-  ];
+  const appointmentsActive = isActive('/patient/appointments');
 
   return (
     <div className="flex flex-col h-full bg-[#2D3A74] text-white">
@@ -77,48 +62,20 @@ export default function UserSidebar({ currentPath }) {
               </Link>
             </li>
 
-            {/* Appointments — expandable */}
+            {/* My Appointments */}
             <li>
-              <button
-                type="button"
-                onClick={() => setApptOpen((p) => !p)}
+              <Link
+                href="/patient/appointments"
                 className={`w-full flex items-center text-white text-sm py-3 transition-colors ${
-                  apptActive && !apptOpen ? 'font-semibold' : 'hover:bg-white/10'
+                  appointmentsActive ? 'font-semibold' : 'hover:bg-white/10'
                 }`}
-                style={apptActive && !apptOpen
+                style={appointmentsActive
                   ? { background: 'rgba(255,255,255,0.15)', borderLeft: `4px solid ${ACCENT}`, paddingLeft: '20px' }
                   : { paddingLeft: '24px' }}
               >
-                <CalendarDays className={`w-5 h-5 mr-3 flex-shrink-0 ${apptActive ? 'text-white' : 'text-white/70'}`} />
-                <span className="flex-1 text-left">Appointments</span>
-                <ChevronDown className={`h-3.5 w-3.5 mr-4 text-white/50 transition-transform duration-200 ${apptOpen ? 'rotate-180' : ''}`} />
-              </button>
-              <div
-                ref={dropRef}
-                className="overflow-hidden transition-all duration-300"
-                style={{ maxHeight: apptOpen ? `${dropH}px` : '0px', opacity: apptOpen ? 1 : 0 }}
-              >
-                <ul>
-                  {[
-                    { href: '/patient/appointments', label: 'My Appointments' },
-                    { href: '/book-appointment', label: 'Book Appointment' },
-                  ].map(({ href, label }) => (
-                    <li key={href}>
-                      <Link
-                        href={href}
-                        className={`flex items-center text-white text-sm py-2 transition-colors ${
-                          isActive(href) ? 'font-semibold' : 'hover:bg-white/10'
-                        }`}
-                        style={isActive(href)
-                          ? { background: 'rgba(255,255,255,0.15)', borderLeft: `4px solid ${ACCENT}`, paddingLeft: '40px' }
-                          : { paddingLeft: '44px' }}
-                      >
-                        {label}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+                <CalendarDays className={`w-5 h-5 mr-3 flex-shrink-0 ${appointmentsActive ? 'text-white' : 'text-white/70'}`} />
+                My Appointments
+              </Link>
             </li>
 
             {/* Prescriptions */}

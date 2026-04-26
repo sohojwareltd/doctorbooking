@@ -1,6 +1,6 @@
 import { Link, usePage } from '@inertiajs/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Calendar, CalendarCheck2, Clock3, Eye, FilePlus, FileText, Hash, Loader2, Mars, Phone, Plus, Search, User, UserCheck, Venus } from 'lucide-react';
+import { Calendar, CalendarCheck2, Eye, FilePlus, FileText, Hash, Loader2, Mars, Phone, Plus, Search, User, UserCheck, Venus } from 'lucide-react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
@@ -685,7 +685,7 @@ export default function DoctorAppointments() {
     today: rows.filter((item) => item.appointment_date === today).length,
     awaitingTests: rows.filter((item) => item.status === 'awaiting_tests').length,
     arrived: rows.filter((item) => item.status === 'arrived').length,
-    inProgress: rows.filter((item) => item.status === 'in_consultation').length,
+    reportSubmitted: rows.filter((item) => item.status === 'test_registered').length,
     completed: rows.filter((item) => item.status === 'prescribed').length,
     visible: pageMeta.total,
   }), [rows, today, pageMeta.total]);
@@ -708,22 +708,25 @@ export default function DoctorAppointments() {
       helper: `${stats.visible} total appointments found`,
       icon: CalendarCheck2,
       tone: 'bg-sky-50 text-sky-700',
+      filter: { type: 'date', value: 'today' },
     },
     {
       key: 'queue',
-      label: 'Queue Now',
+      label: 'Arrived',
       value: stats.arrived,
       helper: 'Patients marked arrived',
       icon: UserCheck,
       tone: 'bg-amber-50 text-amber-700',
+      filter: { type: 'status', value: 'arrived' },
     },
     {
       key: 'progress',
-      label: 'In Consultation',
-      value: stats.inProgress,
-      helper: 'Currently being seen',
-      icon: Clock3,
+      label: 'Report Submitted',
+      value: stats.reportSubmitted,
+      helper: 'Patients with submitted reports',
+      icon: FileText,
       tone: 'bg-violet-50 text-violet-700',
+      filter: { type: 'status', value: 'test_registered' },
     },
     {
       key: 'tests',
@@ -732,8 +735,36 @@ export default function DoctorAppointments() {
       helper: `${stats.completed} completed overall`,
       icon: FileText,
       tone: 'bg-orange-50 text-orange-700',
+      filter: { type: 'status', value: 'awaiting_tests' },
     },
   ];
+
+  const applyWidgetFilter = useCallback((widget) => {
+    if (!widget?.filter) return;
+
+    if (widget.filter.type === 'status') {
+      setStatusFilter(widget.filter.value);
+      return;
+    }
+
+    if (widget.filter.type === 'date') {
+      setDatePreset(widget.filter.value);
+    }
+  }, []);
+
+  const isWidgetActive = useCallback((widget) => {
+    if (!widget?.filter) return false;
+
+    if (widget.filter.type === 'status') {
+      return statusFilter === widget.filter.value;
+    }
+
+    if (widget.filter.type === 'date') {
+      return datePreset === widget.filter.value;
+    }
+
+    return false;
+  }, [datePreset, statusFilter]);
 
   const calendarRenderKey = useMemo(
     () => [
@@ -780,9 +811,18 @@ export default function DoctorAppointments() {
           <div className="grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-4">
             {topWidgets.map((widget) => {
               const Icon = widget.icon;
+              const active = isWidgetActive(widget);
 
               return (
-                <div key={widget.key} className="surface-card rounded-2xl p-3.5 sm:rounded-3xl sm:p-5">
+                <button
+                  key={widget.key}
+                  type="button"
+                  onClick={() => applyWidgetFilter(widget)}
+                  className={`surface-card rounded-2xl p-3.5 text-left transition sm:rounded-3xl sm:p-5 ${active
+                    ? 'ring-2 ring-[#2D3A74]/35 shadow-[0_14px_34px_-18px_rgba(45,58,116,0.7)]'
+                    : 'hover:-translate-y-0.5 hover:shadow-[0_14px_34px_-20px_rgba(15,23,42,0.5)]'
+                    }`}
+                >
                   <div className="flex items-start justify-between gap-3 sm:gap-4">
                     <div>
                       <p className="mb-1 text-xs text-slate-500 sm:text-sm">{widget.label}</p>
@@ -793,7 +833,7 @@ export default function DoctorAppointments() {
                     </div>
                   </div>
                   <p className="mt-2.5 line-clamp-2 text-[11px] text-slate-400 sm:mt-4 sm:text-xs">{widget.helper}</p>
-                </div>
+                </button>
               );
             })}
           </div>

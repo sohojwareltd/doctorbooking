@@ -132,10 +132,10 @@ export default function Profile({ userData = {}, profile = null, isSetup = false
     !profile?.gender && !profile?.date_of_birth && !profile?.age;
 
   return (
-    <div className="max-w-[900px] mx-auto space-y-6">
+    <div className="mx-auto w-full max-w-[1400px] space-y-5">
 
       {/* HERO BANNER */}
-      <section className="hero-panel rounded-[28px] p-6 md:p-8 text-white">
+      <section className="hero-panel rounded-3xl p-6 md:p-8 text-white">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-white/80 mb-4">
@@ -162,8 +162,8 @@ export default function Profile({ userData = {}, profile = null, isSetup = false
 
       {/* SETUP BANNER (only for new users) */}
       {(isSetup || isProfileNew) && (
-        <div className="flex items-start gap-3 rounded-2xl border border-[#4aa5ec]/30 bg-[#4aa5ec]/8 px-5 py-4">
-          <Sparkles className="h-5 w-5 text-[#4aa5ec] flex-shrink-0 mt-0.5" />
+        <div className="flex items-start gap-3 rounded-2xl border border-sky-200 bg-sky-50 px-5 py-4">
+          <Sparkles className="mt-0.5 h-5 w-5 flex-shrink-0 text-sky-600" />
           <div>
             <p className="text-sm font-semibold text-[#2D3A74]">Complete your profile</p>
             <p className="text-xs text-slate-500 mt-0.5">
@@ -177,7 +177,7 @@ export default function Profile({ userData = {}, profile = null, isSetup = false
       <form onSubmit={handleSubmit} className="space-y-6">
 
         {/* Account Section */}
-        <div className="surface-card rounded-3xl p-6">
+        <div className="surface-card rounded-3xl p-5 sm:p-6">
           <h2 className="text-base font-semibold text-[#2D3A74] mb-5 flex items-center gap-2">
             <User className="h-4 w-4 text-[#4055A8]" />
             Account Information
@@ -234,7 +234,7 @@ export default function Profile({ userData = {}, profile = null, isSetup = false
         </div>
 
         {/* Health Details Section */}
-        <div className="surface-card rounded-3xl p-6">
+        <div className="surface-card rounded-3xl p-5 sm:p-6">
           <h2 className="text-base font-semibold text-[#2D3A74] mb-5 flex items-center gap-2">
             <Calendar className="h-4 w-4 text-[#4055A8]" />
             Health Details
@@ -381,7 +381,7 @@ export default function Profile({ userData = {}, profile = null, isSetup = false
 
       </form>
 
-      <form onSubmit={handlePasswordSubmit} className="surface-card rounded-3xl p-6">
+      <form onSubmit={handlePasswordSubmit} className="surface-card rounded-3xl p-5 sm:p-6">
         <h2 className="text-base font-semibold text-[#2D3A74] mb-5 flex items-center gap-2">
           <KeyRound className="h-4 w-4 text-[#4055A8]" />
           Change Password

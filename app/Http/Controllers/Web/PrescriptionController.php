@@ -233,27 +233,16 @@ class PrescriptionController extends Controller
     {
         $user = Auth::user();
 
-        $apptIds = Appointment::where(fn ($q) => $q
-            ->where('user_id', $user->id)
-            ->orWhere('email', $user->email)
-        )->pluck('id');
-
         $prescriptions = Prescription::with([
                 'user:id,name,phone',
                 'appointment:id,name,age,gender,phone,symptoms',
             ])
-            ->where(fn ($q) => $q
-                ->where('user_id', $user->id)
-                ->orWhereIn('appointment_id', $apptIds)
-            )
+            ->where('user_id', $user->id)
             ->orderByDesc('created_at')
             ->paginate(15)
             ->withQueryString();
 
-        $all = Prescription::where(fn ($q) => $q
-            ->where('user_id', $user->id)
-            ->orWhereIn('appointment_id', $apptIds)
-        )->get(['next_visit_date']);
+        $all = Prescription::where('user_id', $user->id)->get(['next_visit_date']);
 
         $withFollowUp      = $all->filter(fn ($p) => $p->next_visit_date)->count();
         $upcomingFollowUps = $all->filter(fn ($p) => $p->next_visit_date
@@ -288,17 +277,10 @@ class PrescriptionController extends Controller
     /** GET /patient/prescriptions/{prescription} */
     public function patientShow(Prescription $prescription): Response
     {
-        $user    = Auth::user();
-        $apptIds = Appointment::where(fn ($q) => $q
-            ->where('user_id', $user->id)
-            ->orWhere('email', $user->email)
-        )->pluck('id');
+        $user = Auth::user();
 
-        // Allow access only if this prescription belongs to the patient
-        $allowed = $prescription->user_id === $user->id
-            || ($prescription->appointment_id && $apptIds->contains($prescription->appointment_id));
-
-        abort_unless($allowed, 403);
+        // Allow access only if this prescription belongs to the authenticated patient user.
+        abort_unless($prescription->user_id === $user->id, 403);
 
         $prescription->load([
             'appointment:id,appointment_date,appointment_time,status',

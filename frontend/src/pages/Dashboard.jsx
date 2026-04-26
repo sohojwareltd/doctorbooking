@@ -12,8 +12,9 @@ export default function Dashboard({
   recentAppointments = [],
   upcomingAppointment = null,
 }) {
-  const { auth } = usePage().props;
+  const { auth, publicDoctor } = usePage().props;
   const user = auth?.user;
+  const doctorName = (publicDoctor?.name || '').trim();
   const [apiRecent, setApiRecent] = useState(recentAppointments);
   const [activeTab, setActiveTab] = useState('all');
 
@@ -269,7 +270,11 @@ export default function Dashboard({
               <Stethoscope className="h-4 w-4 text-white/70" />
               <span className="text-xs font-semibold uppercase tracking-widest text-white/70">New Visit</span>
             </div>
-            <p className="text-base font-semibold mb-4">Need to see a doctor?</p>
+            <p className="text-sm mb-4">
+              {doctorName
+                ? `Book your consultation with ${doctorName}`
+                : 'Book your consultation with a doctor'}
+            </p>
             <Link
               href="/book-appointment"
               className="inline-flex items-center gap-1.5 rounded-xl bg-white/20 border border-white/30 px-4 py-2.5 text-sm font-semibold text-white hover:bg-white/30 transition w-full justify-center"
