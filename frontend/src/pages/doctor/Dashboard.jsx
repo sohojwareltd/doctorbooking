@@ -564,12 +564,12 @@ export default function DoctorDashboard({
                           }`}
                       >
                         {tab.label}
-                        {tab.count > 0 && (
+                        {/* {tab.count > 0 && (
                           <span className={`rounded-full px-2 py-0.5 text-xs font-bold leading-none ${isActive ? tone.badgeActive : tone.badgeIdle
                             }`}>
                             {tab.count}
                           </span>
-                        )}
+                        )} */}
                       </button>
                     );
                   })()
