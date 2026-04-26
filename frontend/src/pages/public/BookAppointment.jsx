@@ -1,6 +1,6 @@
 import { Head, usePage } from '@inertiajs/react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowRight, Calendar, CheckCircle2, ChevronLeft, Clock, Loader2, MapPin, Phone, ShieldQuestion, Sparkles, User } from 'lucide-react';
+import { ArrowRight, Building2, Calendar, CheckCircle2, ChevronLeft, Clock, Loader2, MapPin, Phone, ShieldQuestion, Sparkles, User } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
@@ -19,7 +19,7 @@ export default function PublicBookAppointment() {
   const page = usePage();
   const contactPhone = page?.props?.site?.contactPhone || '';
   const authUser = page?.props?.auth?.user || null;
-    const initialSearch = typeof window !== 'undefined' ? window.location.search : '';
+  const initialSearch = typeof window !== 'undefined' ? window.location.search : '';
 
   const initial = useMemo(
     () => ({
@@ -57,15 +57,15 @@ export default function PublicBookAppointment() {
   const [previewSerial, setPreviewSerial] = useState(null);
   const [previewTime, setPreviewTime] = useState(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
-    const [requestedChamberId, setRequestedChamberId] = useState(() => {
-      const params = new URLSearchParams(initialSearch);
-      return params.get('chamber_id');
-    });
-    const [requestedStep, setRequestedStep] = useState(() => {
-      const params = new URLSearchParams(initialSearch);
-      const rawStep = Number(params.get('step'));
-      return Number.isInteger(rawStep) && rawStep >= 1 && rawStep <= 3 ? rawStep : null;
-    });
+  const [requestedChamberId, setRequestedChamberId] = useState(() => {
+    const params = new URLSearchParams(initialSearch);
+    return params.get('chamber_id');
+  });
+  const [requestedStep, setRequestedStep] = useState(() => {
+    const params = new URLSearchParams(initialSearch);
+    const rawStep = Number(params.get('step'));
+    return Number.isInteger(rawStep) && rawStep >= 1 && rawStep <= 3 ? rawStep : null;
+  });
 
   const isClosedByWeekday = (dateStr) => {
     if (!dateStr || !Array.isArray(closedWeekdays) || closedWeekdays.length === 0) return false;
@@ -116,7 +116,7 @@ export default function PublicBookAppointment() {
     };
     run();
     return () => { mounted = false; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Load unavailable ranges for the selected chamber's schedule
@@ -158,21 +158,21 @@ export default function PublicBookAppointment() {
         if (!mounted) return;
         const list = Array.isArray(data?.chambers) ? data.chambers : [];
         setChambers(list);
-          const matchedRequestedChamber = requestedChamberId
-            ? list.find((item) => String(item?.id) === String(requestedChamberId))
-            : null;
+        const matchedRequestedChamber = requestedChamberId
+          ? list.find((item) => String(item?.id) === String(requestedChamberId))
+          : null;
 
-          if (matchedRequestedChamber) {
-            setSelectedChamberId(matchedRequestedChamber.id);
-            setSelectedChamber(matchedRequestedChamber);
-            if (requestedStep) {
-              setStep(requestedStep);
-            }
-            setRequestedChamberId(null);
-            setRequestedStep(null);
-          } else if (list.length === 1) {
-            setSelectedChamberId(list[0].id);
-            setSelectedChamber(list[0]);
+        if (matchedRequestedChamber) {
+          setSelectedChamberId(matchedRequestedChamber.id);
+          setSelectedChamber(matchedRequestedChamber);
+          if (requestedStep) {
+            setStep(requestedStep);
+          }
+          setRequestedChamberId(null);
+          setRequestedStep(null);
+        } else if (list.length === 1) {
+          setSelectedChamberId(list[0].id);
+          setSelectedChamber(list[0]);
         }
       } catch {
         if (!mounted) return;
@@ -186,13 +186,13 @@ export default function PublicBookAppointment() {
     return () => {
       mounted = false;
     };
-    }, [requestedChamberId, requestedStep]);
+  }, [requestedChamberId, requestedStep]);
 
-    useEffect(() => {
-      if (!selectedChamberId || chambers.length === 0) return;
-      const active = chambers.find((item) => String(item?.id) === String(selectedChamberId)) || null;
-      setSelectedChamber(active);
-    }, [selectedChamberId, chambers]);
+  useEffect(() => {
+    if (!selectedChamberId || chambers.length === 0) return;
+    const active = chambers.find((item) => String(item?.id) === String(selectedChamberId)) || null;
+    setSelectedChamber(active);
+  }, [selectedChamberId, chambers]);
 
   // Load a simple math captcha
   const loadCaptcha = async () => {
@@ -415,33 +415,29 @@ export default function PublicBookAppointment() {
     <>
       <Head title="Book Appointment" />
 
-      <div className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+      <div className="mx-auto w-full max-w-7xl px-4 pt-0 py-10 sm:px-6 lg:px-8">
         <div className="rounded-[32px] bg-[linear-gradient(180deg,#f7fbfa_0%,#eef6f4_100%)] p-5 shadow-[0_30px_80px_rgba(15,23,42,0.08)] sm:p-7 lg:p-8">
           <div className="mb-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-end">
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-[#bfe9e4] bg-white/90 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#0c7b79] shadow-sm">
-                <Sparkles className="h-4 w-4" />
-                Appointment Booking
+              <div className="mt-3 flex items-center gap-3 sm:gap-4">
+                <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-[#0c7b79] shadow-sm">
+                  <MapPin className="h-5 w-5" />
+                </span>
+                <div>
+                  <p className="max-w-2xl text-sm   text-slate-500 sm:text-base">
+                    Choose a Chamber
+                  </p>
+                  <p className="max-w-2xl text-sm leading-7 text-slate-600 sm:text-base">
+                    Select the location where you want to meet the doctor
+                  </p>
+                </div>
               </div>
-              <h1 className="mt-4 max-w-3xl text-3xl font-semibold tracking-tight text-[#0f2f34] sm:text-4xl lg:text-[3.1rem]">
-                Book a consultation in a cleaner, faster flow.
-              </h1>
-              <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600 sm:text-base">
-                Select a chamber, choose a date, and confirm patient details to receive an appointment serial instantly.
-              </p>
             </div>
 
-            <div className="rounded-[28px] border border-white/80 bg-white/80 p-4 shadow-[0_20px_55px_rgba(15,23,42,0.06)] backdrop-blur">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Need help?</div>
-              <div className="mt-2 text-lg font-semibold text-[#14383d]">Call for booking support</div>
-              <div className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-[#0c7b79]">
-                <Phone className="h-4 w-4" />
-                {contactPhone || 'Support contact available on request'}
-              </div>
-            </div>
+
           </div>
 
-          <div className="mb-7 grid gap-3 md:grid-cols-3">
+          <div className="mb-7 grid md:grid-cols-3">
             {steps.map((item) => {
               const active = step === item.id;
               const done = step > item.id;
@@ -452,14 +448,25 @@ export default function PublicBookAppointment() {
                   initial={{ opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.35, delay: item.id * 0.06 }}
-                  className={`rounded-[24px] border px-4 py-4 transition ${done ? 'border-emerald-200 bg-emerald-50/90' : active ? 'border-[#9dded7] bg-white shadow-sm' : 'border-white/70 bg-white/55'}`}
+                  className="relative overflow-hidden  py-4 transition-all"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold ${done ? 'bg-emerald-500 text-white' : active ? 'bg-[#0c7b79] text-white' : 'bg-slate-100 text-slate-500'}`}>
-                      {done ? <CheckCircle2 className="h-5 w-5" /> : item.id}
+                  <div className="pt-1">
+                    <div className="relative">
+                      <div className={`h-px w-full ${done ? 'bg-emerald-300' : active ? 'bg-[#7dcfc7]' : 'bg-slate-200'}`} />
+                      <div className={`absolute left-1/2 top-1/2 flex h-10 w-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-dashed text-sm font-semibold ${done
+                        ? 'border-emerald-300 bg-emerald-500 text-white'
+                        : active
+                          ? 'border-[#0c7b79]/45 bg-white text-[#0c7b79]'
+                          : 'border-slate-300 bg-white text-slate-500'}
+                      `}>
+                        {done ? <CheckCircle2 className="h-5 w-5" /> : item.id}
+                      </div>
                     </div>
-                    <div>
-                      <div className={`text-sm font-semibold ${active || done ? 'text-[#12373d]' : 'text-slate-500'}`}>{item.label}</div>
+
+                    <div className="mt-6 text-center">
+                      <div className={`text-sm font-semibold ${active || done ? 'text-[#12373d]' : 'text-slate-500'}`}>
+                        {item.label}
+                      </div>
                       <div className="text-xs text-slate-400">{item.hint}</div>
                     </div>
                   </div>
@@ -474,7 +481,7 @@ export default function PublicBookAppointment() {
             </GlassCard>
           )}
 
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1.18fr)_320px]">
+          <div className="grid gap-6 ">
             <div>
               <AnimatePresence mode="wait">
                 {step === 1 && (
@@ -504,62 +511,105 @@ export default function PublicBookAppointment() {
                                   : null;
 
                             return (
-                              <motion.button
+                              <motion.div
                                 key={ch.id}
-                                type="button"
                                 initial={{ opacity: 0, y: 12 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.28, delay: index * 0.05 }}
                                 onClick={() => {
                                   setSelectedChamberId(ch.id);
                                   setSelectedChamber(ch);
-                                  setFormData((p) => ({ ...p, date: '' }));
-                                  setSelectedDate(null);
-                                  selectedDateRef.current = null;
-                                  setStep(2);
                                 }}
-                                className={`w-full rounded-[26px] border px-5 py-4 text-left transition ${isActive ? 'border-[#8edfd7] bg-[linear-gradient(135deg,#eefaf8_0%,#ffffff_100%)] shadow-[0_16px_40px_rgba(12,123,121,0.12)]' : 'border-slate-200 bg-white hover:border-[#9dded7] hover:bg-[#fbfefd]'}`}
+                                className={`w-full cursor-pointer rounded-2xl border px-4 py-4 transition-all duration-200 sm:px-5 sm:py-4 ${isActive
+                                  ? 'border-[#0c7b79]/30 bg-[#f0faf9] shadow-[0_4px_20px_rgba(12,123,121,0.12)]'
+                                  : 'border-[#e3e8ef] bg-white hover:border-[#0c7b79]/20 hover:bg-[#f7fdfb] hover:shadow-[0_2px_12px_rgba(12,123,121,0.07)]'
+                                  }`}
                               >
-                                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                                  <div>
-                                    <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Chamber {String(index + 1).padStart(2, '0')}</div>
-                                    <div className="mt-1 text-lg font-semibold text-[#12373d]">{ch.name}</div>
-                                  </div>
-                                  <div className={`inline-flex rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] ${isActive ? 'bg-[#0c7b79] text-white' : 'bg-slate-100 text-slate-500'}`}>
-                                    {isActive ? 'Selected' : 'Available'}
-                                  </div>
-                                </div>
+                                <div className="flex items-center justify-between gap-3.5 sm:gap-4">
 
-                                <div className="mt-4 grid gap-3 text-sm text-slate-600 md:grid-cols-[minmax(0,1fr)_220px] md:items-start">
-                                  <div className="inline-flex items-start gap-2">
-                                    <MapPin className="mt-0.5 h-4 w-4 flex-shrink-0 text-slate-400" />
-                                    <span>{ch.location || 'Location details shared during confirmation.'}</span>
-                                  </div>
-                                  <div className="inline-flex items-center gap-2 text-slate-600">
-                                    <Phone className="h-4 w-4 text-slate-400" />
-                                    {ch.phone || 'Call for schedule information'}
-                                  </div>
-                                </div>
+                                  {/* Icon badge */}
 
-                                <div className="mt-4 flex flex-wrap items-center gap-4">
-                                  {mapsUrl ? (
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        window.open(mapsUrl, '_blank', 'noopener,noreferrer');
-                                      }}
-                                      className="text-xs font-semibold uppercase tracking-[0.14em] text-[#0c7b79] transition hover:text-[#0a6664]"
-                                    >
-                                      Directions
-                                    </button>
-                                  ) : null}
-                                  <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
-                                    Auto move to date step
+
+                                  {/* Name + Location */}
+                                  <div className="flex min-w-0 gap-5 sm:w-[45%] sm:max-w-[45%] sm:shrink-0">
+                                    <span className={`inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border transition-colors duration-200 ${isActive ? 'border-[#0c7b79]/25 bg-[#0c7b79]/10 text-[#0c7b79]' : 'border-[#dbe9ec] bg-[#eaf4f3] text-[#0c7b79]'}`}>
+                                      <Building2 className="h-5 w-5" />
+                                    </span>
+                                    <div className="min-w-0">
+                                      <p className="truncate text-[15px] font-semibold leading-snug text-[#1a2f44]">
+                                        {ch.name}
+                                      </p>
+                                      <div className="mt-0.5 flex items-start gap-1 text-[13px] text-slate-500">
+                                        <MapPin className="mt-[3px] h-3.5 w-3.5 shrink-0 text-[#0c7b79]" />
+                                        <span className="line-clamp-1">{ch.location || 'Location details shared during confirmation.'}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* Divider between left and middle column */}
+                                  <div className="hidden h-10 w-px shrink-0 bg-slate-400/40 sm:block" />
+
+                                  {/* Phone + View on map + Call */}
+                                  <div className="hidden shrink-0 flex-col items-end gap-1.5 sm:flex">
+                                    {ch.phone && (
+                                      <span className="flex items-center gap-1.5 text-[13px] text-slate-500">
+                                        <Phone className="h-3.5 w-3.5 shrink-0" />
+                                        {ch.phone}
+                                      </span>
+                                    )}
+                                    <div className="flex items-center gap-2.5">
+                                      {mapsUrl && (
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            window.open(mapsUrl, '_blank', 'noopener,noreferrer');
+                                          }}
+                                          className="flex items-center gap-1 text-[12px] font-medium text-[#0c7b79] transition hover:text-[#0a6664] hover:underline"
+                                        >
+                                          <MapPin className="h-3 w-3" />
+                                          View on map
+                                        </button>
+                                      )}
+                                      {ch.phone && (
+                                        <a
+                                          href={`tel:${ch.phone}`}
+                                          onClick={(e) => e.stopPropagation()}
+                                          className="flex items-center gap-1 text-[12px] font-medium text-[#0c7b79] transition hover:text-[#0a6664] hover:underline"
+                                        >
+                                          <Phone className="h-3 w-3" />
+                                          Call
+                                        </a>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* Divider between middle and right column */}
+                                  <div className="hidden h-10 w-px shrink-0 bg-slate-400/40 sm:block" />
+
+                                  {/* Select button */}
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedChamberId(ch.id);
+                                      setSelectedChamber(ch);
+                                      setFormData((p) => ({ ...p, date: '' }));
+                                      setSelectedDate(null);
+                                      selectedDateRef.current = null;
+                                      setStep(2);
+                                    }}
+                                    className={`inline-flex h-9 shrink-0 items-center gap-1.5 rounded-xl px-4 text-[13px] font-semibold text-white transition-all duration-150 ${isActive
+                                      ? 'bg-[#0a6664] shadow-[0_2px_8px_rgba(10,102,100,0.30)]'
+                                      : 'bg-[#0c7b79] hover:bg-[#0a6664] hover:shadow-[0_2px_8px_rgba(10,102,100,0.22)]'
+                                      }`}
+                                  >
+                                    Select
                                     <ArrowRight className="h-3.5 w-3.5" />
-                                  </div>
+                                  </button>
+
                                 </div>
-                              </motion.button>
+                              </motion.div>
                             );
                           })}
                         </div>
@@ -673,187 +723,187 @@ export default function PublicBookAppointment() {
                       </div>
 
                       <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-[#005963]">Full Name <span className="text-rose-500">*</span></label>
-                <div className="relative">
-                  <User className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#005963]" />
-                  <input
-                    type="text"
-                    name="name"
-                    placeholder="Full Name"
-                    required
-                    value={formData.name}
-                    onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
-                    className={`${inputClass} pl-11`}
-                    disabled={submitting}
-                  />
-                </div>
-              </div>
+                        <div>
+                          <label className="mb-2 block text-sm font-semibold text-[#005963]">Full Name <span className="text-rose-500">*</span></label>
+                          <div className="relative">
+                            <User className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#005963]" />
+                            <input
+                              type="text"
+                              name="name"
+                              placeholder="Full Name"
+                              required
+                              value={formData.name}
+                              onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
+                              className={`${inputClass} pl-11`}
+                              disabled={submitting}
+                            />
+                          </div>
+                        </div>
 
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-[#005963]">
-                  Phone Number <span className="text-rose-500">*</span>
-                </label>
-                <div className="relative">
-                  <Phone className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#005963]" />
-                  <input
-                    type="tel"
-                    name="phone"
-                    placeholder="Phone Number"
-                    required
-                    value={formData.phone}
-                    onChange={(e) => setFormData((p) => ({ ...p, phone: e.target.value }))}
-                    className={`${inputClass} pl-11`}
-                    disabled={submitting}
-                  />
-                </div>
-              </div>
+                        <div>
+                          <label className="mb-2 block text-sm font-semibold text-[#005963]">
+                            Phone Number <span className="text-rose-500">*</span>
+                          </label>
+                          <div className="relative">
+                            <Phone className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#005963]" />
+                            <input
+                              type="tel"
+                              name="phone"
+                              placeholder="Phone Number"
+                              required
+                              value={formData.phone}
+                              onChange={(e) => setFormData((p) => ({ ...p, phone: e.target.value }))}
+                              className={`${inputClass} pl-11`}
+                              disabled={submitting}
+                            />
+                          </div>
+                        </div>
 
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-[#005963]">Age</label>
-                <input
-                  type="number"
-                  name="age"
-                  placeholder="Age (optional)"
-                  min={1}
-                  max={150}
-                  value={formData.age}
-                  onChange={(e) => setFormData((p) => ({ ...p, age: e.target.value }))}
-                  className={inputClass}
-                  disabled={submitting}
-                />
-              </div>
+                        <div>
+                          <label className="mb-2 block text-sm font-semibold text-[#005963]">Age</label>
+                          <input
+                            type="number"
+                            name="age"
+                            placeholder="Age (optional)"
+                            min={1}
+                            max={150}
+                            value={formData.age}
+                            onChange={(e) => setFormData((p) => ({ ...p, age: e.target.value }))}
+                            className={inputClass}
+                            disabled={submitting}
+                          />
+                        </div>
 
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-[#005963]">Gender</label>
-                <select
-                  name="gender"
-                  value={formData.gender}
-                  onChange={(e) => setFormData((p) => ({ ...p, gender: e.target.value }))}
-                  className={inputClass}
-                  disabled={submitting}
-                >
-                  <option value="">Select gender (optional)</option>
-                  <option value="male">Male</option>
-                  <option value="female">Female</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
+                        <div>
+                          <label className="mb-2 block text-sm font-semibold text-[#005963]">Gender</label>
+                          <select
+                            name="gender"
+                            value={formData.gender}
+                            onChange={(e) => setFormData((p) => ({ ...p, gender: e.target.value }))}
+                            className={inputClass}
+                            disabled={submitting}
+                          >
+                            <option value="">Select gender (optional)</option>
+                            <option value="male">Male</option>
+                            <option value="female">Female</option>
+                            <option value="other">Other</option>
+                          </select>
+                        </div>
                       </div>
 
                       <div className="mt-4">
-              <label className="mb-2 block text-sm font-semibold text-[#005963]">Address</label>
-              <div className="relative">
-                <MapPin className="absolute left-4 top-3.5 h-5 w-5 text-[#005963]" />
-                <input
-                  type="text"
-                  name="address"
-                  placeholder="Address (optional)"
-                  value={formData.address}
-                  onChange={(e) => setFormData((p) => ({ ...p, address: e.target.value }))}
-                  className={`${inputClass} pl-11`}
-                  disabled={submitting}
-                />
-              </div>
+                        <label className="mb-2 block text-sm font-semibold text-[#005963]">Address</label>
+                        <div className="relative">
+                          <MapPin className="absolute left-4 top-3.5 h-5 w-5 text-[#005963]" />
+                          <input
+                            type="text"
+                            name="address"
+                            placeholder="Address (optional)"
+                            value={formData.address}
+                            onChange={(e) => setFormData((p) => ({ ...p, address: e.target.value }))}
+                            className={`${inputClass} pl-11`}
+                            disabled={submitting}
+                          />
+                        </div>
                       </div>
 
                       <div className="mt-4">
-              <label className="mb-2 block text-sm font-semibold text-[#005963]">Symptoms / Chief Complaint</label>
-              <textarea
-                name="symptoms"
-                placeholder="Describe your symptoms (optional)"
-                rows={3}
-                value={formData.symptoms}
-                onChange={(e) => setFormData((p) => ({ ...p, symptoms: e.target.value }))}
-                className={`${inputClass} resize-none`}
-                disabled={submitting}
-              />
+                        <label className="mb-2 block text-sm font-semibold text-[#005963]">Symptoms / Chief Complaint</label>
+                        <textarea
+                          name="symptoms"
+                          placeholder="Describe your symptoms (optional)"
+                          rows={3}
+                          value={formData.symptoms}
+                          onChange={(e) => setFormData((p) => ({ ...p, symptoms: e.target.value }))}
+                          className={`${inputClass} resize-none`}
+                          disabled={submitting}
+                        />
                       </div>
 
                       <div className="mt-4">
-              <label className="mb-2 block text-sm font-semibold text-[#005963]">Additional Notes</label>
-              <textarea
-                name="notes"
-                placeholder="Any additional notes (optional)"
-                rows={2}
-                value={formData.notes}
-                onChange={(e) => setFormData((p) => ({ ...p, notes: e.target.value }))}
-                className={`${inputClass} resize-none`}
-                disabled={submitting}
-              />
+                        <label className="mb-2 block text-sm font-semibold text-[#005963]">Additional Notes</label>
+                        <textarea
+                          name="notes"
+                          placeholder="Any additional notes (optional)"
+                          rows={2}
+                          value={formData.notes}
+                          onChange={(e) => setFormData((p) => ({ ...p, notes: e.target.value }))}
+                          className={`${inputClass} resize-none`}
+                          disabled={submitting}
+                        />
                       </div>
 
                       <div className="mt-4 rounded-[24px] border border-[#d6ece8] bg-[linear-gradient(135deg,#f7fdfc_0%,#ffffff_100%)] px-4 py-4 text-xs text-gray-700">
                         <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Appointment Summary</div>
                         <div className="flex flex-col gap-3 sm:flex-row sm:gap-6">
-                <div>
-                  <div className="text-[11px] text-gray-500">Date</div>
-                  <div className="font-semibold">
-                    {formData.date
-                      ? formatDisplayDateWithYear(formData.date) || formData.date
-                      : '—'}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-[11px] text-gray-500">Chamber</div>
-                  <div className="font-semibold">
-                    {selectedChamber?.name || '—'}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-[11px] text-gray-500">Serial Number</div>
-                  <div className="font-semibold">
-                    {previewSerial ?? successDetails?.serial ?? '—'}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-[11px] text-gray-500">Est. Time</div>
-                  <div className="font-semibold">
-                    {previewTime
-                      ? formatDisplayTime12h(previewTime) || previewTime
-                      : successDetails?.estimated_time
-                        ? formatDisplayTime12h(successDetails.estimated_time) ||
-                          successDetails.estimated_time
-                        : '—'}
-                  </div>
-                </div>
+                          <div>
+                            <div className="text-[11px] text-gray-500">Date</div>
+                            <div className="font-semibold">
+                              {formData.date
+                                ? formatDisplayDateWithYear(formData.date) || formData.date
+                                : '—'}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-[11px] text-gray-500">Chamber</div>
+                            <div className="font-semibold">
+                              {selectedChamber?.name || '—'}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-[11px] text-gray-500">Serial Number</div>
+                            <div className="font-semibold">
+                              {previewSerial ?? successDetails?.serial ?? '—'}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-[11px] text-gray-500">Est. Time</div>
+                            <div className="font-semibold">
+                              {previewTime
+                                ? formatDisplayTime12h(previewTime) || previewTime
+                                : successDetails?.estimated_time
+                                  ? formatDisplayTime12h(successDetails.estimated_time) ||
+                                  successDetails.estimated_time
+                                  : '—'}
+                            </div>
+                          </div>
                         </div>
                       </div>
 
                       <div className="mt-4">
-              <label className="mb-2 block text-sm font-semibold text-[#005963]">Captcha</label>
-              <div className="flex items-center gap-3">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 rounded-2xl border border-[#00acb1]/30 bg-[#00acb1]/5 px-3 py-2 text-sm text-[#005963]">
-                    <ShieldQuestion className="h-4 w-4" />
-                    <span>
-                      {loadingCaptcha
-                        ? 'Loading…'
-                        : captchaQuestion || 'Captcha unavailable. Please reload.'}
-                    </span>
-                  </div>
-                  <input
-                    type="text"
-                    name="captcha_answer"
-                    placeholder="Your answer"
-                    value={formData.captcha_answer}
-                    onChange={(e) =>
-                      setFormData((p) => ({ ...p, captcha_answer: e.target.value }))
-                    }
-                    className={`${inputClass} mt-2`}
-                    disabled={submitting || !captchaQuestion}
-                    required
-                  />
-                </div>
-                <button
-                  type="button"
-                  onClick={loadCaptcha}
-                  disabled={loadingCaptcha}
-                  className="mt-6 rounded-2xl border border-[#00acb1]/40 bg-white px-3 py-2 text-xs font-semibold text-[#005963] hover:bg-[#00acb1]/10 disabled:opacity-60"
-                >
-                  Refresh
-                </button>
-              </div>
+                        <label className="mb-2 block text-sm font-semibold text-[#005963]">Captcha</label>
+                        <div className="flex items-center gap-3">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 rounded-2xl border border-[#00acb1]/30 bg-[#00acb1]/5 px-3 py-2 text-sm text-[#005963]">
+                              <ShieldQuestion className="h-4 w-4" />
+                              <span>
+                                {loadingCaptcha
+                                  ? 'Loading…'
+                                  : captchaQuestion || 'Captcha unavailable. Please reload.'}
+                              </span>
+                            </div>
+                            <input
+                              type="text"
+                              name="captcha_answer"
+                              placeholder="Your answer"
+                              value={formData.captcha_answer}
+                              onChange={(e) =>
+                                setFormData((p) => ({ ...p, captcha_answer: e.target.value }))
+                              }
+                              className={`${inputClass} mt-2`}
+                              disabled={submitting || !captchaQuestion}
+                              required
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={loadCaptcha}
+                            disabled={loadingCaptcha}
+                            className="mt-6 rounded-2xl border border-[#00acb1]/40 bg-white px-3 py-2 text-xs font-semibold text-[#005963] hover:bg-[#00acb1]/10 disabled:opacity-60"
+                          >
+                            Refresh
+                          </button>
+                        </div>
                       </div>
 
                       <div className="mt-6 flex items-center justify-between gap-4 text-[11px] text-slate-500">
@@ -882,20 +932,20 @@ export default function PublicBookAppointment() {
                       {successDetails && (
                         <div className="mt-5 rounded-[24px] border border-[#d6ece8] bg-[linear-gradient(135deg,#f7fdfc_0%,#ffffff_100%)] px-4 py-4 text-left text-sm text-gray-700">
                           <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-[11px] text-gray-500">Serial Number</div>
-                      <div className="text-lg font-extrabold text-emerald-600">
-                        #{successDetails.serial}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-[11px] text-gray-500">Est. Time</div>
-                      <div className="text-sm font-semibold text-[#005963]">
-                        {formatDisplayTime12h(successDetails.estimated_time) ||
-                          successDetails.estimated_time}
-                      </div>
-                    </div>
-                  </div>
+                            <div>
+                              <div className="text-[11px] text-gray-500">Serial Number</div>
+                              <div className="text-lg font-extrabold text-emerald-600">
+                                #{successDetails.serial}
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-[11px] text-gray-500">Est. Time</div>
+                              <div className="text-sm font-semibold text-[#005963]">
+                                {formatDisplayTime12h(successDetails.estimated_time) ||
+                                  successDetails.estimated_time}
+                              </div>
+                            </div>
+                          </div>
                           <div className="mt-3 text-xs text-gray-600">
                             Your appointment request is now available in the doctor panel.
                           </div>
@@ -913,56 +963,7 @@ export default function PublicBookAppointment() {
               </AnimatePresence>
             </div>
 
-            <motion.aside
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-              className="space-y-4"
-            >
-              <GlassCard variant="solid" className="rounded-[28px] border border-white/80 bg-[linear-gradient(180deg,#123c46_0%,#0d2f38_100%)] p-5 text-white shadow-[0_24px_60px_rgba(18,60,70,0.18)]">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9fe9dd]">Booking Snapshot</div>
-                <div className="mt-5 space-y-4 text-sm">
-                  <div>
-                    <div className="text-[11px] uppercase tracking-[0.14em] text-white/45">Selected chamber</div>
-                    <div className="mt-1 font-semibold text-white">{selectedChamber?.name || 'Not selected yet'}</div>
-                  </div>
-                  <div>
-                    <div className="text-[11px] uppercase tracking-[0.14em] text-white/45">Chosen date</div>
-                    <div className="mt-1 font-semibold text-white">
-                      {formData.date ? formatDisplayDateWithYear(formData.date) || formData.date : 'Not selected yet'}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-[11px] uppercase tracking-[0.14em] text-white/45">Estimated serial</div>
-                    <div className="mt-1 font-semibold text-white">{previewSerial ? `#${previewSerial}` : 'Pending date selection'}</div>
-                  </div>
-                  <div>
-                    <div className="text-[11px] uppercase tracking-[0.14em] text-white/45">Estimated time</div>
-                    <div className="mt-1 font-semibold text-white">
-                      {previewTime ? formatDisplayTime12h(previewTime) || previewTime : 'Will appear after date selection'}
-                    </div>
-                  </div>
-                </div>
-              </GlassCard>
-
-              <GlassCard variant="solid" className="rounded-[28px] border border-white/70 bg-white/75 p-5 shadow-[0_18px_45px_rgba(15,23,42,0.05)]">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">What happens next</div>
-                <div className="mt-4 space-y-4 text-sm text-slate-600">
-                  <div className="flex items-start gap-3">
-                    <div className="mt-0.5 flex h-7 w-7 items-center justify-center rounded-full bg-[#e8f7f4] text-xs font-semibold text-[#0c7b79]">1</div>
-                    <p>Choose a chamber with the most convenient location.</p>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="mt-0.5 flex h-7 w-7 items-center justify-center rounded-full bg-[#e8f7f4] text-xs font-semibold text-[#0c7b79]">2</div>
-                    <p>Pick an available date from the live calendar.</p>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="mt-0.5 flex h-7 w-7 items-center justify-center rounded-full bg-[#e8f7f4] text-xs font-semibold text-[#0c7b79]">3</div>
-                    <p>Confirm patient details and receive your booking serial.</p>
-                  </div>
-                </div>
-              </GlassCard>
-            </motion.aside>
+          
           </div>
         </div>
       </div>

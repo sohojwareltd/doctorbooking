@@ -156,7 +156,8 @@ export default function Welcome({ home, doctor, chambers = [] }) {
     };
 
     const handleContactSubmit = async (event) => {
-        event.preventDefault();
+        event?.preventDefault?.();
+        if (contactSubmitting) return;
         setContactSubmitting(true);
         setContactStatus({ type: '', message: '' });
 
@@ -437,7 +438,8 @@ export default function Welcome({ home, doctor, chambers = [] }) {
                                 </div>
                             )}
                             <button
-                                type="submit"
+                                type="button"
+                                onClick={handleContactSubmit}
                                 disabled={contactSubmitting}
                                 className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#b8f23c] px-4 text-sm font-semibold text-[#2a3a24] transition hover:brightness-95 disabled:opacity-60"
                             >
