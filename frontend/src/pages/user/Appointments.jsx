@@ -80,9 +80,22 @@ export default function UserAppointments() {
 
   const getPatientName = (a) => a?.patient_name || a?.user?.name || '-';
   const getPatientEmail = (a) => a?.patient_email || a?.user?.email || '-';
+  const getPatientPhone = (a) => a?.patient_phone || a?.user?.phone || null;
+  const getPatientContact = (a) => {
+    const email = getPatientEmail(a);
+    if (email && email !== '-') return email;
+    return getPatientPhone(a) || '-';
+  };
   const getPatientAge = (a) => (a?.patient_age ?? '-') === '' ? '-' : (a?.patient_age ?? '-');
   const getChamberName = (a) => a?.chamber?.name || '-';
   const formatTime = (a) => formatDisplayTime12h(a?.appointment_time) || a?.appointment_time || '-';
+  const getPatientInitials = (a) => {
+    const name = String(getPatientName(a) || '').trim();
+    if (!name || name === '-') return 'P';
+    const parts = name.split(/\s+/).filter(Boolean);
+    const initials = parts.slice(0, 2).map((p) => p[0]?.toUpperCase() || '').join('');
+    return initials || 'P';
+  };
 
   const hasPrescription = (a) => Boolean(a?.prescription_id || a?.has_prescription);
 
@@ -242,9 +255,7 @@ export default function UserAppointments() {
             <table className="min-w-full">
               <thead>
                 <tr className="border-b border-[#edf4f3] bg-[#f8fcfb]">
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Patient Name</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Email</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Age</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Patient</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Chamber</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Date</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Time</th>
@@ -255,15 +266,24 @@ export default function UserAppointments() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={8} className="px-5 py-16 text-center text-sm text-gray-400">Loading appointments...</td>
+                    <td colSpan={6} className="px-5 py-16 text-center text-sm text-gray-400">Loading appointments...</td>
                   </tr>
                 ) : null}
 
                 {!loading && filteredRows.map((a) => (
                   <tr key={a.id} className="border-b border-[#f1f5f4] transition-colors odd:bg-white even:bg-[#fcfefd] hover:bg-[#f2faf9]">
-                    <td className="px-4 py-3.5 text-sm font-medium text-[#1b3f44] whitespace-nowrap">{getPatientName(a)}</td>
-                    <td className="px-4 py-3.5 text-sm text-slate-600 whitespace-nowrap">{getPatientEmail(a)}</td>
-                    <td className="px-4 py-3.5 text-sm text-slate-600 whitespace-nowrap">{getPatientAge(a)}</td>
+                    <td className="px-4 py-3.5 text-sm text-slate-700">
+                      <div className="flex min-w-[220px] items-center gap-3">
+                        <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#d8ece9] bg-[#eef8f6] text-xs font-bold text-[#1b5b61]">
+                          {getPatientInitials(a)}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-[#1b3f44]">{getPatientName(a)}</p>
+                          <p className="truncate text-xs text-slate-500">{getPatientContact(a)}</p>
+                          <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-slate-400">Age: {getPatientAge(a)}</p>
+                        </div>
+                      </div>
+                    </td>
                     <td className="px-4 py-3.5 text-sm text-slate-600 whitespace-nowrap">{getChamberName(a)}</td>
                     <td className="px-4 py-3.5 text-sm font-medium text-[#1b3f44] whitespace-nowrap">
                       {formatDisplayDateWithYearFromDateLike(a.appointment_date) || a.appointment_date}
@@ -307,7 +327,7 @@ export default function UserAppointments() {
 
                 {filteredRows.length === 0 && !loading ? (
                   <tr>
-                    <td colSpan={8} className="px-5 py-16 text-center">
+                    <td colSpan={6} className="px-5 py-16 text-center">
                       <p className="text-sm text-gray-400">No appointments found.</p>
                     </td>
                   </tr>
