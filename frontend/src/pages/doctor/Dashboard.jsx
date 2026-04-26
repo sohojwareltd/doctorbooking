@@ -99,7 +99,27 @@ export default function DoctorDashboard({
     try { return new Date(d).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' }); }
     catch { return d; }
   };
-  const fmtTime = (t) => t || '';
+  const fmtTime = (timeValue) => {
+    if (!timeValue) return '';
+
+    const raw = String(timeValue).trim();
+    if (!raw) return '';
+
+    if (/\s?(AM|PM)$/i.test(raw)) {
+      return raw.replace(/\s?(am|pm)$/i, (_, marker) => ` ${marker.toUpperCase()}`);
+    }
+
+    const match = raw.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+    if (!match) return raw;
+
+    const hours24 = Number(match[1]);
+    const minutes = match[2];
+    if (Number.isNaN(hours24) || hours24 < 0 || hours24 > 23) return raw;
+
+    const meridiem = hours24 >= 12 ? 'PM' : 'AM';
+    const hours12 = hours24 % 12 || 12;
+    return `${hours12}:${minutes} ${meridiem}`;
+  };
   const getName = (a) => a?.patient_name || a?.user?.name || 'Patient';
   const getPhone = (a) => a?.patient_phone || a?.user?.phone || null;
   const getGender = (a) => String(a?.patient_gender || a?.user?.gender || '').toLowerCase();
@@ -194,7 +214,7 @@ export default function DoctorDashboard({
     { key: 'scheduled', label: 'Scheduled', count: todayAppointments.filter((a) => a.status === 'scheduled').length },
     { key: 'in_consultation', label: 'In Progress', count: todayAppointments.filter((a) => a.status === 'in_consultation').length },
     { key: 'awaiting', label: 'Awaiting Tests', count: awaitingList.length },
-    { key: 'prescribed', label: 'Completed', count: todayAppointments.filter((a) => a.status === 'prescribed').length },
+    { key: 'prescribed', label: 'Report Submitted', count: todayAppointments.filter((a) => a.status === 'prescribed').length },
   ];
 
   const getTabTone = (key) => {
