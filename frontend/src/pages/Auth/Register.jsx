@@ -245,27 +245,6 @@ export default function Register() {
                                     </div>
 
                                     <div>
-                                        <label htmlFor="email" className="mb-1.5 block text-sm font-semibold text-[#153a4a]">
-                                            Email Address
-                                        </label>
-                                        <div className="relative">
-                                            <Mail className="absolute left-3.5 top-1/2 h-4.5 w-4.5 -translate-y-1/2 text-[#1a9f9c]" />
-                                            <input
-                                                id="email"
-                                                type="email"
-                                                name="email"
-                                                value={data.email}
-                                                className={inputClass}
-                                                autoComplete="email"
-                                                placeholder="Enter your email address"
-                                                onChange={(e) => setData('email', e.target.value)}
-                                                required
-                                            />
-                                        </div>
-                                        {resolvedEmailError && <div className="mt-1.5 text-xs font-medium text-red-600">{resolvedEmailError}</div>}
-                                    </div>
-
-                                    <div>
                                         <label htmlFor="phone" className="mb-1.5 block text-sm font-semibold text-[#153a4a]">
                                             Phone Number
                                         </label>
@@ -278,15 +257,38 @@ export default function Register() {
                                                 value={data.phone}
                                                 className={inputClass}
                                                 autoComplete="tel"
-                                                placeholder="+880 1XXX-XXXXXX"
-                                                onChange={(e) => setData('phone', e.target.value)}
+                                                inputMode="numeric"
+                                                maxLength={11}
+                                                pattern="[0-9]{11}"
+                                                placeholder="01XXXXXXXXX"
+                                                onChange={(e) => setData('phone', e.target.value.replace(/\D/g, '').slice(0, 11))}
                                                 required
                                             />
                                         </div>
                                         {resolvedPhoneError && <div className="mt-1.5 text-xs font-medium text-red-600">{resolvedPhoneError}</div>}
                                         <p className="mt-1.5 text-xs text-slate-500">
-                                            We'll use this number for login and important updates.
+                                            Enter 11 digits only. No +88 needed.
                                         </p>
+                                    </div>
+
+                                    <div>
+                                        <label htmlFor="email" className="mb-1.5 block text-sm font-semibold text-[#153a4a]">
+                                            Email Address <span className="font-normal text-slate-400">(optional)</span>
+                                        </label>
+                                        <div className="relative">
+                                            <Mail className="absolute left-3.5 top-1/2 h-4.5 w-4.5 -translate-y-1/2 text-[#1a9f9c]" />
+                                            <input
+                                                id="email"
+                                                type="email"
+                                                name="email"
+                                                value={data.email}
+                                                className={inputClass}
+                                                autoComplete="email"
+                                                placeholder="Enter your email address"
+                                                onChange={(e) => setData('email', e.target.value)}
+                                            />
+                                        </div>
+                                        {resolvedEmailError && <div className="mt-1.5 text-xs font-medium text-red-600">{resolvedEmailError}</div>}
                                     </div>
 
                                     <div>

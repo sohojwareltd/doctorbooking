@@ -14,24 +14,21 @@ class CreateNewUser implements CreatesNewUsers
 
     /**
      * Validate and create a new patient (default role) user.
-     * Accepts email OR phone � stores whichever is provided as username.
+     * Phone is required as an 11-digit local number; email is optional.
      */
     public function create(array $input): User
     {
         Validator::make($input, [
             'name'     => ['required', 'string', 'max:255'],
-            // Accept email or phone � at least one required
-            'email'    => ['nullable', 'email', 'max:255'],
-            'phone'    => ['nullable', 'string', 'max:50'],
+            'email'    => ['nullable', 'email', 'max:255', 'unique:users,email'],
+            'phone'    => ['required', 'regex:/^[0-9]{11}$/', 'unique:users,phone'],
             'password' => $this->passwordRules(),
-        ])->after(function ($validator) use ($input) {
-            if (empty($input['email']) && empty($input['phone'])) {
-                $validator->errors()->add('email', 'Provide an email address or phone number.');
-            }
-        })->validate();
+        ], [
+            'phone.regex' => 'Phone number must be exactly 11 digits.',
+        ])->validate();
 
-        // Derive username: email preferred, else phone
-        $username = ! empty($input['email']) ? $input['email'] : $input['phone'];
+        // Keep username aligned with the required login identifier.
+        $username = $input['phone'];
 
         // Validate uniqueness
         Validator::make(['username' => $username], [
