@@ -16,6 +16,60 @@ use Inertia\Response;
 
 class PrescriptionController extends Controller
 {
+    /** GET /public/prescriptions/{prescription} */
+    public function publicShow(Prescription $prescription): Response
+    {
+        $prescription->load([
+            'appointment:id,appointment_date,appointment_time,status',
+            'doctor:id,user_id,specialization,degree',
+            'doctor.user:id,name,email,phone',
+        ]);
+
+        $chamber = $prescription->doctor_id
+            ? Chamber::where('doctor_id', $prescription->doctor_id)->where('is_active', true)->first()
+              ?? Chamber::where('doctor_id', $prescription->doctor_id)->first()
+            : null;
+
+        return Inertia::render('public/PrescriptionShow', [
+            'prescription' => [
+                'id'               => $prescription->id,
+                'uuid'             => $prescription->uuid,
+                'created_at'       => $prescription->created_at?->toDateTimeString(),
+                'diagnosis'        => $prescription->diagnosis,
+                'medications'      => $prescription->medications,
+                'instructions'     => $prescription->instructions,
+                'tests'            => $prescription->tests,
+                'next_visit_date'  => $prescription->next_visit_date?->format('Y-m-d'),
+                'visit_type'       => $prescription->visit_type,
+                'template_type'    => $prescription->template_type,
+                'specialty_data'   => $prescription->specialty_data,
+                'patient_name'     => $prescription->patient_name,
+                'patient_contact'  => $prescription->patient_contact,
+                'patient_age'      => $prescription->patient_age,
+                'patient_age_unit' => $prescription->patient_age_unit ?? 'years',
+                'patient_gender'   => $prescription->patient_gender,
+                'patient_weight'   => $prescription->patient_weight,
+                'appointment' => $prescription->appointment ? [
+                    'appointment_date' => $prescription->appointment->appointment_date?->toDateString(),
+                    'appointment_time' => substr((string) $prescription->appointment->appointment_time, 0, 5),
+                    'status'           => $prescription->appointment->status,
+                ] : null,
+            ],
+            'doctorInfo' => [
+                'name'           => $prescription->doctor?->user?->name,
+                'email'          => $prescription->doctor?->user?->email,
+                'phone'          => $prescription->doctor?->user?->phone,
+                'specialization' => $prescription->doctor?->specialization,
+                'degree'         => $prescription->doctor?->degree,
+            ],
+            'chamberInfo' => $chamber ? [
+                'name'     => $chamber->name,
+                'location' => $chamber->location,
+                'phone'    => $chamber->phone,
+            ] : null,
+        ]);
+    }
+
     // ── Doctor ────────────────────────────────────────────────────────────────
 
     /** GET /doctor/prescriptions */

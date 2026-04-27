@@ -469,7 +469,7 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
   const openMessageModal = (prescription) => {
     const routeParam = prescription?.uuid || prescription?.id;
     const patientName = getPatientName(prescription);
-    const prescriptionUrl = routeParam ? `${window.location.origin}/patient/prescriptions/${routeParam}` : '';
+    const prescriptionUrl = routeParam ? `${window.location.origin}/public/prescriptions/${routeParam}` : '';
     const defaultMessage = `Dear Mr. ${patientName},\n\nYour prescription has been successfully prepared by the doctor.\nPlease review it at your convenience using the link below:\n\n${prescriptionUrl}\n\nIf you have any questions or need further assistance, feel free to reach out.\n\nThank you.`;
 
     setMessageTarget(prescription);
