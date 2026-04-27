@@ -1,5 +1,6 @@
 import { Link, router } from '@inertiajs/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Calendar,
   Eye,
@@ -13,10 +14,12 @@ import {
   Plus,
   Printer,
   Search,
+  SlidersHorizontal,
   Stethoscope,
   Upload,
   User,
   Venus,
+  X,
 } from 'lucide-react';
 import DoctorLayout from '../../layouts/DoctorLayout';
 import DocModal from '../../components/doctor/DocModal';
@@ -146,6 +149,7 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
   const [messagePhone, setMessagePhone] = useState('');
   const [messageText, setMessageText] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showCreatePatientModal, setShowCreatePatientModal] = useState(false);
@@ -330,6 +334,13 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
       tone: 'bg-orange-50 text-orange-700',
     },
   ];
+
+  const handleResetFilters = () => {
+    setSearchTerm('');
+    setDateFilter('all');
+    setGenderFilter('all');
+    setShowMobileFilters(false);
+  };
 
   const resetCreateModal = () => {
     setShowCreateModal(false);
@@ -635,7 +646,7 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-4">
             {topWidgets.map((widget) => {
               const Icon = widget.icon;
 
@@ -661,7 +672,7 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
           <div className="border-b border-slate-100 px-6 py-5">
             <div className="flex flex-col gap-3">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,360px)_180px_180px] lg:items-end">
+                <div className="hidden md:grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,360px)_180px_180px] lg:items-end">
                   <div>
                     <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Search</label>
                     <div className="relative">
@@ -703,15 +714,27 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
                   </div>
                 </div>
 
+                <div className="flex md:hidden items-center justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setShowMobileFilters(true)}
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+                    title="Open filters"
+                    aria-label="Open filters"
+                  >
+                    <SlidersHorizontal className="h-4.5 w-4.5" />
+                  </button>
+                </div>
+
                 <div className="hidden lg:block" />
               </div>
             </div>
           </div>
 
           {/* ── Mobile Cards ── */}
-          <div className="md:hidden divide-y divide-slate-100 border-t border-slate-100">
+          <div className="md:hidden space-y-3 border-t border-slate-100 bg-slate-50/70 p-3">
             {filteredRows.length === 0 ? (
-              <div className="p-5">
+              <div className="rounded-2xl border border-slate-200 bg-white p-5">
                 <DocEmptyState icon={FileText} title="No prescriptions found" description="Try another filter or search keyword." />
               </div>
             ) : filteredRows.map((prescription, index) => {
@@ -719,7 +742,7 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
               return (
                 <div
                   key={prescription.id}
-                  className="p-4 space-y-2 cursor-pointer active:bg-slate-50"
+                  className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-2 cursor-pointer active:bg-slate-50"
                   onClick={() => setSelectedPrescription(prescription)}
                 >
                   <div className="flex items-start justify-between gap-2">
@@ -734,6 +757,7 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
                       </div>
                     </div>
                     <div className="shrink-0 text-xs text-slate-400 text-right">
+                      <div className="font-medium text-slate-500">#{serial}</div>
                       <div>{formatDisplayDateWithYearFromDateLike(prescription.created_at) || prescription.created_at}</div>
                     </div>
                   </div>
@@ -934,6 +958,91 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
           ) : null}
         </section>
       </div>
+
+      {showMobileFilters && typeof document !== 'undefined'
+        ? createPortal(
+          <div className="fixed inset-0 z-[110] flex items-start bg-black/40 backdrop-blur-[1px]" onClick={() => setShowMobileFilters(false)}>
+            <div
+              className="w-full rounded-b-3xl border border-slate-200 bg-white p-4 shadow-[0_14px_40px_rgba(15,23,42,0.15)]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-[#2D3A74]">Filters</h3>
+                <button
+                  type="button"
+                  onClick={() => setShowMobileFilters(false)}
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500"
+                  aria-label="Close filters"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Search</label>
+                  <div className="relative">
+                    <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="text"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      placeholder="Patient, phone, diagnosis or id"
+                      className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-900 placeholder-slate-400 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Created date</label>
+                    <select
+                      value={dateFilter}
+                      onChange={(e) => setDateFilter(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-700 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+                    >
+                      <option value="all">All dates</option>
+                      <option value="today">Today</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Gender</label>
+                    <select
+                      value={genderFilter}
+                      onChange={(e) => setGenderFilter(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-700 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+                    >
+                      <option value="all">All gender</option>
+                      <option value="male">Male</option>
+                      <option value="female">Female</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={handleResetFilters}
+                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+                  >
+                    Reset
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowMobileFilters(false)}
+                    className="w-full rounded-xl bg-[#2D3A74] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#243063]"
+                  >
+                    Apply Filters
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )
+        : null}
 
       <DocModal
         open={!!selectedPrescription}
