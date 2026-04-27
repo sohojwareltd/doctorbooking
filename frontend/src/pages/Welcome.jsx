@@ -225,9 +225,9 @@ export default function Welcome({ home, doctor, chambers = [] }) {
             <div className="min-h-screen bg-[linear-gradient(180deg,#edf3f1_0%,#f8fbfa_28%,#f7f8f8_100%)] text-slate-900">
                 <HeroSection doctor={doctor} />
 
-                <section id="chambers" className="relative z-10  px-4 py-12 sm:px-6  lg:px-8 lg:py-14">
-                    <div className="mx-auto max-w-6xl rounded-[36px] border border-[#dbe7e3] bg-white/94 p-8 shadow-[0_30px_75px_rgba(15,23,42,0.07)] backdrop-blur sm:p-10 lg:p-12">
-                        <div className="mb-8 flex flex-col gap-5 border-b border-slate-100 pb-6 lg:flex-row lg:items-end lg:justify-between">
+                <section id="chambers" className="relative z-10 px-0 py-10 sm:px-6 sm:py-12 lg:px-8 lg:py-14">
+                    <div className="mx-auto max-w-6xl border border-[#dbe7e3] bg-white/94 p-0 shadow-[0_30px_75px_rgba(15,23,42,0.07)] backdrop-blur sm:rounded-[36px] sm:p-10 lg:p-12">
+                        <div className="mx-4 mb-6 flex flex-col mt-4 lg:mt-0 gap-5 border-b border-slate-100 pb-5 sm:mx-0 sm:mb-8 sm:pb-6 lg:flex-row lg:items-end lg:justify-between">
                             <div className="max-w-3xl">
                                 <div className="inline-flex items-center rounded-full border border-[#dce7e3] bg-[#f4f9f7] px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#4f716e]">
                                     Our Locations
@@ -246,23 +246,20 @@ export default function Welcome({ home, doctor, chambers = [] }) {
                             </div>
                         </div>
 
-                        <div className="overflow-hidden rounded-[28px] border border-[#dce9e5] bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(247,250,249,0.96)_100%)]">
+                        <div className="space-y-4 overflow-hidden border-y border-[#dce9e5] bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(247,250,249,0.96)_100%)] p-4 sm:space-y-0 sm:border sm:rounded-[28px] sm:p-6 lg:border-y lg:p-0 lg:rounded-none">
                             {chamberCards.map((chamber, index) => {
                                 return (
                                     <article
                                         key={chamber.id}
-                                        className="group border-b border-[#e6f0ec] bg-transparent transition-colors last:border-b-0 hover:bg-[#f8fcfb]"
+                                        className="group rounded-2xl border border-[#e0ebe6] bg-white/95 p-5 shadow-[0_4px_12px_rgba(15,23,42,0.06)] transition-all duration-300 hover:border-[#d1e4de] hover:shadow-[0_12px_24px_rgba(15,23,42,0.12)] sm:rounded-3xl sm:p-6 lg:rounded-none lg:border-b lg:border-[#e6f0ec] lg:border-t-0 lg:border-l-0 lg:border-r-0 lg:bg-transparent lg:p-0 lg:shadow-none lg:last:border-b-0 hover:lg:bg-[#f8fcfb]"
                                     >
-                                        <div className="grid gap-5 px-4 py-5 sm:px-6 lg:grid-cols-[minmax(250px,1fr)_minmax(0,1.35fr)_minmax(170px,0.85fr)_auto] lg:items-center lg:gap-6">
+                                        <div className="hidden lg:grid lg:gap-5 lg:px-6 lg:py-5 lg:grid-cols-[minmax(250px,1fr)_minmax(0,1.35fr)_minmax(170px,0.85fr)_auto] lg:items-center">
                                             <div className="flex items-start gap-3">
-                                                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-[#123c46] text-[#fff]">
+                                                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-[#123c46] text-white">
                                                     <Building2 className="h-5 w-5" />
                                                 </div>
                                                 <div>
-                                                    {/* <div className="inline-flex rounded-full bg-[#e9f7f3] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#0f766e]">
-                                                        {String(index + 1).padStart(2, '0')}
-                                                    </div> */}
-                                                    <h3 className=" text-lg font-semibold tracking-tight text-slate-900 sm:text-[1.2rem]">
+                                                    <h3 className="text-lg font-semibold tracking-tight text-slate-900 sm:text-[1.2rem]">
                                                         {chamber.name}
                                                     </h3>
                                                     <div className="mt-1.5 text-[12px] font-semibold tracking-wide text-[#0f766e]">
@@ -315,6 +312,77 @@ export default function Welcome({ home, doctor, chambers = [] }) {
                                                 </Link>
                                             </div>
                                         </div>
+
+                                        <div className="lg:hidden">
+                                            {/* Header with icon and status */}
+                                            <div className="flex items-start justify-between gap-3 mb-4">
+                                                <div className="flex items-start gap-3 flex-1">
+                                                    <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#0f766e] to-[#123c46] text-white shadow-lg">
+                                                        <Building2 className="h-6 w-6" />
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <h3 className="text-lg font-bold tracking-tight text-slate-900">
+                                                            {chamber.name}
+                                                        </h3>
+                                                        <div className="mt-1.5 inline-flex rounded-full bg-[#e0f2ef] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-[#0f766e]">
+                                                            ✓ Available Now
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Location section */}
+                                            <div className="mb-4 space-y-2 border-t border-[#e9f0ed] pt-4">
+                                                <div className="flex items-start gap-3">
+                                                    <MapPin className="h-5 w-5 flex-shrink-0 text-[#0f766e] mt-0.5" />
+                                                    <div className="flex-1">
+                                                        <p className="text-xs font-semibold uppercase tracking-[0.1em] text-slate-400">Location</p>
+                                                        <p className="mt-1 text-sm leading-6 text-slate-600">
+                                                            {chamber.location || 'Location details shared during confirmation.'}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Contact section */}
+                                            <div className="mb-5 space-y-2 border-t border-[#e9f0ed] pt-4">
+                                                <div className="flex items-center gap-3">
+                                                    <Phone className="h-5 w-5 flex-shrink-0 text-[#0f766e]" />
+                                                    <div className="flex-1">
+                                                        <p className="text-xs font-semibold uppercase tracking-[0.1em] text-slate-400">Contact</p>
+                                                        <p className="mt-1 text-sm font-medium text-slate-700">
+                                                            {chamber.phone || 'Call for schedule information'}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Action buttons */}
+                                            <div className="flex items-center gap-3 border-t border-[#e9f0ed] pt-4">
+                                                {chamber.google_maps_url ? (
+                                                    <a
+                                                        href={chamber.google_maps_url}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        className="flex h-11 w-11 items-center justify-center rounded-lg border border-[#d1e4de] bg-[#f0f9f7] text-[#0f766e] transition-all duration-200 hover:border-[#b8d9d1] hover:bg-[#e8f4f1] active:scale-95"
+                                                        title="View on Google Maps"
+                                                    >
+                                                        <MapPin className="h-5 w-5" />
+                                                    </a>
+                                                ) : null}
+                                                <Link
+                                                    href={
+                                                        typeof chamber.id === 'number' || /^\d+$/.test(String(chamber.id || ''))
+                                                            ? `/book-appointment?chamber_id=${encodeURIComponent(chamber.id)}&step=2`
+                                                            : '/book-appointment'
+                                                    }
+                                                    className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#0f766e] to-[#123c46] px-5 py-3 text-xs font-semibold uppercase tracking-[0.1em] text-white transition-all duration-200 hover:shadow-lg active:scale-95"
+                                                >
+                                                    Book Now
+                                                    <ArrowRight className="h-4 w-4" />
+                                                </Link>
+                                            </div>
+                                        </div>
                                     </article>
                                 );
                             })}
@@ -340,7 +408,7 @@ export default function Welcome({ home, doctor, chambers = [] }) {
                                 inquiries, or any assistance you need.
                             </p>
 
-                            <div className="mt-8 space-y-6 border-r border-white/10 pr-2">
+                            <div className="mt-8 space-y-6 sm:border-r sm:border-white/10 sm:pr-2">
                                 <div className="flex items-start gap-4">
                                     <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#2f6f77] text-[#b8f23c]">
                                         <Phone className="h-5 w-5" />
