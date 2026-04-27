@@ -69,6 +69,14 @@ export default function PublicBookAppointment() {
   });
   const captchaRequestSeq = useRef(0);
 
+  const getTodayYmd = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const isClosedByWeekday = (dateStr) => {
     if (!dateStr || !Array.isArray(closedWeekdays) || closedWeekdays.length === 0) return false;
     const dow = new Date(`${dateStr}T00:00:00`).getDay();
@@ -77,6 +85,7 @@ export default function PublicBookAppointment() {
 
   const isUnavailableDate = (dateStr) => {
     if (!dateStr) return false;
+    if (dateStr < getTodayYmd()) return true;
     if (isClosedByWeekday(dateStr)) return true;
     if (Array.isArray(fullyBookedDates) && fullyBookedDates.includes(dateStr)) return true;
     if (!Array.isArray(unavailableRanges) || unavailableRanges.length === 0) return false;
@@ -304,6 +313,13 @@ export default function PublicBookAppointment() {
   const handleDateClick = (info) => {
     const clickedDate = info.dateStr;
 
+    if (clickedDate < getTodayYmd()) {
+      const message = 'Previous dates are not available for booking. Please choose today or a future date.';
+      setError(message);
+      toastError(message);
+      return;
+    }
+
     if (isFullyBookedDate(clickedDate)) {
       const message = 'All slots are already booked on the selected date. Please choose another date.';
       setError(message);
@@ -327,40 +343,8 @@ export default function PublicBookAppointment() {
   };
 
   const handleDayCellDidMount = (arg) => {
-    const cell = arg?.el;
-    if (!cell) return;
-
-    const existing = cell.querySelector('.fc-unavailable-icon');
-    const dayStr = normalizeCalendarDate(arg);
-    const unavailable = isUnavailableDate(dayStr);
-
-    if (!unavailable) {
-      if (existing) existing.remove();
-      return;
-    }
-
-    if (existing) return;
-
-    const frame = cell.querySelector('.fc-daygrid-day-frame') || cell;
-    frame.style.position = 'relative';
-
-    const icon = document.createElement('span');
-    icon.className = 'fc-unavailable-icon';
-    icon.textContent = '🚫';
-    icon.setAttribute('aria-label', 'Unavailable date');
-    icon.title = 'Unavailable date';
-    icon.style.position = 'absolute';
-    icon.style.top = '3px';
-    icon.style.right = '4px';
-    icon.style.fontSize = '15px';
-    icon.style.lineHeight = '1';
-    icon.style.pointerEvents = 'none';
-    icon.style.zIndex = '2';
-    icon.style.background = 'rgba(255,255,255,0.95)';
-    icon.style.borderRadius = '999px';
-    icon.style.padding = '1px';
-
-    frame.appendChild(icon);
+    // Dates are styled via CSS classes in dayCellClassNames callback
+    // No icon decoration needed
   };
 
   const handleSubmit = async (e) => {
@@ -759,84 +743,170 @@ export default function PublicBookAppointment() {
                 {step === 2 && (
                   <motion.div key="step-2" {...stepCardMotion}>
                     <GlassCard variant="solid" className="rounded-[30px] border border-white/80 bg-white/88 p-6 shadow-[0_22px_60px_rgba(15,23,42,0.05)] sm:p-7">
-                      <div className="mb-5 flex items-center justify-between gap-3">
+                      <div className="grid gap-8 lg:grid-cols-[320px_1fr]">
+                        {/* Left: Doctor/Chamber Info */}
+                        <div className="hidden lg:block">
+                          <div className="sticky top-4 space-y-6 rounded-[28px] border border-slate-200/60 bg-[linear-gradient(180deg,#f9fcfb_0%,#ffffff_100%)] p-6 shadow-sm">
+                            {/* Doctor/Clinic Header */}
+                            <div className="border-b border-slate-200 pb-5">
+                              {/* <h4 className="text-sm font-semibold tracking-tight text-slate-900">Clinic</h4> */}
+                              <p className="mt-2 text-base font-bold text-[#0c7b79]">{selectedChamber?.name || 'Consultation Clinic'}</p>
+                              <p className="mt-1 text-xs text-slate-500">Professional healthcare services</p>
+                            </div>
+
+                            {/* Consultation Info */}
+                            <div className="space-y-4 border-b border-slate-200 pb-5">
+                              <div className="flex items-start gap-3">
+                                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[#e0f2f1] text-[#0c7b79]">
+                                  <Clock className="h-5 w-5" />
+                                </div>
+                                <div>
+                                  <p className="text-xs text-slate-500">Consultation Duration</p>
+                                  <p className="mt-1 text-sm font-semibold text-slate-900">30 min</p>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* What's Included */}
+                            <div className="space-y-3 border-b border-slate-200 pb-5">
+                              <p className="flex items-center gap-2 text-xs font-semibold text-slate-700">
+                                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                                What's included
+                              </p>
+                              <ul className="space-y-2 text-xs text-slate-600">
+                                <li className="flex items-start gap-2">
+                                  <span className="mt-1.5 flex h-1.5 w-1.5 flex-shrink-0 rounded-full bg-slate-400" />
+                                  <span>Professional consultation with specialist</span>
+                                </li>
+                                <li className="flex items-start gap-2">
+                                  <span className="mt-1.5 flex h-1.5 w-1.5 flex-shrink-0 rounded-full bg-slate-400" />
+                                  <span>Diagnosis and treatment plan</span>
+                                </li>
+                                <li className="flex items-start gap-2">
+                                  <span className="mt-1.5 flex h-1.5 w-1.5 flex-shrink-0 rounded-full bg-slate-400" />
+                                  <span>Prescription and follow-up guidance</span>
+                                </li>
+                              </ul>
+                            </div>
+
+                            {/* Before Appointment */}
+                            <div className="space-y-3 border-b border-slate-200 pb-5">
+                              <p className="flex items-center gap-2 text-xs font-semibold text-slate-700">
+                                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                                Before your appointment
+                              </p>
+                              <ul className="space-y-2 text-xs text-slate-600">
+                                <li className="flex items-start gap-2">
+                                  <span className="mt-1.5 flex h-1.5 w-1.5 flex-shrink-0 rounded-full bg-slate-400" />
+                                  <span>Arrive 5-10 minutes early</span>
+                                </li>
+                                <li className="flex items-start gap-2">
+                                  <span className="mt-1.5 flex h-1.5 w-1.5 flex-shrink-0 rounded-full bg-slate-400" />
+                                  <span>Bring medical documents if available</span>
+                                </li>
+                                <li className="flex items-start gap-2">
+                                  <span className="mt-1.5 flex h-1.5 w-1.5 flex-shrink-0 rounded-full bg-slate-400" />
+                                  <span>Prepare list of symptoms/concerns</span>
+                                </li>
+                              </ul>
+                            </div>
+
+                            {/* Contact Info */}
+                            <div className="pt-1">
+                              <p className="text-xs font-semibold text-slate-700 mb-3">Contact Information</p>
+                              <a
+                                href={`tel:${selectedChamber?.phone || contactPhone}`}
+                                className="inline-flex items-center gap-2 text-xs text-[#0c7b79] hover:underline"
+                              >
+                                <Phone className="h-4 w-4" />
+                                {selectedChamber?.phone || contactPhone || 'Call for details'}
+                              </a>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Right: Calendar Section */}
                         <div>
-                          <h3 className="text-xl font-semibold tracking-tight text-[#10363b]">Pick a Date</h3>
-                          <p className="mt-1 text-sm text-slate-500">
-                            {selectedChamber?.name || 'Choose your preferred appointment date'}
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
-                          onClick={() => setStep(1)}
-                        >
-                          <ChevronLeft className="h-3.5 w-3.5" />
-                          Back
-                        </button>
-                      </div>
-
-                      <div className="public-booking-calendar rounded-[28px] border border-slate-200/80 bg-[linear-gradient(180deg,#ffffff_0%,#f8fcfb_100%)] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.75),0_12px_30px_rgba(15,23,42,0.04)] sm:p-4">
-                        <FullCalendar
-                          key={calendarRenderKey}
-                          plugins={[dayGridPlugin, interactionPlugin]}
-                          initialView="dayGridMonth"
-                          dateClick={handleDateClick}
-                          dayCellDidMount={handleDayCellDidMount}
-                          selectable
-                          showNonCurrentDates={false}
-                          fixedWeekCount={false}
-                          headerToolbar={{ left: 'prev', center: 'title', right: 'next' }}
-                          height="auto"
-                          validRange={{ start: new Date().toISOString().split('T')[0] }}
-                          dayCellClassNames={(arg) => {
-                            const dayStr = normalizeCalendarDate(arg);
-                            if (isUnavailableDate(dayStr)) return 'fc-unavailable';
-                            if (dayStr === selectedDate) return 'fc-day-selected';
-                            return '';
-                          }}
-                        />
-                      </div>
-
-                      {formData.date && (
-                        <div className="mt-5 border-t border-slate-100 pt-5">
-                          {loadingPreview ? (
-                            <div className="flex items-center gap-2 text-xs text-slate-500">
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                              Calculating estimated time…
+                          <div className="mb-5 flex items-center justify-between gap-3">
+                            <div>
+                              <h3 className="text-xl font-semibold tracking-tight text-[#10363b]">Select a Date</h3>
+                              <p className="mt-1 text-sm text-slate-500">
+                                Choose your preferred appointment date
+                              </p>
                             </div>
-                          ) : previewSerial && previewTime ? (
-                            <div className="rounded-[24px] border border-[#caebe6] bg-[linear-gradient(135deg,#eefaf8_0%,#ffffff_100%)] px-4 py-4 text-sm text-[#0d5558] shadow-sm">
-                              <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Selected date</div>
-                              <div className="mt-1 font-semibold">
-                                {formatDisplayDateWithYear(formData.date) || formData.date}
-                              </div>
-                              <div className="mt-2 text-xs sm:text-sm">
-                                Serial <span className="font-bold">#{previewSerial}</span> • Estimated time{' '}
-                                <span className="font-bold">{formatDisplayTime12h(previewTime) || previewTime}</span>
-                              </div>
-                            </div>
-                          ) : null}
-                        </div>
-                      )}
+                            <button
+                              type="button"
+                              className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 lg:hidden"
+                              onClick={() => setStep(1)}
+                            >
+                              <ChevronLeft className="h-3.5 w-3.5" />
+                              Back
+                            </button>
+                          </div>
 
-                      <div className="mt-6 flex justify-between">
-                        <button
-                          type="button"
-                          className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
-                          onClick={() => setStep(1)}
-                        >
-                          <ChevronLeft className="h-3.5 w-3.5" />
-                          Back
-                        </button>
-                        <PrimaryButton
-                          type="button"
-                          disabled={!isStep2Complete}
-                          className={`rounded-full px-6 py-3 ${!isStep2Complete ? 'opacity-60' : ''}`}
-                          onClick={() => setStep(3)}
-                        >
-                          Continue
-                        </PrimaryButton>
+                          <div className="public-booking-calendar rounded-[28px] border border-slate-200/80 bg-[linear-gradient(180deg,#ffffff_0%,#f8fcfb_100%)] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.75),0_12px_30px_rgba(15,23,42,0.04)] sm:p-4">
+                            <FullCalendar
+                              key={calendarRenderKey}
+                              plugins={[dayGridPlugin, interactionPlugin]}
+                              initialView="dayGridMonth"
+                              dateClick={handleDateClick}
+                              dayCellDidMount={handleDayCellDidMount}
+                              selectable
+                              showNonCurrentDates={true}
+                              fixedWeekCount={false}
+                              headerToolbar={{ left: 'prev', center: 'title', right: 'next' }}
+                              height="auto"
+                              dayCellClassNames={(arg) => {
+                                const dayStr = normalizeCalendarDate(arg);
+                                if (isUnavailableDate(dayStr)) return 'fc-unavailable';
+                                if (dayStr === selectedDate) return 'fc-day-selected';
+                                if (dayStr === getTodayYmd()) return 'fc-day-today-custom';
+                                return 'fc-day-available';
+                              }}
+                            />
+                          </div>
+
+                          {formData.date && (
+                            <div className="mt-5 border-t border-slate-100 pt-5">
+                              {loadingPreview ? (
+                                <div className="flex items-center gap-2 text-xs text-slate-500">
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                  Calculating estimated time…
+                                </div>
+                              ) : previewSerial && previewTime ? (
+                                <div className="rounded-[24px] border border-[#caebe6] bg-[linear-gradient(135deg,#eefaf8_0%,#ffffff_100%)] px-4 py-4 text-sm text-[#0d5558] shadow-sm">
+                                  <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Selected date</div>
+                                  <div className="mt-1 font-semibold">
+                                    {formatDisplayDateWithYear(formData.date) || formData.date}
+                                  </div>
+                                  <div className="mt-2 text-xs sm:text-sm">
+                                    Serial <span className="font-bold">#{previewSerial}</span> • Estimated time{' '}
+                                    <span className="font-bold">{formatDisplayTime12h(previewTime) || previewTime}</span>
+                                  </div>
+                                </div>
+                              ) : null}
+                            </div>
+                          )}
+
+                          <div className="mt-6 flex flex-col gap-3 lg:flex-row lg:justify-between">
+                            <button
+                              type="button"
+                              className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
+                              onClick={() => setStep(1)}
+                            >
+                              <ChevronLeft className="h-3.5 w-3.5" />
+                              Back
+                            </button>
+                            <PrimaryButton
+                              type="button"
+                              disabled={!isStep2Complete}
+                              className={`rounded-full px-6 py-3 ${!isStep2Complete ? 'opacity-60' : ''}`}
+                              onClick={() => setStep(3)}
+                            >
+                              Continue
+                            </PrimaryButton>
+                          </div>
+                        </div>
                       </div>
                     </GlassCard>
                   </motion.div>
@@ -1101,10 +1171,81 @@ export default function PublicBookAppointment() {
               </AnimatePresence>
             </div>
 
-          
+
           </div>
         </div>
       </div>
+      <style>{`
+        .public-booking-calendar .fc-theme-standard td,
+        .public-booking-calendar .fc-theme-standard th,
+        .public-booking-calendar .fc-scrollgrid,
+        .public-booking-calendar .fc-scrollgrid-section > * {
+          border: 0;
+        }
+
+        .public-booking-calendar .fc-col-header-cell {
+          padding-bottom: 10px;
+        }
+
+        .public-booking-calendar .fc .fc-daygrid-day-frame {
+          padding: 6px 0;
+          min-height: 58px;
+          display: flex;
+          // flex-direction: column;
+          justify-content: center;
+        }
+
+        .public-booking-calendar .fc-daygrid-day-top {
+          justify-content: center;
+        }
+
+        .public-booking-calendar .fc-daygrid-day-number {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 40px;
+          height: 40px;
+          font-size: 18px;
+          border-radius: 999px;
+          font-weight: 600;
+          color: #334155;
+          transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .public-booking-calendar .fc-day-available .fc-daygrid-day-number {
+          background: #eef4ff;
+          color: #2563eb;
+        }
+
+        .public-booking-calendar .fc-day-today-custom .fc-daygrid-day-number,
+        .public-booking-calendar .fc-day-selected .fc-daygrid-day-number {
+          background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+          color: #ffffff;
+          box-shadow: 0 10px 22px rgba(37, 99, 235, 0.28);
+        }
+
+        .public-booking-calendar .fc-unavailable .fc-daygrid-day-number {
+          background: transparent !important;
+          background-image: none !important;
+          color: #94a3b8;
+          opacity: 1;
+          box-shadow: none;
+        }
+
+        .public-booking-calendar .fc-day-available:hover .fc-daygrid-day-number,
+        .public-booking-calendar .fc-day-today-custom:hover .fc-daygrid-day-number {
+          filter: brightness(0.98);
+        }
+
+        .public-booking-calendar .fc-day-other .fc-daygrid-day-number {
+          opacity: 0.45;
+        }
+
+        .fc-daygrid-day-number {
+          font-size: 16px !important;
+          padding: 27px !important;
+        }
+      `}</style>
     </>
   );
 }
