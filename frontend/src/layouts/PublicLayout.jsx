@@ -3,7 +3,7 @@ import { Menu, X, LogIn, ArrowUp, ArrowRight } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import DoctorLogo from '../components/DoctorLogo';
 
-export default function PublicLayout({ children }) {
+export default function PublicLayout({ children, hideHeader = false }) {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [showScrollTop, setShowScrollTop] = useState(false);
     const { auth, home, doctor, publicDoctor } = usePage().props;
@@ -52,6 +52,7 @@ export default function PublicLayout({ children }) {
 
     return (
         <div className="min-h-screen flex flex-col bg-white">
+            {!hideHeader ? (
             <nav className="sticky top-0 z-40 border-b border-white/10 bg-[rgba(8,24,29,0.78)] shadow-[0_18px_45px_rgba(2,12,17,0.18)] backdrop-blur-2xl">
                 <div className="flex h-[74px] items-center justify-between px-4 sm:px-6 lg:px-8">
                         <Link href="/" className="group flex shrink-0 items-center gap-3">
@@ -202,6 +203,7 @@ export default function PublicLayout({ children }) {
                         </div>
                     )}
             </nav>
+            ) : null}
 
             {/* Main Content */}
             <main className="flex-grow">

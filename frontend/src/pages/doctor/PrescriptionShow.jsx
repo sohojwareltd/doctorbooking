@@ -8,6 +8,7 @@ import EyePrescriptionSection, {
   isEyeSpecialist,
   normalizeEyePrescriptionData,
 } from '../../components/prescription/EyePrescriptionSection';
+import PrescriptionDocument from '../../components/prescription/PrescriptionDocument';
 import { formatDisplayDate, formatDisplayFromDateLike, formatTime12hFromDateTime } from '../../utils/dateFormat';
 import { toastSuccess, toastError } from '../../utils/toast';
 
@@ -955,6 +956,44 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
         ) : null}
 
         {/* Prescription Layout - Matches CreatePrescription */}
+        {isPrintMode ? (
+          <PrescriptionDocument
+            prescription={{
+              ...data,
+              diagnosis: form.diagnosis,
+              tests: form.tests,
+              instructions: form.instructions,
+              next_visit_date: form.next_visit_date,
+              specialty_data: form.specialty_data,
+            }}
+            doctorInfo={{
+              name: doctorName,
+              email: doctorEmail,
+              phone: doctorPhone,
+              specialization: authUser?.specialization,
+              degree: authUser?.degree,
+            }}
+            chamberInfo={chamberInfo}
+            patientName={form.patient_name || patientName}
+            patientAge={form.patient_age || patientAge}
+            patientAgeUnit={form.patient_age_unit || patientAgeUnit}
+            patientGender={form.patient_gender || patientGender}
+            patientWeight={form.patient_weight || patientWeight}
+            patientContact={form.patient_contact || patientContact}
+            visitType={form.visit_type || visitType}
+            templateType={form.template_type || templateType}
+            medicines={medicines}
+            nextVisitLabel={nextVisitLabel}
+            createdAtDateLabel={createdAtDateLabel}
+            createdAtTimeLabel={createdAtTimeLabel}
+            onPrint={handlePrint}
+            onDownloadPDF={handleDownloadPDF}
+            downloadingPDF={downloadingPDF}
+            showDownloadButton
+            showActionBar={false}
+            prescriptionRef={prescriptionRef}
+          />
+        ) : (
         <div ref={prescriptionRef} className="prescription-print-area">
           <div className="overflow-hidden rounded-lg border bg-white shadow-sm print:border-0 print:shadow-none">
 
@@ -1451,6 +1490,7 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
             </div>
           </div>
         </div>
+        )}
 
         {/* Print Styles */}
         <style>{`

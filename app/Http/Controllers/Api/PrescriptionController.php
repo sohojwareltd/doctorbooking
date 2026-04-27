@@ -151,11 +151,17 @@ class PrescriptionController extends Controller
             'message' => ['required', 'string', 'max:2000'],
         ]);
 
+        $publicUrl = route('public.prescriptions.show', ['prescription' => $prescription->uuid ?: $prescription->id]);
+        $messageBody = trim((string) $validated['message']);
+        if (! str_contains($messageBody, $publicUrl)) {
+            $messageBody = trim($messageBody."\n\n".$publicUrl);
+        }
+
         $saved = PrescriptionMessage::create([
             'prescription_id' => $prescription->id,
             'doctor_id' => $prescription->doctor_id,
             'phone' => trim($validated['phone']),
-            'message' => trim($validated['message']),
+            'message' => $messageBody,
         ]);
 
         $smsResult = $smsService->send($saved->phone, $saved->message);
@@ -175,6 +181,7 @@ class PrescriptionController extends Controller
                 'prescription_id' => $saved->prescription_id,
                 'phone' => $saved->phone,
                 'message' => $saved->message,
+                'public_url' => $publicUrl,
                 'created_at' => $saved->created_at?->toDateTimeString(),
             ],
         ], 201);
