@@ -1,6 +1,7 @@
 import { Link, router } from '@inertiajs/react';
+import { createPortal } from 'react-dom';
 import { useEffect, useMemo, useState } from 'react';
-import { Calendar, Eye, FilePlus, FileText, Hash, Mars, Phone, Printer, Search, Share2, Stethoscope, User, Venus } from 'lucide-react';
+import { Calendar, Eye, FilePlus, FileText, Hash, Mars, Phone, Printer, Search, Share2, SlidersHorizontal, Stethoscope, User, Venus, X } from 'lucide-react';
 import UserLayout from '../../layouts/UserLayout';
 import { DocEmptyState } from '../../components/doctor/DocUI';
 import { formatDisplayDateWithYearFromDateLike } from '../../utils/dateFormat';
@@ -73,6 +74,7 @@ export default function UserPrescriptions({ prescriptions = [], stats = {} }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState('all');
   const [genderFilter, setGenderFilter] = useState('all');
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   useEffect(() => {
     setRows(pageRows);
@@ -249,22 +251,22 @@ export default function UserPrescriptions({ prescriptions = [], stats = {} }) {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-4">
             {topWidgets.map((widget) => {
               const Icon = widget.icon;
 
               return (
-                <div key={widget.key} className="surface-card rounded-3xl p-5">
-                  <div className="flex items-start justify-between gap-4">
+                <div key={widget.key} className="surface-card rounded-2xl p-3.5 sm:rounded-3xl sm:p-5">
+                  <div className="flex items-start justify-between gap-3 sm:gap-4">
                     <div>
-                      <p className="mb-1 text-sm text-slate-500">{widget.label}</p>
-                      <p className="text-3xl font-semibold text-[#2D3A74]">{widget.value}</p>
+                      <p className="mb-1 text-xs text-slate-500 sm:text-sm">{widget.label}</p>
+                      <p className="text-2xl font-semibold text-[#2D3A74] sm:text-3xl">{widget.value}</p>
                     </div>
-                    <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${widget.tone}`}>
-                      <Icon className="h-5 w-5" />
+                    <div className={`flex h-9 w-9 items-center justify-center rounded-xl sm:h-11 sm:w-11 sm:rounded-2xl ${widget.tone}`}>
+                      <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
                     </div>
                   </div>
-                  <p className="mt-4 text-xs text-slate-400">{widget.helper}</p>
+                  <p className="mt-2.5 line-clamp-2 text-[11px] text-slate-400 sm:mt-4 sm:text-xs">{widget.helper}</p>
                 </div>
               );
             })}
@@ -272,10 +274,9 @@ export default function UserPrescriptions({ prescriptions = [], stats = {} }) {
         </section>
 
         <section className="surface-card overflow-hidden rounded-3xl">
-          <div className="border-b border-slate-100 px-6 py-5">
-            <div className="flex flex-col gap-3">
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,360px)_180px_180px] lg:items-end">
+          <div className="border-b border-slate-100 px-4 py-4 sm:px-5">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+              <div className="hidden md:grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,360px)_180px_180px] lg:items-end">
                   <div>
                     <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Search</label>
                     <div className="relative">
@@ -317,74 +318,95 @@ export default function UserPrescriptions({ prescriptions = [], stats = {} }) {
                   </div>
                 </div>
 
-                <div className="hidden lg:block" />
+              <div className="hidden lg:block" />
+
+              <div className="flex md:hidden items-center justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowMobileFilters(true)}
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+                  title="Filters"
+                  aria-label="Open filters"
+                >
+                  <SlidersHorizontal className="h-4 w-4" />
+                </button>
               </div>
             </div>
           </div>
 
-          <div className="md:hidden divide-y divide-slate-100 border-t border-slate-100">
-            {filteredRows.length === 0 ? (
-              <div className="p-5">
-                <DocEmptyState icon={FileText} title="No prescriptions found" description="Try another filter or search keyword." />
-              </div>
-            ) : filteredRows.map((p, index) => {
+          <div className="divide-y divide-[#edf4f3] md:hidden">
+            {filteredRows.map((p, index) => {
               const serial = p.serial_no || (((pagination?.current_page || 1) - 1) * (pagination?.per_page || 15) + index + 1);
-
               return (
-                <div
-                  key={p.id || index}
-                  className="cursor-pointer space-y-2 p-4 active:bg-slate-50"
-                  onClick={() => router.visit(`/patient/prescriptions/${p.uuid || p.id}`)}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2.5">
-                      <GenderIconAvatar gender={getPatientGender(p)} />
-                      <div>
-                        <div className="text-sm font-semibold text-slate-900">{renderHighlighted(getPatientName(p), searchTerm)}</div>
-                        <div className="text-xs text-slate-500">
-                          {formatAgeLabel(p)}
-                          {getPatientPhone(p) ? ` · ${getPatientPhone(p)}` : ''}
+                <article key={p.id || index} className="px-4 py-4">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_10px_22px_rgba(15,23,42,0.05)]">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex min-w-0 items-center gap-2.5">
+                        <GenderIconAvatar gender={getPatientGender(p)} />
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-slate-900">{renderHighlighted(getPatientName(p), searchTerm)}</p>
+                          <p className="truncate text-xs text-slate-500">
+                            {formatAgeLabel(p)}{getPatientPhone(p) ? ` · ${getPatientPhone(p)}` : ''}
+                          </p>
                         </div>
                       </div>
+                      <span className="shrink-0 text-[11px] font-medium text-slate-400">#{serial}</span>
                     </div>
-                    <div className="shrink-0 text-right text-xs text-slate-400">
-                      <div>{formatDisplayDateWithYearFromDateLike(p.created_at) || p.created_at}</div>
-                      <div className="mt-0.5">#{serial}</div>
+
+                    <div className="mt-3 grid grid-cols-2 gap-2.5 text-xs">
+                      <div className="rounded-lg border border-slate-100 bg-slate-50 px-2.5 py-2">
+                        <p className="text-[10px] uppercase tracking-[0.08em] text-slate-400">Prescribed</p>
+                        <p className="mt-0.5 font-semibold text-slate-700">{formatDisplayDateWithYearFromDateLike(p.created_at) || p.created_at}</p>
+                      </div>
+                      <div className="rounded-lg border border-slate-100 bg-slate-50 px-2.5 py-2">
+                        <p className="text-[10px] uppercase tracking-[0.08em] text-slate-400">Follow-up</p>
+                        <p className="mt-0.5 font-semibold text-slate-700">{getNextVisitLabel(p)}</p>
+                      </div>
+                    </div>
+
+                    <div className="mt-2.5 rounded-lg border border-slate-100 bg-slate-50 px-2.5 py-2">
+                      <p className="text-[10px] uppercase tracking-[0.08em] text-slate-400">Diagnosis</p>
+                      <p className="mt-0.5 line-clamp-2 text-xs font-semibold text-slate-700">{p.diagnosis || p.instructions || 'N/A'}</p>
+                    </div>
+
+                    <div className="mt-3 flex items-center justify-between gap-2">
+                      <p className="text-[11px] text-slate-400">{getPatientGender(p)}</p>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => router.visit(`/patient/prescriptions/${p.uuid || p.id}`)}
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-sky-200 bg-sky-50 text-sky-700 transition hover:border-sky-300 hover:bg-sky-100"
+                          aria-label="View prescription"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handlePrintPrescription(p)}
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-amber-200 bg-amber-50 text-amber-700 transition hover:border-amber-300 hover:bg-amber-100"
+                          aria-label="Print"
+                        >
+                          <Printer className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleSharePrescription(p)}
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-emerald-200 bg-emerald-50 text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100"
+                          aria-label="Share"
+                        >
+                          <Share2 className="h-4 w-4" />
+                        </button>
+                      </div>
                     </div>
                   </div>
-
-                  <div className="text-xs text-slate-600 line-clamp-2">{p.diagnosis || p.instructions || 'N/A'}</div>
-                  <div className="text-xs text-slate-400">Follow-up: {getNextVisitLabel(p)}</div>
-
-                  <div className="flex items-center gap-1.5 pt-1" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      type="button"
-                      onClick={() => router.visit(`/patient/prescriptions/${p.uuid || p.id}`)}
-                      className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100"
-                      aria-label="View prescription"
-                    >
-                      <Eye className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handlePrintPrescription(p)}
-                      className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
-                      aria-label="Print"
-                    >
-                      <Printer className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleSharePrescription(p)}
-                      className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                      aria-label="Share"
-                    >
-                      <Share2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                </div>
+                </article>
               );
             })}
+            {filteredRows.length === 0 ? (
+              <div className="px-5 py-14 text-center">
+                <p className="text-sm text-slate-400">No prescriptions found.</p>
+              </div>
+            ) : null}
           </div>
 
           <div className="hidden md:block overflow-x-auto border-t border-slate-100">
@@ -526,6 +548,77 @@ export default function UserPrescriptions({ prescriptions = [], stats = {} }) {
             </div>
           ) : null}
         </section>
+
+        {/* Mobile filters modal */}
+        {showMobileFilters && typeof document !== 'undefined'
+          ? createPortal(
+            <div className="fixed inset-0 z-[110] flex items-start bg-black/40 backdrop-blur-[1px]" onClick={() => setShowMobileFilters(false)}>
+              <div
+                className="w-full rounded-b-3xl border border-slate-200 bg-white p-4 shadow-[0_14px_40px_rgba(15,23,42,0.15)]"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="mb-3 flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-[#2D3A74]">Filters</h3>
+                  <button
+                    type="button"
+                    onClick={() => setShowMobileFilters(false)}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500"
+                    aria-label="Close filters"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Search</label>
+                    <div className="relative">
+                      <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                      <input
+                        type="text"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        placeholder="Patient, phone, diagnosis or id"
+                        className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-900 placeholder-slate-400 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Created date</label>
+                    <select
+                      value={dateFilter}
+                      onChange={(e) => setDateFilter(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-700 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+                    >
+                      <option value="all">All dates</option>
+                      <option value="today">Today</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Gender</label>
+                    <select
+                      value={genderFilter}
+                      onChange={(e) => setGenderFilter(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-700 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+                    >
+                      <option value="all">All gender</option>
+                      <option value="male">Male</option>
+                      <option value="female">Female</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowMobileFilters(false)}
+                    className="w-full rounded-xl bg-[#2D3A74] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#243063]"
+                  >
+                    Apply Filters
+                  </button>
+                </div>
+              </div>
+            </div>,
+            document.body
+          )
+          : null}
       </div>
     </UserLayout>
   );
