@@ -35,4 +35,13 @@ return [
         ],
     ],
 
+    'sms' => [
+        'enabled' => env('SMS_ENABLED', false),
+        'base_url' => env('SMS_BASE_URL'),
+        'api_key' => env('SMS_API_KEY'),
+        'sender_id' => env('SMS_SENDER_ID'),
+        'method' => env('SMS_METHOD', 'get'),
+        'timeout' => env('SMS_TIMEOUT', 15),
+    ],
+
 ];

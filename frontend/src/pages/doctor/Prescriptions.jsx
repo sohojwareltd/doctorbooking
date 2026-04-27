@@ -115,6 +115,16 @@ function getNextVisitLabel(prescription) {
     : 'No follow-up';
 }
 
+function sanitizePhoneDigits(value) {
+  return String(value ?? '').replace(/\D/g, '');
+}
+
+function toLocalPhone11Digits(value) {
+  const digits = sanitizePhoneDigits(value);
+  const withoutCountryCode = digits.startsWith('88') ? digits.slice(2) : digits;
+  return withoutCountryCode.slice(0, 11);
+}
+
 export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) {
   const pageRows = useMemo(() => (Array.isArray(prescriptions) ? prescriptions : (prescriptions?.data ?? [])), [prescriptions]);
   const pagination = useMemo(() => (Array.isArray(prescriptions) ? null : prescriptions), [prescriptions]);
@@ -463,7 +473,7 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
     const defaultMessage = `Dear Mr. ${patientName},\n\nYour prescription has been successfully prepared by the doctor.\nPlease review it at your convenience using the link below:\n\n${prescriptionUrl}\n\nIf you have any questions or need further assistance, feel free to reach out.\n\nThank you.`;
 
     setMessageTarget(prescription);
-    setMessagePhone(getPatientPhone(prescription) || '');
+    setMessagePhone(toLocalPhone11Digits(getPatientPhone(prescription) || ''));
     setMessageText(defaultMessage);
     setShowMessageModal(true);
   };
@@ -472,8 +482,15 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
     const routeParam = messageTarget?.uuid || messageTarget?.id;
     if (!routeParam || sendingMessage) return;
 
-    if (!String(messagePhone || '').trim()) {
+    const normalizedPhone = toLocalPhone11Digits(messagePhone);
+
+    if (!normalizedPhone) {
       toastError('Phone is required.');
+      return;
+    }
+
+    if (!/^\d{11}$/.test(normalizedPhone)) {
+      toastError('Phone must be exactly 11 digits.');
       return;
     }
 
@@ -493,7 +510,7 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
         },
         credentials: 'same-origin',
         body: JSON.stringify({
-          phone: messagePhone.trim(),
+          phone: `+88${normalizedPhone}`,
           message: messageText.trim(),
         }),
       });
@@ -505,6 +522,8 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
       }
 
       toastSuccess(data?.message || 'Message saved successfully.');
+      setMessagePhone('');
+      setMessageText('');
       setShowMessageModal(false);
       setMessageTarget(null);
     } catch {
@@ -1088,13 +1107,19 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
         <div className="space-y-3">
           <div>
             <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Phone</label>
-            <input
-              type="text"
-              value={messagePhone}
-              onChange={(e) => setMessagePhone(e.target.value)}
-              placeholder="Patient phone"
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800"
-            />
+            <div className="flex w-full overflow-hidden rounded-lg border border-slate-200 bg-white">
+             
+              <input
+                type="text"
+                inputMode="numeric"
+                value={messagePhone}
+                onChange={(e) => setMessagePhone(toLocalPhone11Digits(e.target.value))}
+                placeholder="01XXXXXXXXX"
+                maxLength={11}
+                className="w-full bg-white px-3 py-2 text-sm text-slate-800 focus:outline-none"
+              />
+            </div>
+            <p className="mt-1 text-[11px] text-slate-500">Only 11 digits are allowed. `-` and spaces are removed automatically.</p>
           </div>
           <div>
             <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Message</label>

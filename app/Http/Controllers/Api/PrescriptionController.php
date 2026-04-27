@@ -11,6 +11,7 @@ use App\Models\Prescription;
 use App\Models\PrescriptionMessage;
 use App\Models\Role;
 use App\Models\User;
+use App\Services\Sms\SmsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -136,7 +137,7 @@ class PrescriptionController extends Controller
     }
 
     /** POST /api/doctor/prescriptions/{prescription}/messages */
-    public function storeMessage(Request $request, Prescription $prescription): JsonResponse
+    public function storeMessage(Request $request, Prescription $prescription, SmsService $smsService): JsonResponse
     {
         $doctor = $request->user();
         abort_unless($doctor->hasRole('doctor') || $doctor->hasRole('compounder'), 403);
@@ -157,8 +158,18 @@ class PrescriptionController extends Controller
             'message' => trim($validated['message']),
         ]);
 
+        $smsResult = $smsService->send($saved->phone, $saved->message);
+        $smsSent = (bool) ($smsResult['success'] ?? false);
+
         return response()->json([
-            'message' => 'Prescription message saved successfully.',
+            'message' => $smsSent
+                ? 'Prescription message saved and SMS sent successfully.'
+                : 'Prescription message saved, but SMS sending failed.',
+            'sms' => [
+                'sent' => $smsSent,
+                'status_code' => $smsResult['status_code'] ?? null,
+                'detail' => $smsResult['message'] ?? null,
+            ],
             'saved' => [
                 'id' => $saved->id,
                 'prescription_id' => $saved->prescription_id,
