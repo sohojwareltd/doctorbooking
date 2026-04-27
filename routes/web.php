@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\DoctorScheduleController;
 use App\Http\Controllers\Web\AppointmentController as WebAppointmentController;
+use App\Http\Controllers\Web\Auth\PasswordOtpController;
 use App\Http\Controllers\Web\ChamberController;
 use App\Http\Controllers\Web\CompoundUserController;
 use App\Http\Controllers\Web\DashboardController;
@@ -10,7 +11,9 @@ use App\Http\Controllers\Web\PatientController;
 use App\Http\Controllers\Web\PrescriptionController as WebPrescriptionController;
 use App\Http\Controllers\Web\ProfileController;
 use App\Http\Controllers\Web\PublicController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
 
 /*
 |--------------------------------------------------------------------------
@@ -22,6 +25,19 @@ Route::get('/', [PublicController::class, 'home'])->name('home');
 Route::get('/about', [PublicController::class, 'about'])->name('about');
 Route::get('/contact', [PublicController::class, 'contact'])->name('contact');
 Route::post('/contact', fn () => redirect()->back())->name('contact.submit');
+
+Route::middleware('guest')->group(function () {
+    Route::get('/forgot-password/otp', fn (Request $request) => Inertia::render('Auth/forgot-password-otp', [
+        'phone' => (string) $request->query('phone', ''),
+    ]))->name('password.sms-otp.page');
+
+    Route::post('/forgot-password/sms-otp', [PasswordOtpController::class, 'send'])
+        ->middleware('throttle:password-reset')
+        ->name('password.sms-otp.send');
+    Route::post('/forgot-password/sms-reset', [PasswordOtpController::class, 'reset'])
+        ->middleware('throttle:password-reset')
+        ->name('password.sms-otp.reset');
+});
 
 // Public booking page (Inertia render only data fetched via /api/public/*)
 Route::get('/book-appointment', [PublicController::class, 'bookAppointment'])->name('public.book-appointment.view');
