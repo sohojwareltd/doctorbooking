@@ -1,15 +1,16 @@
-﻿import { router } from '@inertiajs/react';
+﻿import { router, usePage } from '@inertiajs/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Calendar, Eye, EyeOff, FileText,
   Hash, Mail, Mars, Phone,
-  Pencil, Search, SlidersHorizontal, User, Users, Venus, X,
+  Pencil, Plus, Search, SlidersHorizontal, User, Users, Venus, X,
 } from 'lucide-react';
 import DoctorLayout from '../../layouts/DoctorLayout';
 import DocModal from '../../components/doctor/DocModal';
 import { DocButton, DocEmptyState } from '../../components/doctor/DocUI';
 import { formatDisplayDateWithYearFromDateLike } from '../../utils/dateFormat';
+import { toastError, toastSuccess } from '../../utils/toast';
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -87,19 +88,22 @@ function ageGenderLabel(p) {
 // ── sort options ──────────────────────────────────────────────────────────────
 
 const SORT_OPTIONS = [
-  { value: 'newest',        label: 'Newest First' },
-  { value: 'oldest',        label: 'Oldest First' },
-  { value: 'name_asc',      label: 'Name A → Z' },
-  { value: 'name_desc',     label: 'Name Z → A' },
+  { value: 'newest', label: 'Newest First' },
+  { value: 'oldest', label: 'Oldest First' },
+  { value: 'name_asc', label: 'Name A → Z' },
+  { value: 'name_desc', label: 'Name Z → A' },
   { value: 'prescriptions', label: 'Most Prescriptions' },
 ];
 
 // ── component ─────────────────────────────────────────────────────────────────
 
 export default function Patients() {
+  const { auth } = usePage().props;
+  const isCompounder = auth?.user?.role === 'compounder';
+
   // data
-  const [rows, setRows]   = useState([]);
-  const [meta, setMeta]   = useState({ current_page: 1, last_page: 1, total: 0 });
+  const [rows, setRows] = useState([]);
+  const [meta, setMeta] = useState({ current_page: 1, last_page: 1, total: 0 });
   const [loading, setLoading] = useState(false);
 
   // ui
@@ -118,20 +122,30 @@ export default function Patients() {
   const [editSaving, setEditSaving] = useState(false);
   const [editSaved, setEditSaved] = useState(false);
   const [editError, setEditError] = useState('');
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [createSaving, setCreateSaving] = useState(false);
+  const [createError, setCreateError] = useState('');
+  const [createForm, setCreateForm] = useState({
+    name: '',
+    phone: '',
+    gender: '',
+    age: '',
+    address: '',
+  });
   const [showEditPasswords, setShowEditPasswords] = useState({
     password: false,
     password_confirmation: false,
   });
 
   // filters
-  const [search, setSearch]                       = useState('');
-  const [gender, setGender]                       = useState('all');
-  const [ageMin, setAgeMin]                       = useState('');
-  const [ageMax, setAgeMax]                       = useState('');
-  const [hasPrescription, setHasPrescription]     = useState('all');
-  const [sortBy, setSortBy]                       = useState('newest');
+  const [search, setSearch] = useState('');
+  const [gender, setGender] = useState('all');
+  const [ageMin, setAgeMin] = useState('');
+  const [ageMax, setAgeMax] = useState('');
+  const [hasPrescription, setHasPrescription] = useState('all');
+  const [sortBy, setSortBy] = useState('newest');
   const [showMobileFilters, setShowMobileFilters] = useState(false);
-  const [page, setPage]                           = useState(1);
+  const [page, setPage] = useState(1);
 
   const debounceTimer = useRef(null);
 
@@ -139,6 +153,7 @@ export default function Patients() {
   const toggleEditPasswordVisibility = (key) => {
     setShowEditPasswords((prev) => ({ ...prev, [key]: !prev[key] }));
   };
+  const setCreate = (key) => (e) => setCreateForm((f) => ({ ...f, [key]: e.target.value }));
 
   const getCsrfToken = () => {
     const cookie = document.cookie
@@ -262,9 +277,9 @@ export default function Patients() {
           address: editForm.address || null,
           ...(editForm.password
             ? {
-                password: editForm.password,
-                password_confirmation: editForm.password_confirmation,
-              }
+              password: editForm.password,
+              password_confirmation: editForm.password_confirmation,
+            }
             : {}),
         }),
       });
@@ -289,6 +304,74 @@ export default function Patients() {
       setEditError('Network error. Please try again.');
     } finally {
       setEditSaving(false);
+    }
+  };
+
+  const handleOpenCreateModal = () => {
+    setCreateError('');
+    setCreateForm({
+      name: '',
+      phone: '',
+      gender: '',
+      age: '',
+      address: '',
+    });
+    setCreateModalOpen(true);
+  };
+
+  const handleCloseCreateModal = () => {
+    if (createSaving) return;
+    setCreateModalOpen(false);
+  };
+
+  const handleCreatePatient = async (e) => {
+    e.preventDefault();
+    if (!createForm.name.trim() || !createForm.phone.trim()) {
+      setCreateError('Patient name and phone are required.');
+      return;
+    }
+
+    setCreateSaving(true);
+    setCreateError('');
+
+    try {
+      const res = await fetch('/api/doctor/patients', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
+          'X-XSRF-TOKEN': getCsrfToken(),
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          name: createForm.name,
+          phone: createForm.phone,
+          gender: createForm.gender || undefined,
+          age: createForm.age === '' ? undefined : Number(createForm.age),
+          address: createForm.address || undefined,
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        const firstValidationError = data?.errors
+          ? Object.values(data.errors)[0]?.[0]
+          : null;
+        setCreateError(firstValidationError || data?.message || 'Failed to create patient.');
+        return;
+      }
+
+      toastSuccess(data?.message || 'Patient created successfully.');
+      setCreateModalOpen(false);
+      setPage(1);
+      await fetchPatients({ page: 1 });
+    } catch {
+      setCreateError('Network error. Please try again.');
+      toastError('Failed to create patient.');
+    } finally {
+      setCreateSaving(false);
     }
   };
 
@@ -333,14 +416,23 @@ export default function Patients() {
     <DoctorLayout title="Patients" gradient={false}>
       <div className="mx-auto max-w-[1400px]">
         <section className="mb-4 space-y-4">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center justify-between gap-2 sm:gap-3">
             <div className="flex items-center gap-3">
               <h2 className="text-2xl font-semibold text-[#2D3A74]">Patients</h2>
               <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
                 {meta.total}
               </span>
             </div>
-            {/* <p className="text-sm text-slate-500">Review profiles, contacts, and prescription activity in one place.</p> */}
+
+            <DocButton
+              type="button"
+              onClick={handleOpenCreateModal}
+              className="inline-flex shrink-0 items-center gap-1.5 px-3 py-2 text-xs sm:gap-2 sm:text-sm"
+            >
+              <Plus className="h-4 w-4" />
+              Create Patient
+            </DocButton>
+
           </div>
 
           <div className="grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-4">
@@ -369,7 +461,7 @@ export default function Patients() {
           {/* ── Header ── */}
           <div className="px-6 py-5 border-b border-slate-100">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-              <div className="hidden md:grid grid-cols-2 gap-3 lg:grid-cols-[minmax(0,360px)_170px_120px_120px_170px_180px] lg:items-end">
+              <div className="hidden md:grid grid-cols-2 gap-3 xl:grid-cols-[minmax(0,1.8fr)_repeat(5,minmax(0,1fr))] xl:items-end">
                 <div className="col-span-2 lg:col-span-1">
                   <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Search</label>
                   <div className="relative">
@@ -384,7 +476,7 @@ export default function Patients() {
                   </div>
                 </div>
 
-                <div className="col-span-1 min-w-0 lg:w-[170px]">
+                <div className="col-span-1 min-w-0">
                   <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Gender</label>
                   <select
                     value={gender}
@@ -397,7 +489,7 @@ export default function Patients() {
                   </select>
                 </div>
 
-                <div className="col-span-1 min-w-0 lg:w-[120px]">
+                <div className="col-span-1 min-w-0">
                   <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Min Age</label>
                   <input
                     type="number"
@@ -410,7 +502,7 @@ export default function Patients() {
                   />
                 </div>
 
-                <div className="col-span-1 min-w-0 lg:w-[120px]">
+                <div className="col-span-1 min-w-0">
                   <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Max Age</label>
                   <input
                     type="number"
@@ -423,7 +515,7 @@ export default function Patients() {
                   />
                 </div>
 
-                <div className="col-span-1 min-w-0 lg:w-[170px]">
+                <div className="col-span-1 min-w-0">
                   <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Prescription</label>
                   <select
                     value={hasPrescription}
@@ -436,7 +528,7 @@ export default function Patients() {
                   </select>
                 </div>
 
-                <div className="col-span-1 min-w-0 lg:w-[180px]">
+                <div className="col-span-1 min-w-0">
                   <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Sort</label>
                   <select
                     value={sortBy}
@@ -469,9 +561,9 @@ export default function Patients() {
           {/* ── Table ── */}
           {/* ── Mobile Cards ── */}
           {!loading && (
-            <div className="md:hidden divide-y divide-slate-100 border-t border-slate-100">
+            <div className="md:hidden space-y-3 border-t border-slate-100 bg-slate-50/70 p-3">
               {rows.length === 0 ? (
-                <div className="p-5">
+                <div className="rounded-2xl border border-slate-200 bg-white p-5">
                   <DocEmptyState icon={Users} title="No patients found" description="Try adjusting your search or filters." />
                 </div>
               ) : rows.map((p, idx) => {
@@ -479,7 +571,7 @@ export default function Patients() {
                 return (
                   <div
                     key={p.id ?? idx}
-                    className="p-4 space-y-2 cursor-pointer active:bg-slate-50"
+                    className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-2 cursor-pointer active:bg-slate-50"
                     onClick={() => router.visit(`/doctor/patients/${p.id}`)}
                   >
                     <div className="flex items-start justify-between gap-2">
@@ -490,9 +582,8 @@ export default function Patients() {
                           <div className="text-xs text-slate-500">{ageGenderLabel(p)}</div>
                         </div>
                       </div>
-                      <span className={`shrink-0 inline-flex items-center justify-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                        (p.prescriptions_count ?? 0) > 0 ? 'bg-violet-100 text-violet-700' : 'bg-slate-100 text-slate-400'
-                      }`}>
+                      <span className={`shrink-0 inline-flex items-center justify-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${(p.prescriptions_count ?? 0) > 0 ? 'bg-violet-100 text-violet-700' : 'bg-slate-100 text-slate-400'
+                        }`}>
                         {p.prescriptions_count ?? 0} Rx
                       </span>
                     </div>
@@ -521,7 +612,7 @@ export default function Patients() {
                       >
                         <Eye className="h-4 w-4" />
                       </ActionBtn>
-                       <ActionBtn
+                      <ActionBtn
                         label="Edit"
                         className="border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
                         onClick={() => handleOpenPatientEditModal(p)}
@@ -535,8 +626,8 @@ export default function Patients() {
                       >
                         <FileText className="h-4 w-4" />
                       </ActionBtn> */}
-                      
-                      {p.email && (
+
+                      {/* {p.email && (
                         <ActionBtn
                           label="Email"
                           className="border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
@@ -544,8 +635,8 @@ export default function Patients() {
                         >
                           <Mail className="h-4 w-4" />
                         </ActionBtn>
-                      )}
-                     
+                      )} */}
+
                       {p.phone && (
                         <ActionBtn
                           label="Call"
@@ -567,7 +658,7 @@ export default function Patients() {
             {loading ? (
               <div className="flex items-center justify-center py-16 text-sm text-slate-400">Loading…</div>
             ) : (
-              <table className="min-w-full text-sm">
+              <table className="w-full table-fixed text-sm">
                 <thead className="bg-slate-50 text-slate-500 uppercase text-xs tracking-[0.12em]">
                   <tr>
                     <th className="px-6 py-4 text-left">#</th>
@@ -632,15 +723,14 @@ export default function Patients() {
 
                         {/* Prescriptions count */}
                         <td className="px-6 py-4 text-center">
-                          <span className={`inline-flex items-center justify-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                            (p.prescriptions_count ?? 0) > 0 ? 'bg-violet-100 text-violet-700' : 'bg-slate-100 text-slate-400'
-                          }`}>
+                          <span className={`inline-flex items-center justify-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${(p.prescriptions_count ?? 0) > 0 ? 'bg-violet-100 text-violet-700' : 'bg-slate-100 text-slate-400'
+                            }`}>
                             {p.prescriptions_count ?? 0}
                           </span>
                         </td>
 
                         {/* Joined */}
-                        <td className="whitespace-nowrap px-6 py-4 text-[13px] text-slate-700">
+                        <td className="px-6 py-4 text-[13px] text-slate-700">
                           <span className="inline-flex items-center gap-1.5">
                             <Calendar className="h-3.5 w-3.5 text-slate-400" />
                             {p.created_at
@@ -651,7 +741,7 @@ export default function Patients() {
 
                         {/* Actions */}
                         <td className="px-6 py-4 text-center" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex items-center justify-center gap-2">
+                          <div className="flex flex-wrap items-center justify-center gap-2">
                             <ActionBtn
                               label="View"
                               className="border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100"
@@ -666,14 +756,14 @@ export default function Patients() {
                             >
                               <FileText className="h-4 w-4" />
                             </ActionBtn> */}
-                               <ActionBtn
+                            <ActionBtn
                               label="Edit"
                               className="border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
                               onClick={() => handleOpenPatientEditModal(p)}
                             >
                               <Pencil className="h-4 w-4" />
                             </ActionBtn>
-                            {p.email && (
+                            {/* {p.email && (
                               <ActionBtn
                                 label="Email"
                                 className="border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
@@ -681,8 +771,8 @@ export default function Patients() {
                               >
                                 <Mail className="h-4 w-4" />
                               </ActionBtn>
-                            )}
-                         
+                            )} */}
+
                             {p.phone && (
                               <ActionBtn
                                 label="Call"
@@ -909,6 +999,95 @@ export default function Patients() {
       </DocModal>
 
       <DocModal
+        open={createModalOpen}
+        onClose={handleCloseCreateModal}
+        title="Create Patient"
+        icon={Plus}
+        size="md"
+        footer={(
+          <>
+            <DocButton variant="secondary" size="sm" onClick={handleCloseCreateModal} disabled={createSaving}>
+              Cancel
+            </DocButton>
+            <DocButton size="sm" type="submit" form="doctor-create-patient-form" disabled={createSaving}>
+              {createSaving ? 'Creating...' : 'Create Patient'}
+            </DocButton>
+          </>
+        )}
+      >
+        <form id="doctor-create-patient-form" onSubmit={handleCreatePatient} className="space-y-4">
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500">Full Name</label>
+            <input
+              type="text"
+              value={createForm.name}
+              onChange={setCreate('name')}
+              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 transition focus:border-[#2D3A74] focus:outline-none focus:ring-2 focus:ring-[#2D3A74]/20"
+              placeholder="Patient full name"
+              required
+            />
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500">Phone</label>
+              <input
+                type="text"
+                value={createForm.phone}
+                onChange={setCreate('phone')}
+                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 transition focus:border-[#2D3A74] focus:outline-none focus:ring-2 focus:ring-[#2D3A74]/20"
+                placeholder="Patient phone"
+                required
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500">Age</label>
+              <input
+                type="number"
+                min="1"
+                max="150"
+                value={createForm.age}
+                onChange={setCreate('age')}
+                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 transition focus:border-[#2D3A74] focus:outline-none focus:ring-2 focus:ring-[#2D3A74]/20"
+                placeholder="Age"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500">Gender</label>
+            <select
+              value={createForm.gender}
+              onChange={setCreate('gender')}
+              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 transition focus:border-[#2D3A74] focus:outline-none focus:ring-2 focus:ring-[#2D3A74]/20"
+            >
+              <option value="">Select gender</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500">Address</label>
+            <textarea
+              value={createForm.address}
+              onChange={setCreate('address')}
+              rows={3}
+              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 transition focus:border-[#2D3A74] focus:outline-none focus:ring-2 focus:ring-[#2D3A74]/20"
+              placeholder="Patient address"
+            />
+          </div>
+
+          {createError && (
+            <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-600">
+              {createError}
+            </div>
+          )}
+        </form>
+      </DocModal>
+
+      <DocModal
         open={editModalOpen}
         onClose={handleCloseEditModal}
         title={editPatient ? `Edit Profile - ${editPatient.name}` : 'Edit Profile'}
@@ -1060,7 +1239,7 @@ function ActionBtn({ children, label, className, onClick }) {
       className={`group relative inline-flex h-8 w-8 items-center justify-center rounded-md border transition ${className}`}
     >
       {children}
-      <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-[10px] font-medium text-white opacity-0 transition-opacity group-hover:opacity-100">
+      <span className="pointer-events-none absolute -top-8 left-1/2 hidden -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-[10px] font-medium text-white opacity-0 transition-opacity group-hover:opacity-100 xl:block">
         {label}
       </span>
     </button>
