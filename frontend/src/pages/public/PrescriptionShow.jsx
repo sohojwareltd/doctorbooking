@@ -99,32 +99,61 @@ export default function PublicPrescriptionShow({ prescription = {}, doctorInfo =
         <div className="mx-auto max-w-[1400px] px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
         
 
-          <PrescriptionDocument
-            prescription={prescription}
-            doctorInfo={doctorInfo}
-            chamberInfo={chamberInfo}
-            patientName={patientName}
-            patientAge={patientAge}
-            patientAgeUnit={patientAgeUnit}
-            patientGender={patientGender}
-            patientWeight={patientWeight}
-            patientContact={patientContact}
-            visitType={visitType}
-            templateType={templateType}
-            medicines={medicines}
-            nextVisitLabel={nextVisitLabel}
-            createdAtDateLabel={createdAtDateLabel}
-            createdAtTimeLabel={createdAtTimeLabel}
-            onPrint={handlePrint}
-            onDownloadPDF={handleDownloadPDF}
-            downloadingPDF={downloadingPDF}
-            showDownloadButton
-            backHref="/"
-            backLabel="Back to Home"
-            prescriptionRef={prescriptionRef}
-            hidePrintHeader
-            hidePrintPatientMeta
-          />
+          <div className="print:hidden">
+            <PrescriptionDocument
+              prescription={prescription}
+              doctorInfo={doctorInfo}
+              chamberInfo={chamberInfo}
+              patientName={patientName}
+              patientAge={patientAge}
+              patientAgeUnit={patientAgeUnit}
+              patientGender={patientGender}
+              patientWeight={patientWeight}
+              patientContact={patientContact}
+              visitType={visitType}
+              templateType={templateType}
+              medicines={medicines}
+              nextVisitLabel={nextVisitLabel}
+              createdAtDateLabel={createdAtDateLabel}
+              createdAtTimeLabel={createdAtTimeLabel}
+              onPrint={handlePrint}
+              onDownloadPDF={handleDownloadPDF}
+              downloadingPDF={downloadingPDF}
+              showDownloadButton
+              backHref="/"
+              backLabel="Back to Home"
+              prescriptionRef={prescriptionRef}
+              hidePrintHeader
+              hidePrintPatientMeta
+              forceDesktopColumnsOnMobile
+            />
+          </div>
+
+          <div className="hidden print:block">
+            <PrescriptionDocument
+              prescription={prescription}
+              doctorInfo={doctorInfo}
+              chamberInfo={chamberInfo}
+              patientName={patientName}
+              patientAge={patientAge}
+              patientAgeUnit={patientAgeUnit}
+              patientGender={patientGender}
+              patientWeight={patientWeight}
+              patientContact={patientContact}
+              visitType={visitType}
+              templateType={templateType}
+              medicines={medicines}
+              nextVisitLabel={nextVisitLabel}
+              createdAtDateLabel={createdAtDateLabel}
+              createdAtTimeLabel={createdAtTimeLabel}
+              onPrint={handlePrint}
+              onDownloadPDF={handleDownloadPDF}
+              downloadingPDF={downloadingPDF}
+              hidePrintHeader
+              hidePrintPatientMeta
+              printElementId="public-prescription-print-root"
+            />
+          </div>
         </div>
       </section>
 
@@ -132,6 +161,13 @@ export default function PublicPrescriptionShow({ prescription = {}, doctorInfo =
         @media print {
           @page { size: A4; margin: 10mm; }
           body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          body * { visibility: hidden !important; }
+          #public-prescription-print-root,
+          #public-prescription-print-root * { visibility: visible !important; }
+          #public-prescription-print-root {
+            position: static !important;
+            width: 100% !important;
+          }
           .print\\:hidden { display: none !important; }
           .print\\:border-0 { border: 0 !important; }
           .print\\:shadow-none { box-shadow: none !important; }
