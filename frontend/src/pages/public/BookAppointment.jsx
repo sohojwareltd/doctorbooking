@@ -1120,7 +1120,7 @@ export default function PublicBookAppointment() {
                       </div>
 
                       <div className="mt-6 flex items-center justify-between gap-4 text-[11px] text-slate-500">
-                        <div>Step 1: Chamber • Step 2: Date • Step 3: Patient Info</div>
+                        <div className='hidden lg:block'>Step 1: Chamber • Step 2: Date • Step 3: Patient Info</div>
                         <PrimaryButton
                           type="button"
                           onClick={handleSubmit}
