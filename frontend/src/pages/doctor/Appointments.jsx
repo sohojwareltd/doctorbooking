@@ -1,6 +1,7 @@
 import { Link, usePage } from '@inertiajs/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Calendar, CalendarCheck2, Eye, FilePlus, FileText, Hash, Loader2, Mars, Phone, Plus, Search, User, UserCheck, Venus } from 'lucide-react';
+import { Calendar, CalendarCheck2, Eye, FilePlus, FileText, Hash, Loader2, Mars, Phone, Plus, Search, SlidersHorizontal, User, UserCheck, Venus, X } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
@@ -73,6 +74,20 @@ function getStatusSelectTone(status) {
   return tones[value] || tones.scheduled;
 }
 
+function getMobileCardAccent(status) {
+  const value = String(status || '').toLowerCase();
+
+  if (value === 'in_consultation') return 'from-violet-500 to-indigo-500';
+  if (value === 'arrived') return 'from-amber-400 to-orange-400';
+  if (value === 'scheduled') return 'from-sky-400 to-blue-500';
+  if (value === 'test_registered') return 'from-cyan-400 to-sky-500';
+  if (value === 'awaiting_tests') return 'from-orange-400 to-amber-500';
+  if (value === 'prescribed') return 'from-emerald-500 to-green-500';
+  if (value === 'cancelled') return 'from-rose-400 to-red-500';
+
+  return 'from-slate-300 to-slate-400';
+}
+
 function getStatusSummaryTone(status) {
   const value = String(status || '').toLowerCase();
 
@@ -135,6 +150,7 @@ export default function DoctorAppointments() {
   const [datePreset, setDatePreset] = useState('all');
   const [genderFilter, setGenderFilter] = useState('all');
   const [chamberFilter, setChamberFilter] = useState('all');
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [chambers, setChambers] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -844,7 +860,7 @@ export default function DoctorAppointments() {
           <div className="px-6 py-5 border-b border-slate-100">
             <div className="flex flex-col gap-3">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-                <div className="grid grid-cols-2 gap-3 lg:grid-cols-[minmax(0,360px)_180px_180px_180px_180px] lg:items-end">
+                <div className="hidden md:grid grid-cols-2 gap-3 lg:grid-cols-[minmax(0,360px)_180px_180px_180px_180px] lg:items-end">
                   <div className="col-span-2 lg:col-span-1">
                     <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Search</label>
                     <div className="relative">
@@ -915,6 +931,18 @@ export default function DoctorAppointments() {
                   </div>
                 </div>
 
+                <div className="flex md:hidden items-center justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setShowMobileFilters(true)}
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+                    title="Open filters"
+                    aria-label="Open filters"
+                  >
+                    <SlidersHorizontal className="h-4.5 w-4.5" />
+                  </button>
+                </div>
+
                 <div className="hidden lg:block" />
               </div>
             </div>
@@ -944,107 +972,108 @@ export default function DoctorAppointments() {
               return (
                 <div
                   key={appointment.id}
-                  className={`rounded-2xl border p-4 space-y-3 shadow-sm cursor-pointer transition active:scale-[0.995] ${
+                  className={`overflow-hidden rounded-2xl border bg-white shadow-[0_10px_22px_rgba(15,23,42,0.06)] cursor-pointer transition active:scale-[0.995] ${
                     isInConsultation
-                      ? 'border-emerald-300 bg-emerald-50/60 shadow-emerald-100 animate-[consultation-bounce_1.8s_ease-in-out_infinite]'
-                      : 'border-slate-200 bg-white'
+                      ? 'border-emerald-300 animate-[consultation-bounce_1.8s_ease-in-out_infinite]'
+                      : 'border-slate-200'
                   }`}
                   onClick={() => setSelectedPatient(appointment)}
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2.5">
-                      <GenderIconAvatar gender={getPatientGender(appointment)} />
-                      <div>
-                        <div className="text-sm font-semibold text-slate-900 leading-tight">{renderHighlighted(getPatientName(appointment), searchTerm)}</div>
-                        <div className="mt-0.5 inline-flex items-center gap-1.5 text-xs text-slate-500">
-                          {/* <Phone className="h-3.5 w-3.5 text-slate-400" /> */}
-                          {renderHighlighted(patientPhone || 'N/A', searchTerm)}
+                  <div className={`h-1 w-full bg-gradient-to-r ${getMobileCardAccent(appointment.status)}`} />
+                  <div className="space-y-3 p-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <GenderIconAvatar gender={getPatientGender(appointment)} />
+                        <div className="min-w-0">
+                          <div className="truncate text-sm font-semibold text-slate-900 leading-tight">{renderHighlighted(getPatientName(appointment), searchTerm)}</div>
+                          <div className="mt-0.5 inline-flex items-center gap-1.5 text-xs text-slate-500">
+                            {renderHighlighted(patientPhone || 'N/A', searchTerm)}
+                          </div>
+                          <div className="mt-0.5 text-xs text-slate-500">{formatAgeGender(appointment)}</div>
                         </div>
-                        <div className="mt-0.5 text-xs text-slate-500">{formatAgeGender(appointment)}</div>
-
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-slate-500">#{appointment.id}</span>
                       </div>
                     </div>
-                    <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-slate-500">#{appointment.id}</span>
-                  </div>
 
-                  <div className="rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2">
-                    <div className="flex items-center justify-between gap-2 text-xs text-slate-600">
-                      <span />
-                      <span className="inline-flex flex-col items-end leading-tight text-slate-500">
-                        <span className="inline-flex items-center gap-1.5">
-                          <Calendar className="h-3.5 w-3.5 text-slate-400" />
-                          {(formatDisplayDateWithYearFromDateLike(appointment.appointment_date) || appointment.appointment_date)}
-                        </span>
-                        <span className="text-[11px] font-medium">{appointmentTimeLabel}</span>
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="pt-0.5" onClick={(e) => e.stopPropagation()}>
-                    <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
-                      <div className="mb-1.5 flex items-center justify-between gap-2">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Schedule Status</p>
-                        <StatusBadge status={appointment.status} />
+                    <div className="grid grid-cols-2 gap-2.5 text-xs">
+                      <div className="rounded-lg border border-slate-100 bg-slate-50 px-2.5 py-2">
+                        <p className="text-[10px] uppercase tracking-[0.08em] text-slate-400">Date</p>
+                        <p className="mt-0.5 font-semibold text-slate-700 truncate">{formatDisplayDateWithYearFromDateLike(appointment.appointment_date) || appointment.appointment_date}</p>
                       </div>
-                      <select
-                        value={appointment.status}
-                        onChange={(e) => updateStatus(appointment.id, e.target.value)}
-                        className={`w-full rounded-lg border bg-white px-2.5 py-2 text-xs font-semibold transition-colors hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-200 ${getStatusSelectTone(appointment.status)}`}
-                      >
-                        <option value="in_consultation">In consultation</option>
-                        <option value="arrived">Arrived</option>
-                        <option value="scheduled">Scheduled</option>
-                        <option value="test_registered">Report Submitted</option>
-                                        <option value="awaiting_tests">Awaiting Report</option>
-                        <option value="prescribed">Prescribed</option>
-                        <option value="cancelled">Cancelled</option>
-                      </select>
+                      <div className="rounded-lg border border-slate-100 bg-slate-50 px-2.5 py-2">
+                        <p className="text-[10px] uppercase tracking-[0.08em] text-slate-400">Time</p>
+                        <p className="mt-0.5 font-semibold text-slate-700">{appointmentTimeLabel}</p>
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="flex items-center gap-2 pt-0.5" onClick={(e) => e.stopPropagation()}>
-                    {!isCompounder && (
-                      !appointment.has_prescription || !appointment.prescription_id ? (
-                        <Link
-                          href={`/doctor/prescriptions/create?appointment_id=${appointment.id}`}
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[#d8e2f8] bg-white text-[#3556a6] transition hover:bg-[#f3f7ff]"
-                          aria-label="Create prescription"
+                    <div className="pt-0.5" onClick={(e) => e.stopPropagation()}>
+                      <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                        <div className="mb-1.5 flex items-center justify-between gap-2">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Schedule Status</p>
+                          <StatusBadge status={appointment.status} />
+                        </div>
+                        <select
+                          value={appointment.status}
+                          onChange={(e) => updateStatus(appointment.id, e.target.value)}
+                          className={`w-full rounded-lg border bg-white px-2.5 py-2 text-xs font-semibold transition-colors hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-200 ${getStatusSelectTone(appointment.status)}`}
                         >
-                          <FilePlus className="h-4 w-4" />
-                        </Link>
-                      ) : (
-                        <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-300">
-                          <FilePlus className="h-4 w-4" />
-                        </span>
-                      )
-                    )}
+                          <option value="in_consultation">In consultation</option>
+                          <option value="arrived">Arrived</option>
+                          <option value="scheduled">Scheduled</option>
+                          <option value="test_registered">Report Submitted</option>
+                          <option value="awaiting_tests">Awaiting Report</option>
+                          <option value="prescribed">Prescribed</option>
+                          <option value="cancelled">Cancelled</option>
+                        </select>
+                      </div>
+                    </div>
 
-                    <button
-                      type="button"
-                      onClick={() => setSelectedPatient(appointment)}
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-sky-200 bg-sky-50 text-sky-700 transition hover:border-sky-300 hover:bg-sky-100 hover:text-sky-800"
-                      aria-label="View details"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </button>
+                    <div className="flex items-center gap-2 pt-0.5" onClick={(e) => e.stopPropagation()}>
+                      {!isCompounder && (
+                        !appointment.has_prescription || !appointment.prescription_id ? (
+                          <Link
+                            href={`/doctor/prescriptions/create?appointment_id=${appointment.id}`}
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[#d8e2f8] bg-white text-[#3556a6] transition hover:bg-[#f3f7ff]"
+                            aria-label="Create prescription"
+                          >
+                            <FilePlus className="h-4 w-4" />
+                          </Link>
+                        ) : (
+                          <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-300">
+                            <FilePlus className="h-4 w-4" />
+                          </span>
+                        )
+                      )}
 
-                    {appointment.has_prescription && appointment.prescription_id ? (
-                      <Link
-                        href={`/doctor/prescriptions/${appointment.prescription_id}`}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 transition hover:border-emerald-300 hover:text-emerald-800"
-                        aria-label="View prescription"
+                      <button
+                        type="button"
+                        onClick={() => setSelectedPatient(appointment)}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-sky-200 bg-sky-50 text-sky-700 transition hover:border-sky-300 hover:bg-sky-100 hover:text-sky-800"
+                        aria-label="View details"
                       >
-                        <FileText className="h-4 w-4" />
-                      </Link>
-                    ) : null}
+                        <Eye className="h-4 w-4" />
+                      </button>
 
-                    <button
-                      type="button"
-                      onClick={() => setSelectedPatient(appointment)}
-                      className="ml-auto inline-flex items-center rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
-                    >
-                      Details
-                    </button>
+                      {appointment.has_prescription && appointment.prescription_id ? (
+                        <Link
+                          href={`/doctor/prescriptions/${appointment.prescription_id}`}
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 transition hover:border-emerald-300 hover:text-emerald-800"
+                          aria-label="View prescription"
+                        >
+                          <FileText className="h-4 w-4" />
+                        </Link>
+                      ) : null}
+
+                      <button
+                        type="button"
+                        onClick={() => setSelectedPatient(appointment)}
+                        className="ml-auto inline-flex items-center rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+                      >
+                        Details
+                      </button>
+                    </div>
                   </div>
                 </div>
               );
@@ -1259,6 +1288,108 @@ export default function DoctorAppointments() {
           ) : null}
         </section>
       </div>
+
+      {showMobileFilters && typeof document !== 'undefined'
+        ? createPortal(
+          <div className="fixed inset-0 z-[110] flex items-start bg-black/40 backdrop-blur-[1px]" onClick={() => setShowMobileFilters(false)}>
+            <div
+              className="w-full rounded-b-3xl border border-slate-200 bg-white p-4 shadow-[0_14px_40px_rgba(15,23,42,0.15)]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-[#2D3A74]">Filters</h3>
+                <button
+                  type="button"
+                  onClick={() => setShowMobileFilters(false)}
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500"
+                  aria-label="Close filters"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Search</label>
+                  <div className="relative">
+                    <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="text"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      placeholder="Name, phone, serial or id"
+                      className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-900 placeholder-slate-400 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Date</label>
+                    <select
+                      value={datePreset}
+                      onChange={(e) => setDatePreset(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-700 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+                    >
+                      <option value="all">All time</option>
+                      <option value="today">Today</option>
+                      <option value="week">This week</option>
+                      <option value="month">This month</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Gender</label>
+                    <select
+                      value={genderFilter}
+                      onChange={(e) => setGenderFilter(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-700 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+                    >
+                      <option value="all">All gender</option>
+                      <option value="male">Male</option>
+                      <option value="female">Female</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Status</label>
+                    <select
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-700 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+                    >
+                      {STATUS_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Chamber</label>
+                    <select
+                      value={chamberFilter}
+                      onChange={(e) => setChamberFilter(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-700 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+                    >
+                      <option value="all">All chambers</option>
+                      {chambers.map((chamber) => (
+                        <option key={chamber.id} value={String(chamber.id)}>{chamber.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowMobileFilters(false)}
+                  className="w-full rounded-xl bg-[#2D3A74] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#243063]"
+                >
+                  Apply Filters
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )
+        : null}
 
       <DocModal
         open={!!selectedPatient}

@@ -543,7 +543,7 @@ export default function DoctorDashboard({
             ) : null}
 
             {/* TABBED APPOINTMENTS TABLE — admin table style */}
-            <div className="surface-card rounded-3xl overflow-hidden">
+            <div className="hidden md:block surface-card rounded-3xl overflow-hidden">
               <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between gap-4">
                 <div>
                   <h2 className="flex items-center gap-2 text-xl font-semibold text-[#2D3A74]">
