@@ -255,14 +255,14 @@ export default function Welcome({ home, doctor, chambers = [] }) {
                                     >
                                         <div className="grid gap-5 px-4 py-5 sm:px-6 lg:grid-cols-[minmax(250px,1fr)_minmax(0,1.35fr)_minmax(170px,0.85fr)_auto] lg:items-center lg:gap-6">
                                             <div className="flex items-start gap-3">
-                                                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-[#123c46] text-[#b8f23c]">
+                                                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-[#123c46] text-[#fff]">
                                                     <Building2 className="h-5 w-5" />
                                                 </div>
                                                 <div>
-                                                    <div className="inline-flex rounded-full bg-[#e9f7f3] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#0f766e]">
+                                                    {/* <div className="inline-flex rounded-full bg-[#e9f7f3] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#0f766e]">
                                                         {String(index + 1).padStart(2, '0')}
-                                                    </div>
-                                                    <h3 className="mt-2 text-lg font-semibold tracking-tight text-slate-900 sm:text-[1.2rem]">
+                                                    </div> */}
+                                                    <h3 className=" text-lg font-semibold tracking-tight text-slate-900 sm:text-[1.2rem]">
                                                         {chamber.name}
                                                     </h3>
                                                     <div className="mt-1.5 text-[12px] font-semibold tracking-wide text-[#0f766e]">
@@ -471,7 +471,7 @@ export default function Welcome({ home, doctor, chambers = [] }) {
                             </div>
 
                             <div className="absolute bottom-2 left-[8px] right-[-16px] rounded-[20px] border border-white/15 bg-[linear-gradient(135deg,rgba(23,52,64,0.94)_0%,rgba(17,58,73,0.9)_100%)] p-5 text-white shadow-[0_20px_44px_rgba(6,18,24,0.4)] backdrop-blur-sm">
-                                <div className="flex items-start gap-3">
+                                <div className="flex items-center gap-3">
                                     <div className="mt-0.5 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-[#2f6f77] text-[#b8f23c]">
                                         <CalendarCheck2 className="h-5 w-5" />
                                     </div>
