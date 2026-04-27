@@ -482,10 +482,10 @@ export default function PublicBookAppointment() {
       <Head title="Book Appointment" />
 
       <div className="mx-auto w-full max-w-7xl px-4 pt-0 py-10 sm:px-6 lg:px-8">
-        <div className="rounded-[32px] bg-[linear-gradient(180deg,#f7fbfa_0%,#eef6f4_100%)] p-5 shadow-[0_30px_80px_rgba(15,23,42,0.08)] sm:p-7 lg:p-8">
+        <div className="rounded-[32px] bg-[linear-gradient(180deg,#f7fbfa_0%,#eef6f4_100%)] p-0 shadow-[0_30px_80px_rgba(15,23,42,0.08)] sm:p-7 lg:p-8">
           <div className="mb-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-end">
             <div>
-              <div className="mt-3 flex items-center gap-3 sm:gap-4">
+              <div className="hidden lg:flex mt-3 items-center gap-3 sm:gap-4">
                 <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-[#0c7b79] shadow-sm">
                   <MapPin className="h-5 w-5" />
                 </span>
@@ -552,7 +552,7 @@ export default function PublicBookAppointment() {
               <AnimatePresence mode="wait">
                 {step === 1 && (
                   <motion.div key="step-1" {...stepCardMotion}>
-                    <GlassCard variant="solid" className="rounded-[30px] border border-white/80 bg-white/88 p-6 shadow-[0_22px_60px_rgba(15,23,42,0.05)] sm:p-7">
+                    <GlassCard variant="solid" className="p-4 rounded-[30px] border border-white/80 bg-white/88 p-0 shadow-[0_22px_60px_rgba(15,23,42,0.05)] sm:p-7">
                       <div className="mb-6">
                         <h3 className="text-xl font-semibold tracking-tight text-[#10363b]">Choose Chamber</h3>
                         <p className="mt-1 text-sm text-slate-500">Select where you want to meet the doctor.</p>
@@ -742,7 +742,7 @@ export default function PublicBookAppointment() {
 
                 {step === 2 && (
                   <motion.div key="step-2" {...stepCardMotion}>
-                    <GlassCard variant="solid" className="rounded-[30px] border border-white/80 bg-white/88 p-6 shadow-[0_22px_60px_rgba(15,23,42,0.05)] sm:p-7">
+                    <GlassCard variant="solid" className="rounded-[30px] border border-white/80 bg-white/88 p-0 shadow-[0_22px_60px_rgba(15,23,42,0.05)] sm:p-7">
                       <div className="grid gap-8 lg:grid-cols-[320px_1fr]">
                         {/* Left: Doctor/Chamber Info */}
                         <div className="hidden lg:block">
@@ -828,7 +828,7 @@ export default function PublicBookAppointment() {
                         {/* Right: Calendar Section */}
                         <div>
                           <div className="mb-5 flex items-center justify-between gap-3">
-                            <div>
+                            <div className='p-4 lg:p-0'>
                               <h3 className="text-xl font-semibold tracking-tight text-[#10363b]">Select a Date</h3>
                               <p className="mt-1 text-sm text-slate-500">
                                 Choose your preferred appointment date
@@ -836,7 +836,7 @@ export default function PublicBookAppointment() {
                             </div>
                             <button
                               type="button"
-                              className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 lg:hidden"
+                              className="inline-flex me-3 lg:me-0 items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 lg:hidden"
                               onClick={() => setStep(1)}
                             >
                               <ChevronLeft className="h-3.5 w-3.5" />
@@ -844,7 +844,7 @@ export default function PublicBookAppointment() {
                             </button>
                           </div>
 
-                          <div className="public-booking-calendar rounded-[28px] border border-slate-200/80 bg-[linear-gradient(180deg,#ffffff_0%,#f8fcfb_100%)] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.75),0_12px_30px_rgba(15,23,42,0.04)] sm:p-4">
+                          <div className="public-booking-calendar rounded-[28px] border-0 bg-transparent p-2 shadow-none sm:border sm:border-slate-200/80 sm:bg-[linear-gradient(180deg,#ffffff_0%,#f8fcfb_100%)] sm:p-4 sm:shadow-[inset_0_1px_0_rgba(255,255,255,0.75),0_12px_30px_rgba(15,23,42,0.04)]">
                             <FullCalendar
                               key={calendarRenderKey}
                               plugins={[dayGridPlugin, interactionPlugin]}
@@ -874,7 +874,7 @@ export default function PublicBookAppointment() {
                                   Calculating estimated time…
                                 </div>
                               ) : previewSerial && previewTime ? (
-                                <div className="rounded-[24px] border border-[#caebe6] bg-[linear-gradient(135deg,#eefaf8_0%,#ffffff_100%)] px-4 py-4 text-sm text-[#0d5558] shadow-sm">
+                                <div className="mx-[10px] lg:mx-0 rounded-[24px] border border-[#caebe6] bg-[linear-gradient(135deg,#eefaf8_0%,#ffffff_100%)] px-4 py-4 text-sm text-[#0d5558] shadow-sm">
                                   <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Selected date</div>
                                   <div className="mt-1 font-semibold">
                                     {formatDisplayDateWithYear(formData.date) || formData.date}
@@ -888,19 +888,20 @@ export default function PublicBookAppointment() {
                             </div>
                           )}
 
-                          <div className="mt-6 flex flex-col gap-3 lg:flex-row lg:justify-between">
+                          <div className="mt-6 mb-4 lg:mb-0 mx-4 lg:mx-0 flex flex-row gap-3 lg:flex-row lg:justify-between">
                             <button
                               type="button"
-                              className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
+                              className="w-[30%] lg:w-auto inline-flex items-center justify-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
                               onClick={() => setStep(1)}
                             >
                               <ChevronLeft className="h-3.5 w-3.5" />
                               Back
                             </button>
+
                             <PrimaryButton
                               type="button"
                               disabled={!isStep2Complete}
-                              className={`rounded-full px-6 py-3 ${!isStep2Complete ? 'opacity-60' : ''}`}
+                              className={`w-[70%] lg:w-auto rounded-full px-6 py-3 ${!isStep2Complete ? 'opacity-60' : ''}`}
                               onClick={() => setStep(3)}
                             >
                               Continue
@@ -914,7 +915,7 @@ export default function PublicBookAppointment() {
 
                 {step === 3 && (
                   <motion.div key="step-3" {...stepCardMotion}>
-                    <GlassCard variant="solid" className="rounded-[30px] border border-white/80 bg-white/88 p-6 shadow-[0_22px_60px_rgba(15,23,42,0.05)] sm:p-7">
+                    <GlassCard variant="solid" className="p-4 rounded-[30px] border border-white/80 bg-white/88 p-0 shadow-[0_22px_60px_rgba(15,23,42,0.05)] sm:p-7">
                       <div className="mb-5 flex items-center justify-between gap-3">
                         <div>
                           <h3 className="text-xl font-semibold tracking-tight text-[#10363b]">Patient Information</h3>
@@ -967,36 +968,38 @@ export default function PublicBookAppointment() {
                           </div>
                         </div>
 
-                        <div>
-                          <label className="mb-2 block text-sm font-semibold text-[#005963]">Age</label>
-                          <input
-                            type="number"
-                            name="age"
-                            placeholder="Age (optional)"
-                            min={1}
-                            max={150}
-                            value={formData.age}
-                            onChange={(e) => setFormData((p) => ({ ...p, age: e.target.value }))}
-                            className={inputClass}
-                            disabled={submitting}
-                          />
-                        </div>
+                        {/* <div className="grid grid-cols-2 lg:grid-cols-1 gap-3"> */}
+                          <div>
+                            <label className="mb-2 block text-sm font-semibold text-[#005963]">Age</label>
+                            <input
+                              type="number"
+                              name="age"
+                              placeholder="Age (optional)"
+                              min={1}
+                              max={150}
+                              value={formData.age}
+                              onChange={(e) => setFormData((p) => ({ ...p, age: e.target.value }))}
+                              className={inputClass}
+                              disabled={submitting}
+                            />
+                          </div>
 
-                        <div>
-                          <label className="mb-2 block text-sm font-semibold text-[#005963]">Gender</label>
-                          <select
-                            name="gender"
-                            value={formData.gender}
-                            onChange={(e) => setFormData((p) => ({ ...p, gender: e.target.value }))}
-                            className={inputClass}
-                            disabled={submitting}
-                          >
-                            <option value="">Select gender (optional)</option>
-                            <option value="male">Male</option>
-                            <option value="female">Female</option>
-                            <option value="other">Other</option>
-                          </select>
-                        </div>
+                          <div>
+                            <label className="mb-2 block text-sm font-semibold text-[#005963]">Gender</label>
+                            <select
+                              name="gender"
+                              value={formData.gender}
+                              onChange={(e) => setFormData((p) => ({ ...p, gender: e.target.value }))}
+                              className={inputClass}
+                              disabled={submitting}
+                            >
+                              <option value="">Select gender (optional)</option>
+                              <option value="male">Male</option>
+                              <option value="female">Female</option>
+                              <option value="other">Other</option>
+                            </select>
+                          </div>
+                        {/* </div> */}
                       </div>
 
                       <div className="mt-4">
@@ -1041,8 +1044,10 @@ export default function PublicBookAppointment() {
                         />
                       </div>
 
-                      <div className="mt-4 rounded-[24px] border border-[#d6ece8] bg-[linear-gradient(135deg,#f7fdfc_0%,#ffffff_100%)] px-4 py-4 text-xs text-gray-700">
-                        <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Appointment Summary</div>
+                      <div className="hidden lg:block mt-4 rounded-[24px] border border-[#d6ece8] bg-[linear-gradient(135deg,#f7fdfc_0%,#ffffff_100%)] px-4 py-4 text-xs text-gray-700">
+                        <div className=" mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                          Appointment Summary
+                        </div>
                         <div className="flex flex-col gap-3 sm:flex-row sm:gap-6">
                           <div>
                             <div className="text-[11px] text-gray-500">Date</div>
@@ -1191,7 +1196,7 @@ export default function PublicBookAppointment() {
           padding: 6px 0;
           min-height: 58px;
           display: flex;
-          // flex-direction: column;
+          flex-direction: row;
           justify-content: center;
         }
 
@@ -1242,8 +1247,22 @@ export default function PublicBookAppointment() {
         }
 
         .fc-daygrid-day-number {
-          font-size: 16px !important;
-          padding: 27px !important;
+          font-size: 14px !important;
+          padding: 8px !important;
+        }
+
+        @media (max-width: 640px) {
+          .public-booking-calendar .fc .fc-toolbar {
+            flex-direction: row;
+            align-items: center;
+          }
+        }
+
+        @media (min-width: 640px) {
+          .fc-daygrid-day-number {
+            font-size: 16px !important;
+            padding: 27px !important;
+          }
         }
       `}</style>
     </>
