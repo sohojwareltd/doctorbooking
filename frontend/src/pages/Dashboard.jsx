@@ -64,7 +64,7 @@ export default function Dashboard({
     <div className="max-w-[1400px] mx-auto space-y-6">
 
       {/* HERO BANNER */}
-      <section className="hero-panel rounded-[28px] p-6 md:p-8 text-white">
+      <section className="hero-panel rounded-[28px] p-5 md:p-8 text-white">
         <div className="relative z-10 flex flex-col xl:flex-row xl:items-end xl:justify-between gap-6">
           <div className="max-w-3xl">
             <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-white/80 mb-4">
@@ -79,7 +79,7 @@ export default function Dashboard({
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 md:min-w-[360px]">
+          <div className="hidden md:grid grid-cols-2 gap-3 md:min-w-[360px]">
             <Link href="/patient/appointments" className="glass-card rounded-2xl p-4 transition hover:bg-white/[0.18]">
               <p className="text-xs uppercase tracking-[0.18em] text-white/60 mb-1">Upcoming</p>
               <p className="text-3xl font-semibold">{stats.upcomingAppointments ?? 0}</p>
@@ -93,21 +93,21 @@ export default function Dashboard({
       </section>
 
       {/* STAT CARDS */}
-      <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+      <section className="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4">
         {statCards.map((item) => {
           const Icon = item.icon;
           return (
-            <div key={item.label} className="surface-card rounded-3xl p-5">
-              <div className="flex items-start justify-between gap-4">
+            <div key={item.label} className="surface-card rounded-2xl md:rounded-3xl p-4 md:p-5">
+              <div className="flex items-start justify-between gap-2 md:gap-4">
                 <div>
-                  <p className="text-sm text-slate-500 mb-1">{item.label}</p>
-                  <p className="text-3xl font-semibold text-[#2D3A74]">{item.value}</p>
+                  <p className="text-xs md:text-sm text-slate-500 mb-1">{item.label}</p>
+                  <p className="text-2xl md:text-3xl font-semibold text-[#2D3A74]">{item.value}</p>
                 </div>
-                <div className={`w-11 h-11 rounded-2xl ${item.iconBg} flex items-center justify-center`}>
-                  <Icon className={`h-5 w-5 ${item.iconColor}`} />
+                <div className={`w-9 h-9 md:w-11 md:h-11 rounded-xl md:rounded-2xl ${item.iconBg} flex items-center justify-center flex-shrink-0`}>
+                  <Icon className={`h-4 w-4 md:h-5 md:w-5 ${item.iconColor}`} />
                 </div>
               </div>
-              <p className="text-xs text-slate-400 mt-4">{item.desc}</p>
+              <p className="text-xs text-slate-400 mt-3 md:mt-4 hidden sm:block">{item.desc}</p>
             </div>
           );
         })}
@@ -195,65 +195,106 @@ export default function Dashboard({
             </div>
 
             {tabItems.length > 0 ? (
-              <div className="overflow-x-auto border-t border-slate-100">
-                <table className="min-w-full text-sm">
-                  <thead className="bg-slate-50 text-slate-500 uppercase text-xs tracking-[0.12em]">
-                    <tr>
-                      <th className="px-6 py-4 text-left">#</th>
-                      <th className="px-6 py-4 text-left">Date</th>
-                      <th className="px-6 py-4 text-left hidden md:table-cell">Time</th>
-                      <th className="px-6 py-4 text-left">Status</th>
-                      <th className="px-6 py-4 text-left">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 bg-white">
-                    {tabItems.map((a, i) => (
-                      <tr key={a.id || i} className="hover:bg-slate-50/80 transition-colors">
-                        <td className="px-6 py-4">
-                          <span className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-600">
-                            <Hash className="h-3.5 w-3.5 text-slate-400" />
-                            {a.serial_no || (i + 1)}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-[13px] font-medium text-slate-700">
-                          <span className="inline-flex items-center gap-1.5">
+              <>
+                {/* Mobile cards */}
+                <div className="md:hidden divide-y divide-slate-100">
+                  {tabItems.map((a, i) => (
+                    <div key={a.id || i} className="px-4 py-3.5">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] font-medium text-slate-400">#{a.serial_no || (i + 1)}</span>
+                          <span className="text-sm font-semibold text-slate-700 inline-flex items-center gap-1">
                             <CalendarDays className="h-3.5 w-3.5 text-slate-400" />
                             {fmt(a.appointment_date)}
                           </span>
-                        </td>
-                        <td className="px-6 py-4 text-[13px] font-medium text-slate-700 hidden md:table-cell">
-                          <span className="inline-flex items-center gap-1.5">
-                            <Clock className="h-3.5 w-3.5 text-slate-400" />
-                            {fmtTime(a.appointment_time)}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <StatusBadge status={a.status} size="xs" />
-                        </td>
-                        <td className="px-6 py-4">
-                          {a.prescription_id ? (
-                            <Link
-                              href={'/patient/prescriptions/' + (a.prescription_uuid || a.prescription_id)}
-                              className="inline-flex items-center gap-1 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-700 transition"
-                            >
-                              <FileText className="h-3 w-3" /> View Rx
-                            </Link>
-                          ) : (
-                            <Link
-                              href="/patient/appointments"
-                              className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 transition"
-                            >
-                              Details
-                            </Link>
-                          )}
-                        </td>
+                        </div>
+                        <StatusBadge status={a.status} size="xs" />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-slate-500 inline-flex items-center gap-1">
+                          <Clock className="h-3 w-3" />{fmtTime(a.appointment_time)}
+                        </span>
+                        {a.prescription_id ? (
+                          <Link
+                            href={'/patient/prescriptions/' + (a.prescription_uuid || a.prescription_id)}
+                            className="inline-flex items-center gap-1 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white"
+                          >
+                            <FileText className="h-3 w-3" /> View Rx
+                          </Link>
+                        ) : (
+                          <Link
+                            href="/patient/appointments"
+                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600"
+                          >
+                            Details
+                          </Link>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop table */}
+                <div className="hidden md:block overflow-x-auto border-t border-slate-100">
+                  <table className="min-w-full text-sm">
+                    <thead className="bg-slate-50 text-slate-500 uppercase text-xs tracking-[0.12em]">
+                      <tr>
+                        <th className="px-6 py-4 text-left">#</th>
+                        <th className="px-6 py-4 text-left">Date</th>
+                        <th className="px-6 py-4 text-left hidden md:table-cell">Time</th>
+                        <th className="px-6 py-4 text-left">Status</th>
+                        <th className="px-6 py-4 text-left">Action</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 bg-white">
+                      {tabItems.map((a, i) => (
+                        <tr key={a.id || i} className="hover:bg-slate-50/80 transition-colors">
+                          <td className="px-6 py-4">
+                            <span className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-600">
+                              <Hash className="h-3.5 w-3.5 text-slate-400" />
+                              {a.serial_no || (i + 1)}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-[13px] font-medium text-slate-700">
+                            <span className="inline-flex items-center gap-1.5">
+                              <CalendarDays className="h-3.5 w-3.5 text-slate-400" />
+                              {fmt(a.appointment_date)}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-[13px] font-medium text-slate-700 hidden md:table-cell">
+                            <span className="inline-flex items-center gap-1.5">
+                              <Clock className="h-3.5 w-3.5 text-slate-400" />
+                              {fmtTime(a.appointment_time)}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <StatusBadge status={a.status} size="xs" />
+                          </td>
+                          <td className="px-6 py-4">
+                            {a.prescription_id ? (
+                              <Link
+                                href={'/patient/prescriptions/' + (a.prescription_uuid || a.prescription_id)}
+                                className="inline-flex items-center gap-1 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-700 transition"
+                              >
+                                <FileText className="h-3 w-3" /> View Rx
+                              </Link>
+                            ) : (
+                              <Link
+                                href="/patient/appointments"
+                                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 transition"
+                              >
+                                Details
+                              </Link>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             ) : (
-              <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+              <div className="flex flex-col items-center justify-center py-10 md:py-12 text-slate-400">
                 <CalendarDays className="h-8 w-8 mb-3 opacity-40" />
                 <p className="text-sm">No appointments found</p>
               </div>
