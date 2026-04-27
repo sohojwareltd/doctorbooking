@@ -653,7 +653,7 @@ export default function DoctorProfile({ doctor = {} }) {
                                 {errors.address && <p className={errorClass}>{errors.address}</p>}
                             </div>
 
-                            <div className="grid gap-4 sm:grid-cols-2">
+                            {/* <div className="grid gap-4 sm:grid-cols-2">
                                 <div>
                                     <label className={labelClass}>
                                         <Calendar className="mr-2 inline h-4 w-4" />
@@ -684,7 +684,7 @@ export default function DoctorProfile({ doctor = {} }) {
                                     </select>
                                     {errors.gender && <p className={errorClass}>{errors.gender}</p>}
                                 </div>
-                            </div>
+                            </div> */}
                         </div>
                     </div>
 
