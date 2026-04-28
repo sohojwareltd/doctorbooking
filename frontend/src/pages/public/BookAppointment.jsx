@@ -554,12 +554,12 @@ export default function PublicBookAppointment() {
               );
             })}
           </div>
-
+{/* 
           {error && (
             <GlassCard variant="solid" className="mb-6 border-rose-200 bg-rose-50/75 p-4">
               <div className="text-sm font-semibold text-rose-800">{error}</div>
             </GlassCard>
-          )}
+          )} */}
 
           <div className="grid gap-6 ">
             <div>
