@@ -82,6 +82,26 @@ function installCsrfAxiosInterceptor() {
     axios.defaults.xsrfHeaderName = 'X-XSRF-TOKEN';
     axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
 
+    axios.interceptors.request.use((config) => {
+        const method = String(config?.method || 'get').toUpperCase();
+        const needsCsrf = !['GET', 'HEAD', 'OPTIONS'].includes(method);
+        if (!needsCsrf) return config;
+
+        const cookieToken = getCookie('XSRF-TOKEN');
+        const metaToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        const token = cookieToken || metaToken;
+
+        config.headers = config.headers || {};
+        if (token && !config.headers['X-CSRF-TOKEN']) {
+            config.headers['X-CSRF-TOKEN'] = token;
+        }
+        if (cookieToken && !config.headers['X-XSRF-TOKEN']) {
+            config.headers['X-XSRF-TOKEN'] = cookieToken;
+        }
+
+        return config;
+    });
+
     axios.interceptors.response.use(
         (response) => response,
         async (error) => {
@@ -99,6 +119,12 @@ function installCsrfAxiosInterceptor() {
                     withCredentials: true,
                     headers: { Accept: 'application/json' },
                 });
+
+                const refreshed = getCookie('XSRF-TOKEN');
+                const metaEl = document.querySelector('meta[name="csrf-token"]');
+                if (refreshed && metaEl) {
+                    metaEl.setAttribute('content', refreshed);
+                }
 
                 return axios(config);
             } catch {
