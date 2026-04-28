@@ -16,8 +16,6 @@ import GlassCard from '../../components/GlassCard';
 import PrimaryButton from '../../components/PrimaryButton';
 import PublicLayout from '../../layouts/PublicLayout';
 
-const getMetaCsrfToken = () => document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-
 export default function Login({ status, canResetPassword }) {
     const [showPassword, setShowPassword] = useState(false);
 
@@ -25,7 +23,6 @@ export default function Login({ status, canResetPassword }) {
         email: '',
         password: '',
         remember: false,
-        _token: getMetaCsrfToken(),
     });
 
     const submit = async (e) => {
@@ -41,17 +38,7 @@ export default function Login({ status, canResetPassword }) {
             // Continue with token from page if preflight fails.
         }
 
-        const csrfToken = getMetaCsrfToken();
-
-        post('/login', {
-            data: {
-                ...data,
-                _token: csrfToken,
-            },
-            headers: {
-                'X-CSRF-TOKEN': csrfToken,
-            },
-        });
+        post('/login');
     };
 
     const inputClass =
@@ -158,7 +145,6 @@ export default function Login({ status, canResetPassword }) {
                                 )}
 
                                 <form onSubmit={submit} className="space-y-4.5">
-                                    <input type="hidden" name="_token" value={data._token} readOnly />
                                     <div>
                                         <label htmlFor="email" className="mb-1.5 block text-sm font-semibold text-[#153a4a]">
                                             Email or Phone
