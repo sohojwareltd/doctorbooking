@@ -128,6 +128,19 @@ function toLocalPhone11Digits(value) {
   return withoutCountryCode.slice(0, 11);
 }
 
+function getCsrfToken() {
+  const cookie = document.cookie
+    .split('; ')
+    .find((row) => row.startsWith('XSRF-TOKEN='))
+    ?.split('=')[1];
+
+  if (cookie) {
+    return decodeURIComponent(cookie);
+  }
+
+  return document.querySelector('meta[name="csrf-token"]')?.content ?? '';
+}
+
 export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) {
   const pageRows = useMemo(() => (Array.isArray(prescriptions) ? prescriptions : (prescriptions?.data ?? [])), [prescriptions]);
   const pagination = useMemo(() => (Array.isArray(prescriptions) ? null : prescriptions), [prescriptions]);
@@ -408,12 +421,13 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
     setPatientFormErrors({});
 
     try {
+      const csrfToken = getCsrfToken();
       const res = await fetch('/api/doctor/patients', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Accept: 'application/json',
-          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
+          ...(csrfToken ? { 'X-CSRF-TOKEN': csrfToken, 'X-XSRF-TOKEN': csrfToken } : {}),
         },
         credentials: 'same-origin',
         body: JSON.stringify({
@@ -512,12 +526,13 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
 
     setSendingMessage(true);
     try {
+      const csrfToken = getCsrfToken();
       const res = await fetch(`/api/doctor/prescriptions/${routeParam}/messages`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Accept: 'application/json',
-          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
+          ...(csrfToken ? { 'X-CSRF-TOKEN': csrfToken, 'X-XSRF-TOKEN': csrfToken } : {}),
         },
         credentials: 'same-origin',
         body: JSON.stringify({
@@ -564,6 +579,7 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
 
     setUploadingReport(true);
     try {
+      const csrfToken = getCsrfToken();
       const formData = new FormData();
       if (reportFile) {
         formData.append('report_file', reportFile);
@@ -579,7 +595,7 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
         method: 'POST',
         headers: {
           Accept: 'application/json',
-          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
+          ...(csrfToken ? { 'X-CSRF-TOKEN': csrfToken, 'X-XSRF-TOKEN': csrfToken } : {}),
         },
         credentials: 'same-origin',
         body: formData,

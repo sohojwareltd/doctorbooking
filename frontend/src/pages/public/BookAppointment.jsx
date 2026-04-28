@@ -15,6 +15,19 @@ import {
   formatDisplayTime12h,
 } from '../../utils/dateFormat';
 
+function getCsrfToken() {
+  const cookie = document.cookie
+    .split('; ')
+    .find((row) => row.startsWith('XSRF-TOKEN='))
+    ?.split('=')[1];
+
+  if (cookie) {
+    return decodeURIComponent(cookie);
+  }
+
+  return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+}
+
 export default function PublicBookAppointment() {
   const page = usePage();
   const contactPhone = page?.props?.site?.contactPhone || '';
@@ -379,7 +392,7 @@ export default function PublicBookAppointment() {
     setError('');
 
     try {
-      const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+      const token = getCsrfToken();
       if (!token) {
         const message = 'Missing CSRF token. Please refresh the page and try again.';
         setError(message);
@@ -392,6 +405,7 @@ export default function PublicBookAppointment() {
         headers: {
           'Content-Type': 'application/json',
           'X-CSRF-TOKEN': token,
+          'X-XSRF-TOKEN': token,
           'X-Requested-With': 'XMLHttpRequest',
           Accept: 'application/json',
         },
