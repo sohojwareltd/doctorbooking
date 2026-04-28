@@ -27,7 +27,7 @@ export default function PublicLayout({ children, hideHeader = false }) {
         const navLinks = [
             { label: 'Home', href: '/' },
             { label: 'Chambers', href: '/#chambers' },
-            { label: 'About', href: '/#about' },
+            { label: 'Contact', href: '/#about' },
         ];
 
     useEffect(() => {
@@ -157,14 +157,6 @@ export default function PublicLayout({ children, hideHeader = false }) {
                                         {item.label}
                                     </Link>
                                 ))}
-                                <Link
-                                    href="/book-appointment"
-                                    className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#b8ff4f] px-5 py-4 text-sm font-semibold text-[#062128] shadow-[0_16px_32px_rgba(184,255,79,0.34)] ring-4 ring-[#dfffaa]/20"
-                                    onClick={() => setMobileMenuOpen(false)}
-                                >
-                                    Book Now
-                                    <ArrowRight className="h-4 w-4" />
-                                </Link>
                             </div>
 
                             {auth.user && (

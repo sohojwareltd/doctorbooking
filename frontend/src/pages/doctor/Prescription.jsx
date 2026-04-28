@@ -978,11 +978,12 @@ export default function Prescription({
 
         setSubmitting(true);
         try {
-            // Get CSRF token from cookie
-            const token = document.cookie
+            const metaCsrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+            const cookieCsrfToken = document.cookie
                 .split('; ')
                 .find(row => row.startsWith('XSRF-TOKEN='))
                 ?.split('=')[1];
+            const csrfToken = metaCsrfToken || (cookieCsrfToken ? decodeURIComponent(cookieCsrfToken) : '');
             
             const url = isEditMode
                 ? `/doctor/prescriptions/${prescription.id}`
@@ -993,7 +994,8 @@ export default function Prescription({
                 headers: {
                     'Content-Type': 'application/json',
                     Accept: 'application/json',
-                    'X-XSRF-TOKEN': token ? decodeURIComponent(token) : '',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'X-XSRF-TOKEN': cookieCsrfToken ? decodeURIComponent(cookieCsrfToken) : '',
                 },
                 credentials: 'include',
                 body: JSON.stringify({
