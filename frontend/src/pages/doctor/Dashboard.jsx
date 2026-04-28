@@ -26,7 +26,7 @@ export default function DoctorDashboard({
   const [hideActiveVisitCard, setHideActiveVisitCard] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createForm, setCreateForm] = useState({ name: '', phone: '', age: '', gender: '' });
-  const [activeTab, setActiveTab] = useState('today');
+  const [activeTab, setActiveTab] = useState('test_registered');
   const [scheduleTab, setScheduleTab] = useState('today');
 
   const fetchDashboardData = async () => {
@@ -200,10 +200,7 @@ export default function DoctorDashboard({
       return (ai === -1 ? STATUS_ORDER.length : ai) - (bi === -1 ? STATUS_ORDER.length : bi);
     });
 
-  const tabAppointments =
-    activeTab === 'today' ? sortByStatusOrder(todayAppointments).slice(0, 10) :
-      activeTab === 'awaiting' ? sortByStatusOrder(awaitingList) :
-        sortByStatusOrder(todayAppointments.filter((a) => a.status === activeTab));
+  const tabAppointments = sortByStatusOrder(todayAppointments.filter((a) => a.status === 'test_registered'));
 
   const formatRangeTime = (start, end) => {
     const startLabel = start ? fmtTime(start) : '-';
@@ -228,10 +225,6 @@ export default function DoctorDashboard({
   }));
 
   const TABS = [
-    { key: 'today', label: 'All Appointments', count: todayAppointments.length },
-    { key: 'scheduled', label: 'Scheduled', count: todayAppointments.filter((a) => a.status === 'scheduled').length },
-    { key: 'in_consultation', label: 'In Progress', count: todayAppointments.filter((a) => a.status === 'in_consultation').length },
-    { key: 'awaiting', label: 'Awaiting Tests', count: awaitingList.length },
     { key: 'test_registered', label: 'Report Submitted', count: todayAppointments.filter((a) => a.status === 'test_registered').length },
   ];
 
@@ -548,39 +541,14 @@ export default function DoctorDashboard({
                 <div>
                   <h2 className="flex items-center gap-2 text-xl font-semibold text-[#2D3A74]">
                     <CalendarDays className="h-5 w-5 text-[#4055A8]" />
-                    <span>Today's appointments</span>
+                    <span>Report Submitted</span>
                   </h2>
-                  <p className="text-sm text-slate-500">Latest patients in the pipeline.</p>
+                  <p className="text-sm text-slate-500">Appointments with reports ready for review.</p>
                 </div>
                 <Link href="/doctor/appointments" className="text-sm font-semibold text-[#4055A8] hover:text-[#2D3A74]">View all</Link>
               </div>
 
-              {/* Tabs */}
-              <div className="px-6 pt-3 border-b border-slate-100 flex gap-1 overflow-x-auto scrollbar-hide">
-                {TABS.map((tab) => (
-                  (() => {
-                    const tone = getTabTone(tab.key);
-                    const isActive = activeTab === tab.key;
 
-                    return (
-                      <button
-                        key={tab.key}
-                        onClick={() => setActiveTab(tab.key)}
-                        className={`flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-3 text-sm font-semibold transition-colors ${isActive ? tone.active : `border-transparent ${tone.idle}`
-                          }`}
-                      >
-                        {tab.label}
-                        {/* {tab.count > 0 && (
-                          <span className={`rounded-full px-2 py-0.5 text-xs font-bold leading-none ${isActive ? tone.badgeActive : tone.badgeIdle
-                            }`}>
-                            {tab.count}
-                          </span>
-                        )} */}
-                      </button>
-                    );
-                  })()
-                ))}
-              </div>
 
               {tabAppointments.length > 0 ? (
                 <div className="overflow-x-auto border-t border-slate-100">

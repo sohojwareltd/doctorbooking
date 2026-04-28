@@ -746,7 +746,7 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
               <Upload className="h-4 w-4" />
               Upload Report
             </button>
-            <button
+            {/* <button
               type="button"
               onClick={handleDownloadPDF}
               disabled={downloadingPDF}
@@ -754,15 +754,15 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
             >
               {downloadingPDF ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-400 border-t-transparent" /> : <Download className="h-4 w-4" />}
               {downloadingPDF ? 'Generating...' : 'PDF'}
-            </button>
-            <button
+            </button> */}
+            {/* <button
               type="button"
               onClick={handlePrint}
               className="flex items-center gap-2 rounded-lg border bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300"
             >
               <Printer className="h-4 w-4" />
               Print
-            </button>
+            </button> */}
           </div>
         </div>
 

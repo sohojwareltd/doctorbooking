@@ -199,7 +199,7 @@ export default function UserPrescriptions({ prescriptions = [], stats = {} }) {
 
   const handlePrintPrescription = (prescription) => {
     const routeParam = prescription?.uuid || prescription?.id;
-    const printWindow = window.open(`/patient/prescriptions/${routeParam}?action=print`, '_blank');
+    const printWindow = window.open(`/prescription/${routeParam}?action=print`, '_blank');
 
     if (printWindow) {
       toastSuccess('Opening prescription for printing...');
@@ -211,7 +211,7 @@ export default function UserPrescriptions({ prescriptions = [], stats = {} }) {
 
   const handleSharePrescription = async (prescription) => {
     const routeParam = prescription?.uuid || prescription?.id;
-    const shareUrl = `${window.location.origin}/patient/prescriptions/${routeParam}`;
+    const shareUrl = `${window.location.origin}/prescription/${routeParam}`;
 
     try {
       if (navigator.share) {
@@ -374,7 +374,7 @@ export default function UserPrescriptions({ prescriptions = [], stats = {} }) {
                       <div className="flex items-center gap-1.5">
                         <button
                           type="button"
-                          onClick={() => router.visit(`/patient/prescriptions/${p.uuid || p.id}`)}
+                          onClick={() => window.open(`/prescription/${p.uuid || p.id}`, '_blank')}
                           className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-sky-200 bg-sky-50 text-sky-700 transition hover:border-sky-300 hover:bg-sky-100"
                           aria-label="View prescription"
                         >
@@ -428,7 +428,7 @@ export default function UserPrescriptions({ prescriptions = [], stats = {} }) {
                     <tr
                       key={p.id || index}
                       className="cursor-pointer hover:bg-slate-50/80"
-                      onClick={() => router.visit(`/patient/prescriptions/${p.uuid || p.id}`)}
+                      onClick={() => window.open(`/prescription/${p.uuid || p.id}`, '_blank')}
                     >
                       <td className="px-6 py-4 text-center font-medium text-slate-600">
                         <span className="inline-flex items-center justify-center gap-1.5">
@@ -467,7 +467,7 @@ export default function UserPrescriptions({ prescriptions = [], stats = {} }) {
                         <div className="flex items-center justify-center gap-1.5">
                           <button
                             type="button"
-                            onClick={() => router.visit(`/patient/prescriptions/${p.uuid || p.id}`)}
+                            onClick={() => window.open(`/prescription/${p.uuid || p.id}`, '_blank')}
                             className="group relative inline-flex h-8 w-8 items-center justify-center rounded-md border border-sky-200 bg-sky-50 text-sky-700 transition hover:border-sky-300 hover:bg-sky-100 hover:text-sky-800"
                             aria-label="View prescription"
                           >
@@ -477,7 +477,7 @@ export default function UserPrescriptions({ prescriptions = [], stats = {} }) {
                             </span>
                           </button>
 
-                          <button
+                          {/* <button
                             type="button"
                             onClick={() => handlePrintPrescription(p)}
                             className="group relative inline-flex h-8 w-8 items-center justify-center rounded-md border border-amber-200 bg-amber-50 text-amber-700 transition hover:border-amber-300 hover:bg-amber-100 hover:text-amber-800"
@@ -487,7 +487,7 @@ export default function UserPrescriptions({ prescriptions = [], stats = {} }) {
                             <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-[10px] font-medium text-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
                               Print
                             </span>
-                          </button>
+                          </button> */}
 
                           <button
                             type="button"

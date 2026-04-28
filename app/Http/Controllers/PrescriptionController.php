@@ -160,7 +160,7 @@ class PrescriptionController extends Controller
             'patient_gender' => ['nullable', 'string', 'max:20'],
             'patient_weight' => ['nullable', 'string', 'max:20'],
             'visit_type' => ['nullable', 'string', 'max:50'],
-            'appointment_action' => ['nullable', 'string', 'in:prescribed'],
+            'appointment_action' => ['nullable', 'string', 'in:awaiting_tests,prescribed'],
         ]);
 
         $rawPatientAge = array_key_exists('patient_age', $validated)
@@ -205,11 +205,11 @@ class PrescriptionController extends Controller
                 $appointmentUpdates['age'] = $parsedPatientAge;
             }
 
-            // Mark appointment as prescribed if doctor explicitly completes it
+            // Keep the linked appointment status aligned with the selected save action.
             $appointmentAction = $validated['appointment_action'] ?? null;
-            if ($appointmentAction === 'prescribed'
+            if (in_array($appointmentAction, ['awaiting_tests', 'prescribed'], true)
                 && in_array($prescription->appointment->status, ['awaiting_tests', 'in_consultation'], true)) {
-                $appointmentUpdates['status'] = 'prescribed';
+                $appointmentUpdates['status'] = $appointmentAction;
             }
 
             if (!empty($appointmentUpdates)) {

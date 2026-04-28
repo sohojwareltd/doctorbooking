@@ -793,13 +793,15 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
                     >
                       <Eye className="h-3.5 w-3.5" />
                     </button>
-                    <Link
-                      href={`/doctor/prescriptions/${prescription.uuid || prescription.id}`}
+                    <a
+                      href={`/prescription/${prescription.uuid || prescription.id}`}
                       className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
                       aria-label="Open prescription"
+                      target="_blank"
+                      rel="noopener noreferrer"
                     >
-                      <FileText className="h-3.5 w-3.5" />
-                    </Link>
+                      <Eye className="h-3.5 w-3.5" />
+                    </a>
                     <Link
                       href={`/doctor/prescriptions/${prescription.uuid || prescription.id}/edit`}
                       className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
@@ -807,14 +809,14 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
                     >
                       <Pencil className="h-3.5 w-3.5" />
                     </Link>
-                    <button
+                    {/* <button
                       type="button"
                       onClick={() => handlePrintPrescription(prescription)}
                       className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
                       aria-label="Print"
                     >
                       <Printer className="h-3.5 w-3.5" />
-                    </button>
+                    </button> */}
                   </div>
                 </div>
               );
@@ -899,16 +901,18 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
                             </span>
                           </button> */}
 
-                          <Link
-                            href={`/doctor/prescriptions/${prescription.uuid || prescription.id}`}
+                          <a
+                            href={`/prescription/${prescription.uuid || prescription.id}`}
                             className="group relative inline-flex h-7 w-7 items-center justify-center rounded-md border border-emerald-200 bg-emerald-50 text-emerald-700 transition hover:border-emerald-300 hover:text-emerald-800"
                             aria-label="Open prescription"
+                            target="_blank"
+                            rel="noopener noreferrer"
                           >
-                            <FileText className="h-3.5 w-3.5" />
+                            <Eye className="h-3.5 w-3.5" />
                             <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-[10px] font-medium text-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
                               Open Prescription
                             </span>
-                          </Link>
+                          </a>
 
                           <Link
                             href={`/doctor/prescriptions/${prescription.uuid || prescription.id}/edit`}
@@ -921,7 +925,7 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
                             </span>
                           </Link>
 
-                          <button
+                          {/* <button
                             type="button"
                             onClick={() => handlePrintPrescription(prescription)}
                             className="group relative inline-flex h-7 w-7 items-center justify-center rounded-md border border-amber-200 bg-amber-50 text-amber-700 transition hover:border-amber-300 hover:bg-amber-100 hover:text-amber-800"
@@ -931,7 +935,7 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
                             <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-[10px] font-medium text-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
                               Print
                             </span>
-                          </button>
+                          </button> */}
 
                           <button
                             type="button"
@@ -1107,12 +1111,14 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
               >
                 Close
               </button>
-              <Link
-                href={`/doctor/prescriptions/${selectedPrescription.uuid || selectedPrescription.id}`}
+              <a
+                href={`/prescription/${selectedPrescription.uuid || selectedPrescription.id}`}
                 className="inline-flex items-center rounded-lg bg-[#2D3A74] px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-[#243063]"
+                target="_blank"
+                rel="noopener noreferrer"
               >
                 Open Prescription
-              </Link>
+              </a>
             </>
           ) : null
         }

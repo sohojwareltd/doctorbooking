@@ -951,8 +951,12 @@ export default function Prescription({
         return lines.join('\n').trim();
     };
 
-    const handleSubmit = async (action) => {
-        setAppointmentAction(action);
+    const handleSubmit = async (submitType = 'save') => {
+        const role = String(authUser?.role || '').toLowerCase();
+        const computedAppointmentAction = submitType === 'complete'
+            ? 'prescribed'
+            : (role === 'doctor' ? 'awaiting_tests' : null);
+        setAppointmentAction(submitType);
 
         // Validate patient name
         if (!state.patient.name?.trim()) {
@@ -1011,9 +1015,7 @@ export default function Prescription({
                     tests: testsText || null,
                     investigation_items: investigationItems,
                     next_visit_date: state.follow_up.date || null,
-                    appointment_action: isEditMode
-                        ? (action === 'prescribed' ? 'prescribed' : null)
-                        : (action || null),
+                    appointment_action: computedAppointmentAction,
                 }),
             });
 
@@ -1577,11 +1579,9 @@ export default function Prescription({
 
                     {/* Form Submit Section - Enhanced */}
                     <div className="mt-10 rounded-xl border border-slate-200 bg-slate-50 p-6">
-                        {!isEditMode ? (
-                            <div className="mb-4 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-xs text-blue-800">
-                                After clicking <span className="font-semibold">Save &amp; Send for Tests</span>, you will be redirected to prescription details where you can upload test files and text reports.
-                            </div>
-                        ) : null}
+                        <div className="mb-4 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-xs text-blue-800">
+                            Save keeps appointment status unchanged for compounder and sets <span className="font-semibold">awaiting_tests</span> for doctor. Complete marks the appointment as completed.
+                        </div>
                         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4 text-sm">
                                 <div className="flex items-center gap-3">
@@ -1615,33 +1615,31 @@ export default function Prescription({
                                     <RotateCcw className="h-4 w-4" />
                                     Reset Form
                                 </button>
-                                {!isEditMode ? (
-                                    <button
-                                        type="button"
-                                        className="flex items-center gap-2 rounded-xl border border-amber-400 bg-amber-50 px-6 py-2.5 text-sm font-semibold text-amber-700 shadow-sm transition hover:bg-amber-100 disabled:opacity-50"
-                                        disabled={submitting}
-                                        onClick={() => handleSubmit('awaiting_tests')}
-                                    >
-                                        {submitting && appointmentAction === 'awaiting_tests' ? (
-                                            <>
-                                                <div className="h-4 w-4 animate-spin rounded-full border-2 border-amber-600 border-t-transparent" />
-                                                Saving...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <FlaskConical className="h-4 w-4" />
-                                                Save &amp; Send for Tests
-                                            </>
-                                        )}
-                                    </button>
-                                ) : null}
+                                <button
+                                    type="button"
+                                    className="flex items-center gap-2 rounded-xl border border-amber-400 bg-amber-50 px-6 py-2.5 text-sm font-semibold text-amber-700 shadow-sm transition hover:bg-amber-100 disabled:opacity-50"
+                                    disabled={submitting}
+                                    onClick={() => handleSubmit('save')}
+                                >
+                                    {submitting && appointmentAction === 'save' ? (
+                                        <>
+                                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-amber-600 border-t-transparent" />
+                                            Saving...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <FlaskConical className="h-4 w-4" />
+                                            Save
+                                        </>
+                                    )}
+                                </button>
                                 <button
                                     type="button"
                                     className="flex items-center gap-2 rounded-xl bg-[#3556a6] px-8 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#2a488f] disabled:opacity-50"
                                     disabled={submitting}
-                                    onClick={() => handleSubmit('prescribed')}
+                                    onClick={() => handleSubmit('complete')}
                                 >
-                                    {submitting && appointmentAction === 'prescribed' ? (
+                                    {submitting && appointmentAction === 'complete' ? (
                                         <>
                                             <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
                                             Saving...
@@ -1649,7 +1647,7 @@ export default function Prescription({
                                     ) : (
                                         <>
                                             <Save className="h-4 w-4" />
-                                            {isEditMode ? 'Update Prescription' : 'Save &amp; Complete'}
+                                            Complete
                                         </>
                                     )}
                                 </button>

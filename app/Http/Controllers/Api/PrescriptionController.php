@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
- * Prescription CRUD — doctor only.
+ * Prescription CRUD.
  * Used by both the web (Inertia via form submit) and the API.
  */
 class PrescriptionController extends Controller
@@ -139,8 +139,8 @@ class PrescriptionController extends Controller
     /** POST /api/doctor/prescriptions */
     public function store(Request $request): JsonResponse
     {
-        $doctor = $request->user();
-        abort_unless($doctor->hasRole('doctor'), 403);
+        $actor = $request->user();
+        abort_unless($actor->hasRole('doctor') || $actor->hasRole('compounder'), 403);
 
         $validated = $request->validate([
             'appointment_id'    => ['nullable', 'integer', 'exists:appointments,id'],
@@ -155,7 +155,7 @@ class PrescriptionController extends Controller
             'specialty_data'    => ['nullable', 'array'],
             'diagnosis'         => ['nullable', 'string', 'max:5000'],
             'medications'       => ['nullable', 'string', 'max:10000'],
-            'dose'             => ['nullable', 'string', 'max:10000'],
+            'dose'              => ['nullable', 'string', 'max:10000'],
             'instructions'      => ['nullable', 'string', 'max:10000'],
             'tests'             => ['nullable', 'string', 'max:10000'],
             'investigation_items' => ['nullable', 'array'],
@@ -163,16 +163,16 @@ class PrescriptionController extends Controller
             'investigation_items.*.note' => ['nullable', 'string', 'max:1000'],
             'investigation_items.*.sort_order' => ['nullable', 'integer', 'min:0'],
             'next_visit_date'   => ['nullable', 'date'],
-            'appointment_action'=> ['nullable', 'in:awaiting_tests,prescribed'],
+            'appointment_action'=> ['nullable', 'in:arrived,awaiting_tests,prescribed'],
         ]);
 
-        $userId      = null;
+        $userId = null;
         $appointment = null;
         $userCreated = false;
 
         if ($validated['appointment_id'] ?? null) {
             $appointment = Appointment::with('prescription')
-                ->where('doctor_id', $doctor->doctorId())
+                ->where('doctor_id', $actor->doctorId())
                 ->where('id', $validated['appointment_id'])
                 ->firstOrFail();
 
@@ -182,9 +182,8 @@ class PrescriptionController extends Controller
             $userId = $appointment->user_id;
         }
 
-        // Auto-create patient if phone provided and no user found
         if (! $userId && ! empty($validated['patient_contact'])) {
-            $phone       = $validated['patient_contact'];
+            $phone = $validated['patient_contact'];
             $patientRole = Role::where('name', 'patient')->first();
 
             $existingUser = User::where('phone', $phone)
@@ -201,8 +200,7 @@ class PrescriptionController extends Controller
                     ])
                 );
             } elseif ($patientRole) {
-                $safePhone = preg_replace('/\D+/', '', (string) $phone);
-                $newUser   = User::create([
+                $newUser = User::create([
                     'name'     => $validated['patient_name'],
                     'username' => $phone,
                     'phone'    => $phone,
@@ -214,7 +212,7 @@ class PrescriptionController extends Controller
                     'gender' => $validated['patient_gender'] ?? null,
                     'weight' => $validated['patient_weight'] ?? null,
                 ]);
-                $userId      = $newUser->id;
+                $userId = $newUser->id;
                 $userCreated = true;
             }
         }
@@ -222,7 +220,7 @@ class PrescriptionController extends Controller
         $prescription = Prescription::create([
             'appointment_id'   => $validated['appointment_id'] ?? null,
             'user_id'          => $userId,
-            'doctor_id' => $doctor->doctorId(),
+            'doctor_id'        => $actor->doctorId(),
             'visit_type'       => $validated['visit_type'] ?? null,
             'template_type'    => $validated['template_type'] ?? 'general',
             'specialty_data'   => $validated['specialty_data'] ?? null,
@@ -311,13 +309,14 @@ class PrescriptionController extends Controller
     /** PUT /api/doctor/prescriptions/{prescription} */
     public function update(Request $request, Prescription $prescription): JsonResponse
     {
-        $doctor = $request->user();
-        abort_unless($doctor->hasRole('doctor') && $prescription->doctor_id === $doctor->doctorId(), 403);
+        $actor = $request->user();
+        abort_unless($actor->hasRole('doctor') || $actor->hasRole('compounder'), 403);
+        abort_unless($prescription->doctor_id === $actor->doctorId(), 403);
 
         $validated = $request->validate([
             'diagnosis'         => ['nullable', 'string', 'max:5000'],
             'medications'       => ['nullable', 'string', 'max:10000'],
-            'dose'             => ['nullable', 'string', 'max:10000'],
+            'dose'              => ['nullable', 'string', 'max:10000'],
             'instructions'      => ['nullable', 'string', 'max:10000'],
             'tests'             => ['nullable', 'string', 'max:10000'],
             'investigation_items' => ['nullable', 'array'],
@@ -333,7 +332,7 @@ class PrescriptionController extends Controller
             'visit_type'        => ['nullable', 'string', 'max:50'],
             'template_type'     => ['nullable', 'in:general,eye'],
             'specialty_data'    => ['nullable', 'array'],
-            'appointment_action'=> ['nullable', 'string', 'in:prescribed'],
+            'appointment_action'=> ['nullable', 'string', 'in:arrived,awaiting_tests,prescribed'],
         ]);
 
         $prescription->update([
@@ -358,7 +357,6 @@ class PrescriptionController extends Controller
             $this->syncInvestigationItems($prescription, $investigationItems);
         }
 
-        // Keep patient profile in sync
         if ($prescription->user) {
             $prescription->user->patientProfile()->updateOrCreate(
                 ['user_id' => $prescription->user_id],
@@ -369,10 +367,8 @@ class PrescriptionController extends Controller
             );
         }
 
-        if (($validated['appointment_action'] ?? null) === 'prescribed' && $prescription->appointment) {
-            if (in_array($prescription->appointment->status, ['awaiting_tests', 'in_consultation'], true)) {
-                $prescription->appointment->update(['status' => 'prescribed']);
-            }
+        if (($validated['appointment_action'] ?? null) && $prescription->appointment) {
+            $prescription->appointment->update(['status' => $validated['appointment_action']]);
         }
 
         $prescription->load([
