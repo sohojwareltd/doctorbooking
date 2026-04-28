@@ -1306,9 +1306,9 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
                                     ))}
                                   </div>
                                 ) : null}
-                                {normalizedMedicineName && !hasMedicineMatches ? (
+                                {/* {normalizedMedicineName && !hasMedicineMatches ? (
                                   <p className="mt-1 text-[11px] font-medium text-amber-700">No medicine match found.</p>
-                                ) : null}
+                                ) : null} */}
                               </div>
                               <div className="col-span-2">
                                 <input
