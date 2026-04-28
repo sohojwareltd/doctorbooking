@@ -137,9 +137,9 @@ export default function DoctorProfile({ doctor = {} }) {
             return;
         }
 
-        // Validate file size (max 2MB)
-        if (file.size > 2 * 1024 * 1024) {
-            toastError('Image size must be less than 2MB');
+        // Validate file size (max 10MB)
+        if (file.size > 10 * 1024 * 1024) {
+            toastError('Image size must be less than 10MB');
             return;
         }
 
@@ -439,7 +439,7 @@ export default function DoctorProfile({ doctor = {} }) {
                                         </div>
                                     )}
 
-                                    <p className="text-center text-xs text-slate-400">Max: 2MB • JPEG, PNG, GIF, WebP</p>
+                                    <p className="text-center text-xs text-slate-400">Max: 10MB • JPEG, PNG, GIF, WebP</p>
                                 </div>
                             </div>
 

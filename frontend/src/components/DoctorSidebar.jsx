@@ -60,7 +60,7 @@ export default function DoctorSidebar({ currentPath, onClose, collapsed = false,
 
       {/* Logo Area */}
       <div className={`flex-shrink-0 ${collapsed ? 'px-3 py-6 pb-8' : 'px-6 py-6 pb-8'} flex items-center justify-between`}>
-        <Link href="/doctor/dashboard" className="flex items-center gap-3 group">
+        <a href="/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 group">
           <div className="rounded-lg bg-white p-1 transition group-hover:bg-slate-100 flex-shrink-0 shadow-md">
             <img
               src={brandImageUrl}
@@ -80,7 +80,7 @@ export default function DoctorSidebar({ currentPath, onClose, collapsed = false,
               <div className="text-[11px] font-medium text-white/60">Doctor Portal</div>
             </div>
           )}
-        </Link>
+        </a>
       </div>
 
       {/* Navigation */}
