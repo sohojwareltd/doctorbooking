@@ -130,16 +130,31 @@ class PatientController extends Controller
     {
         $user = $request->user()->load('patientProfile', 'role');
 
+        $profile = $user->patientProfile;
+
         return response()->json([
             'user' => [
-                'id'       => $user->id,
-                'name'     => $user->name,
-                'username' => $user->username,
-                'email'    => $user->email,
-                'phone'    => $user->phone,
-                'role'     => $user->role?->name,
+                'id'                 => $user->id,
+                'name'               => $user->name,
+                'username'           => $user->username,
+                'email'              => $user->email,
+                'phone'              => $user->phone,
+                'role'               => $user->role?->name,
+                'email_verified_at'  => $user->email_verified_at?->toIso8601String(),
             ],
-            'profile' => $user->patientProfile,
+            'profile' => $profile ? [
+                'date_of_birth' => $profile->date_of_birth?->toDateString(),
+                'age'           => $profile->age,
+                'gender'        => $profile->gender,
+                'weight'        => $profile->weight !== null ? (float) $profile->weight : null,
+                'address'       => $profile->address,
+            ] : [
+                'date_of_birth' => null,
+                'age'           => null,
+                'gender'        => null,
+                'weight'        => null,
+                'address'       => null,
+            ],
         ]);
     }
 
