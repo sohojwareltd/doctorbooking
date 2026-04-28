@@ -23,8 +23,15 @@ class PrescriptionResource extends JsonResource
             'specialty_data'   => $this->specialty_data,
             'diagnosis'        => $this->diagnosis,
             'medications'      => $this->medications,
+            'dose'             => $this->dose,
             'instructions'     => $this->instructions,
             'tests'            => $this->tests,
+            'investigation_items' => $this->whenLoaded('investigationItems', fn () => $this->investigationItems->map(fn ($item) => [
+                'id' => $item->id,
+                'name' => $item->name,
+                'note' => $item->note,
+                'sort_order' => $item->sort_order,
+            ])->values()),
             'next_visit_date'  => $this->next_visit_date?->toDateString(),
 
             // Snapshot fields stored on the prescription (immutable patient info at time of visit)

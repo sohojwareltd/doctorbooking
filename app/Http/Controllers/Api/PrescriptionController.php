@@ -8,6 +8,7 @@ use App\Models\Appointment;
 use App\Models\PatientReport;
 use App\Models\Patient;
 use App\Models\Prescription;
+use App\Models\PrescriptionInvestigationItem;
 use App\Models\PrescriptionMessage;
 use App\Models\Role;
 use App\Models\User;
@@ -24,6 +25,117 @@ use Illuminate\Support\Str;
  */
 class PrescriptionController extends Controller
 {
+    /** GET /api/doctor/investigation-items */
+    public function investigationItems(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        abort_unless($user->hasRole('doctor') || $user->hasRole('compounder'), 403);
+
+        $validated = $request->validate([
+            'q' => ['nullable', 'string', 'max:100'],
+            'prescription_id' => ['nullable', 'integer', 'exists:prescriptions,id'],
+        ]);
+
+        $query = PrescriptionInvestigationItem::query()
+            ->with(['prescription:id,doctor_id,user_id,patient_name,created_at', 'prescription.user:id,name'])
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id');
+
+        if ($user->hasRole('doctor')) {
+            $doctorId = $user->doctorId();
+            $query->whereHas('prescription', fn ($q) => $q->where('doctor_id', $doctorId));
+        }
+
+        if (!empty($validated['prescription_id'])) {
+            $query->where('prescription_id', (int) $validated['prescription_id']);
+        }
+
+        if (!empty($validated['q'])) {
+            $term = trim((string) $validated['q']);
+            $query->where(function ($q) use ($term): void {
+                $q->where('name', 'like', "%{$term}%")
+                    ->orWhere('note', 'like', "%{$term}%");
+            });
+        }
+
+        $items = $query->limit(300)->get()->map(fn (PrescriptionInvestigationItem $item) => $this->mapInvestigationItem($item));
+
+        return response()->json(['items' => $items]);
+    }
+
+    /** POST /api/doctor/investigation-items */
+    public function storeInvestigationItem(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        abort_unless($user->hasRole('doctor') || $user->hasRole('compounder'), 403);
+
+        $validated = $request->validate([
+            'prescription_id' => ['required', 'integer', 'exists:prescriptions,id'],
+            'name' => ['required', 'string', 'max:255'],
+            'note' => ['nullable', 'string', 'max:1000'],
+            'sort_order' => ['nullable', 'integer', 'min:0'],
+        ]);
+
+        $prescription = Prescription::findOrFail((int) $validated['prescription_id']);
+        $this->authorizeInvestigationCrud($user, $prescription);
+
+        $item = $prescription->investigationItems()->create([
+            'name' => trim((string) $validated['name']),
+            'note' => !empty($validated['note']) ? trim((string) $validated['note']) : null,
+            'sort_order' => $validated['sort_order'] ?? ((int) $prescription->investigationItems()->max('sort_order') + 1),
+        ]);
+
+        $item->load(['prescription:id,doctor_id,user_id,patient_name,created_at', 'prescription.user:id,name']);
+
+        return response()->json([
+            'message' => 'Investigation item created successfully.',
+            'item' => $this->mapInvestigationItem($item),
+        ], 201);
+    }
+
+    /** PUT /api/doctor/investigation-items/{item} */
+    public function updateInvestigationItem(Request $request, PrescriptionInvestigationItem $item): JsonResponse
+    {
+        $user = $request->user();
+        abort_unless($user->hasRole('doctor') || $user->hasRole('compounder'), 403);
+
+        $item->loadMissing('prescription:id,doctor_id,user_id,patient_name,created_at');
+        $this->authorizeInvestigationCrud($user, $item->prescription);
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'note' => ['nullable', 'string', 'max:1000'],
+            'sort_order' => ['nullable', 'integer', 'min:0'],
+        ]);
+
+        $item->update([
+            'name' => trim((string) $validated['name']),
+            'note' => !empty($validated['note']) ? trim((string) $validated['note']) : null,
+            'sort_order' => $validated['sort_order'] ?? $item->sort_order,
+        ]);
+
+        $item->load(['prescription:id,doctor_id,user_id,patient_name,created_at', 'prescription.user:id,name']);
+
+        return response()->json([
+            'message' => 'Investigation item updated successfully.',
+            'item' => $this->mapInvestigationItem($item),
+        ]);
+    }
+
+    /** DELETE /api/doctor/investigation-items/{item} */
+    public function destroyInvestigationItem(Request $request, PrescriptionInvestigationItem $item): JsonResponse
+    {
+        $user = $request->user();
+        abort_unless($user->hasRole('doctor') || $user->hasRole('compounder'), 403);
+
+        $item->loadMissing('prescription:id,doctor_id');
+        $this->authorizeInvestigationCrud($user, $item->prescription);
+
+        $item->delete();
+
+        return response()->json(['message' => 'Investigation item deleted successfully.']);
+    }
+
     /** POST /api/doctor/prescriptions */
     public function store(Request $request): JsonResponse
     {
@@ -46,6 +158,10 @@ class PrescriptionController extends Controller
             'dose'             => ['nullable', 'string', 'max:10000'],
             'instructions'      => ['nullable', 'string', 'max:10000'],
             'tests'             => ['nullable', 'string', 'max:10000'],
+            'investigation_items' => ['nullable', 'array'],
+            'investigation_items.*.name' => ['nullable', 'string', 'max:255'],
+            'investigation_items.*.note' => ['nullable', 'string', 'max:1000'],
+            'investigation_items.*.sort_order' => ['nullable', 'integer', 'min:0'],
             'next_visit_date'   => ['nullable', 'date'],
             'appointment_action'=> ['nullable', 'in:awaiting_tests,prescribed'],
         ]);
@@ -124,6 +240,9 @@ class PrescriptionController extends Controller
             'patient_contact'  => $validated['patient_contact'] ?? null,
         ]);
 
+        $investigationItems = $validated['investigation_items'] ?? $this->linesToInvestigationItems($validated['tests'] ?? null);
+        $this->syncInvestigationItems($prescription, $investigationItems);
+
         if ($validated['appointment_action'] ?? null) {
             $appointment?->update(['status' => $validated['appointment_action']]);
         }
@@ -201,6 +320,10 @@ class PrescriptionController extends Controller
             'dose'             => ['nullable', 'string', 'max:10000'],
             'instructions'      => ['nullable', 'string', 'max:10000'],
             'tests'             => ['nullable', 'string', 'max:10000'],
+            'investigation_items' => ['nullable', 'array'],
+            'investigation_items.*.name' => ['nullable', 'string', 'max:255'],
+            'investigation_items.*.note' => ['nullable', 'string', 'max:1000'],
+            'investigation_items.*.sort_order' => ['nullable', 'integer', 'min:0'],
             'next_visit_date'   => ['nullable', 'date'],
             'patient_contact'   => ['nullable', 'string', 'max:50'],
             'patient_age'       => ['nullable', 'string', 'max:10'],
@@ -230,6 +353,11 @@ class PrescriptionController extends Controller
             'patient_weight'   => $validated['patient_weight'] ?? $prescription->patient_weight,
         ]);
 
+        if (array_key_exists('investigation_items', $validated) || array_key_exists('tests', $validated)) {
+            $investigationItems = $validated['investigation_items'] ?? $this->linesToInvestigationItems($validated['tests'] ?? null);
+            $this->syncInvestigationItems($prescription, $investigationItems);
+        }
+
         // Keep patient profile in sync
         if ($prescription->user) {
             $prescription->user->patientProfile()->updateOrCreate(
@@ -250,6 +378,7 @@ class PrescriptionController extends Controller
         $prescription->load([
             'user:id,name,phone',
             'appointment:id,appointment_date,appointment_time,status',
+            'investigationItems:id,prescription_id,name,note,sort_order',
         ]);
 
         return response()->json([
@@ -394,5 +523,86 @@ class PrescriptionController extends Controller
             'report_text' => $report->report_text,
             'created_at' => $report->created_at?->toDateTimeString(),
         ];
+    }
+
+    private function mapInvestigationItem(PrescriptionInvestigationItem $item): array
+    {
+        $prescription = $item->prescription;
+        $patientName = $prescription?->patient_name ?: $prescription?->user?->name;
+
+        return [
+            'id' => $item->id,
+            'prescription_id' => $item->prescription_id,
+            'name' => $item->name,
+            'note' => $item->note,
+            'sort_order' => $item->sort_order,
+            'updated_at' => $item->updated_at?->toDateTimeString(),
+            'prescription' => $prescription ? [
+                'id' => $prescription->id,
+                'patient_name' => $patientName,
+                'created_at' => $prescription->created_at?->toDateTimeString(),
+            ] : null,
+        ];
+    }
+
+    private function authorizeInvestigationCrud($user, ?Prescription $prescription): void
+    {
+        abort_unless($prescription, 404);
+
+        if ($user->hasRole('doctor')) {
+            abort_unless($prescription->doctor_id === $user->doctorId(), 403);
+            return;
+        }
+
+        abort_unless($user->hasRole('compounder'), 403);
+    }
+
+    private function linesToInvestigationItems(?string $tests): array
+    {
+        return collect(explode("\n", (string) ($tests ?? '')))
+            ->map(fn ($line) => trim((string) $line))
+            ->filter(fn ($line) => $line !== '')
+            ->values()
+            ->map(fn ($line, $index) => [
+                'name' => $line,
+                'note' => null,
+                'sort_order' => $index,
+            ])
+            ->all();
+    }
+
+    private function syncInvestigationItems(Prescription $prescription, ?array $items): void
+    {
+        if (!is_array($items)) {
+            return;
+        }
+
+        $normalized = collect($items)
+            ->map(function ($item, $index) {
+                $name = trim((string) ($item['name'] ?? ''));
+                $note = trim((string) ($item['note'] ?? ''));
+                $sortOrder = isset($item['sort_order']) && is_numeric($item['sort_order'])
+                    ? (int) $item['sort_order']
+                    : $index;
+
+                if ($name === '') {
+                    return null;
+                }
+
+                return [
+                    'name' => $name,
+                    'note' => $note !== '' ? $note : null,
+                    'sort_order' => $sortOrder,
+                ];
+            })
+            ->filter()
+            ->values()
+            ->all();
+
+        $prescription->investigationItems()->delete();
+
+        if (!empty($normalized)) {
+            $prescription->investigationItems()->createMany($normalized);
+        }
     }
 }

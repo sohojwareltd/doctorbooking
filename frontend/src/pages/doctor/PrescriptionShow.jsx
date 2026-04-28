@@ -8,6 +8,7 @@ import EyePrescriptionSection, {
   isEyeSpecialist,
   normalizeEyePrescriptionData,
 } from '../../components/prescription/EyePrescriptionSection';
+import PrescriptionMedicineSection from '../../components/prescription/PrescriptionFormSection';
 import PrescriptionDocument from '../../components/prescription/PrescriptionDocument';
 import { formatDisplayDate, formatDisplayFromDateLike, formatTime12hFromDateTime } from '../../utils/dateFormat';
 import { toastSuccess, toastError } from '../../utils/toast';
@@ -21,6 +22,12 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
 
   const toStr = (val) => (val === null || val === undefined ? '' : String(val));
   const normalizeMedicineName = (value) => String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  const buildMedicineWithStrength = (name, strength) => {
+    const cleanName = String(name || '').trim();
+    const cleanStrength = String(strength || '').trim();
+    if (!cleanName) return '';
+    return cleanStrength ? `${cleanName} ${cleanStrength}` : cleanName;
+  };
   const calculateAgeFromDob = (dob) => {
     if (!dob) return null;
     const birthDate = new Date(dob);
@@ -48,6 +55,37 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
   };
 
   const emptyMedicine = () => ({ name: '', strength: '', dosage: '', duration: '', instruction: '' });
+  const parseInvestigationRows = (items, testsText = '') => {
+    if (Array.isArray(items) && items.length) {
+      const rows = items
+        .sort((a, b) => Number(a?.sort_order ?? 0) - Number(b?.sort_order ?? 0))
+        .map((item) => String(item?.name || '').trim())
+        .filter(Boolean);
+      if (rows.length) return rows;
+    }
+    const fromText = String(testsText || '')
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean);
+    return fromText.length ? fromText : [''];
+  };
+
+  const buildInvestigationItems = (rows) => (
+    (rows || [])
+      .map((row, index) => ({
+        name: String(row || '').trim(),
+        note: null,
+        sort_order: index,
+      }))
+      .filter((row) => row.name)
+  );
+
+  const buildTestsText = (rows) => (
+    (rows || [])
+      .map((row) => String(row || '').trim())
+      .filter(Boolean)
+      .join('\n')
+  );
 
   const normalizeMedicineRow = (row = {}) => ({
     name: String(row?.name || '').trim(),
@@ -76,7 +114,8 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
         }
       }
       const stripLabel = (value = '', label = '') => String(value || '').replace(new RegExp(`^${label}:\\s*`, 'i'), '').trim();
-      const dosage = stripLabel(parts[1] || '', 'frequency');
+      const stripDoseLikeLabel = (value = '') => String(value || '').replace(/^(dose|frequency):\s*/i, '').trim();
+      const dosage = stripDoseLikeLabel(parts[1] || '');
       const duration = stripLabel(parts[2] || '', 'duration');
       const instruction = stripLabel(parts[3] || '', 'instruction');
       return { name, strength, dosage, duration, instruction };
@@ -90,7 +129,7 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
   const buildDoseText = (meds) => (
     (meds || [])
       .filter((m) => String(m?.name || '').trim())
-      .map((m) => String(m?.strength || '').trim())
+      .map((m) => String(m?.dosage || '').trim())
       .join('\n')
   );
 
@@ -99,14 +138,12 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
     return (meds || []).map(m => {
       const name = String(m.name || '').trim();
       if (!name) return null;
-      const strength = String(m.strength || '').trim();
       const dosage = String(m.dosage || '').trim();
       const duration = String(m.duration || '').trim();
       const instruction = String(m.instruction || '').trim();
       const parts = [name];
-      if (strength) parts.push(`Dose: ${strength}`);
       const details = [];
-      if (dosage) details.push(`Frequency: ${dosage}`);
+      if (dosage) details.push(dosage);
       if (duration) details.push(`Duration: ${duration}`);
       if (instruction) details.push(`Instruction: ${instruction}`);
       if (details.length) parts.push(`- ${details.join(' - ')}`);
@@ -115,6 +152,7 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
   };
 
   const [medicines, setMedicines] = useState(() => parseMedicationsText(prescription?.medications, prescription?.dose));
+  const [investigationRows, setInvestigationRows] = useState(() => parseInvestigationRows(prescription?.investigation_items, prescription?.tests));
   const [medicineMatchesByRow, setMedicineMatchesByRow] = useState({});
   const [focusedMedicineIndex, setFocusedMedicineIndex] = useState(null);
   const medicineMatchCacheRef = useRef(new Map());
@@ -167,6 +205,25 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
   const addMedicine = () => setMedicines(prev => [...prev, emptyMedicine()]);
   const removeMedicine = (idx) => setMedicines(prev => prev.length > 1 ? prev.filter((_, i) => i !== idx) : prev);
 
+  const handleMedicineNameChange = (idx, value) => {
+    setMedicines((prev) => prev.map((item, itemIndex) => (
+      itemIndex === idx ? { ...item, name: value, strength: '' } : item
+    )));
+    void queryMedicineMatches(value, idx);
+  };
+
+  const handleMedicineSuggestionSelect = (idx, med) => {
+    setMedicines((prev) => prev.map((item, itemIndex) => (
+      itemIndex === idx
+        ? {
+            ...item,
+            name: buildMedicineWithStrength(med.name, med.strength),
+            strength: String(med.strength || '').trim(),
+          }
+        : item
+    )));
+  };
+
   const buildFormState = (source = {}) => ({
     patient_name: source?.patient_name || source?.user?.name || '',
     diagnosis: source?.diagnosis || '',
@@ -193,6 +250,7 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
     setData(prescription || {});
     setForm(buildFormState(prescription || {}));
     setMedicines(parseMedicationsText(prescription?.medications, prescription?.dose));
+    setInvestigationRows(parseInvestigationRows(prescription?.investigation_items, prescription?.tests));
   }, [prescription]);
 
   useEffect(() => {
@@ -224,6 +282,8 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
         patient_age: toStr(form.patient_age).trim(),
         patient_contact: toStr(form.patient_contact).trim(),
         medications: buildMedicationsText(medicines),
+        tests: buildTestsText(investigationRows),
+        investigation_items: buildInvestigationItems(investigationRows),
         dose: buildDoseText(medicines),
         template_type: form.template_type || 'general',
         specialty_data: form.template_type === 'eye'
@@ -249,6 +309,7 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
         const updated = { ...data, ...payload, ...(body?.prescription || {}) };
         setData(updated);
         setForm(buildFormState(updated));
+        setInvestigationRows(parseInvestigationRows(updated?.investigation_items, updated?.tests));
         toastSuccess('Prescription updated successfully.');
       }
     } catch (err) {
@@ -260,6 +321,8 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
 
   const handleCancel = () => {
     setForm(buildFormState(data));
+    setMedicines(parseMedicationsText(data?.medications, data?.dose));
+    setInvestigationRows(parseInvestigationRows(data?.investigation_items, data?.tests));
   };
 
   const handleSaveAndComplete = async () => {
@@ -273,6 +336,8 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
         patient_age: toStr(form.patient_age).trim(),
         patient_contact: toStr(form.patient_contact).trim(),
         medications: buildMedicationsText(medicines),
+        tests: buildTestsText(investigationRows),
+        investigation_items: buildInvestigationItems(investigationRows),
         dose: buildDoseText(medicines),
         template_type: form.template_type || 'general',
         specialty_data: form.template_type === 'eye'
@@ -1139,19 +1204,17 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
                     </div>
 
                     <div className="space-y-1 px-1">
-                      {(String(form.tests || '').split('\n').length
-                        ? String(form.tests || '').split('\n')
-                        : ['']
-                      ).map((test, idx, arr) => (
+                      {investigationRows.map((test, idx, arr) => (
                         <div key={idx} className="group flex items-center gap-1.5 border-b border-dotted border-[#9aa8be] pb-1">
                           <span className="text-slate-700">•</span>
                           <input
                             className="w-full border-0 bg-transparent px-0 py-0.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none"
                             value={test}
                             onChange={(e) => {
-                              const next = String(form.tests || '').split('\n');
+                              const next = [...investigationRows];
                               next[idx] = e.target.value;
-                              handleChange('tests', next.join('\n'));
+                              setInvestigationRows(next);
+                              handleChange('tests', buildTestsText(next));
                             }}
                             placeholder="Add test"
                           />
@@ -1160,8 +1223,10 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
                               type="button"
                               className="rounded border border-rose-300 bg-rose-50 px-1.5 py-0 text-[11px] text-rose-800 opacity-0 transition group-hover:opacity-100"
                               onClick={() => {
-                                const next = String(form.tests || '').split('\n').filter((_, i) => i !== idx);
-                                handleChange('tests', (next.length ? next : ['']).join('\n'));
+                                const next = investigationRows.filter((_, i) => i !== idx);
+                                const normalized = next.length ? next : [''];
+                                setInvestigationRows(normalized);
+                                handleChange('tests', buildTestsText(normalized));
                               }}
                             >
                               ×
@@ -1175,8 +1240,9 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
                       type="button"
                       className="mt-3 self-start text-xs font-semibold text-[#0b4fa3] hover:underline"
                       onClick={() => {
-                        const next = String(form.tests || '').split('\n');
-                        handleChange('tests', [...next, ''].join('\n'));
+                        const next = [...investigationRows, ''];
+                        setInvestigationRows(next);
+                        handleChange('tests', buildTestsText(next));
                       }}
                     >
                       + Add Test
@@ -1229,143 +1295,27 @@ export default function PrescriptionShow({ prescription, chamberInfo, medicines:
                 </div>
 
                 <div className="col-span-9 space-y-6">
-                  <div>
-                    <div className="mb-2 flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-5xl font-serif font-bold text-[#0d2f63]">Rx</span>
-                        <span className="text-2xl font-bold uppercase tracking-wide text-[#0d2f63]">Prescription</span>
-                      </div>
-                    </div>
-
-                    <div className="overflow-hidden rounded-xl border border-[#c7d3e4] bg-white">
-                      <div className="grid grid-cols-12 bg-[#0b3f86] px-2 py-2 text-[11px] font-bold uppercase tracking-[0.08em] text-white">
-                        <div className="col-span-1">No.</div>
-                        <div className="col-span-4">Medicine</div>
-                        <div className="col-span-2">Dose</div>
-                        <div className="col-span-2">Frequency</div>
-                        <div className="col-span-1">Duration</div>
-                        <div className="col-span-2">Instruction</div>
-                      </div>
-
-                      <div className="space-y-1 p-2">
-                        {medicines.map((m, idx) => {
-                          const normalizedMedicineName = normalizeMedicineName(m.name);
-                          const matchedSuggestions = medicineMatchesByRow[idx] || [];
-                          const hasMedicineMatches = matchedSuggestions.length > 0;
-                          const showMedicineMatchDropdown = focusedMedicineIndex === idx && hasMedicineMatches;
-
-                          return (
-                            <div key={idx} className="grid grid-cols-12 items-center gap-2 border-b border-dotted border-[#b9c7dc] pb-1">
-                              <div className="col-span-1 text-center text-sm font-bold text-slate-500">{idx + 1}</div>
-                              <div className="col-span-4 relative">
-                                <input
-                                  className="w-full border-0 bg-transparent px-0 py-0.5 text-sm text-slate-900 focus:outline-none"
-                                  value={m.name}
-                                  onFocus={() => {
-                                    setFocusedMedicineIndex(idx);
-                                    void queryMedicineMatches(m.name, idx);
-                                  }}
-                                  onBlur={() => {
-                                    window.setTimeout(() => {
-                                      setFocusedMedicineIndex((current) => (current === idx ? null : current));
-                                    }, 120);
-                                  }}
-                                  onChange={(e) => {
-                                    const value = e.target.value;
-                                    setMedicines((prev) => prev.map((item, itemIndex) => (
-                                      itemIndex === idx ? { ...item, name: value, strength: '' } : item
-                                    )));
-                                    void queryMedicineMatches(value, idx);
-                                  }}
-                                  placeholder="Medicine"
-                                />
-                                {showMedicineMatchDropdown ? (
-                                  <div className="absolute left-0 right-0 z-20 mt-1 rounded-md border border-[#c7d6f7] bg-white shadow-lg">
-                                    {matchedSuggestions.slice(0, 8).map((med, optionIdx) => (
-                                      <button
-                                        key={`${med.id ?? med.name}-${med.strength}-${optionIdx}`}
-                                        type="button"
-                                        className="flex w-full items-center justify-between border-b border-slate-100 px-3 py-2 text-left text-xs last:border-b-0 hover:bg-[#edf2ff]"
-                                        onMouseDown={(event) => {
-                                          event.preventDefault();
-                                          setMedicines((prev) => prev.map((item, itemIndex) => (
-                                            itemIndex === idx
-                                              ? {
-                                                  ...item,
-                                                  name: String(med.name || '').trim(),
-                                                  strength: String(med.strength || '').trim(),
-                                                }
-                                              : item
-                                          )));
-                                          setFocusedMedicineIndex(null);
-                                        }}
-                                      >
-                                        <span className="font-semibold text-slate-800">{med.name}</span>
-                                        <span className="text-slate-500">{med.strength || 'No strength'}</span>
-                                      </button>
-                                    ))}
-                                  </div>
-                                ) : null}
-                                {/* {normalizedMedicineName && !hasMedicineMatches ? (
-                                  <p className="mt-1 text-[11px] font-medium text-amber-700">No medicine match found.</p>
-                                ) : null} */}
-                              </div>
-                              <div className="col-span-2">
-                                <input
-                                  className="w-full border-0 bg-transparent px-0 py-0.5 text-sm text-slate-900 focus:outline-none"
-                                  value={m.strength}
-                                  onChange={(e) => handleMedicineChange(idx, 'strength', e.target.value)}
-                                  placeholder="Dose"
-                                />
-                              </div>
-                              <div className="col-span-2">
-                                <input
-                                  className="w-full border-0 bg-transparent px-0 py-0.5 text-sm text-slate-900 focus:outline-none"
-                                  value={m.dosage}
-                                  onChange={(e) => handleMedicineChange(idx, 'dosage', e.target.value)}
-                                  placeholder="0-1"
-                                />
-                              </div>
-                              <div className="col-span-1">
-                                <input
-                                  className="w-full border-0 bg-transparent px-0 py-0.5 text-sm text-slate-900 focus:outline-none"
-                                  value={m.duration}
-                                  onChange={(e) => handleMedicineChange(idx, 'duration', e.target.value)}
-                                  placeholder="—"
-                                />
-                              </div>
-                              <div className="col-span-2 flex items-center gap-1">
-                                <select
-                                  className="w-full border-0 bg-transparent px-0 py-0.5 text-xs text-slate-900 focus:outline-none"
-                                  value={m.instruction || ''}
-                                  onChange={(e) => handleMedicineChange(idx, 'instruction', e.target.value)}
-                                >
-                                  <option value="">None</option>
-                                  <option value="After meal">After meal</option>
-                                  <option value="Before meal">Before meal</option>
-                                </select>
-                                <button
-                                  type="button"
-                                  className="rounded border border-rose-300 bg-rose-50 px-1.5 py-1 text-xs text-rose-800 hover:bg-rose-100"
-                                  onClick={() => removeMedicine(idx)}
-                                >
-                                  ×
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })}
-
-                        <button
-                          type="button"
-                          onClick={addMedicine}
-                          className="mt-2 w-full rounded border border-dashed border-[#b9c7dc] bg-[#f8fbff] px-3 py-2 text-lg font-semibold text-[#3556a6] transition hover:bg-[#edf2ff]"
-                        >
-                          + Add Medicine Row
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+                  <PrescriptionMedicineSection
+                    templateType={form.template_type}
+                    medicines={medicines}
+                    normalizeMedicineName={normalizeMedicineName}
+                    medicineMatchesByRow={medicineMatchesByRow}
+                    focusedMedicineIndex={focusedMedicineIndex}
+                    setFocusedMedicineIndex={setFocusedMedicineIndex}
+                    onNameFocus={(idx, name) => {
+                      void queryMedicineMatches(name, idx);
+                    }}
+                    onNameBlur={(idx) => {
+                      setFocusedMedicineIndex((current) => (current === idx ? null : current));
+                    }}
+                    onNameChange={handleMedicineNameChange}
+                    onSelectSuggestion={handleMedicineSuggestionSelect}
+                    onDoseChange={(idx, value) => handleMedicineChange(idx, 'dosage', value)}
+                    onDurationChange={(idx, value) => handleMedicineChange(idx, 'duration', value)}
+                    onInstructionChange={(idx, value) => handleMedicineChange(idx, 'instruction', value)}
+                    onRemove={removeMedicine}
+                    onAdd={addMedicine}
+                  />
 
                   <div className="border-t-2 border-dotted border-slate-200 pt-4">
                     <div className="mb-2 flex items-center gap-2">

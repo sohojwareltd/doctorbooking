@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\SiteContentController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CompoundController;
 use App\Http\Controllers\Api\DoctorController;
+use App\Http\Controllers\Api\InvestigationTestController;
 use App\Http\Controllers\Api\PatientController;
 use App\Http\Controllers\Api\PrescriptionController as ApiPrescriptionController;
 use App\Http\Controllers\Api\PublicController;
@@ -100,6 +101,10 @@ Route::middleware(['auth:sanctum', 'role:doctor,compounder'])
         Route::post('/prescriptions', [ApiPrescriptionController::class, 'store']);
         Route::get('/prescriptions/{prescription}', [DoctorController::class, 'prescriptionShow']);
         Route::put('/prescriptions/{prescription}', [ApiPrescriptionController::class, 'update']);
+        Route::get('/investigation-tests', [InvestigationTestController::class, 'index']);
+        Route::post('/investigation-tests', [InvestigationTestController::class, 'store']);
+        Route::put('/investigation-tests/{item}', [InvestigationTestController::class, 'update']);
+        Route::delete('/investigation-tests/{item}', [InvestigationTestController::class, 'destroy']);
         Route::post('/prescriptions/{prescription}/messages', [ApiPrescriptionController::class, 'storeMessage']);
         Route::get('/prescriptions/{prescription}/reports', [ApiPrescriptionController::class, 'reports']);
         Route::post('/prescriptions/{prescription}/reports', [ApiPrescriptionController::class, 'uploadReport']);

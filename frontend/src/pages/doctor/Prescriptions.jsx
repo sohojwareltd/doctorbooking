@@ -10,6 +10,7 @@ import {
   Loader2,
   Mars,
   MessageSquare,
+  Pencil,
   Phone,
   Plus,
   Printer,
@@ -799,6 +800,13 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
                     >
                       <FileText className="h-3.5 w-3.5" />
                     </Link>
+                    <Link
+                      href={`/doctor/prescriptions/${prescription.uuid || prescription.id}/edit`}
+                      className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
+                      aria-label="Edit prescription"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Link>
                     <button
                       type="button"
                       onClick={() => handlePrintPrescription(prescription)}
@@ -899,6 +907,17 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
                             <FileText className="h-3.5 w-3.5" />
                             <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-[10px] font-medium text-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
                               Open Prescription
+                            </span>
+                          </Link>
+
+                          <Link
+                            href={`/doctor/prescriptions/${prescription.uuid || prescription.id}/edit`}
+                            className="group relative inline-flex h-7 w-7 items-center justify-center rounded-md border border-indigo-200 bg-indigo-50 text-indigo-700 transition hover:border-indigo-300 hover:bg-indigo-100 hover:text-indigo-800"
+                            aria-label="Edit prescription"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                            <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-[10px] font-medium text-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
+                              Edit Prescription
                             </span>
                           </Link>
 

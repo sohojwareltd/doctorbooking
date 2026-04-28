@@ -23,6 +23,7 @@ class PrescriptionController extends Controller
             'appointment:id,appointment_date,appointment_time,status',
             'doctor:id,user_id,specialization,degree',
             'doctor.user:id,name,email,phone',
+            'investigationItems:id,prescription_id,name,note,sort_order',
         ]);
 
         $chamber = $prescription->doctor_id
@@ -40,6 +41,12 @@ class PrescriptionController extends Controller
                 'dose'             => $prescription->dose,
                 'instructions'     => $prescription->instructions,
                 'tests'            => $prescription->tests,
+                'investigation_items' => $prescription->investigationItems->map(fn ($item) => [
+                    'id' => $item->id,
+                    'name' => $item->name,
+                    'note' => $item->note,
+                    'sort_order' => $item->sort_order,
+                ])->values(),
                 'next_visit_date'  => $prescription->next_visit_date?->format('Y-m-d'),
                 'visit_type'       => $prescription->visit_type,
                 'template_type'    => $prescription->template_type,
@@ -221,6 +228,7 @@ class PrescriptionController extends Controller
         $prescription->load([
             'user:id,name,email,phone',
             'appointment:id,appointment_date,appointment_time,status',
+            'investigationItems:id,prescription_id,name,note,sort_order',
         ]);
 
         $prescription->user?->loadMissing('patientProfile');
@@ -238,6 +246,12 @@ class PrescriptionController extends Controller
                 'dose'             => $prescription->dose,
                 'instructions'     => $prescription->instructions,
                 'tests'            => $prescription->tests,
+                'investigation_items' => $prescription->investigationItems->map(fn ($item) => [
+                    'id' => $item->id,
+                    'name' => $item->name,
+                    'note' => $item->note,
+                    'sort_order' => $item->sort_order,
+                ])->values(),
                 'next_visit_date'  => $prescription->next_visit_date?->format('Y-m-d'),
                 'visit_type'       => $prescription->visit_type,
                 'template_type'    => $prescription->template_type,
@@ -270,6 +284,83 @@ class PrescriptionController extends Controller
             ] : null,
             'medicines' => Medicine::orderBy('name')->get(['id', 'name', 'strength']),
         ]);
+    }
+
+    /** GET /doctor/prescriptions/{prescription}/edit */
+    public function doctorEdit(Prescription $prescription): Response
+    {
+        /** @var User $doctor */
+        $doctor   = Auth::user();
+        $doctorId = $doctor->doctorId();
+        if ($doctorId) {
+            abort_unless($prescription->doctor_id === $doctorId, 403);
+        }
+
+        $prescription->load([
+            'user:id,name,email,phone',
+            'appointment:id,appointment_date,appointment_time,status',
+            'investigationItems:id,prescription_id,name,note,sort_order',
+        ]);
+
+        $prescription->user?->loadMissing('patientProfile');
+
+        $chamber = $doctorId ? Chamber::where('doctor_id', $doctorId)->where('is_active', true)->first() : null;
+
+        return Inertia::render('doctor/EditPrescription', [
+            'prescription' => [
+                'id'               => $prescription->id,
+                'uuid'             => $prescription->uuid,
+                'appointment_id'   => $prescription->appointment_id,
+                'created_at'       => $prescription->created_at?->toDateTimeString(),
+                'diagnosis'        => $prescription->diagnosis,
+                'medications'      => $prescription->medications,
+                'dose'             => $prescription->dose,
+                'instructions'     => $prescription->instructions,
+                'tests'            => $prescription->tests,
+                'investigation_items' => $prescription->investigationItems->map(fn ($item) => [
+                    'id' => $item->id,
+                    'name' => $item->name,
+                    'note' => $item->note,
+                    'sort_order' => $item->sort_order,
+                ])->values(),
+                'next_visit_date'  => $prescription->next_visit_date?->format('Y-m-d'),
+                'visit_type'       => $prescription->visit_type,
+                'template_type'    => $prescription->template_type,
+                'specialty_data'   => $prescription->specialty_data,
+                'patient_name'     => $prescription->patient_name ?? $prescription->user?->name,
+                'patient_contact'  => $prescription->patient_contact ?? $prescription->user?->phone,
+                'patient_age'      => $prescription->patient_age ?? $prescription->user?->patientProfile?->age,
+                'patient_age_unit' => $prescription->patient_age_unit ?? 'years',
+                'patient_gender'   => $prescription->patient_gender ?? $prescription->user?->patientProfile?->gender,
+                'patient_weight'   => $prescription->patient_weight ?? $prescription->user?->patientProfile?->weight,
+                'user'             => $prescription->user ? [
+                    'id'      => $prescription->user->id,
+                    'name'    => $prescription->user->name,
+                    'email'   => $prescription->user->email,
+                    'phone'   => $prescription->user->phone,
+                    'address' => $prescription->user->patientProfile?->address,
+                    'gender'  => $prescription->user->patientProfile?->gender,
+                    'weight'  => $prescription->user->patientProfile?->weight,
+                ] : null,
+                'appointment' => $prescription->appointment ? [
+                    'appointment_date' => (string) $prescription->appointment->appointment_date,
+                    'appointment_time' => substr((string) $prescription->appointment->appointment_time, 0, 5),
+                    'status'           => $prescription->appointment->status,
+                ] : null,
+            ],
+            'chamberInfo' => $chamber ? [
+                'name'     => $chamber->name,
+                'location' => $chamber->location,
+                'phone'    => $chamber->phone,
+            ] : null,
+            'medicines' => Medicine::orderBy('name')->get(['id', 'name', 'strength']),
+        ]);
+    }
+
+    /** GET /doctor/investigation-tests */
+    public function doctorInvestigationTests(): Response
+    {
+        return Inertia::render('doctor/InvestigationTests');
     }
 
     /** POST /doctor/prescriptions — delegate to API controller */
@@ -345,6 +436,7 @@ class PrescriptionController extends Controller
             'appointment:id,appointment_date,appointment_time,status',
             'doctor:id,user_id,specialization,degree',
             'doctor.user:id,name,email,phone',
+            'investigationItems:id,prescription_id,name,note,sort_order',
         ]);
 
         $chamber = $prescription->doctor_id
@@ -362,6 +454,12 @@ class PrescriptionController extends Controller
                 'dose'             => $prescription->dose,
                 'instructions'     => $prescription->instructions,
                 'tests'            => $prescription->tests,
+                'investigation_items' => $prescription->investigationItems->map(fn ($item) => [
+                    'id' => $item->id,
+                    'name' => $item->name,
+                    'note' => $item->note,
+                    'sort_order' => $item->sort_order,
+                ])->values(),
                 'next_visit_date'  => $prescription->next_visit_date?->format('Y-m-d'),
                 'visit_type'       => $prescription->visit_type,
                 'template_type'    => $prescription->template_type,

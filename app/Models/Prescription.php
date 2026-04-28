@@ -103,4 +103,9 @@ class Prescription extends Model
     {
         return $this->hasMany(PrescriptionMessage::class);
     }
+
+    public function investigationItems(): HasMany
+    {
+        return $this->hasMany(PrescriptionInvestigationItem::class)->orderBy('sort_order');
+    }
 }
