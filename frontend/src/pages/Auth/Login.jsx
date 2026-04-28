@@ -11,10 +11,12 @@ import {
     ShieldCheck,
     User,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import GlassCard from '../../components/GlassCard';
 import PrimaryButton from '../../components/PrimaryButton';
 import PublicLayout from '../../layouts/PublicLayout';
+
+const getMetaCsrfToken = () => document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
 export default function Login({ status, canResetPassword }) {
     const [showPassword, setShowPassword] = useState(false);
@@ -23,10 +25,17 @@ export default function Login({ status, canResetPassword }) {
         email: '',
         password: '',
         remember: false,
+        _token: '',
     });
+
+    useEffect(() => {
+        setData('_token', getMetaCsrfToken());
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const submit = (e) => {
         e.preventDefault();
+        setData('_token', getMetaCsrfToken());
         post('/login');
     };
 
@@ -134,6 +143,7 @@ export default function Login({ status, canResetPassword }) {
                                 )}
 
                                 <form onSubmit={submit} className="space-y-4.5">
+                                    <input type="hidden" name="_token" value={data._token} readOnly />
                                     <div>
                                         <label htmlFor="email" className="mb-1.5 block text-sm font-semibold text-[#153a4a]">
                                             Email or Phone
