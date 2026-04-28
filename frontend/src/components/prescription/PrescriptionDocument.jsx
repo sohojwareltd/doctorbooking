@@ -1,4 +1,4 @@
-import { Calendar, Download, FileText, FlaskConical, Phone, Printer, Stethoscope, ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Calendar, Download, Eye, FileText, FlaskConical, HeartHandshake, Mail, MapPin, Phone, Printer, ShieldCheck, Stethoscope } from 'lucide-react';
 import EyePrescriptionSection from './EyePrescriptionSection';
 
 const ReadTextarea = ({ value, rows = 4, placeholder = '—', compact = false }) => (
@@ -39,6 +39,27 @@ export default function PrescriptionDocument({
   forceDesktopColumnsOnMobile = false,
   printElementId,
 }) {
+  const doctorDisplayName = doctorInfo?.name || 'Dr. Fatima Ahmed';
+  const doctorSubTitle = doctorInfo?.specialization || doctorInfo?.degree || 'MBBS, FCPS (Medicine), Consultant Physician';
+  const doctorPhone = doctorInfo?.phone || '+880 1712-345678';
+  const doctorEmail = doctorInfo?.email || 'doctor@example.com';
+
+  const chamberName = chamberInfo?.name || 'Main Chamber';
+  const chamberLocation = chamberInfo?.location || 'Demo Clinic, 123 Main Street, Dhaka';
+  const chamberPhone = chamberInfo?.phone || doctorPhone;
+  const chamberMapUrl = chamberInfo?.google_maps_url || null;
+  const qrSrc = chamberMapUrl
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=96x96&data=${encodeURIComponent(chamberMapUrl)}`
+    : null;
+
+  const logoSrc = doctorInfo?.profile_picture || '/stethoscope-2.png';
+
+  const formattedGender = patientGender ? patientGender.charAt(0).toUpperCase() + patientGender.slice(1) : '—';
+
+  const prescriptionRows = medicines.length > 0
+    ? medicines
+    : [{ name: '', dosage: '', frequency: '', duration: '', instruction: '' }];
+
   return (
     <div ref={prescriptionRef} id={printElementId}>
       {showActionBar ? (
@@ -87,194 +108,193 @@ export default function PrescriptionDocument({
       ) : null}
 
       <div className={forceDesktopColumnsOnMobile ? '-mx-3 overflow-x-auto px-3 print:mx-0 print:overflow-visible print:px-0 sm:mx-0 sm:px-0' : ''}>
-      <div className={forceDesktopColumnsOnMobile ? 'min-w-[700px] print:min-w-0 sm:min-w-[920px]' : ''}>
-      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm print:border-0 print:shadow-none">
-        <div className={`border-b border-slate-200${hidePrintHeader ? ' print:hidden' : ''}`}>
-          <div className="relative overflow-hidden bg-gradient-to-br from-[#071122] via-[#0d1f45] to-[#071122]">
-            <div className="absolute inset-0 shadow-[inset_0_0_120px_rgba(0,0,0,0.7)]" />
+        <div className={forceDesktopColumnsOnMobile ? 'min-w-[700px] print:min-w-0 sm:min-w-[980px]' : ''}>
+          <div className="overflow-hidden rounded-xl border border-slate-300 bg-[#f8fafc] shadow-sm print:border-0 print:shadow-none">
+            <div className="h-4 bg-[#0b3f86]" />
 
-            <div className={forceDesktopColumnsOnMobile
-              ? 'relative z-10 grid grid-cols-2 divide-x divide-white/10 px-3 py-3 sm:px-8 sm:py-7'
-              : 'relative z-10 grid grid-cols-1 divide-y divide-white/10 px-4 py-5 sm:grid-cols-2 sm:divide-y-0 sm:divide-x sm:px-8 sm:py-7'}>
-              <div className={forceDesktopColumnsOnMobile ? 'pr-3 sm:pr-8' : 'pb-4 sm:pb-0 sm:pr-8'}>
-                <div className="mb-1.5 flex items-center gap-1.5">
-                  <Stethoscope className="h-3 w-3 text-blue-300 sm:h-3.5 sm:w-3.5" />
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-blue-300">Doctor</span>
-                </div>
-                <p className={forceDesktopColumnsOnMobile ? 'text-[13px] font-black tracking-tight text-white sm:text-2xl' : 'text-xl font-black tracking-tight text-white sm:text-2xl'}>{doctorInfo?.name || 'Doctor'}</p>
-                <p className={forceDesktopColumnsOnMobile ? 'mt-0.5 text-[10px] font-medium leading-tight text-slate-300 sm:text-sm' : 'mt-0.5 text-sm font-medium text-slate-300'}>{doctorInfo?.specialization || doctorInfo?.degree || 'MBBS, FCPS'}</p>
-                <div className={forceDesktopColumnsOnMobile ? 'mt-1.5 space-y-1' : 'mt-3 space-y-1.5'}>
-                  {doctorInfo?.phone ? (
-                    <div className={forceDesktopColumnsOnMobile ? 'flex items-center gap-1 text-[10px] text-slate-200 sm:text-sm' : 'flex items-center gap-1.5 text-sm text-slate-200'}>
-                      <Phone className="h-3 w-3 shrink-0 text-blue-300 sm:h-3.5 sm:w-3.5" />
-                      <span>{doctorInfo.phone}</span>
+            <div className={`relative border-b border-slate-300 bg-white ${hidePrintHeader ? 'print:hidden' : ''}`}>
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-[0.05]">
+                <Stethoscope className="h-48 w-48 text-[#0b3f86]" />
+              </div>
+
+              <div className="relative z-10 grid grid-cols-2 divide-x divide-slate-300 px-4 py-4 sm:px-6">
+                <div className="pr-4 sm:pr-6">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#cfd8e6] bg-white sm:h-20 sm:w-20">
+                      <img src={logoSrc} alt="Doctor logo" className="h-full w-full object-contain" />
                     </div>
-                  ) : null}
-                </div>
-              </div>
-
-              <div className={forceDesktopColumnsOnMobile ? 'pl-3 sm:pl-8 flex flex-col items-end' : 'pt-4 sm:pt-0 sm:pl-8 flex flex-col items-start sm:items-end'}>
-                <div className={forceDesktopColumnsOnMobile ? 'mb-1.5 flex items-center justify-end gap-1.5' : 'mb-1.5 flex items-center justify-start gap-1.5 sm:justify-end'}>
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-blue-300">Chamber</span>
-                </div>
-                <p className={forceDesktopColumnsOnMobile ? 'text-[13px] font-black tracking-tight text-white sm:text-2xl' : 'text-xl font-black tracking-tight text-white sm:text-2xl'}>{chamberInfo?.name || 'Not set'}</p>
-                {chamberInfo?.location ? (
-                  <div className={forceDesktopColumnsOnMobile ? 'mt-1.5 flex items-start justify-end gap-1 text-[10px] leading-tight text-slate-200 sm:text-sm' : 'mt-2.5 flex items-start justify-start gap-1.5 text-sm text-slate-200 sm:justify-end'}>
-                    <span>{chamberInfo.location}</span>
-                  </div>
-                ) : null}
-                {chamberInfo?.phone ? (
-                  <div className={forceDesktopColumnsOnMobile ? 'mt-1 flex items-center justify-end gap-1 text-[10px] text-slate-200 sm:text-sm' : 'mt-1.5 flex items-center justify-start gap-1.5 text-sm text-slate-200 sm:justify-end'}>
-                    <span>{chamberInfo.phone}</span>
-                  </div>
-                ) : null}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className={forceDesktopColumnsOnMobile ? 'border-b border-slate-200 bg-white px-3 py-2 sm:px-8 sm:py-4' : 'border-b border-slate-200 bg-white px-4 py-3 sm:px-8 sm:py-4'}>
-          <div className={forceDesktopColumnsOnMobile ? 'flex flex-wrap items-end gap-x-2 gap-y-1 sm:gap-x-6 sm:gap-y-3' : 'flex flex-wrap items-end gap-x-6 gap-y-3'}>
-            <div className={forceDesktopColumnsOnMobile ? 'flex min-w-[130px] flex-1 items-end gap-1 sm:min-w-[200px] sm:gap-2' : 'flex min-w-[180px] flex-1 items-end gap-2'}>
-              <span className="shrink-0 text-xs font-bold text-slate-600">Name:</span>
-              <div className={forceDesktopColumnsOnMobile ? 'flex-1 rounded-md border border-transparent border-b-slate-300 bg-white px-1.5 py-0.5 text-[10px] leading-tight text-slate-900 sm:px-3 sm:py-1.5 sm:text-sm' : 'flex-1 rounded-md border border-transparent border-b-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900'}>
-                {patientName || '—'}
-              </div>
-            </div>
-
-            <div className="flex items-end gap-1.5">
-              <span className="shrink-0 text-xs font-bold text-slate-600">Age:</span>
-              <div className={forceDesktopColumnsOnMobile ? 'rounded-md border border-transparent border-b-slate-300 bg-white px-1 py-0.5 text-[10px] leading-tight text-slate-900 sm:px-2 sm:py-1.5 sm:text-sm' : 'rounded-md border border-transparent border-b-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900'}>
-                {patientAge ? `${patientAge} ${patientAgeUnit}` : '—'}
-              </div>
-            </div>
-
-            <div className={`flex items-end gap-1.5${hidePrintPatientMeta ? ' print:hidden' : ''}`}>
-              <span className="shrink-0 text-xs font-bold text-slate-600">Gender:</span>
-              <div className={forceDesktopColumnsOnMobile ? 'rounded-md border border-transparent border-b-slate-300 bg-white px-1 py-0.5 text-[10px] leading-tight text-slate-900 sm:px-2 sm:py-1.5 sm:text-sm' : 'rounded-md border border-transparent border-b-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900'}>
-                {patientGender ? patientGender.charAt(0).toUpperCase() + patientGender.slice(1) : '—'}
-              </div>
-            </div>
-
-            <div className={`flex items-end gap-1.5${hidePrintPatientMeta ? ' print:hidden' : ''}`}>
-              <span className="shrink-0 text-xs font-bold text-slate-600">Contact:</span>
-              <div className={forceDesktopColumnsOnMobile ? 'rounded-md border border-transparent border-b-slate-300 bg-white px-1 py-0.5 text-[10px] leading-tight text-slate-900 sm:px-2 sm:py-1.5 sm:text-sm' : 'rounded-md border border-transparent border-b-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900'}>
-                {patientContact || '—'}
-              </div>
-            </div>
-
-            <div className={`flex items-end gap-1.5${hidePrintPatientMeta ? ' print:hidden' : ''}`}>
-              <span className="shrink-0 text-xs font-bold text-slate-600">Weight:</span>
-              <div className={forceDesktopColumnsOnMobile ? 'rounded-md border border-transparent border-b-slate-300 bg-white px-1 py-0.5 text-[10px] leading-tight text-slate-900 sm:px-2 sm:py-1.5 sm:text-sm' : 'rounded-md border border-transparent border-b-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900'}>
-                {patientWeight ? `${patientWeight} kg` : '—'}
-              </div>
-            </div>
-
-            {/* <div className={`flex items-end gap-1.5${hidePrintPatientMeta ? ' print:hidden' : ''}`}>
-              <span className="shrink-0 text-xs font-bold text-slate-600">Visit:</span>
-              <div className="rounded-md border border-transparent border-b-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900">
-                {visitType || '—'}
-              </div>
-            </div> */}
-          </div>
-        </div>
-
-        <div className={forceDesktopColumnsOnMobile ? 'min-h-[500px] bg-white p-3 pb-4 sm:p-8 sm:pb-12' : 'min-h-[500px] bg-white p-4 pb-8 sm:p-8 sm:pb-12'}>
-          {templateType === 'eye' ? (
-            <div className="mb-6">
-              <EyePrescriptionSection value={prescription?.specialty_data} readOnly />
-            </div>
-          ) : null}
-
-          <div className={forceDesktopColumnsOnMobile ? 'grid grid-cols-12 gap-3 sm:gap-8' : 'grid grid-cols-1 gap-5 lg:grid-cols-12 lg:gap-8'}>
-            <div className={forceDesktopColumnsOnMobile ? 'col-span-3 space-y-2 sm:space-y-6 border-r-2 border-dashed border-slate-200 pr-2.5 sm:pr-8' : 'col-span-1 space-y-6 border-b-2 border-dashed border-slate-200 pb-5 lg:col-span-3 lg:border-b-0 lg:border-r-2 lg:pb-0 lg:pr-8'}>
-              <div>
-                <div className={forceDesktopColumnsOnMobile ? 'mb-1.5 flex items-center gap-1 border-b border-slate-200 pb-1 sm:mb-3 sm:gap-2 sm:pb-2' : 'mb-3 flex items-center gap-2 border-b border-slate-200 pb-2'}>
-                  <FlaskConical className="h-3 w-3 text-[#3556a6] sm:h-4 sm:w-4" />
-                  <span className={forceDesktopColumnsOnMobile ? 'text-[10px] font-bold uppercase tracking-[0.08em] text-slate-700 sm:text-xs sm:tracking-wider' : 'text-xs font-bold uppercase tracking-wider text-slate-700'}>Investigations</span>
-                </div>
-                <ReadTextarea value={prescription?.tests} rows={6} placeholder="None" compact={forceDesktopColumnsOnMobile} />
-              </div>
-
-              <div>
-                <div className={forceDesktopColumnsOnMobile ? 'mb-1.5 flex items-center gap-1 border-b border-slate-200 pb-1 sm:mb-3 sm:gap-2 sm:pb-2' : 'mb-3 flex items-center gap-2 border-b border-slate-200 pb-2'}>
-                  <Stethoscope className="h-3 w-3 text-[#3556a6] sm:h-4 sm:w-4" />
-                  <span className={forceDesktopColumnsOnMobile ? 'text-[10px] font-bold uppercase tracking-[0.08em] text-slate-700 sm:text-xs sm:tracking-wider' : 'text-xs font-bold uppercase tracking-wider text-slate-700'}>Diagnosis</span>
-                </div>
-                <ReadTextarea value={prescription?.diagnosis} rows={8} placeholder="None" compact={forceDesktopColumnsOnMobile} />
-              </div>
-            </div>
-
-            <div className={forceDesktopColumnsOnMobile ? 'col-span-9 space-y-6' : 'col-span-1 space-y-6 lg:col-span-9'}>
-              <div>
-                <div className="mb-4 flex items-start gap-3">
-                  <div className={forceDesktopColumnsOnMobile ? 'text-3xl font-serif font-bold italic text-slate-800 sm:text-5xl' : 'text-4xl font-serif font-bold italic text-slate-800 sm:text-5xl'}>Rx</div>
-                  <div className="flex-1 pt-2">
-                    {medicines.length > 0 ? (
-                      <div className="space-y-2">
-                        {medicines.map((m, idx) => (
-                          <div key={`${m.name || 'med'}-${idx}`} className={forceDesktopColumnsOnMobile ? 'flex items-start gap-1 rounded border border-slate-200 bg-white p-1 sm:gap-2 sm:p-2' : 'flex flex-col gap-2 rounded border border-slate-200 bg-white p-2 sm:flex-row sm:items-start'}>
-                            <span className="mt-2 text-xs font-bold text-slate-400 flex-shrink-0">{idx + 1}.</span>
-                            <div className={forceDesktopColumnsOnMobile ? 'flex-1 grid grid-cols-6 gap-1 sm:gap-2' : 'flex-1 grid grid-cols-1 gap-2 sm:grid-cols-6'}>
-                              <div className={forceDesktopColumnsOnMobile ? 'col-span-2 rounded border border-slate-200 bg-slate-50/50 px-1.5 py-0.5 text-[10px] leading-tight text-slate-900 font-medium sm:px-3 sm:py-1.5 sm:text-sm' : 'col-span-1 rounded border border-slate-200 bg-slate-50/50 px-3 py-1.5 text-sm text-slate-900 font-medium sm:col-span-2'}>
-                                {m.name || '—'}
-                              </div>
-                              <div className={forceDesktopColumnsOnMobile ? 'rounded border border-slate-200 bg-slate-50/50 px-1.5 py-0.5 text-[10px] leading-tight text-slate-900 sm:px-3 sm:py-1.5 sm:text-sm' : 'rounded border border-slate-200 bg-slate-50/50 px-3 py-1.5 text-sm text-slate-900'}>
-                                {m.dosage || '—'}
-                              </div>
-                              <div className={forceDesktopColumnsOnMobile ? 'rounded border border-slate-200 bg-slate-50/50 px-1.5 py-0.5 text-[10px] leading-tight text-slate-900 sm:px-3 sm:py-1.5 sm:text-sm' : 'rounded border border-slate-200 bg-slate-50/50 px-3 py-1.5 text-sm text-slate-900'}>
-                                {m.duration || '—'}
-                              </div>
-                            </div>
-                            {m.instruction ? (
-                              <div className={forceDesktopColumnsOnMobile ? 'flex-shrink-0 rounded border border-slate-100 bg-slate-50 px-1 py-0.5 text-[9px] leading-tight text-slate-500 self-center sm:px-2 sm:py-1 sm:text-xs' : 'self-start rounded border border-slate-100 bg-slate-50 px-2 py-1 text-xs text-slate-500 sm:self-center'}>
-                                {m.instruction}
-                              </div>
-                            ) : null}
-                          </div>
-                        ))}
+                    <div className="min-w-0">
+                      <div className="mb-0.5 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[#0b3f86]">
+                        <Stethoscope className="h-3.5 w-3.5" />
+                        Doctor
                       </div>
-                    ) : (
-                      <div className="rounded border border-slate-200 bg-slate-50/50 px-3 py-2 text-sm text-slate-400">
-                        No medications listed.
+                      <p className="truncate text-2xl font-extrabold tracking-tight text-[#0d2f63]">{doctorDisplayName}</p>
+                      <p className="mt-0.5 text-sm font-medium text-slate-600">{doctorSubTitle}</p>
+                      <div className="mt-2 space-y-1 text-sm text-slate-700">
+                        <div className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5 text-[#0b3f86]" />{doctorPhone}</div>
+                        <div className="flex items-center gap-1.5"><Mail className="h-3.5 w-3.5 text-[#0b3f86]" />{doctorEmail}</div>
                       </div>
-                    )}
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="border-t-2 border-dotted border-slate-200 pt-4">
-                <div className={forceDesktopColumnsOnMobile ? 'mb-1.5 flex items-center gap-1 sm:mb-2 sm:gap-2' : 'mb-2 flex items-center gap-2'}>
-                  <FileText className="h-3 w-3 text-[#3556a6] sm:h-4 sm:w-4" />
-                  <span className={forceDesktopColumnsOnMobile ? 'text-[10px] font-bold uppercase tracking-[0.08em] text-slate-700 sm:text-xs sm:tracking-wider' : 'text-xs font-bold uppercase tracking-wider text-slate-700'}>Advice</span>
-                </div>
-                <ReadTextarea value={prescription?.instructions} rows={4} placeholder="None" compact={forceDesktopColumnsOnMobile} />
-              </div>
+                <div className="pl-4 sm:pl-6">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="mb-0.5 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[#0b3f86]">
+                        <MapPin className="h-3.5 w-3.5" />
+                        Chamber
+                      </div>
+                      <p className="truncate text-2xl font-extrabold tracking-tight text-[#0d2f63]">{chamberName}</p>
+                      <p className="mt-0.5 text-sm text-slate-600">{chamberLocation}</p>
+                      <div className="mt-2 text-sm text-slate-700">
+                        <div className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5 text-[#0b3f86]" />{chamberPhone}</div>
+                      </div>
+                    </div>
 
-              <div className="border-t border-slate-200 pt-4">
-                <div className={forceDesktopColumnsOnMobile ? 'flex items-center gap-4' : 'flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-4'}>
-                  <div className={forceDesktopColumnsOnMobile ? 'flex items-center gap-1.5' : 'flex items-center gap-2'}>
-                    <Calendar className="h-3 w-3 text-[#3556a6] sm:h-4 sm:w-4" />
-                    <span className={forceDesktopColumnsOnMobile ? 'text-[10px] font-bold uppercase tracking-[0.08em] text-slate-700 sm:text-xs sm:tracking-wider' : 'text-xs font-bold uppercase tracking-wider text-slate-700'}>Follow-up Date</span>
+                    <div className="w-[84px] shrink-0 text-center sm:w-[96px]">
+                      <div className="mx-auto overflow-hidden rounded-md border border-slate-300 bg-white p-1.5">
+                        {qrSrc ? <img src={qrSrc} alt="Location QR" className="h-full w-full object-contain" /> : <div className="h-16 w-16 bg-slate-100" />}
+                      </div>
+                      <p className="mt-1 text-[10px] font-semibold text-slate-600">Scan for Location</p>
+                    </div>
                   </div>
-                  {prescription?.next_visit_date ? (
-                    <span className={forceDesktopColumnsOnMobile ? 'rounded-full border border-[#d7dfec] bg-[#edf1fb] px-2 py-0.5 text-[10px] font-semibold text-[#3556a6] sm:px-3 sm:py-1 sm:text-xs' : 'rounded-full border border-[#d7dfec] bg-[#edf1fb] px-3 py-1 text-xs font-semibold text-[#3556a6]'}>
-                      {nextVisitLabel || prescription.next_visit_date}
-                    </span>
-                  ) : (
-                    <span className={forceDesktopColumnsOnMobile ? 'text-[10px] text-slate-400 sm:text-sm' : 'text-sm text-slate-400'}>No follow-up scheduled</span>
-                  )}
                 </div>
               </div>
             </div>
-          </div>
 
-          <div className={forceDesktopColumnsOnMobile ? 'mt-6 rounded-xl border border-slate-200 bg-slate-50 p-2.5 sm:mt-10 sm:p-6' : 'mt-8 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:mt-10 sm:p-6'}>
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className={forceDesktopColumnsOnMobile ? 'text-[10px] text-slate-400 sm:text-xs' : 'text-xs text-slate-400'}>
-                Created: {createdAtDateLabel || 'N/A'} {createdAtTimeLabel || ''} · ID #{prescription?.id || 'N/A'}
+            <div className={`border-b border-slate-300 bg-[#f8fbff] px-4 py-2.5 sm:px-6 ${hidePrintPatientMeta ? 'print:hidden' : ''}`}>
+              <div className="grid grid-cols-5 divide-x divide-slate-300 text-xs text-slate-800 sm:text-sm">
+                <div className="flex items-center gap-2 pr-2"><span className="font-bold text-[#0d2f63]">Name:</span><span className="truncate">{patientName || '—'}</span></div>
+                <div className="flex items-center justify-center gap-2 px-2"><span className="font-bold text-[#0d2f63]">Age:</span><span>{patientAge ? `${patientAge} ${patientAgeUnit}` : '—'}</span></div>
+                <div className="flex items-center justify-center gap-2 px-2"><span className="font-bold text-[#0d2f63]">Gender:</span><span>{formattedGender}</span></div>
+                <div className="flex items-center justify-center gap-2 px-2"><span className="font-bold text-[#0d2f63]">Mobile:</span><span>{patientContact || '—'}</span></div>
+                <div className="flex items-center justify-center gap-2 px-2"><span className="font-bold text-[#0d2f63]">Visit:</span><span>{visitType || 'General'}</span></div>
               </div>
-              <div className={forceDesktopColumnsOnMobile ? 'flex flex-wrap gap-3 print:hidden' : 'flex w-full flex-col gap-2 print:hidden sm:w-auto sm:flex-row sm:flex-wrap sm:gap-3'}>
+            </div>
+
+            <div className="bg-white p-4 sm:p-6">
+              {templateType === 'eye' ? (
+                <div className="mb-6">
+                  <EyePrescriptionSection value={prescription?.specialty_data} readOnly />
+                </div>
+              ) : null}
+
+              <div className={forceDesktopColumnsOnMobile ? 'grid grid-cols-12 gap-4' : 'grid grid-cols-1 gap-5 lg:grid-cols-12 lg:gap-5'}>
+                <div className={forceDesktopColumnsOnMobile ? 'col-span-3 space-y-4' : 'lg:col-span-3 space-y-4'}>
+                  <div className="rounded-xl border border-[#cad6e8] bg-[#f7faff] p-3">
+                    <div className="mb-2 inline-flex items-center gap-2 rounded-r-md bg-[#0b3f86] px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-white">
+                      <FlaskConical className="h-3.5 w-3.5" /> Investigations
+                    </div>
+                    <ReadTextarea value={prescription?.tests} rows={8} placeholder="None" compact={forceDesktopColumnsOnMobile} />
+                  </div>
+
+                  <div className="rounded-xl border border-[#cad6e8] bg-[#f7faff] p-3">
+                    <div className="mb-2 inline-flex items-center gap-2 rounded-r-md bg-[#0b3f86] px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-white">
+                      <Stethoscope className="h-3.5 w-3.5" /> Diagnosis
+                    </div>
+                    <ReadTextarea value={prescription?.diagnosis} rows={8} placeholder="None" compact={forceDesktopColumnsOnMobile} />
+                  </div>
+                </div>
+
+                <div className={forceDesktopColumnsOnMobile ? 'col-span-9 space-y-4' : 'lg:col-span-9 space-y-4'}>
+                  <div>
+                    <div className="mb-2 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-5xl font-serif font-bold text-[#0d2f63]">Rx</span>
+                        <span className="text-lg font-bold uppercase text-[#0d2f63]">Prescription</span>
+                      </div>
+                      <div className="inline-flex items-center rounded-full border border-[#ccd8ea] bg-white p-1 text-[11px] font-semibold text-[#0d2f63]">
+                        <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 ${templateType === 'eye' ? 'text-slate-500' : 'bg-[#0b3f86] text-white'}`}>
+                          <span className="h-1.5 w-1.5 rounded-full bg-current" /> General
+                        </span>
+                        <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 ${templateType === 'eye' ? 'bg-[#0b3f86] text-white' : 'text-slate-500'}`}>
+                          <Eye className="h-3.5 w-3.5" /> Eye
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="overflow-hidden rounded-xl border border-[#c7d3e4]">
+                      <table className="w-full text-xs sm:text-sm">
+                        <thead className="bg-[#0b3f86] text-white">
+                          <tr>
+                            <th className="w-12 px-2 py-2 text-left">No.</th>
+                            <th className="px-2 py-2 text-left">Medicine</th>
+                            <th className="w-20 px-2 py-2 text-left">Dose</th>
+                            <th className="w-24 px-2 py-2 text-left">Frequency</th>
+                            <th className="w-20 px-2 py-2 text-left">Duration</th>
+                            <th className="w-36 px-2 py-2 text-left">Instruction</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {prescriptionRows.map((m, idx) => (
+                            <tr key={`${m.name || 'med'}-${idx}`} className="border-t border-[#dde5f0] bg-white">
+                              <td className="px-2 py-2 font-semibold text-slate-700">{idx + 1}</td>
+                              <td className="px-2 py-2 text-slate-800">{m.name || '—'}</td>
+                              <td className="px-2 py-2 text-slate-700">{m.dosage || '—'}</td>
+                              <td className="px-2 py-2 text-slate-700">{m.frequency || m.schedule || '—'}</td>
+                              <td className="px-2 py-2 text-slate-700">{m.duration || '—'}</td>
+                              <td className="px-2 py-2 text-slate-700">{m.instruction || 'None'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      <div className="border-t border-[#dde5f0] bg-white px-4 py-5">
+                        <div className="space-y-4">
+                          <div className="border-b border-dotted border-[#b9c7dc]" />
+                          <div className="border-b border-dotted border-[#b9c7dc]" />
+                          <div className="border-b border-dotted border-[#b9c7dc]" />
+                        </div>
+                        <div className="mt-3 rounded-md border border-dashed border-[#b9c7dc] py-2 text-center text-sm font-semibold text-[#0b3f86]">+ Add Medicine Row</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="mb-2 flex items-center gap-2 text-[#0d2f63]">
+                      <FileText className="h-4 w-4" />
+                      <span className="text-sm font-bold uppercase tracking-wide">Advice</span>
+                    </div>
+                    <div className="rounded-lg border border-[#d5deea] bg-[#f5f8fd] px-3 py-2.5 text-sm text-slate-800">
+                      <p className="mb-1 font-semibold text-slate-800">Emergency Note:</p>
+                      <p>{prescription?.instructions || 'If symptoms worsen or persist, seek emergency care immediately.'}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-end justify-between gap-4 border-t border-[#dbe3ef] pt-3">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-[#0d2f63]" />
+                      <span className="text-xs font-bold uppercase tracking-wide text-[#0d2f63]">Follow-up Date</span>
+                      <span className="min-w-[120px] rounded-md border border-[#cdd9ea] bg-[#f3f7fd] px-3 py-1 text-xs font-semibold text-slate-700">
+                        {prescription?.next_visit_date ? (nextVisitLabel || prescription.next_visit_date) : 'mm/dd/yyyy'}
+                      </span>
+                    </div>
+
+                    <div className="flex items-end gap-3 text-right">
+                      <div>
+                        <div className="mb-1 border-b border-[#0d2f63] pb-1 text-lg font-semibold italic text-[#0d2f63]">{doctorDisplayName}</div>
+                        <div className="text-xs text-slate-600">{doctorSubTitle}</div>
+                        <div className="text-xs text-slate-500">Reg. No: {doctorInfo?.registration_no || '123456'}</div>
+                      </div>
+                      <div className="flex h-14 w-14 items-center justify-center rounded-full border-4 border-[#0b3f86] bg-white p-2">
+                        <img src={logoSrc} alt="Seal" className="h-full w-full object-contain" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-5 text-xs text-slate-500">Created: {createdAtDateLabel || 'N/A'} {createdAtTimeLabel || ''} · ID #{prescription?.id || 'N/A'}</div>
+
+              <div className="mt-5 rounded-2xl bg-[#0b3f86] px-5 py-2.5 text-[11px] text-white">
+                <div className="grid grid-cols-3 divide-x divide-white/30">
+                  <div className="flex items-center justify-center gap-2 px-2"><ShieldCheck className="h-4 w-4" />Your Health, Our Priority</div>
+                  <div className="flex items-center justify-center gap-2 px-2"><HeartHandshake className="h-4 w-4" />Compassionate Care, Trusted Results</div>
+                  <div className="flex items-center justify-center gap-2 px-2"><Calendar className="h-4 w-4" />Thank You for Trusting Us</div>
+                </div>
+              </div>
+
+              <div className={forceDesktopColumnsOnMobile ? 'mt-4 flex flex-wrap gap-3 print:hidden' : 'mt-4 flex w-full flex-col gap-2 print:hidden sm:w-auto sm:flex-row sm:flex-wrap sm:gap-3'}>
                 <button
                   type="button"
                   onClick={onPrint}
@@ -307,8 +327,6 @@ export default function PrescriptionDocument({
             </div>
           </div>
         </div>
-      </div>
-      </div>
       </div>
     </div>
   );

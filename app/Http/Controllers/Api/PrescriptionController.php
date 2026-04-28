@@ -43,6 +43,7 @@ class PrescriptionController extends Controller
             'specialty_data'    => ['nullable', 'array'],
             'diagnosis'         => ['nullable', 'string', 'max:5000'],
             'medications'       => ['nullable', 'string', 'max:10000'],
+            'dose'             => ['nullable', 'string', 'max:10000'],
             'instructions'      => ['nullable', 'string', 'max:10000'],
             'tests'             => ['nullable', 'string', 'max:10000'],
             'next_visit_date'   => ['nullable', 'date'],
@@ -111,6 +112,7 @@ class PrescriptionController extends Controller
             'specialty_data'   => $validated['specialty_data'] ?? null,
             'diagnosis'        => trim($validated['diagnosis'] ?? ''),
             'medications'      => $validated['medications'] ?? '',
+            'dose'             => $validated['dose'] ?? null,
             'instructions'     => $validated['instructions'] ?? null,
             'tests'            => $validated['tests'] ?? null,
             'next_visit_date'  => $validated['next_visit_date'] ?? null,
@@ -196,6 +198,7 @@ class PrescriptionController extends Controller
         $validated = $request->validate([
             'diagnosis'         => ['nullable', 'string', 'max:5000'],
             'medications'       => ['nullable', 'string', 'max:10000'],
+            'dose'             => ['nullable', 'string', 'max:10000'],
             'instructions'      => ['nullable', 'string', 'max:10000'],
             'tests'             => ['nullable', 'string', 'max:10000'],
             'next_visit_date'   => ['nullable', 'date'],
@@ -213,6 +216,7 @@ class PrescriptionController extends Controller
         $prescription->update([
             'diagnosis'        => trim($validated['diagnosis'] ?? ''),
             'medications'      => $validated['medications'] ?? '',
+            'dose'             => $validated['dose'] ?? $prescription->dose,
             'instructions'     => $validated['instructions'] ?? null,
             'tests'            => $validated['tests'] ?? null,
             'next_visit_date'  => $validated['next_visit_date'] ?? null,

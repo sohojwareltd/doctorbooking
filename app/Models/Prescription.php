@@ -15,6 +15,7 @@ use Illuminate\Support\Str;
  * @property string|null $visit_type
  * @property string|null $diagnosis
  * @property string|null $medications
+ * @property string|null $dose
  * @property string|null $instructions
  * @property string|null $tests
  * @property \Illuminate\Support\Carbon|null $next_visit_date
@@ -44,6 +45,7 @@ class Prescription extends Model
         'specialty_data',
         'diagnosis',
         'medications',
+        'dose',
         'instructions',
         'tests',
         'next_visit_date',

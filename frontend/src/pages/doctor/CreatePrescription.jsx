@@ -7,6 +7,8 @@ import {
     Eye,
     FileText,
     FlaskConical,
+    HeartHandshake,
+    HeartPulse,
     Mail,
     MapPin,
     Phone,
@@ -14,6 +16,7 @@ import {
     Plus,
     RotateCcw,
     Save,
+    ShieldCheck,
     Stethoscope,
     Trash2,
     User,
@@ -124,7 +127,7 @@ const initialState = {
     medicines: [],
     investigations: {
         common: Object.fromEntries(COMMON_TESTS.map((t) => [t, false])),
-        custom: [''],
+        custom: ['CBC', 'ESR', 'X-ray'],
         notes: '',
     },
     advice: {
@@ -268,6 +271,11 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
     const chamberName = chamberInfo?.name || '';
     const chamberAddress = chamberInfo?.location || '';
     const chamberPhone = chamberInfo?.phone || '';
+    const chamberMapUrl = chamberInfo?.google_maps_url || '';
+    const chamberQrSrc = chamberMapUrl
+        ? `https://api.qrserver.com/v1/create-qr-code/?size=96x96&data=${encodeURIComponent(chamberMapUrl)}`
+        : '';
+    const doctorLogoSrc = authUser?.profile_picture || '/stethoscope-2.png';
 
     const [state, dispatch] = useReducer(reducer, initialState);
     const [submitting, setSubmitting] = useState(false);
@@ -300,15 +308,14 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                 (item) => normalizeMedicineName(item.name) === normalized,
             );
             if (exactCachedMatch) {
-                const fullName = [exactCachedMatch.name, exactCachedMatch.strength]
-                    .map((v) => String(v || '').trim())
-                    .filter(Boolean)
-                    .join(' ');
                 dispatch({
                     type: 'setArrayItem',
                     path: ['medicines'],
                     index: rowIndex,
-                    patch: { name: fullName || rawName, strength: '' },
+                    patch: {
+                        name: String(exactCachedMatch.name || rawName || '').trim(),
+                        strength: String(exactCachedMatch.strength || '').trim(),
+                    },
                 });
             }
             return;
@@ -355,15 +362,14 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
             );
 
             if (exactMatch) {
-                const fullName = [exactMatch.name, exactMatch.strength]
-                    .map((v) => String(v || '').trim())
-                    .filter(Boolean)
-                    .join(' ');
                 dispatch({
                     type: 'setArrayItem',
                     path: ['medicines'],
                     index: rowIndex,
-                    patch: { name: fullName || rawName, strength: '' },
+                    patch: {
+                        name: String(exactMatch.name || rawName || '').trim(),
+                        strength: String(exactMatch.strength || '').trim(),
+                    },
                 });
             }
         } catch {
@@ -494,9 +500,9 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                 const duration = String(m.duration || '').trim();
                 const instruction = String(m.instruction || '').trim();
                 const parts = [name];
-                if (strength) parts.push(strength);
+                if (strength) parts.push(`Dose: ${strength}`);
                 const details = [];
-                if (dosage) details.push(dosage);
+                if (dosage) details.push(`Frequency: ${dosage}`);
                 if (duration) details.push(duration);
                 if (instruction) details.push(instruction);
                 if (details.length) parts.push(`- ${details.join(' - ')}`);
@@ -504,6 +510,13 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
             })
             .filter(Boolean);
         return meds.join('\n').trim();
+    };
+
+    const buildDoseText = () => {
+        const doses = (state.medicines || [])
+            .filter((m) => String(m?.name || '').trim())
+            .map((m) => String(m?.strength || '').trim());
+        return doses.join('\n').trim();
     };
 
     const buildTestsText = () => {
@@ -551,6 +564,7 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
 
         const diagnosisText = buildDiagnosisText();
         const medicationsText = buildMedicationsText();
+        const doseText = buildDoseText();
         const testsText = buildTestsText();
         const instructionsText = buildInstructionsText();
         const specialtyData =
@@ -588,6 +602,7 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                     visit_date: state.visit.date,
                     diagnosis: diagnosisText,
                     medications: medicationsText,
+                    dose: doseText || null,
                     instructions: instructionsText || null,
                     tests: testsText || null,
                     next_visit_date: state.follow_up.date || null,
@@ -634,79 +649,76 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
             {/* Prescription Header Card - Like real prescription pad (Matching PrescriptionShow) */}
 
             <div>
-                <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+                <div className="overflow-hidden rounded-xl border border-slate-300 bg-[#f8fafc] shadow-sm">
+                    <div className="h-4 bg-[#0b3f86]" />
                     
                     {/* Prescription Header - Doctor left, Chamber right (matching PrescriptionShow) */}
-                    <div className="border-b border-slate-200">
-                        <div className="relative overflow-hidden bg-gradient-to-br from-[#071122] via-[#0d1f45] to-[#071122]">
-                            {/* Inset vignette shadow */}
-                            <div className="absolute inset-0 shadow-[inset_0_0_120px_rgba(0,0,0,0.7)]" />
-
-                            {/* Decorative stethoscope SVG watermark */}
-                            <div className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-[0.07] select-none">
-                                <svg viewBox="0 0 280 360" className="h-full w-auto" fill="none" stroke="white" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M 75 60 Q 140 18 205 60" strokeWidth="10" />
-                                    <path d="M 75 60 C 70 82 56 105 52 135" strokeWidth="8" />
-                                    <path d="M 205 60 C 210 82 224 105 228 135" strokeWidth="8" />
-                                    <path d="M 52 135 C 46 195 100 225 140 238" strokeWidth="8" />
-                                    <path d="M 228 135 C 234 195 180 225 140 238" strokeWidth="8" />
-                                    <path d="M 140 238 L 140 282" strokeWidth="10" />
-                                    <circle cx="140" cy="314" r="36" strokeWidth="12" />
-                                    <circle cx="140" cy="314" r="18" strokeWidth="5" />
-                                    <circle cx="140" cy="314" r="6" strokeWidth="4" fill="white" />
-                                    <ellipse cx="75" cy="54" rx="11" ry="8" strokeWidth="5" fill="white" />
-                                    <ellipse cx="205" cy="54" rx="11" ry="8" strokeWidth="5" fill="white" />
-                                </svg>
+                    <div className="border-b border-slate-300 bg-white">
+                        <div className="relative">
+                            <div className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-[0.05]">
+                                <Stethoscope className="h-48 w-48 text-[#0b3f86]" />
                             </div>
 
-                            <div className="relative z-10 grid grid-cols-2 divide-x divide-white/10 px-8 py-7">
+                            <div className="relative z-10 grid grid-cols-2 divide-x divide-slate-300 px-8 py-7">
                                 {/* Left — Doctor Info */}
                                 <div className="pr-8">
-                                    <div className="mb-1.5 flex items-center gap-1.5">
-                                        <Stethoscope className="h-3.5 w-3.5 text-blue-300" />
-                                        <span className="text-[10px] font-bold uppercase tracking-widest text-blue-300">Doctor</span>
-                                    </div>
-                                    <p className="text-2xl font-black tracking-tight text-white">
-                                        {authUser?.name || 'Doctor'}
-                                    </p>
-                                    <p className="mt-0.5 text-sm font-medium text-slate-300">
-                                        {doctorSpecialization || doctorDegree || 'MBBS, FCPS'}
-                                    </p>
-                                    <div className="mt-3 space-y-1.5">
-                                        {authUser?.phone ? (
-                                            <div className="flex items-center gap-1.5 text-sm text-slate-200">
-                                                <Phone className="h-3.5 w-3.5 shrink-0 text-blue-300" />
-                                                <span>{authUser.phone}</span>
+                                    <div className="flex items-start gap-3">
+                                        <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#cfd8e6] bg-white sm:h-20 sm:w-20">
+                                            <img src={doctorLogoSrc} alt="Doctor logo" className="h-full w-full object-contain" />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <div className="mb-1.5 flex items-center gap-1.5">
+                                                <Stethoscope className="h-3.5 w-3.5 text-[#0b3f86]" />
+                                                <span className="text-[10px] font-bold uppercase tracking-widest text-[#0b3f86]">Doctor</span>
                                             </div>
-                                        ) : null}
-                                        {authUser?.email ? (
-                                            <div className="flex items-center gap-1.5 text-sm text-slate-200">
-                                                <Mail className="h-3.5 w-3.5 shrink-0 text-blue-300" />
-                                                <span>{authUser.email}</span>
+                                            <p className="text-2xl font-black tracking-tight text-[#0d2f63]">
+                                                {authUser?.name || 'Doctor'}
+                                            </p>
+                                            <p className="mt-0.5 text-sm font-medium text-slate-600">
+                                                {doctorSpecialization || doctorDegree || 'MBBS, FCPS'}
+                                            </p>
+                                            <div className="mt-3 space-y-1.5">
+                                                {authUser?.phone ? (
+                                                    <div className="flex items-center gap-1.5 text-sm text-slate-700">
+                                                        <Phone className="h-3.5 w-3.5 shrink-0 text-[#0b3f86]" />
+                                                        <span>{authUser.phone}</span>
+                                                    </div>
+                                                ) : null}
+                                                {authUser?.email ? (
+                                                    <div className="flex items-center gap-1.5 text-sm text-slate-700">
+                                                        <Mail className="h-3.5 w-3.5 shrink-0 text-[#0b3f86]" />
+                                                        <span>{authUser.email}</span>
+                                                    </div>
+                                                ) : null}
                                             </div>
-                                        ) : null}
+                                        </div>
                                     </div>
                                 </div>
 
                                 {/* Right — Chamber Info */}
                                 <div className="pl-8 flex flex-col items-end">
                                     <div className="mb-1.5 flex items-center justify-end gap-1.5">
-                                        <span className="text-[10px] font-bold uppercase tracking-widest text-blue-300">Chamber</span>
-                                        {/* <MapPin className="h-3.5 w-3.5 text-blue-300" /> */}
+                                        <span className="text-[10px] font-bold uppercase tracking-widest text-[#0b3f86]">Chamber</span>
                                     </div>
-                                    <p className="text-2xl font-black tracking-tight text-white">
+                                    <p className="text-2xl font-black tracking-tight text-[#0d2f63]">
                                         {chamberName || 'Not set'}
                                     </p>
                                     {chamberAddress ? (
-                                        <div className="mt-2.5 flex items-start justify-end gap-1.5 text-sm text-slate-200">
+                                        <div className="mt-2.5 flex items-start justify-end gap-1.5 text-sm text-slate-700">
                                             <span>{chamberAddress}</span>
-                                            {/* <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-blue-300" /> */}
                                         </div>
                                     ) : null}
                                     {chamberPhone ? (
-                                        <div className="mt-1.5 flex items-center justify-end gap-1.5 text-sm text-slate-200">
+                                        <div className="mt-1.5 flex items-center justify-end gap-1.5 text-sm text-slate-700">
                                             <span>{chamberPhone}</span>
-                                            {/* <Phone className="h-3.5 w-3.5 shrink-0 text-blue-300" /> */}
+                                        </div>
+                                    ) : null}
+                                    {chamberQrSrc ? (
+                                        <div className="mt-2 text-center">
+                                            <div className="inline-flex overflow-hidden rounded border border-slate-300 bg-white p-1">
+                                                <img src={chamberQrSrc} alt="Location QR" className="h-16 w-16 object-contain" />
+                                            </div>
+                                            <p className="mt-1 text-[10px] font-semibold text-slate-600">Scan for Location</p>
                                         </div>
                                     ) : null}
                                 </div>
@@ -715,62 +727,70 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                     </div>
 
                     {/* Patient Info Strip - Inline underline style (matching DoctorPrescriptions modal) */}
-                    <div className="border-b border-slate-200 bg-white px-8 py-4">
-                        <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
+                    <div className="border-b border-slate-300 bg-[#f8fbff] px-8 py-4">
+                        <div className="grid grid-cols-5 divide-x divide-slate-300 gap-0">
                             {/* Name */}
-                            <div className="flex w-full min-w-[180px] max-w-[360px] items-end gap-2">
-                                <span className="shrink-0 text-xs font-bold text-slate-600">Name:</span>
-                                <input
-                                    className="flex-1 rounded-md border border-transparent border-b-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 placeholder-slate-300 hover:border-slate-300 focus:border-[#2D3A74] focus:outline-none"
-                                    value={state.patient.name}
-                                    onChange={(e) => dispatch({ type: 'setField', path: ['patient', 'name'], value: e.target.value })}
-                                    placeholder="Patient name"
-                                />
+                            <div className="min-w-0 pr-2">
+                                <div className="flex items-center gap-2 border-b border-dotted border-[#9aa8be] pb-1">
+                                    <span className="shrink-0 text-xs font-bold text-slate-600">Name:</span>
+                                    <input
+                                        className="flex-1 border-0 bg-transparent px-0 py-0.5 text-sm text-slate-900 placeholder-slate-300 focus:outline-none"
+                                        value={state.patient.name}
+                                        onChange={(e) => dispatch({ type: 'setField', path: ['patient', 'name'], value: e.target.value })}
+                                        placeholder="Patient name"
+                                    />
+                                </div>
                             </div>
                             {/* Age */}
-                            <div className="flex items-end gap-1.5">
-                                <span className="shrink-0 text-xs font-bold text-slate-600">Age:</span>
-                                <div className="flex items-end gap-1.5">
-                                    <input
-                                        inputMode="numeric"
-                                        className="w-16 rounded-md border border-transparent border-b-slate-300 bg-white px-2.5 py-2 text-center text-base text-slate-900 placeholder-slate-300 hover:border-slate-300 focus:border-[#2D3A74] focus:outline-none"
-                                        value={state.patient.age_value}
-                                        onChange={(e) => dispatch({ type: 'setField', path: ['patient', 'age_value'], value: e.target.value })}
-                                        placeholder="—"
-                                    />
-                                    <select
-                                        className="min-w-[64px] rounded-md border border-transparent border-b-slate-300 bg-white px-2.5 py-2 text-sm text-slate-700 hover:border-slate-300 focus:border-[#2D3A74] focus:outline-none"
-                                        value={state.patient.age_unit}
-                                        onChange={(e) => dispatch({ type: 'setField', path: ['patient', 'age_unit'], value: e.target.value })}
-                                    >
-                                        <option value="years">yr</option>
-                                        <option value="months">mo</option>
-                                    </select>
+                            <div className="px-2">
+                                <div className="flex items-center justify-center gap-1.5 border-b border-dotted border-[#9aa8be] pb-1">
+                                    <span className="shrink-0 text-xs font-bold text-slate-600">Age:</span>
+                                    <div className="flex items-center gap-1.5">
+                                        <input
+                                            inputMode="numeric"
+                                            className="w-12 border-0 bg-transparent px-1.5 py-0.5 text-center text-sm text-slate-900 placeholder-slate-300 focus:outline-none"
+                                            value={state.patient.age_value}
+                                            onChange={(e) => dispatch({ type: 'setField', path: ['patient', 'age_value'], value: e.target.value })}
+                                            placeholder="—"
+                                        />
+                                        <select
+                                            className="min-w-[54px] border-0 bg-transparent px-1 py-0.5 text-sm text-slate-700 focus:outline-none"
+                                            value={state.patient.age_unit}
+                                            onChange={(e) => dispatch({ type: 'setField', path: ['patient', 'age_unit'], value: e.target.value })}
+                                        >
+                                            <option value="years">yr</option>
+                                            <option value="months">mo</option>
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
                             {/* Gender */}
-                            <div className="flex items-end gap-1.5">
-                                <span className="shrink-0 text-xs font-bold text-slate-600">Gender:</span>
-                                <select
-                                    className="w-32 rounded-md border border-transparent border-b-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 hover:border-slate-300 focus:border-[#2D3A74] focus:outline-none"
-                                    value={state.patient.gender}
-                                    onChange={(e) => dispatch({ type: 'setField', path: ['patient', 'gender'], value: e.target.value })}
-                                >
-                                    <option value="">—</option>
-                                    <option value="male">Male</option>
-                                    <option value="female">Female</option>
-                                    <option value="other">Other</option>
-                                </select>
+                            <div className="px-2">
+                                <div className="flex items-center justify-center gap-1.5 border-b border-dotted border-[#9aa8be] pb-1">
+                                    <span className="shrink-0 text-xs font-bold text-slate-600">Gender:</span>
+                                    <select
+                                        className="w-24 border-0 bg-transparent px-1 py-0.5 text-sm text-slate-900 focus:outline-none"
+                                        value={state.patient.gender}
+                                        onChange={(e) => dispatch({ type: 'setField', path: ['patient', 'gender'], value: e.target.value })}
+                                    >
+                                        <option value="">—</option>
+                                        <option value="male">Male</option>
+                                        <option value="female">Female</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                </div>
                             </div>
                             {/* Contact */}
-                            <div className="flex items-end gap-1.5">
-                                <Phone className="h-3 w-3 shrink-0 text-slate-400 mb-1" />
-                                <input
-                                    className="w-36 rounded-md border border-transparent border-b-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 placeholder-slate-300 hover:border-slate-300 focus:border-[#2D3A74] focus:outline-none"
-                                    value={state.patient.contact}
-                                    onChange={(e) => dispatch({ type: 'setField', path: ['patient', 'contact'], value: e.target.value })}
-                                    placeholder="Contact"
-                                />
+                            <div className="col-span-2 px-2">
+                                <div className="mx-auto flex w-full max-w-[220px] items-center gap-1.5 border-b border-dotted border-[#9aa8be] pb-1">
+                                    <Phone className="h-3 w-3 shrink-0 text-slate-400" />
+                                    <input
+                                        className="w-full border-0 bg-transparent px-0 py-0.5 text-sm text-slate-900 placeholder-slate-300 focus:outline-none"
+                                        value={state.patient.contact}
+                                        onChange={(e) => dispatch({ type: 'setField', path: ['patient', 'contact'], value: e.target.value })}
+                                        placeholder="Phone"
+                                    />
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -778,7 +798,7 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                     {/* Form Main Content - Real Prescription Pad Layout */}
                     <div className="min-h-[500px] bg-white p-8 pb-12">
                         <form onSubmit={(e) => e.preventDefault()}>
-                            <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-4 sm:flex-row sm:items-center sm:justify-between">
+                            {/* <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-4 sm:flex-row sm:items-center sm:justify-between">
                                 <div>
                                     <div className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">Prescription Template</div>
                                     <div className="mt-1 text-sm text-slate-600">
@@ -817,201 +837,176 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                         onChange={(nextValue) => dispatch({ type: 'setSpecialtyData', value: nextValue })}
                                     />
                                 </div>
-                            ) : null}
+                            ) : null} */}
 
                             {/* Prescription Pad Layout - Two Column Grid */}
                             <div className="grid grid-cols-12 gap-8">
                                 
-                                {/* Left Column - Narrow (Tests Top, Diagnosis Bottom) */}
+                                {/* Left Column - Narrow (Investigations and Diagnosis Mirror) */}
                                 <div className="col-span-3 space-y-6 border-r-2 border-dashed border-slate-200 pr-8">
-                                    
-                                    {/* Tests Section - Top Right */}
-                                    <div>
-                                        <div className="mb-3 flex items-center gap-2 border-b border-slate-200 pb-2">
-                                            <FlaskConical className="h-4 w-4 text-[#3556a6]" />
-                                            <span className="text-xs font-bold uppercase tracking-wider text-slate-700">Investigations</span>
+                                    <div className="flex min-h-[250px] flex-col rounded-xl border border-[#cad6e8] bg-[#f2f5fa] p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
+                                        <div className="mb-3 inline-flex items-center gap-2 bg-[#0b4fa3] px-3 py-1.5 text-sm font-bold uppercase tracking-wide text-white" style={{ clipPath: 'polygon(0 0, 92% 0, 100% 100%, 0 100%)' }}>
+                                            <FlaskConical className="h-4 w-4" />
+                                            Investigations
                                         </div>
-                                        
-                                        {/* Common Tests */}
-                                        <div className="mb-3">
-                                            <div className="mb-2 text-xs font-semibold text-slate-600">Common Tests</div>
-                                            <div className="grid grid-cols-2 gap-1.5">
-                                                {COMMON_TESTS.map((test) => (
-                                                    <label key={test} className="flex items-center gap-1.5 cursor-pointer hover:bg-slate-50 p-1 rounded">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={state.investigations.common[test] || false}
-                                                            onChange={(e) => dispatch({
-                                                                type: 'setNestedField',
-                                                                path: ['investigations', 'common', test],
-                                                                value: e.target.checked,
-                                                            })}
-                                                            className="rounded"
-                                                        />
-                                                        <span className="text-xs">{test}</span>
-                                                    </label>
-                                                ))}
+
+                                        <div className="space-y-1 px-1">
+                                            {(state.investigations.custom || []).map((test, idx) => (
+                                                <div key={idx} className="group flex items-center gap-1.5 border-b border-dotted border-[#9aa8be] pb-1">
+                                                    <span className="text-slate-700">•</span>
+                                                    <input
+                                                        className="w-full border-0 bg-transparent px-0 py-0.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none"
+                                                        value={test}
+                                                        onChange={(e) => dispatch({
+                                                            type: 'setCustomTest',
+                                                            index: idx,
+                                                            value: e.target.value,
+                                                        })}
+                                                        placeholder="Add test"
+                                                    />
+                                                    {(state.investigations.custom || []).length > 1 ? (
+                                                        <button
+                                                            type="button"
+                                                            className="rounded border border-rose-300 bg-rose-50 px-1.5 py-0 text-[11px] text-rose-800 opacity-0 transition group-hover:opacity-100"
+                                                            onClick={() => dispatch({ type: 'removeCustomTest', index: idx })}
+                                                        >
+                                                            ×
+                                                        </button>
+                                                    ) : null}
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        {/* <div className="mt-3 flex-1 space-y-3 px-1">
+                                            <div className="border-b border-dotted border-[#9aa8be]" />
+                                            <div className="border-b border-dotted border-[#9aa8be]" />
+                                            <div className="border-b border-dotted border-[#9aa8be]" />
+                                            <div className="border-b border-dotted border-[#9aa8be]" />
+                                        </div> */}
+
+                                        <button
+                                            type="button"
+                                            className="mt-3 self-start text-xs font-semibold text-[#0b4fa3] hover:underline"
+                                            onClick={() => dispatch({ type: 'addCustomTest' })}
+                                        >
+                                            + Add Test
+                                        </button>
+                                    </div>
+
+                                    <div className="flex items-center gap-3 px-1 text-[#4d6289]">
+                                        <div className="h-px flex-1 bg-[#7b8fac]" />
+                                        <HeartPulse className="h-4 w-4" />
+                                        <div className="h-px flex-1 bg-[#7b8fac]" />
+                                    </div>
+
+                                    <div className="flex min-h-[250px] flex-col rounded-xl border border-[#cad6e8] bg-[#f2f5fa] p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
+                                        <div className="mb-3 inline-flex items-center gap-2 bg-[#0b4fa3] px-3 py-1.5 text-sm font-bold uppercase tracking-wide text-white" style={{ clipPath: 'polygon(0 0, 92% 0, 100% 100%, 0 100%)' }}>
+                                            <ClipboardList className="h-4 w-4" />
+                                            Diagnosis
+                                        </div>
+
+                                        <div className="space-y-1 px-1">
+                                            <div className="group flex items-center gap-2 border-b border-dotted border-[#9aa8be] pb-1">
+                                                <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-600">P</span>
+                                                <input
+                                                    className="w-full border-0 bg-transparent px-0 py-0.5 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none"
+                                                    value={state.diagnosis.provisional}
+                                                    onChange={(e) => dispatch({
+                                                        type: 'setField',
+                                                        path: ['diagnosis', 'provisional'],
+                                                        value: e.target.value,
+                                                    })}
+                                                    placeholder="Provisional diagnosis"
+                                                />
                                             </div>
-                                        </div>
-                                        
-                                        {/* Custom Tests */}
-                                        <div>
-                                            <div className="mb-2 text-xs font-semibold text-slate-600">Custom Tests</div>
-                                            <div className="space-y-1.5">
-                                                {(state.investigations.custom || []).map((test, idx) => (
-                                                    <div key={idx} className="flex gap-1">
-                                                        <input
-                                                            className={medicineInputClass}
-                                                            value={test}
-                                                            onChange={(e) => dispatch({
-                                                                type: 'setCustomTest',
-                                                                index: idx,
-                                                                value: e.target.value,
-                                                            })}
-                                                            placeholder="Add test"
-                                                        />
-                                                        {(state.investigations.custom || []).length > 1 && (
-                                                            <button
-                                                                type="button"
-                                                                className="rounded border border-rose-300 bg-rose-50 px-2 py-1 text-xs text-rose-800 hover:bg-rose-100"
-                                                                onClick={() => dispatch({ type: 'removeCustomTest', index: idx })}
-                                                            >
-                                                                ×
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                ))}
-                                                <button
-                                                    type="button"
-                                                    className="w-full rounded border border-[#d7dfec] bg-[#edf1fb] px-2 py-1 text-xs font-semibold text-[#3556a6] transition hover:bg-[#e4eafb]"
-                                                    onClick={() => dispatch({ type: 'addCustomTest' })}
-                                                >
-                                                    + Add Test
-                                                </button>
+                                            <div className="group flex items-center gap-2 border-b border-dotted border-[#9aa8be] pb-1">
+                                                <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-600">F</span>
+                                                <input
+                                                    className="w-full border-0 bg-transparent px-0 py-0.5 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none"
+                                                    value={state.diagnosis.final}
+                                                    onChange={(e) => dispatch({
+                                                        type: 'setField',
+                                                        path: ['diagnosis', 'final'],
+                                                        value: e.target.value,
+                                                    })}
+                                                    placeholder="Final diagnosis"
+                                                />
                                             </div>
                                         </div>
 
-                                        <div className="mt-3 border-t border-slate-200 pt-3">
-                                            <div className="mb-2 text-xs font-semibold text-slate-600">Write Tests</div>
-                                            <textarea
-                                                className="w-full rounded-md border border-slate-200 bg-slate-50/50 px-2 py-1.5 text-xs text-slate-900 doc-input-focus"
-                                                rows={4}
-                                                value={state.investigations.notes}
-                                                onChange={(e) => dispatch({
-                                                    type: 'setField',
-                                                    path: ['investigations', 'notes'],
-                                                    value: e.target.value,
-                                                })}
-                                                placeholder="Write investigation notes or test instructions"
-                                            />
-                                            <p className="mt-1 text-[10px] text-slate-500">You can use checklist above or write tests manually here.</p>
-                                        </div>
+                                        {/* <div className="mt-3 flex-1 space-y-3 px-1">
+                                            <div className="border-b border-dotted border-[#9aa8be]" />
+                                            <div className="border-b border-dotted border-[#9aa8be]" />
+                                            <div className="border-b border-dotted border-[#9aa8be]" />
+                                        </div> */}
                                     </div>
-                                    
-                                    {/* Diagnosis & Complaints Section - Bottom Right */}
-                                    <div>
-                                        <div className="mb-3 flex items-center gap-2 border-b border-slate-200 pb-2">
-                                            <Stethoscope className="h-4 w-4 text-[#3556a6]" />
-                                            <span className="text-xs font-bold uppercase tracking-wider text-slate-700">Diagnosis</span>
-                                        </div>
-                                        
-                                        {/* Provisional Diagnosis */}
-                                        <div className="mb-3">
-                                            <label className="mb-1 block text-xs font-semibold text-slate-600">Provisional</label>
-                                            <textarea
-                                                className="w-full rounded-md border border-slate-200 bg-slate-50/50 px-2 py-1.5 text-xs text-slate-900 doc-input-focus"
-                                                rows={2}
-                                                value={state.diagnosis.provisional}
-                                                onChange={(e) => dispatch({
-                                                    type: 'setField',
-                                                    path: ['diagnosis', 'provisional'],
-                                                    value: e.target.value,
-                                                })}
-                                                placeholder="Initial diagnosis"
-                                            />
-                                        </div>
-                                        
-                                        {/* Final Diagnosis */}
-                                        <div className="mb-3">
-                                            <label className="mb-1 block text-xs font-semibold text-slate-600">Final</label>
-                                            <textarea
-                                                className="w-full rounded-md border border-slate-200 bg-slate-50/50 px-2 py-1.5 text-xs text-slate-900 doc-input-focus"
-                                                rows={2}
-                                                value={state.diagnosis.final}
-                                                onChange={(e) => dispatch({
-                                                    type: 'setField',
-                                                    path: ['diagnosis', 'final'],
-                                                    value: e.target.value,
-                                                })}
-                                                placeholder="Confirmed diagnosis"
-                                            />
-                                        </div>
-                                        
-                                        {/* Chief Complaints */}
-                                        <div>
-                                            <div className="mb-2 flex items-center justify-between">
-                                                <label className="text-xs font-semibold text-slate-600">Complaints</label>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => dispatch({
-                                                        type: 'addArrayItem',
-                                                        section: 'complaints',
-                                                        item: emptyComplaint(),
-                                                    })}
-                                                    className="text-[10px] text-[#3556a6] hover:underline"
-                                                >
-                                                    + Add
-                                                </button>
-                                            </div>
-                                            <div className="space-y-1.5">
-                                                {(state.complaints || []).map((c, idx) => (
-                                                    <div key={idx} className="space-y-1 rounded border border-slate-200 bg-white p-1.5">
-                                                        <input
-                                                            className="w-full rounded border border-slate-200 bg-slate-50/50 px-1.5 py-1 text-xs text-slate-900 doc-input-focus"
-                                                            value={c.description}
-                                                            onChange={(e) => dispatch({
-                                                                type: 'setArrayItem',
-                                                                path: ['complaints'],
-                                                                index: idx,
-                                                                patch: { description: e.target.value },
-                                                            })}
-                                                            placeholder="Complaint"
-                                                        />
-                                                        <input
-                                                            className="w-full rounded border border-slate-200 bg-slate-50/50 px-1.5 py-1 text-xs text-slate-900 doc-input-focus"
-                                                            value={c.duration}
-                                                            onChange={(e) => dispatch({
-                                                                type: 'setArrayItem',
-                                                                path: ['complaints'],
-                                                                index: idx,
-                                                                patch: { duration: e.target.value },
-                                                            })}
-                                                            placeholder="Duration"
-                                                        />
-                                                        {(state.complaints || []).length > 1 && (
-                                                            <button
-                                                                type="button"
-                                                                className="w-full rounded border border-rose-300 bg-rose-50 px-1 py-0.5 text-[10px] text-rose-800 hover:bg-rose-100"
-                                                                onClick={() => dispatch({
-                                                                    type: 'removeArrayItem',
-                                                                    section: 'complaints',
+
+                                    <details className="rounded-lg border border-slate-200 bg-white/70 p-2.5">
+                                        <summary className="cursor-pointer text-xs font-semibold text-slate-600">More clinical fields</summary>
+                                        <div className="mt-3 space-y-3">
+                                            <div>
+                                                <div className="mb-2 flex items-center justify-between">
+                                                    <label className="text-xs font-semibold text-slate-600">Complaints</label>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => dispatch({
+                                                            type: 'addArrayItem',
+                                                            section: 'complaints',
+                                                            item: emptyComplaint(),
+                                                        })}
+                                                        className="text-[10px] text-[#3556a6] hover:underline"
+                                                    >
+                                                        + Add
+                                                    </button>
+                                                </div>
+                                                <div className="space-y-1.5">
+                                                    {(state.complaints || []).map((c, idx) => (
+                                                        <div key={idx} className="space-y-1 rounded border border-slate-200 bg-white p-1.5">
+                                                            <input
+                                                                className="w-full rounded border border-slate-200 bg-slate-50/50 px-1.5 py-1 text-xs text-slate-900 doc-input-focus"
+                                                                value={c.description}
+                                                                onChange={(e) => dispatch({
+                                                                    type: 'setArrayItem',
+                                                                    path: ['complaints'],
                                                                     index: idx,
-                                                                    min: 1,
+                                                                    patch: { description: e.target.value },
                                                                 })}
-                                                            >
-                                                                Remove
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                ))}
+                                                                placeholder="Complaint"
+                                                            />
+                                                            <input
+                                                                className="w-full rounded border border-slate-200 bg-slate-50/50 px-1.5 py-1 text-xs text-slate-900 doc-input-focus"
+                                                                value={c.duration}
+                                                                onChange={(e) => dispatch({
+                                                                    type: 'setArrayItem',
+                                                                    path: ['complaints'],
+                                                                    index: idx,
+                                                                    patch: { duration: e.target.value },
+                                                                })}
+                                                                placeholder="Duration"
+                                                            />
+                                                            {(state.complaints || []).length > 1 && (
+                                                                <button
+                                                                    type="button"
+                                                                    className="w-full rounded border border-rose-300 bg-rose-50 px-1 py-0.5 text-[10px] text-rose-800 hover:bg-rose-100"
+                                                                    onClick={() => dispatch({
+                                                                        type: 'removeArrayItem',
+                                                                        section: 'complaints',
+                                                                        index: idx,
+                                                                        min: 1,
+                                                                    })}
+                                                                >
+                                                                    Remove
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
                                             </div>
-                                        </div>
-                                        
-                                        {state.template_type !== 'eye' ? (
-                                            <div className="mt-3 border-t border-slate-200 pt-3">
-                                                <div className="mb-2 text-xs font-semibold text-slate-600">Vitals</div>
-                                                <div className="grid grid-cols-2 gap-1.5">
-                                                    <div>
+
+                                            {state.template_type !== 'eye' ? (
+                                                <div className="border-t border-slate-200 pt-3">
+                                                    <div className="mb-2 text-xs font-semibold text-slate-600">Vitals</div>
+                                                    <div className="grid grid-cols-2 gap-1.5">
                                                         <input
                                                             className="w-full rounded border border-slate-200 bg-slate-50/50 px-1.5 py-1 text-xs text-slate-900 doc-input-focus"
                                                             value={state.exam.bp}
@@ -1022,8 +1017,6 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                                             })}
                                                             placeholder="BP"
                                                         />
-                                                    </div>
-                                                    <div>
                                                         <input
                                                             className="w-full rounded border border-slate-200 bg-slate-50/50 px-1.5 py-1 text-xs text-slate-900 doc-input-focus"
                                                             value={state.exam.pulse}
@@ -1034,8 +1027,6 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                                             })}
                                                             placeholder="Pulse"
                                                         />
-                                                    </div>
-                                                    <div>
                                                         <input
                                                             className="w-full rounded border border-slate-200 bg-slate-50/50 px-1.5 py-1 text-xs text-slate-900 doc-input-focus"
                                                             value={state.exam.temperature}
@@ -1046,8 +1037,6 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                                             })}
                                                             placeholder="Temp"
                                                         />
-                                                    </div>
-                                                    <div>
                                                         <input
                                                             className="w-full rounded border border-slate-200 bg-slate-50/50 px-1.5 py-1 text-xs text-slate-900 doc-input-focus"
                                                             value={state.exam.spo2}
@@ -1060,9 +1049,9 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                                         />
                                                     </div>
                                                 </div>
-                                            </div>
-                                        ) : null}
-                                    </div>
+                                            ) : null}
+                                        </div>
+                                    </details>
                                 </div>
 
                                 {/* Right Column - Wide (Medicine Main, Advice Bottom) */}
@@ -1070,138 +1059,157 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                     
                                     {/* Rx Symbol and Medications - Main Area */}
                                     <div>
-                                        <div className="mb-4 flex items-start gap-3">
-                                            <div className="text-5xl font-serif font-bold italic text-slate-800">℞</div>
-                                            <div className="flex-1 pt-2">
-                                                {/* Medicine Rows - Dynamic */}
-                                                <div className="space-y-2">
-                                                    {(state.medicines || []).map((m, idx) => {
-                                                        const normalizedMedicineName = normalizeMedicineName(m.name);
-                                                        const matchedSuggestions = medicineMatchesByRow[idx] || [];
-                                                        const hasMedicineMatches = matchedSuggestions.length > 0;
-                                                        const showMedicineMatchDropdown = focusedMedicineIndex === idx && hasMedicineMatches;
+                                        <div className="mb-2 flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-5xl font-serif font-bold text-[#0d2f63]">Rx</span>
+                                                <span className="text-2xl font-bold uppercase tracking-wide text-[#0d2f63]">Prescription</span>
+                                            </div>
+                                            <div className="inline-flex items-center rounded-full border border-[#ccd8ea] bg-white p-1 text-[11px] font-semibold text-[#0d2f63]">
+                                                <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 ${state.template_type === 'eye' ? 'text-slate-500' : 'bg-[#0b3f86] text-white'}`}>
+                                                    <span className="h-1.5 w-1.5 rounded-full bg-current" /> General
+                                                </span>
+                                                <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 ${state.template_type === 'eye' ? 'bg-[#0b3f86] text-white' : 'text-slate-500'}`}>
+                                                    <Eye className="h-3.5 w-3.5" /> Eye
+                                                </span>
+                                            </div>
+                                        </div>
 
-                                                        return (
-                                                        <div key={idx} className="group/med flex items-start gap-2 rounded-lg border border-slate-200 bg-white p-2.5 shadow-sm transition hover:border-[#9fb7ea] hover:shadow">
-                                                            <span className="mt-1 text-xs font-bold text-slate-400">{idx + 1}.</span>
-                                                            <div className="flex-1 grid grid-cols-3 gap-2">
-                                                                <div className="relative">
-                                                                    <input
-                                                                        className="w-full rounded border border-slate-200 bg-slate-50/50 py-1.5 text-sm text-slate-900 doc-input-focus"
-                                                                        style={{ paddingLeft: '12px', paddingRight: '12px' }}
-                                                                        value={m.name}
-                                                                        onFocus={() => {
-                                                                            setFocusedMedicineIndex(idx);
-                                                                            void queryMedicineMatches(m.name, idx);
-                                                                        }}
-                                                                        onBlur={() => {
-                                                                            window.setTimeout(() => {
-                                                                                setFocusedMedicineIndex((current) => (current === idx ? null : current));
-                                                                            }, 120);
-                                                                        }}
-                                                                        onChange={(e) => {
-                                                                            const value = e.target.value;
-                                                                            const patch = { name: value, strength: '' };
-                                                                            dispatch({
-                                                                                type: 'setArrayItem',
-                                                                                path: ['medicines'],
-                                                                                index: idx,
-                                                                                patch,
-                                                                            });
-                                                                            void queryMedicineMatches(value, idx);
-                                                                        }}
-                                                                        placeholder="Search medicine name"
-                                                                    />
-                                                                    {showMedicineMatchDropdown ? (
-                                                                        <div className="absolute left-0 right-0 z-20 mt-1 rounded-md border border-[#c7d6f7] bg-white shadow-lg">
-                                                                            {matchedSuggestions.slice(0, 8).map((med, optionIdx) => (
-                                                                                <button
-                                                                                    key={`${med.id ?? med.name}-${med.strength}-${optionIdx}`}
-                                                                                    type="button"
-                                                                                    className="flex w-full items-center justify-between border-b border-slate-100 px-3 py-2 text-left text-xs last:border-b-0 hover:bg-[#edf2ff]"
-                                                                                    onMouseDown={(event) => {
-                                                                                        event.preventDefault();
-                                                                                        dispatch({
-                                                                                            type: 'setArrayItem',
-                                                                                            path: ['medicines'],
-                                                                                            index: idx,
-                                                                                            patch: {
-                                                                                                name: [med.name, med.strength]
-                                                                                                    .map((v) => String(v || '').trim())
-                                                                                                    .filter(Boolean)
-                                                                                                    .join(' '),
-                                                                                                strength: '',
-                                                                                            },
-                                                                                        });
-                                                                                        setFocusedMedicineIndex(null);
-                                                                                    }}
-                                                                                >
-                                                                                    <span className="font-semibold text-slate-800">{med.name}</span>
-                                                                                    <span className="text-slate-500">{med.strength || 'No strength'}</span>
-                                                                                </button>
-                                                                            ))}
-                                                                        </div>
-                                                                    ) : null}
-                                                                    {normalizedMedicineName && !hasMedicineMatches ? (
-                                                                        <p className="mt-1 text-[11px] font-medium text-amber-700">No medicine match found.</p>
-                                                                    ) : null}
+                                        <div className="overflow-hidden rounded-xl border border-[#c7d3e4] bg-white">
+                                            <div className="grid grid-cols-12 bg-[#0b3f86] px-2 py-2 text-[11px] font-bold uppercase tracking-[0.08em] text-white">
+                                                <div className="col-span-1">No.</div>
+                                                <div className="col-span-4">Medicine</div>
+                                                <div className="col-span-2">Dose</div>
+                                                <div className="col-span-2">Frequency</div>
+                                                <div className="col-span-1">Duration</div>
+                                                <div className="col-span-2">Instruction</div>
+                                            </div>
+
+                                            <div className="space-y-1 p-2">
+                                                {(state.medicines || []).map((m, idx) => {
+                                                    const normalizedMedicineName = normalizeMedicineName(m.name);
+                                                    const matchedSuggestions = medicineMatchesByRow[idx] || [];
+                                                    const hasMedicineMatches = matchedSuggestions.length > 0;
+                                                    const showMedicineMatchDropdown = focusedMedicineIndex === idx && hasMedicineMatches;
+
+                                                    return (
+                                                    <div key={idx} className="grid grid-cols-12 items-center gap-2 border-b border-dotted border-[#b9c7dc] pb-1">
+                                                        <div className="col-span-1 text-center text-sm font-bold text-slate-500">{idx + 1}</div>
+                                                        <div className="col-span-4 relative">
+                                                            <input
+                                                                className="w-full border-0 bg-transparent px-0 py-0.5 text-sm text-slate-900 focus:outline-none"
+                                                                value={m.name}
+                                                                onFocus={() => {
+                                                                    setFocusedMedicineIndex(idx);
+                                                                    void queryMedicineMatches(m.name, idx);
+                                                                }}
+                                                                onBlur={() => {
+                                                                    window.setTimeout(() => {
+                                                                        setFocusedMedicineIndex((current) => (current === idx ? null : current));
+                                                                    }, 120);
+                                                                }}
+                                                                onChange={(e) => {
+                                                                    const value = e.target.value;
+                                                                    const patch = { name: value, strength: '' };
+                                                                    dispatch({
+                                                                        type: 'setArrayItem',
+                                                                        path: ['medicines'],
+                                                                        index: idx,
+                                                                        patch,
+                                                                    });
+                                                                    void queryMedicineMatches(value, idx);
+                                                                }}
+                                                                placeholder="Medicine"
+                                                            />
+                                                            {showMedicineMatchDropdown ? (
+                                                                <div className="absolute left-0 right-0 z-20 mt-1 rounded-md border border-[#c7d6f7] bg-white shadow-lg">
+                                                                    {matchedSuggestions.slice(0, 8).map((med, optionIdx) => (
+                                                                        <button
+                                                                            key={`${med.id ?? med.name}-${med.strength}-${optionIdx}`}
+                                                                            type="button"
+                                                                            className="flex w-full items-center justify-between border-b border-slate-100 px-3 py-2 text-left text-xs last:border-b-0 hover:bg-[#edf2ff]"
+                                                                            onMouseDown={(event) => {
+                                                                                event.preventDefault();
+                                                                                dispatch({
+                                                                                    type: 'setArrayItem',
+                                                                                    path: ['medicines'],
+                                                                                    index: idx,
+                                                                                    patch: {
+                                                                                        name: String(med.name || '').trim(),
+                                                                                        strength: String(med.strength || '').trim(),
+                                                                                    },
+                                                                                });
+                                                                                setFocusedMedicineIndex(null);
+                                                                            }}
+                                                                        >
+                                                                            <span className="font-semibold text-slate-800">{med.name}</span>
+                                                                            <span className="text-slate-500">{med.strength || 'No strength'}</span>
+                                                                        </button>
+                                                                    ))}
                                                                 </div>
-                                                                {/* <input
-                                                                    className="rounded border border-slate-200 bg-slate-50/50 px-3 py-1.5 text-sm text-slate-900 doc-input-focus"
-                                                                    value={m.strength}
-                                                                    onChange={(e) => dispatch({
+                                                            ) : null}
+                                                            {normalizedMedicineName && !hasMedicineMatches ? (
+                                                                <p className="mt-1 text-[11px] font-medium text-amber-700">No medicine match found.</p>
+                                                            ) : null}
+                                                        </div>
+                                                        <div className="col-span-2">
+                                                            <input
+                                                                className="w-full border-0 bg-transparent px-0 py-0.5 text-sm text-slate-900 focus:outline-none"
+                                                                value={m.strength}
+                                                                onChange={(e) => dispatch({
+                                                                    type: 'setArrayItem',
+                                                                    path: ['medicines'],
+                                                                    index: idx,
+                                                                    patch: { strength: e.target.value },
+                                                                })}
+                                                                placeholder="Dose"
+                                                            />
+                                                        </div>
+                                                        <div className="col-span-2">
+                                                            <input
+                                                                className="w-full border-0 bg-transparent px-0 py-0.5 text-sm text-slate-900 focus:outline-none"
+                                                                value={m.dosage}
+                                                                onChange={(e) => dispatch({
+                                                                    type: 'setArrayItem',
+                                                                    path: ['medicines'],
+                                                                    index: idx,
+                                                                    patch: { dosage: e.target.value },
+                                                                })}
+                                                                placeholder="0-1"
+                                                            />
+                                                        </div>
+                                                        <div className="col-span-1">
+                                                            <input
+                                                                className="w-full border-0 bg-transparent px-0 py-0.5 text-sm text-slate-900 focus:outline-none"
+                                                                value={m.duration}
+                                                                onChange={(e) => dispatch({
+                                                                    type: 'setArrayItem',
+                                                                    path: ['medicines'],
+                                                                    index: idx,
+                                                                    patch: { duration: e.target.value },
+                                                                })}
+                                                                placeholder="—"
+                                                            />
+                                                        </div>
+                                                        <div className="col-span-2 flex items-center gap-1">
+                                                            <select
+                                                                className="w-full border-0 bg-transparent px-0 py-0.5 text-xs text-slate-900 focus:outline-none"
+                                                                value={m.instruction || ''}
+                                                                onChange={(e) =>
+                                                                    dispatch({
                                                                         type: 'setArrayItem',
                                                                         path: ['medicines'],
                                                                         index: idx,
-                                                                        patch: { strength: e.target.value },
-                                                                    })}
-                                                                    placeholder="Strength"
-                                                                /> */}
-                                                                <input
-                                                                    className="rounded border border-slate-200 bg-slate-50/50 px-3 py-1.5 text-sm text-slate-900 doc-input-focus"
-                                                                    value={m.dosage}
-                                                                    onChange={(e) => dispatch({
-                                                                        type: 'setArrayItem',
-                                                                        path: ['medicines'],
-                                                                        index: idx,
-                                                                        patch: { dosage: e.target.value },
-                                                                    })}
-                                                                    placeholder="e.g. 1+0+1"
-                                                                />
-                                                                <input
-                                                                    className="rounded border border-slate-200 bg-slate-50/50 px-3 py-1.5 text-sm text-slate-900 doc-input-focus"
-                                                                    value={m.duration}
-                                                                    onChange={(e) => dispatch({
-                                                                        type: 'setArrayItem',
-                                                                        path: ['medicines'],
-                                                                        index: idx,
-                                                                        patch: { duration: e.target.value },
-                                                                    })}
-                                                                    placeholder="Duration"
-                                                                />
-                                                            </div>
-                                                            <div className="flex flex-col gap-1 text-xs text-slate-600">
-                                                                {/* <span className="font-semibold">Timing</span> */}
-                                                                <select
-                                                                    className="rounded border border-slate-200 bg-slate-50/50 px-2 py-1 text-xs text-slate-900 doc-input-focus"
-                                                                    value={m.instruction || ''}
-                                                                    onChange={(e) =>
-                                                                        dispatch({
-                                                                            type: 'setArrayItem',
-                                                                            path: ['medicines'],
-                                                                            index: idx,
-                                                                            patch: { instruction: e.target.value },
-                                                                        })
-                                                                    }
-                                                                >
-                                                                    <option value="">None</option>
-                                                                    <option value="After meal">After meal</option>
-                                                                    <option value="Before meal">Before meal</option>
-                                                                </select>
-                                                            </div>
+                                                                        patch: { instruction: e.target.value },
+                                                                    })
+                                                                }
+                                                            >
+                                                                <option value="">None</option>
+                                                                <option value="After meal">After meal</option>
+                                                                <option value="Before meal">Before meal</option>
+                                                            </select>
                                                             <button
                                                                 type="button"
-                                                                className="opacity-0 group-hover/med:opacity-100 rounded border border-rose-300 bg-rose-50 px-1.5 py-1 text-xs text-rose-800 hover:bg-rose-100 transition"
+                                                                className="rounded border border-rose-300 bg-rose-50 px-1.5 py-1 text-xs text-rose-800 hover:bg-rose-100"
                                                                 onClick={() => dispatch({
                                                                     type: 'removeArrayItem',
                                                                     section: 'medicines',
@@ -1212,26 +1220,29 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                                                 ×
                                                             </button>
                                                         </div>
-                                                        );
-                                                    })}
-                                                    
-                                                    {/* Add New Medicine Row Button */}
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            dispatch({
-                                                                type: 'addArrayItem',
-                                                                section: 'medicines',
-                                                                item: emptyMedicine(),
-                                                            });
-                                                        }}
-                                                        className="w-full rounded border-2 border-dashed border-[#d7dfec] bg-[#edf1fb] px-3 py-2 text-xs font-semibold text-[#3556a6] transition hover:bg-[#e4eafb] flex items-center justify-center gap-1"
-                                                    >
-                                                        <Plus className="h-3 w-3" />
-                                                        Add Medicine Row
-                                                    </button>
-                                                    
-                                                </div>
+                                                    </div>
+                                                    );
+                                                })}
+
+                                                {/* <div className="space-y-3 pt-2">
+                                                    <div className="border-b border-dotted border-[#b9c7dc]" />
+                                                    <div className="border-b border-dotted border-[#b9c7dc]" />
+                                                    <div className="border-b border-dotted border-[#b9c7dc]" />
+                                                </div> */}
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        dispatch({
+                                                            type: 'addArrayItem',
+                                                            section: 'medicines',
+                                                            item: emptyMedicine(),
+                                                        });
+                                                    }}
+                                                    className="mt-2 w-full rounded border border-dashed border-[#b9c7dc] bg-[#f8fbff] px-3 py-2 text-lg font-semibold text-[#3556a6] transition hover:bg-[#edf2ff]"
+                                                >
+                                                    + Add Medicine Row
+                                                </button>
                                             </div>
                                         </div>
                                     </div>
@@ -1243,40 +1254,27 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                             <span className="text-xs font-bold uppercase tracking-wider text-slate-700">Advice</span>
                                         </div>
                                         
-                                        <div className="space-y-3">
-                                            <div>
-                                                <label className="mb-1 block text-xs font-semibold text-slate-600">Lifestyle</label>
-                                                <textarea
-                                                    className="w-full rounded-md border border-slate-200 bg-slate-50/50 px-2 py-1.5 text-xs text-slate-900 "
-                                                    rows={2}
-                                                    value={state.advice.lifestyle}
-                                                    onChange={(e) => dispatch({
-                                                        type: 'setField',
-                                                        path: ['advice', 'lifestyle'],
-                                                        value: e.target.value,
-                                                    })}
-                                                    placeholder="Lifestyle advice"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="mb-1 block text-xs font-semibold text-slate-600">Diet / Rest</label>
-                                                <textarea
-                                                    className="w-full rounded-md border border-slate-200 bg-slate-50/50 px-2 py-1.5 text-xs text-slate-900 "
-                                                    rows={2}
-                                                    value={state.advice.diet_rest}
-                                                    onChange={(e) => dispatch({
-                                                        type: 'setField',
-                                                        path: ['advice', 'diet_rest'],
-                                                        value: e.target.value,
-                                                    })}
-                                                    placeholder="Diet and rest instructions"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="mb-1 block text-xs font-semibold text-slate-600">Follow-up Date</label>
+                                        <div className="rounded-lg border border-[#d5deea] bg-[#f5f8fd] px-3 py-2.5 text-sm text-slate-800">
+                                            <p className="mb-1 font-semibold text-slate-800">Emergency Note:</p>
+                                            <textarea
+                                                className="w-full rounded-md border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-900 doc-input-focus"
+                                                rows={2}
+                                                value={state.follow_up.emergency_note}
+                                                onChange={(e) => dispatch({
+                                                    type: 'setField',
+                                                    path: ['follow_up', 'emergency_note'],
+                                                    value: e.target.value,
+                                                })}
+                                            />
+                                        </div>
+
+                                        <div className="mt-4 flex flex-wrap items-end justify-between gap-4 border-t border-[#dbe3ef] pt-3">
+                                            <div className="flex items-center gap-2">
+                                                <Calendar className="h-4 w-4 text-[#0d2f63]" />
+                                                <span className="text-xs font-bold uppercase tracking-wide text-[#0d2f63]">Follow-up Date</span>
                                                 <input
                                                     type="date"
-                                                    className="w-full rounded-md border border-slate-200 bg-slate-50/50 px-2 py-1.5 text-xs text-slate-900"
+                                                    className="min-w-[140px] rounded-md border border-[#cdd9ea] bg-[#f3f7fd] px-3 py-1 text-xs font-semibold text-slate-700"
                                                     value={state.follow_up.date}
                                                     onChange={(e) => dispatch({
                                                         type: 'setField',
@@ -1284,6 +1282,25 @@ export default function CreatePrescription({ appointmentId = null, chamberInfo, 
                                                         value: e.target.value,
                                                     })}
                                                 />
+                                            </div>
+
+                                            <div className="flex items-end gap-3 text-right">
+                                                <div>
+                                                    <div className="mb-1 border-b border-[#0d2f63] pb-1 text-lg font-semibold italic text-[#0d2f63]">{authUser?.name || 'Doctor'}</div>
+                                                    <div className="text-xs text-slate-600">{doctorSpecialization || doctorDegree || 'MBBS, FCPS'}</div>
+                                                    <div className="text-xs text-slate-500">Reg. No: {doctorInfo?.registration_no || '123456'}</div>
+                                                </div>
+                                                <div className="flex h-14 w-14 items-center justify-center rounded-full border-4 border-[#0b3f86] bg-white p-2">
+                                                    <img src={doctorLogoSrc} alt="Seal" className="h-full w-full object-contain" />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-5 rounded-2xl bg-[#0b3f86] px-5 py-2.5 text-[11px] text-white">
+                                            <div className="grid grid-cols-3 divide-x divide-white/30">
+                                                <div className="flex items-center justify-center gap-2 px-2"><ShieldCheck className="h-4 w-4" />Your Health, Our Priority</div>
+                                                <div className="flex items-center justify-center gap-2 px-2"><HeartHandshake className="h-4 w-4" />Compassionate Care, Trusted Results</div>
+                                                <div className="flex items-center justify-center gap-2 px-2"><Calendar className="h-4 w-4" />Thank You for Trusting Us</div>
                                             </div>
                                         </div>
                                     </div>
