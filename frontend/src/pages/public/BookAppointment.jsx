@@ -15,17 +15,13 @@ import {
   formatDisplayTime12h,
 } from '../../utils/dateFormat';
 
-function getCsrfToken() {
+function getCookieXsrfToken() {
   const cookie = document.cookie
     .split('; ')
     .find((row) => row.startsWith('XSRF-TOKEN='))
     ?.split('=')[1];
 
-  if (cookie) {
-    return decodeURIComponent(cookie);
-  }
-
-  return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+  return cookie ? decodeURIComponent(cookie) : '';
 }
 
 export default function PublicBookAppointment() {
@@ -392,8 +388,14 @@ export default function PublicBookAppointment() {
     setError('');
 
     try {
-      const token = getCsrfToken();
-      if (!token) {
+      await fetch('/sanctum/csrf-cookie', {
+        method: 'GET',
+        credentials: 'same-origin',
+        headers: { Accept: 'application/json' },
+      });
+
+      const xsrfToken = getCookieXsrfToken();
+      if (!xsrfToken) {
         const message = 'Missing CSRF token. Please refresh the page and try again.';
         setError(message);
         toastError(message);
@@ -404,8 +406,7 @@ export default function PublicBookAppointment() {
         credentials: 'same-origin',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRF-TOKEN': token,
-          'X-XSRF-TOKEN': token,
+          'X-XSRF-TOKEN': xsrfToken,
           'X-Requested-With': 'XMLHttpRequest',
           Accept: 'application/json',
         },
