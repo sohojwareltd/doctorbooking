@@ -309,7 +309,7 @@ class PatientController extends Controller
         $user = $request->user();
 
         $prescriptions = Prescription::where('user_id', $user->id)
-            ->with(['doctor:id,name', 'appointment:id,appointment_date,symptoms'])
+            ->with(['appointment:id,appointment_date,symptoms'])
             ->orderByDesc('created_at')
             ->paginate($request->integer('per_page', 10))
             ->withQueryString();
@@ -331,7 +331,8 @@ class PatientController extends Controller
         abort_unless($prescription->user_id === $user->id, 403);
 
         $prescription->load([
-            'doctor:id,name,email,phone',
+            'doctor:id,user_id,specialization,degree',
+            'doctor.user:id,name,email,phone',
             'appointment:id,appointment_date,appointment_time,status',
         ]);
 
