@@ -181,7 +181,7 @@ export default function PublicLayout({ children, hideHeader = false }) {
                             )}
 
                             {!auth.user && (
-                                <div className="mt-3 border-t border-white/10 pt-3">
+                                <div className="mt-3 space-y-2 border-t border-white/10 pt-3">
                                     <Link
                                         href="/login"
                                         className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-white/12 px-4 py-3 text-sm font-medium text-white/86 transition hover:bg-white/8 hover:text-white"
@@ -189,6 +189,13 @@ export default function PublicLayout({ children, hideHeader = false }) {
                                     >
                                         <LogIn className="h-4 w-4" />
                                         Login
+                                    </Link>
+                                    <Link
+                                        href="/register"
+                                        className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#b8ff4f] px-4 py-3 text-sm font-semibold text-[#062128] transition hover:bg-[#d2ff85]"
+                                        onClick={() => setMobileMenuOpen(false)}
+                                    >
+                                        Register
                                     </Link>
                                 </div>
                             )}
