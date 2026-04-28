@@ -1068,9 +1068,9 @@ export default function Prescription({
                                 <Stethoscope className="h-48 w-48 text-[#0b3f86]" />
                             </div>
 
-                            <div className="relative z-10 grid grid-cols-2 divide-x divide-slate-300 px-8 py-7">
+                            <div className="relative z-10 grid grid-cols-1 sm:grid-cols-2 sm:divide-x divide-slate-300 px-4 py-4 sm:px-8 sm:py-7">
                                 {/* Left — Doctor Info */}
-                                <div className="pr-8">
+                                <div className="pr-0 sm:pr-8">
                                     <div className="flex items-start gap-3">
                                         <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#cfd8e6] bg-white sm:h-20 sm:w-20">
                                             <img src={doctorLogoSrc} alt="Doctor logo" className="h-full w-full object-contain" />
@@ -1105,20 +1105,20 @@ export default function Prescription({
                                 </div>
 
                                 {/* Right — Chamber Info */}
-                                <div className="pl-8 flex flex-col items-end">
-                                    <div className="mb-1.5 flex items-center justify-end gap-1.5">
+                                <div className="pl-0 sm:pl-8 flex flex-col items-start sm:items-end border-t border-slate-200 sm:border-t-0 pt-4 sm:pt-0">
+                                    <div className="mb-1.5 flex items-center justify-start sm:justify-end gap-1.5">
                                         <span className="text-[10px] font-bold uppercase tracking-widest text-[#0b3f86]">Chamber</span>
                                     </div>
                                     <p className="text-2xl font-black tracking-tight text-[#0d2f63]">
                                         {chamberName || 'Not set'}
                                     </p>
                                     {chamberAddress ? (
-                                        <div className="mt-2.5 flex items-start justify-end gap-1.5 text-sm text-slate-700">
+                                        <div className="mt-2.5 flex items-start justify-start sm:justify-end gap-1.5 text-sm text-slate-700">
                                             <span>{chamberAddress}</span>
                                         </div>
                                     ) : null}
                                     {chamberPhone ? (
-                                        <div className="mt-1.5 flex items-center justify-end gap-1.5 text-sm text-slate-700">
+                                        <div className="mt-1.5 flex items-center justify-start sm:justify-end gap-1.5 text-sm text-slate-700">
                                             <span>{chamberPhone}</span>
                                         </div>
                                     ) : null}
@@ -1136,10 +1136,10 @@ export default function Prescription({
                     </div>
 
                     {/* Patient Info Strip - Inline underline style (matching DoctorPrescriptions modal) */}
-                    <div className="border-b border-slate-300 bg-[#f8fbff] px-8 py-4">
-                        <div className="grid grid-cols-5 divide-x divide-slate-300 gap-0">
+                    <div className="border-b border-slate-300 bg-[#f8fbff] px-4 py-3 sm:px-8 sm:py-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-5 sm:divide-x divide-slate-300 gap-y-2 sm:gap-y-0 gap-0">
                             {/* Name */}
-                            <div className="min-w-0 pr-2">
+                            <div className="min-w-0 pr-0 sm:pr-2">
                                 <div className="flex items-center gap-2 border-b border-dotted border-[#9aa8be] pb-1">
                                     <span className="shrink-0 text-xs font-bold text-slate-600">Name:</span>
                                     <input
@@ -1151,8 +1151,8 @@ export default function Prescription({
                                 </div>
                             </div>
                             {/* Age */}
-                            <div className="px-2">
-                                <div className="flex items-center justify-center gap-1.5 border-b border-dotted border-[#9aa8be] pb-1">
+                            <div className="px-0 sm:px-2">
+                                <div className="flex items-center justify-start sm:justify-center gap-1.5 border-b border-dotted border-[#9aa8be] pb-1">
                                     <span className="shrink-0 text-xs font-bold text-slate-600">Age:</span>
                                     <div className="flex items-center gap-1.5">
                                         <input
@@ -1174,8 +1174,8 @@ export default function Prescription({
                                 </div>
                             </div>
                             {/* Gender */}
-                            <div className="px-2">
-                                <div className="flex items-center justify-center gap-1.5 border-b border-dotted border-[#9aa8be] pb-1">
+                            <div className="px-0 sm:px-2">
+                                <div className="flex items-center justify-start sm:justify-center gap-1.5 border-b border-dotted border-[#9aa8be] pb-1">
                                     <span className="shrink-0 text-xs font-bold text-slate-600">Gender:</span>
                                     <select
                                         className="w-24 border-0 bg-transparent px-1 py-0.5 text-sm text-slate-900 focus:outline-none"
@@ -1190,8 +1190,8 @@ export default function Prescription({
                                 </div>
                             </div>
                             {/* Contact */}
-                            <div className="col-span-2 px-2">
-                                <div className="mx-auto flex w-full max-w-[220px] items-center gap-1.5 border-b border-dotted border-[#9aa8be] pb-1">
+                            <div className="col-span-1 sm:col-span-2 px-0 sm:px-2">
+                                <div className="mx-0 sm:mx-auto flex w-full max-w-full sm:max-w-[220px] items-center gap-1.5 border-b border-dotted border-[#9aa8be] pb-1">
                                     <Phone className="h-3 w-3 shrink-0 text-slate-400" />
                                     <input
                                         className="w-full border-0 bg-transparent px-0 py-0.5 text-sm text-slate-900 placeholder-slate-300 focus:outline-none"
@@ -1205,7 +1205,7 @@ export default function Prescription({
                     </div>
 
                     {/* Form Main Content - Real Prescription Pad Layout */}
-                    <div className="min-h-[500px] bg-white p-8 pb-12">
+                    <div className="min-h-[500px] bg-white p-4 sm:p-8 pb-6 sm:pb-12">
                         <form onSubmit={(e) => e.preventDefault()}>
                             {/* <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-4 sm:flex-row sm:items-center sm:justify-between">
                                 <div>
@@ -1249,10 +1249,10 @@ export default function Prescription({
                             ) : null} */}
 
                             {/* Prescription Pad Layout - Two Column Grid */}
-                            <div className="grid grid-cols-12 gap-8">
+                            <div className="grid grid-cols-12 gap-4 sm:gap-8">
                                 
                                 {/* Left Column - Narrow (Investigations and Diagnosis Mirror) */}
-                                <div className="col-span-3 space-y-6 border-r-2 border-dashed border-slate-200 pr-8">
+                                <div className="col-span-12 sm:col-span-3 space-y-6 sm:border-r-2 border-dashed border-slate-200 pr-0 sm:pr-8">
                                     <div className="flex min-h-[250px] flex-col rounded-xl border border-[#cad6e8] bg-[#f2f5fa] p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
                                         <div className="mb-3 inline-flex items-center gap-2 bg-[#0b4fa3] px-3 py-1.5 text-sm font-bold uppercase tracking-wide text-white" style={{ clipPath: 'polygon(0 0, 92% 0, 100% 100%, 0 100%)' }}>
                                             <FlaskConical className="h-4 w-4" />
@@ -1492,7 +1492,7 @@ export default function Prescription({
                                 </div>
 
                                 {/* Right Column - Wide (Medicine Main, Advice Bottom) */}
-                                <div className="col-span-9 space-y-6">
+                                <div className="col-span-12 sm:col-span-9 space-y-6">
                                     
                                     <PrescriptionMedicineSection
                                         templateType={state.template_type}
@@ -1567,7 +1567,7 @@ export default function Prescription({
                                         </div>
 
                                         <div className="mt-5 rounded-2xl bg-[#0b3f86] px-5 py-2.5 text-[11px] text-white">
-                                            <div className="grid grid-cols-3 divide-x divide-white/30">
+                                            <div className="grid grid-cols-1 sm:grid-cols-3 sm:divide-x divide-y sm:divide-y-0 divide-white/30">
                                                 <div className="flex items-center justify-center gap-2 px-2"><ShieldCheck className="h-4 w-4" />Your Health, Our Priority</div>
                                                 <div className="flex items-center justify-center gap-2 px-2"><HeartHandshake className="h-4 w-4" />Compassionate Care, Trusted Results</div>
                                                 <div className="flex items-center justify-center gap-2 px-2"><Calendar className="h-4 w-4" />Thank You for Trusting Us</div>
@@ -1578,7 +1578,7 @@ export default function Prescription({
                             </div>
 
                     {/* Form Submit Section - Enhanced */}
-                    <div className="mt-10 rounded-xl border border-slate-200 bg-slate-50 p-6">
+                    <div className="mt-6 sm:mt-10 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:p-6">
                         <div className="mb-4 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-xs text-blue-800">
                             Save keeps appointment status unchanged for compounder and sets <span className="font-semibold">awaiting_tests</span> for doctor. Complete marks the appointment as completed.
                         </div>
@@ -1603,10 +1603,10 @@ export default function Prescription({
                                     <span className="text-xs font-medium text-slate-500">{visitDateLabel}</span>
                                 </div>
                             </div>
-                            <div className="flex gap-3">
+                            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:gap-3">
                                 <button
                                     type="button"
-                                    className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-6 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-50"
+                                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-6 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-50 sm:w-auto"
                                     onClick={() => {
                                         dispatch({ type: 'reset' });
                                     }}
@@ -1617,7 +1617,7 @@ export default function Prescription({
                                 </button>
                                 <button
                                     type="button"
-                                    className="flex items-center gap-2 rounded-xl border border-amber-400 bg-amber-50 px-6 py-2.5 text-sm font-semibold text-amber-700 shadow-sm transition hover:bg-amber-100 disabled:opacity-50"
+                                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-400 bg-amber-50 px-6 py-2.5 text-sm font-semibold text-amber-700 shadow-sm transition hover:bg-amber-100 disabled:opacity-50 sm:w-auto"
                                     disabled={submitting}
                                     onClick={() => handleSubmit('save')}
                                 >
@@ -1635,7 +1635,7 @@ export default function Prescription({
                                 </button>
                                 <button
                                     type="button"
-                                    className="flex items-center gap-2 rounded-xl bg-[#3556a6] px-8 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#2a488f] disabled:opacity-50"
+                                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#3556a6] px-8 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#2a488f] disabled:opacity-50 sm:w-auto"
                                     disabled={submitting}
                                     onClick={() => handleSubmit('complete')}
                                 >
