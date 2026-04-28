@@ -19,6 +19,17 @@ import DoctorLogo from '../../components/DoctorLogo';
 import PublicLayout from '../../layouts/PublicLayout';
 import { toastError } from '../../utils/toast';
 
+const getCookieXsrfToken = () => {
+    const cookie = document.cookie
+        .split('; ')
+        .find((row) => row.startsWith('XSRF-TOKEN='))
+        ?.split('=')[1];
+
+    return cookie ? decodeURIComponent(cookie) : '';
+};
+
+const getMetaCsrfToken = () => document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
 const extractErrorMessages = (errorObject) => {
     const messages = [];
 
@@ -93,11 +104,31 @@ export default function Register() {
         phone: '',
         password: '',
         password_confirmation: '',
+        _token: getMetaCsrfToken(),
     });
 
-    const submit = (e) => {
+    const submit = async (e) => {
         e.preventDefault();
-        post('/register');
+
+        try {
+            await fetch('/sanctum/csrf-cookie', {
+                method: 'GET',
+                credentials: 'same-origin',
+                headers: { Accept: 'application/json' },
+            });
+        } catch {
+            // Continue with existing token/header fallback.
+        }
+
+        const xsrf = getCookieXsrfToken();
+        const csrf = getMetaCsrfToken();
+        setData('_token', csrf);
+
+        post('/register', {
+            headers: {
+                'X-XSRF-TOKEN': xsrf,
+            },
+        });
     };
 
     const errorMessages = extractErrorMessages(errors);
