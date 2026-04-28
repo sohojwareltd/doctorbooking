@@ -32,12 +32,6 @@ function installCsrfFetchInterceptor() {
         const withCsrfHeaders = (sourceInit = {}) => {
             const headers = new Headers(sourceInit.headers || request.headers || {});
             const cookieToken = getCookie('XSRF-TOKEN');
-            const metaToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-
-            // X-CSRF-TOKEN expects plain token from meta tag.
-            if (metaToken && !headers.has('X-CSRF-TOKEN')) {
-                headers.set('X-CSRF-TOKEN', metaToken);
-            }
             // X-XSRF-TOKEN can carry the encrypted cookie value.
             if (cookieToken && !headers.has('X-XSRF-TOKEN')) {
                 headers.set('X-XSRF-TOKEN', cookieToken);
@@ -89,12 +83,8 @@ function installCsrfAxiosInterceptor() {
         if (!needsCsrf) return config;
 
         const cookieToken = getCookie('XSRF-TOKEN');
-        const metaToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
         config.headers = config.headers || {};
-        if (metaToken && !config.headers['X-CSRF-TOKEN']) {
-            config.headers['X-CSRF-TOKEN'] = metaToken;
-        }
         if (cookieToken && !config.headers['X-XSRF-TOKEN']) {
             config.headers['X-XSRF-TOKEN'] = cookieToken;
         }

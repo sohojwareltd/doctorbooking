@@ -16,10 +16,6 @@ export default function ProfileSettings({ mustVerifyEmail, status }) {
     return cookie ? decodeURIComponent(cookie) : '';
   };
 
-  const getMetaCsrfToken = () => {
-    return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-  };
-
   const submit = async (e) => {
     e.preventDefault();
 
@@ -33,12 +29,10 @@ export default function ProfileSettings({ mustVerifyEmail, status }) {
       // Continue with available token and let backend validation decide.
     }
 
-    const metaCsrfToken = getMetaCsrfToken();
     const cookieXsrfToken = getCookieXsrfToken();
 
     patch('/settings/profile', {
       headers: {
-        'X-CSRF-TOKEN': metaCsrfToken,
         'X-XSRF-TOKEN': cookieXsrfToken,
       },
       onSuccess: () => toastSuccess('Profile updated.'),
