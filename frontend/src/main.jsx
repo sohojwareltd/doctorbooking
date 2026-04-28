@@ -1,4 +1,5 @@
 import { createInertiaApp } from '@inertiajs/react';
+import axios from 'axios';
 import { createRoot } from 'react-dom/client';
 import ToastHost from './components/ToastHost';
 import './css/app.css';
@@ -72,6 +73,60 @@ function installCsrfFetchInterceptor() {
 }
 
 installCsrfFetchInterceptor();
+
+function installCsrfAxiosInterceptor() {
+    if (typeof window === 'undefined' || window.__csrfAxiosPatched) return;
+
+    axios.defaults.withCredentials = true;
+    axios.defaults.xsrfCookieName = 'XSRF-TOKEN';
+    axios.defaults.xsrfHeaderName = 'X-XSRF-TOKEN';
+    axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
+
+    axios.interceptors.response.use(
+        (response) => response,
+        async (error) => {
+            const status = error?.response?.status;
+            const config = error?.config;
+
+            if (status !== 419 || !config || config.__csrfRetried) {
+                return Promise.reject(error);
+            }
+
+            config.__csrfRetried = true;
+
+            try {
+                await axios.get('/sanctum/csrf-cookie', {
+                    withCredentials: true,
+                    headers: { Accept: 'application/json' },
+                });
+
+                return axios(config);
+            } catch {
+                return Promise.reject(error);
+            }
+        },
+    );
+
+    window.__csrfAxiosPatched = true;
+}
+
+function primeCsrfCookie() {
+    if (typeof window === 'undefined') return;
+    const hasXsrfCookie = document.cookie
+        .split('; ')
+        .some((row) => row.startsWith('XSRF-TOKEN='));
+
+    if (hasXsrfCookie) return;
+
+    void fetch('/sanctum/csrf-cookie', {
+        method: 'GET',
+        credentials: 'same-origin',
+        headers: { Accept: 'application/json' },
+    });
+}
+
+installCsrfAxiosInterceptor();
+primeCsrfCookie();
 
 createInertiaApp({
     resolve: (name) => {
