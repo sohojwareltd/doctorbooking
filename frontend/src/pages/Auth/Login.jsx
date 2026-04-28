@@ -11,7 +11,7 @@ import {
     ShieldCheck,
     User,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import GlassCard from '../../components/GlassCard';
 import PrimaryButton from '../../components/PrimaryButton';
 import PublicLayout from '../../layouts/PublicLayout';
@@ -25,18 +25,33 @@ export default function Login({ status, canResetPassword }) {
         email: '',
         password: '',
         remember: false,
-        _token: '',
+        _token: getMetaCsrfToken(),
     });
 
-    useEffect(() => {
-        setData('_token', getMetaCsrfToken());
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-
-    const submit = (e) => {
+    const submit = async (e) => {
         e.preventDefault();
-        setData('_token', getMetaCsrfToken());
-        post('/login');
+
+        try {
+            await fetch('/sanctum/csrf-cookie', {
+                method: 'GET',
+                credentials: 'same-origin',
+                headers: { Accept: 'application/json' },
+            });
+        } catch {
+            // Continue with token from page if preflight fails.
+        }
+
+        const csrfToken = getMetaCsrfToken();
+
+        post('/login', {
+            data: {
+                ...data,
+                _token: csrfToken,
+            },
+            headers: {
+                'X-CSRF-TOKEN': csrfToken,
+            },
+        });
     };
 
     const inputClass =
