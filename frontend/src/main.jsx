@@ -33,11 +33,12 @@ function installCsrfFetchInterceptor() {
             const headers = new Headers(sourceInit.headers || request.headers || {});
             const cookieToken = getCookie('XSRF-TOKEN');
             const metaToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-            const token = cookieToken || metaToken;
 
-            if (token && !headers.has('X-CSRF-TOKEN')) {
-                headers.set('X-CSRF-TOKEN', token);
+            // X-CSRF-TOKEN expects plain token from meta tag.
+            if (metaToken && !headers.has('X-CSRF-TOKEN')) {
+                headers.set('X-CSRF-TOKEN', metaToken);
             }
+            // X-XSRF-TOKEN can carry the encrypted cookie value.
             if (cookieToken && !headers.has('X-XSRF-TOKEN')) {
                 headers.set('X-XSRF-TOKEN', cookieToken);
             }
@@ -89,11 +90,10 @@ function installCsrfAxiosInterceptor() {
 
         const cookieToken = getCookie('XSRF-TOKEN');
         const metaToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-        const token = cookieToken || metaToken;
 
         config.headers = config.headers || {};
-        if (token && !config.headers['X-CSRF-TOKEN']) {
-            config.headers['X-CSRF-TOKEN'] = token;
+        if (metaToken && !config.headers['X-CSRF-TOKEN']) {
+            config.headers['X-CSRF-TOKEN'] = metaToken;
         }
         if (cookieToken && !config.headers['X-XSRF-TOKEN']) {
             config.headers['X-XSRF-TOKEN'] = cookieToken;
@@ -119,12 +119,6 @@ function installCsrfAxiosInterceptor() {
                     withCredentials: true,
                     headers: { Accept: 'application/json' },
                 });
-
-                const refreshed = getCookie('XSRF-TOKEN');
-                const metaEl = document.querySelector('meta[name="csrf-token"]');
-                if (refreshed && metaEl) {
-                    metaEl.setAttribute('content', refreshed);
-                }
 
                 return axios(config);
             } catch {
