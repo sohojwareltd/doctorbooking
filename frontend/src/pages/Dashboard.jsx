@@ -61,7 +61,7 @@ export default function Dashboard({
   ];
 
   return (
-    <div className="max-w-[1400px] mx-auto space-y-6">
+    <div className="max-w-[1400px] mx-auto space-y-6 overflow-x-hidden">
 
       {/* HERO BANNER */}
       <section className="hero-panel rounded-[28px] p-5 md:p-8 text-white">
@@ -71,7 +71,7 @@ export default function Dashboard({
               <User className="h-[11px] w-[11px]" />
               Patient Portal
             </div>
-            <h1 className="text-3xl md:text-4xl font-semibold tracking-tight mb-3">
+            <h1 className="text-3xl md:text-4xl font-semibold tracking-tight mb-3 break-words">
               {greeting}, {patientName}
             </h1>
             <p className="text-sm md:text-base text-white/80 max-w-2xl">
@@ -114,10 +114,10 @@ export default function Dashboard({
       </section>
 
       {/* MAIN 2-COLUMN GRID */}
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 lg:grid-cols-3 min-w-0">
 
         {/* LEFT (2/3) */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-6 min-w-0">
 
           {/* NEXT APPOINTMENT CARD */}
           {upcomingAppointment && (
@@ -200,12 +200,12 @@ export default function Dashboard({
                 <div className="md:hidden divide-y divide-slate-100">
                   {tabItems.map((a, i) => (
                     <div key={a.id || i} className="px-4 py-3.5">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
+                      <div className="flex items-center justify-between mb-2 gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
                           <span className="text-[11px] font-medium text-slate-400">#{a.serial_no || (i + 1)}</span>
-                          <span className="text-sm font-semibold text-slate-700 inline-flex items-center gap-1">
+                          <span className="text-sm font-semibold text-slate-700 inline-flex items-center gap-1 min-w-0">
                             <CalendarDays className="h-3.5 w-3.5 text-slate-400" />
-                            {fmt(a.appointment_date)}
+                            <span className="truncate">{fmt(a.appointment_date)}</span>
                           </span>
                         </div>
                         <StatusBadge status={a.status} size="xs" />
@@ -303,7 +303,7 @@ export default function Dashboard({
         </div>
 
         {/* RIGHT SIDEBAR (1/3) */}
-        <div className="space-y-5">
+        <div className="space-y-5 min-w-0">
 
           {/* Book Appointment CTA */}
           <div className="hero-panel rounded-3xl p-5 text-white">
@@ -311,7 +311,7 @@ export default function Dashboard({
               <Stethoscope className="h-4 w-4 text-white/70" />
               <span className="text-xs font-semibold uppercase tracking-widest text-white/70">New Visit</span>
             </div>
-            <p className="text-sm mb-4">
+            <p className="text-sm mb-4 break-words">
               {doctorName
                 ? `Book your consultation with ${doctorName}`
                 : 'Book your consultation with a doctor'}
