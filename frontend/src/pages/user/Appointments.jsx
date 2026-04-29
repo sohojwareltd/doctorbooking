@@ -1,5 +1,5 @@
 import { Head, Link } from '@inertiajs/react';
-import { CalendarCheck2, CalendarDays, CheckCircle2, Eye, FileText, Mail, Search, SlidersHorizontal, UserCheck, UserRound, X, XCircle } from 'lucide-react';
+import { CalendarCheck2, CalendarDays, Calendar, CheckCircle2, Eye, FileText, Hash, Mail, Phone, Search, SlidersHorizontal, UserCheck, UserRound, X, XCircle } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import UserLayout from '../../layouts/UserLayout';
@@ -91,6 +91,54 @@ export default function UserAppointments() {
     });
   }, [rows, searchTerm, statusFilter]);
 
+  const orderedRows = useMemo(() => {
+    const statusPriority = {
+      in_consultation: 0,
+      arrived: 1,
+      scheduled: 2,
+      test_registered: 3,
+      awaiting_tests: 4,
+      prescribed: 5,
+      cancelled: 6,
+      completed: 7,
+    };
+
+    const now = new Date();
+    const todayYmd = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+    const dayBucket = (dateStr) => {
+      if (!dateStr) return 3;
+      if (dateStr === todayYmd) return 0;
+      if (dateStr > todayYmd) return 1;
+      return 2;
+    };
+
+    return [...filteredRows].sort((a, b) => {
+      const aDate = a?.appointment_date || '';
+      const bDate = b?.appointment_date || '';
+
+      const bucketDiff = dayBucket(aDate) - dayBucket(bDate);
+      if (bucketDiff !== 0) return bucketDiff;
+
+      const aStatus = String(a?.status || '').toLowerCase();
+      const bStatus = String(b?.status || '').toLowerCase();
+      const aPriority = Object.prototype.hasOwnProperty.call(statusPriority, aStatus) ? statusPriority[aStatus] : 99;
+      const bPriority = Object.prototype.hasOwnProperty.call(statusPriority, bStatus) ? statusPriority[bStatus] : 99;
+      if (aPriority !== bPriority) return aPriority - bPriority;
+
+      if (aDate !== bDate) {
+        if (dayBucket(aDate) === 2) return aDate < bDate ? 1 : -1;
+        return aDate > bDate ? 1 : -1;
+      }
+
+      const aTime = a?.appointment_time || '';
+      const bTime = b?.appointment_time || '';
+      if (aTime !== bTime) return aTime > bTime ? 1 : -1;
+
+      return Number(a?.id || 0) - Number(b?.id || 0);
+    });
+  }, [filteredRows]);
+
   const currentPage = pagination?.current_page ?? page;
   const lastPage = pagination?.last_page ?? 1;
   const canGoPrev = currentPage > 1;
@@ -111,6 +159,7 @@ export default function UserAppointments() {
     return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: '2-digit' });
   };
 
+  const getAppointmentLabel = (a) => `#${a?.id ?? '-'}`;
   const getPatientName = (a) => a?.patient_name || a?.user?.name || '-';
   const getPatientEmail = (a) => a?.patient_email || a?.user?.email || '-';
   const getPatientPhone = (a) => a?.patient_phone || a?.user?.phone || null;
@@ -120,8 +169,12 @@ export default function UserAppointments() {
     return getPatientPhone(a) || '-';
   };
   const getPatientAge = (a) => (a?.patient_age ?? '-') === '' ? '-' : (a?.patient_age ?? '-');
-  const getChamberName = (a) => a?.chamber?.name || '-';
-  const formatTime = (a) => formatDisplayTime12h(a?.appointment_time) || a?.appointment_time || '-';
+  const getPatientGender = (a) => String(a?.patient_gender || a?.user?.gender || '').trim();
+  const formatGender = (value) => {
+    const raw = String(value || '').trim().toLowerCase();
+    if (!raw) return '-';
+    return raw.charAt(0).toUpperCase() + raw.slice(1);
+  };
   const getPatientInitials = (a) => {
     const name = String(getPatientName(a) || '').trim();
     if (!name || name === '-') return 'P';
@@ -129,6 +182,8 @@ export default function UserAppointments() {
     const initials = parts.slice(0, 2).map((p) => p[0]?.toUpperCase() || '').join('');
     return initials || 'P';
   };
+  const getChamberName = (a) => a?.chamber?.name || '-';
+  const formatTime = (a) => formatDisplayTime12h(a?.appointment_time) || a?.appointment_time || '-';
 
   const hasPrescription = (a) => Boolean(a?.prescription_id || a?.has_prescription);
 
@@ -281,7 +336,7 @@ export default function UserAppointments() {
               <div className="px-5 py-14 text-center text-sm text-gray-400">Loading appointments...</div>
             ) : null}
 
-            {!loading && filteredRows.map((a) => (
+            {!loading && orderedRows.map((a) => (
               <article key={a.id} className="px-4 py-4">
                 <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_10px_22px_rgba(15,23,42,0.05)]">
                   <div className="flex items-start justify-between gap-3">
@@ -313,8 +368,8 @@ export default function UserAppointments() {
                       <p className="mt-0.5 truncate font-semibold text-slate-700">{getChamberName(a)}</p>
                     </div>
                     <div className="rounded-lg border border-slate-100 bg-slate-50 px-2.5 py-2">
-                      <p className="text-[10px] uppercase tracking-[0.08em] text-slate-400">Age</p>
-                      <p className="mt-0.5 font-semibold text-slate-700">{getPatientAge(a)}</p>
+                      <p className="text-[10px] uppercase tracking-[0.08em] text-slate-400">Patient</p>
+                      <p className="mt-0.5 font-semibold text-slate-700">{getPatientAge(a)}y • {formatGender(getPatientGender(a))}</p>
                     </div>
                   </div>
 
@@ -356,7 +411,7 @@ export default function UserAppointments() {
               </article>
             ))}
 
-            {filteredRows.length === 0 && !loading ? (
+            {orderedRows.length === 0 && !loading ? (
               <div className="px-5 py-14 text-center">
                 <p className="text-sm text-gray-400">No appointments found.</p>
               </div>
@@ -368,12 +423,12 @@ export default function UserAppointments() {
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 text-slate-500 uppercase text-xs tracking-[0.12em]">
+                  <th className="px-6 py-4 text-center">#</th>
                   <th className="px-6 py-4 text-center">Patient</th>
                   <th className="px-6 py-4 text-center">Chamber</th>
                   <th className="px-6 py-4 text-center">Date</th>
-                  <th className="px-6 py-4 text-center">Time</th>
                   <th className="px-6 py-4 text-center">Status</th>
-                  <th className="px-6 py-4 text-center">Actions</th>
+                  <th className="px-6 py-4 text-center">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white">
@@ -383,8 +438,14 @@ export default function UserAppointments() {
                   </tr>
                 ) : null}
 
-                {!loading && filteredRows.map((a) => (
+                {!loading && orderedRows.map((a) => (
                   <tr key={a.id} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="px-6 py-4 font-medium text-slate-600 text-center whitespace-nowrap">
+                      <span className="inline-flex items-center justify-center gap-1.5">
+                        <Hash className="h-3.5 w-3.5 text-slate-400" />
+                        {a.id}
+                      </span>
+                    </td>
                     <td className="px-6 py-4 text-sm text-slate-700">
                       <div className="flex min-w-[220px] items-center gap-3">
                         <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#d8ece9] bg-[#eef8f6] text-xs font-bold text-[#1b5b61]">
@@ -393,15 +454,20 @@ export default function UserAppointments() {
                         <div className="min-w-0">
                           <p className="truncate text-sm font-semibold text-[#1b3f44]">{getPatientName(a)}</p>
                           <p className="truncate text-xs text-slate-500">{getPatientContact(a)}</p>
-                          <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-slate-400">Age: {getPatientAge(a)}</p>
+                          <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-slate-400">Age: {getPatientAge(a)} • {formatGender(getPatientGender(a))}</p>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 text-[13px] font-medium text-slate-700 text-center whitespace-nowrap">{getChamberName(a)}</td>
                     <td className="px-6 py-4 text-[13px] font-medium text-slate-700 text-center whitespace-nowrap">
-                      {formatDisplayDateWithYearFromDateLike(a.appointment_date) || a.appointment_date}
+                      <span className="inline-flex flex-col items-center justify-center gap-0.5 leading-tight">
+                        <span className="inline-flex items-center justify-center gap-1.5">
+                          <Calendar className="h-[18px] w-[18px] text-slate-600" />
+                          {formatDisplayDateWithYearFromDateLike(a.appointment_date) || a.appointment_date}
+                        </span>
+                        <span className="text-xs text-slate-500">{formatTime(a)}</span>
+                      </span>
                     </td>
-                    <td className="px-6 py-4 text-[13px] font-medium text-slate-700 text-center whitespace-nowrap">{formatTime(a)}</td>
                     <td className="px-6 py-4 text-center">
                       <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${statusBadge(a.status)}`}>
                         {formatStatusLabel(a.status)}
@@ -438,7 +504,7 @@ export default function UserAppointments() {
                   </tr>
                 ))}
 
-                {filteredRows.length === 0 && !loading ? (
+                {orderedRows.length === 0 && !loading ? (
                   <tr>
                     <td colSpan={6} className="px-6 py-14 text-center">
                       <p className="text-sm text-slate-400">No appointments found.</p>
@@ -593,12 +659,16 @@ export default function UserAppointments() {
                     <div className="font-semibold text-[#1b3f44]">{getPatientName(viewRow)}</div>
                   </div>
                   <div className="rounded-xl border border-[#e8f1f0] bg-[#fbfefd] p-3">
-                    <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">Email</div>
-                    <div className="flex items-center gap-1.5 text-slate-700"><Mail className="h-3.5 w-3.5" /> {getPatientEmail(viewRow)}</div>
+                    <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">Contact</div>
+                    <div className="flex items-center gap-1.5 text-slate-700"><Phone className="h-3.5 w-3.5" /> {getPatientPhone(viewRow) || getPatientEmail(viewRow)}</div>
                   </div>
                   <div className="rounded-xl border border-[#e8f1f0] bg-[#fbfefd] p-3">
-                    <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">Age</div>
-                    <div className="flex items-center gap-1.5 text-slate-700"><UserRound className="h-3.5 w-3.5" /> {getPatientAge(viewRow)}</div>
+                    <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">Age / Gender</div>
+                    <div className="flex items-center gap-1.5 text-slate-700"><UserRound className="h-3.5 w-3.5" /> {getPatientAge(viewRow)} • {formatGender(getPatientGender(viewRow))}</div>
+                  </div>
+                  <div className="rounded-xl border border-[#e8f1f0] bg-[#fbfefd] p-3">
+                    <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">Appointment</div>
+                    <div className="flex items-center gap-1.5 text-slate-700"><Mail className="h-3.5 w-3.5" /> {getAppointmentLabel(viewRow)}</div>
                   </div>
                   <div className="rounded-xl border border-[#e8f1f0] bg-[#fbfefd] p-3">
                     <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">Chamber</div>

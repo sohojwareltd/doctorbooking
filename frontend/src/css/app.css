@@ -519,6 +519,7 @@ html {
 .doctor-appointment-calendar .fc .fc-daygrid-day.fc-unavailable {
     background: rgba(248, 250, 252, 0.92) !important;
     opacity: 1;
+    pointer-events: none;
 }
 
 .doctor-appointment-calendar .fc .fc-daygrid-day.fc-unavailable .fc-daygrid-day-number {
