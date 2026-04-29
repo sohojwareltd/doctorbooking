@@ -1,6 +1,6 @@
 import { Head, usePage } from '@inertiajs/react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowRight, Building2, Calendar, CheckCircle2, ChevronLeft, Clock, Loader2, MapPin, Phone, ShieldQuestion, Sparkles, User } from 'lucide-react';
+import { ArrowRight, Building2, Calendar, CheckCircle2, ChevronLeft, Clock, Loader2, MapPin, Phone, ShieldQuestion, Sparkles, Upload, User } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
@@ -27,6 +27,7 @@ function getCookieXsrfToken() {
 export default function PublicBookAppointment() {
   const page = usePage();
   const contactPhone = page?.props?.site?.contactPhone || '';
+  const chamberIconUrl = page?.props?.site?.branding?.chamberIconUrl || '';
   const authUser = page?.props?.auth?.user || null;
   const initialSearch = typeof window !== 'undefined' ? window.location.search : '';
 
@@ -67,6 +68,7 @@ export default function PublicBookAppointment() {
   const [previewSerial, setPreviewSerial] = useState(null);
   const [previewTime, setPreviewTime] = useState(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
+  const [attachmentFile, setAttachmentFile] = useState(null);
   const [requestedChamberId, setRequestedChamberId] = useState(() => {
     const params = new URLSearchParams(initialSearch);
     return params.get('chamber_id');
@@ -84,6 +86,13 @@ export default function PublicBookAppointment() {
     const month = String(today.getMonth() + 1).padStart(2, '0');
     const day = String(today.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+  };
+
+  const getFirstDayOfCurrentMonth = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    return `${year}-${month}-01`;
   };
 
   const isClosedByWeekday = (dateStr) => {
@@ -278,6 +287,7 @@ export default function PublicBookAppointment() {
     if (!date || !chamberId) {
       setPreviewSerial(null);
       setPreviewTime(null);
+      setError('');
       return;
     }
 
@@ -299,9 +309,7 @@ export default function PublicBookAppointment() {
         } else {
           setPreviewSerial(null);
           setPreviewTime(null);
-          if (data?.message) {
-            setError(data.message);
-          }
+          setError(data?.message || 'Schedule is fully booked on the selected date. Please choose another date.');
         }
       } catch {
         if (cancelled) return;
@@ -459,11 +467,47 @@ export default function PublicBookAppointment() {
     }
   };
 
+  const handleAttachmentChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) {
+      setAttachmentFile(null);
+      return;
+    }
+
+    const allowedMimeTypes = [
+      'image/jpeg',
+      'image/png',
+      'image/webp',
+      'application/pdf',
+    ];
+
+    if (!allowedMimeTypes.includes(file.type)) {
+      const message = 'Only JPG, PNG, WebP, or PDF files are allowed.';
+      setError(message);
+      toastError(message);
+      e.target.value = '';
+      setAttachmentFile(null);
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      const message = 'File size must be 5MB or less.';
+      setError(message);
+      toastError(message);
+      e.target.value = '';
+      setAttachmentFile(null);
+      return;
+    }
+
+    setError('');
+    setAttachmentFile(file);
+  };
+
   const inputClass =
     'w-full rounded-2xl border border-[#00acb1]/30 bg-white px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-4 focus:ring-[#00acb1]/20';
 
   const isStep1Complete = Boolean(selectedChamberId);
-  const isStep2Complete = Boolean(selectedChamberId && formData.date);
+  const isStep2Complete = Boolean(selectedChamberId && formData.date && previewSerial && previewTime && !loadingPreview);
 
   const calendarRenderKey = useMemo(
     () => `${closedWeekdays.join(',')}|${unavailableRanges.map((r) => `${r?.start_date || ''}-${r?.end_date || ''}`).join(',')}`,
@@ -555,7 +599,7 @@ export default function PublicBookAppointment() {
               );
             })}
           </div>
-{/* 
+          {/* 
           {error && (
             <GlassCard variant="solid" className="mb-6 border-rose-200 bg-rose-50/75 p-4">
               <div className="text-sm font-semibold text-rose-800">{error}</div>
@@ -617,7 +661,11 @@ export default function PublicBookAppointment() {
                                     <div className="flex items-start gap-3">
                                       <div className="flex min-w-0 items-start gap-3">
                                         <span className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border transition-colors duration-200 ${isActive ? 'border-[#0c7b79]/25 bg-[#0c7b79]/10 text-[#0c7b79]' : 'border-[#dbe9ec] bg-[#eaf4f3] text-[#0c7b79]'}`}>
-                                          <Building2 className="h-5 w-5" />
+                                          {chamberIconUrl ? (
+                                            <img src={chamberIconUrl} alt="Chamber" className="h-5 w-5 object-contain" />
+                                          ) : (
+                                            <Building2 className="h-5 w-5" />
+                                          )}
                                         </span>
                                         <div className="min-w-0">
                                           <p className="truncate text-[17px] font-semibold leading-snug text-[#1a2f44]">
@@ -679,7 +727,11 @@ export default function PublicBookAppointment() {
                                   <div className="hidden items-center justify-between gap-3.5 sm:flex sm:gap-4">
                                     <div className="flex min-w-0 gap-5 sm:w-[45%] sm:max-w-[45%] sm:shrink-0">
                                       <span className={`inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border transition-colors duration-200 ${isActive ? 'border-[#0c7b79]/25 bg-[#0c7b79]/10 text-[#0c7b79]' : 'border-[#dbe9ec] bg-[#eaf4f3] text-[#0c7b79]'}`}>
-                                        <Building2 className="h-5 w-5" />
+                                        {chamberIconUrl ? (
+                                          <img src={chamberIconUrl} alt="Chamber" className="h-5 w-5 object-contain" />
+                                        ) : (
+                                          <Building2 className="h-5 w-5" />
+                                        )}
                                       </span>
                                       <div className="min-w-0">
                                         <p className="truncate text-[15px] font-semibold leading-snug text-[#1a2f44]">
@@ -784,7 +836,7 @@ export default function PublicBookAppointment() {
 
                             {/* What's Included */}
                             <div className="space-y-3 border-b border-slate-200 pb-5">
-                              <p className="flex items-center gap-2 text-xs font-semibold text-slate-700">
+                              {/* <p className="flex items-center gap-2 text-xs font-semibold text-slate-700">
                                 <CheckCircle2 className="h-4 w-4 text-emerald-500" />
                                 What's included
                               </p>
@@ -801,7 +853,10 @@ export default function PublicBookAppointment() {
                                   <span className="mt-1.5 flex h-1.5 w-1.5 flex-shrink-0 rounded-full bg-slate-400" />
                                   <span>Prescription and follow-up guidance</span>
                                 </li>
-                              </ul>
+                              </ul> */}
+                              <div className="rounded-xl border border-emerald-100 bg-emerald-50/70 px-3 py-2.5 text-[11px] leading-5 text-emerald-800">
+                                Health tip: small daily habits create long-term wellness. Stay hydrated, get enough sleep, and keep moving a little every day.
+                              </div>
                             </div>
 
                             {/* Before Appointment */}
@@ -867,8 +922,9 @@ export default function PublicBookAppointment() {
                               dateClick={handleDateClick}
                               dayCellDidMount={handleDayCellDidMount}
                               selectable
-                              showNonCurrentDates={true}
+                              showNonCurrentDates={false}
                               fixedWeekCount={false}
+                              validRange={{ start: getFirstDayOfCurrentMonth() }}
                               headerToolbar={{ left: 'prev', center: 'title', right: 'next' }}
                               height="auto"
                               dayCellClassNames={(arg) => {
@@ -899,7 +955,11 @@ export default function PublicBookAppointment() {
                                     <span className="font-bold">{formatDisplayTime12h(previewTime) || previewTime}</span>
                                   </div>
                                 </div>
-                              ) : null}
+                              ) : (
+                                <div className="mx-[10px] lg:mx-0 rounded-[24px] border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-700 shadow-sm">
+                                  {error || 'Schedule is fully booked on the selected date. Please choose another date.'}
+                                </div>
+                              )}
                             </div>
                           )}
 
@@ -984,36 +1044,36 @@ export default function PublicBookAppointment() {
                         </div>
 
                         {/* <div className="grid grid-cols-2 lg:grid-cols-1 gap-3"> */}
-                          <div>
-                            <label className="mb-2 block text-sm font-semibold text-[#005963]">Age</label>
-                            <input
-                              type="number"
-                              name="age"
-                              placeholder="Age (optional)"
-                              min={1}
-                              max={150}
-                              value={formData.age}
-                              onChange={(e) => setFormData((p) => ({ ...p, age: e.target.value }))}
-                              className={inputClass}
-                              disabled={submitting}
-                            />
-                          </div>
+                        <div>
+                          <label className="mb-2 block text-sm font-semibold text-[#005963]">Age</label>
+                          <input
+                            type="number"
+                            name="age"
+                            placeholder="Age (optional)"
+                            min={1}
+                            max={150}
+                            value={formData.age}
+                            onChange={(e) => setFormData((p) => ({ ...p, age: e.target.value }))}
+                            className={inputClass}
+                            disabled={submitting}
+                          />
+                        </div>
 
-                          <div>
-                            <label className="mb-2 block text-sm font-semibold text-[#005963]">Gender</label>
-                            <select
-                              name="gender"
-                              value={formData.gender}
-                              onChange={(e) => setFormData((p) => ({ ...p, gender: e.target.value }))}
-                              className={inputClass}
-                              disabled={submitting}
-                            >
-                              <option value="">Select gender (optional)</option>
-                              <option value="male">Male</option>
-                              <option value="female">Female</option>
-                              <option value="other">Other</option>
-                            </select>
-                          </div>
+                        <div>
+                          <label className="mb-2 block text-sm font-semibold text-[#005963]">Gender</label>
+                          <select
+                            name="gender"
+                            value={formData.gender}
+                            onChange={(e) => setFormData((p) => ({ ...p, gender: e.target.value }))}
+                            className={inputClass}
+                            disabled={submitting}
+                          >
+                            <option value="">Select gender (optional)</option>
+                            <option value="male">Male</option>
+                            <option value="female">Female</option>
+                            <option value="other">Other</option>
+                          </select>
+                        </div>
                         {/* </div> */}
                       </div>
 
@@ -1057,6 +1117,26 @@ export default function PublicBookAppointment() {
                           className={`${inputClass} resize-none`}
                           disabled={submitting}
                         />
+                      </div>
+
+                      <div className="mt-4">
+                        <label className="mb-2 block text-sm font-semibold text-[#005963]">Upload Document (optional)</label>
+                        <div className="rounded-2xl border border-[#00acb1]/30 bg-white px-3 py-3">
+                          <div className="flex items-center gap-2 text-xs text-[#005963]">
+                            <Upload className="h-4 w-4" />
+                            Supported: JPG, PNG, WebP, PDF (max 5MB)
+                          </div>
+                          <input
+                            type="file"
+                            accept=".jpg,.jpeg,.png,.webp,.pdf,image/jpeg,image/png,image/webp,application/pdf"
+                            onChange={handleAttachmentChange}
+                            disabled={submitting}
+                            className="mt-2 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                          />
+                          {attachmentFile && (
+                            <p className="mt-2 text-xs text-slate-500">Selected: {attachmentFile.name}</p>
+                          )}
+                        </div>
                       </div>
 
                       <div className="hidden lg:block mt-4 rounded-[24px] border border-[#d6ece8] bg-[linear-gradient(135deg,#f7fdfc_0%,#ffffff_100%)] px-4 py-4 text-xs text-gray-700">
@@ -1208,8 +1288,8 @@ export default function PublicBookAppointment() {
         }
 
         .public-booking-calendar .fc .fc-daygrid-day-frame {
-          padding: 6px 0;
-          min-height: 58px;
+          padding: 0 0;
+          min-height: 40px;
           display: flex;
           flex-direction: row;
           justify-content: center;
@@ -1244,17 +1324,16 @@ export default function PublicBookAppointment() {
           box-shadow: 0 10px 22px rgba(37, 99, 235, 0.28);
         }
 
+        .public-booking-calendar .fc .fc-daygrid-day.fc-unavailable {
+          background-color: white !important;
+        }
+
         .public-booking-calendar .fc-unavailable .fc-daygrid-day-number {
           background: transparent !important;
           background-image: none !important;
           color: #94a3b8;
           opacity: 1;
           box-shadow: none;
-        }
-
-        .public-booking-calendar .fc-day-available:hover .fc-daygrid-day-number,
-        .public-booking-calendar .fc-day-today-custom:hover .fc-daygrid-day-number {
-          filter: brightness(0.98);
         }
 
         .public-booking-calendar .fc-day-other .fc-daygrid-day-number {
@@ -1265,7 +1344,17 @@ export default function PublicBookAppointment() {
           font-size: 14px !important;
           padding: 8px !important;
         }
+.public-booking-calendar .fc .fc-daygrid-day.fc-day-selected .fc-daygrid-day-number
+{
+background:#2563eb !important;
+box-shadow:none !important;
+  }
 
+        .fc .fc-highlight{
+          background-color: white !important;
+          border: none !important;
+          box-shadow: none !important;
+          }
         @media (max-width: 640px) {
           .public-booking-calendar .fc .fc-toolbar {
             flex-direction: row;
@@ -1275,7 +1364,7 @@ export default function PublicBookAppointment() {
 
         @media (min-width: 640px) {
           .fc-daygrid-day-number {
-            font-size: 16px !important;
+            font-size: 14px !important;
             padding: 27px !important;
           }
         }

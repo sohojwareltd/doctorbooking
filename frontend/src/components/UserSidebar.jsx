@@ -7,9 +7,10 @@ import {
 const ACCENT = '#FF7C00';
 
 export default function UserSidebar({ currentPath }) {
-  const { auth, publicDoctor } = usePage().props;
+  const { auth, publicDoctor, site } = usePage().props;
   const user = auth?.user;
   const doctorName = publicDoctor?.name || 'MediCare';
+  const sidebarLogoUrl = site?.branding?.sidebarLogoUrl || site?.branding?.brandLogoUrl || '/stethoscope-2.png';
 
   const isActive = (href) => currentPath === href || currentPath.startsWith(href + '/');
   const appointmentsActive = isActive('/patient/appointments');
@@ -22,7 +23,7 @@ export default function UserSidebar({ currentPath }) {
         <Link href="/patient/dashboard" className="flex items-center gap-3 group">
           <div className="rounded-lg bg-white p-1 transition group-hover:bg-slate-100 flex-shrink-0 shadow-md">
             <img
-              src="/stethoscope-2.png"
+              src={sidebarLogoUrl}
               alt="Medical logo"
               className="h-10 w-10 object-contain"
               onError={(e) => {

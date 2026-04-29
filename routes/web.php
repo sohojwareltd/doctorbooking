@@ -121,6 +121,8 @@ Route::middleware(['auth', 'role:doctor,compounder'])
         Route::delete('/profile/photo', [ProfileController::class, 'doctorPhotoDelete'])->name('profile.photo.delete');
         Route::post('/profile/hero-image', [ProfileController::class, 'doctorHeroUpload'])->name('profile.hero.upload');
         Route::delete('/profile/hero-image', [ProfileController::class, 'doctorHeroDelete'])->name('profile.hero.delete');
+        Route::put('/profile/branding', [ProfileController::class, 'doctorBrandingUpdate'])->name('profile.branding.update');
+        Route::post('/profile/branding/upload', [ProfileController::class, 'doctorBrandingUpload'])->name('profile.branding.upload');
 
         // Chambers
         Route::get('/chambers', [ChamberController::class, 'index'])->name('chambers');

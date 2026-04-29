@@ -48,6 +48,16 @@ class ProfileController extends Controller
         return app(DoctorProfileController::class)->deleteHeroImage();
     }
 
+    public function doctorBrandingUpdate(Request $request): mixed
+    {
+        return app(DoctorProfileController::class)->updateBrandingIcons($request);
+    }
+
+    public function doctorBrandingUpload(Request $request): mixed
+    {
+        return app(DoctorProfileController::class)->uploadBrandingImage($request);
+    }
+
     /** GET /patient/profile */
     public function patientShow(): Response
     {
