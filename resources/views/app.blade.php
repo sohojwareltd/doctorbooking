@@ -7,6 +7,17 @@
             $metaDescription = 'Book appointments, manage prescriptions, and stay connected with your doctor.';
             $metaUrl = url()->current();
             $metaImage = asset('favicon.ico');
+            $faviconUrl = asset('favicon.svg') . '?v=20260429';
+
+            if (\Illuminate\Support\Facades\Schema::hasTable('site_contents')) {
+                $homeContent = \App\Models\SiteContent::where('key', 'home')->first()?->value;
+                $homeContent = \App\Models\SiteContent::normalizeValue($homeContent);
+
+                $configuredFavicon = data_get($homeContent, 'branding.faviconUrl');
+                if (is_string($configuredFavicon) && trim($configuredFavicon) !== '') {
+                    $faviconUrl = $configuredFavicon;
+                }
+            }
 
             $cachedDoctorImage = \Illuminate\Support\Facades\Cache::remember(
                 'meta:doctor_profile_image',
@@ -51,9 +62,9 @@
         <meta name="twitter:image" content="{{ $metaImage }}">
 
         <link rel="canonical" href="{{ $metaUrl }}">
-        <link rel="icon" href="{{ asset('favicon.svg') }}?v=20260429" sizes="any">
-        <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}?v=20260429">
-        <link rel="shortcut icon" type="image/x-icon" href="{{ asset('favicon.svg') }}?v=20260429">
+        <link rel="icon" href="{{ $faviconUrl }}" sizes="any">
+        <link rel="icon" type="image/svg+xml" href="{{ $faviconUrl }}">
+        <link rel="shortcut icon" type="image/x-icon" href="{{ $faviconUrl }}">
         {{-- <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}?v=20260429"> --}}
         <title inertia>{{ config('app.name', 'Doctor Booking') }}</title>
 

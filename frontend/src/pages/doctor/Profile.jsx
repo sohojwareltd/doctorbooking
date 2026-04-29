@@ -26,6 +26,7 @@ import { toastError, toastSuccess } from '../../utils/toast';
 export default function DoctorProfile({ doctor = {} }) {
     const page = usePage();
     const flash = page?.props?.flash || {};
+    const branding = page?.props?.branding || {};
     const [photoPreview, setPhotoPreview] = useState(doctor.profile_picture || null);
     const [heroPreview, setHeroPreview] = useState(doctor.hero_image || null);
     const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -72,6 +73,24 @@ export default function DoctorProfile({ doctor = {} }) {
         password_confirmation: '',
     });
     const [passwordSaved, setPasswordSaved] = useState(false);
+    const {
+        data: brandingData,
+        setData: setBrandingData,
+        put: putBranding,
+        processing: brandingProcessing,
+        errors: brandingErrors,
+    } = useForm({
+        favicon_url: branding.favicon_url || '',
+        brand_logo_url: branding.brand_logo_url || '',
+        sidebar_logo_url: branding.sidebar_logo_url || '',
+        chamber_icon_url: branding.chamber_icon_url || '',
+    });
+    const [uploadingBranding, setUploadingBranding] = useState({
+        favicon_url: false,
+        brand_logo_url: false,
+        sidebar_logo_url: false,
+        chamber_icon_url: false,
+    });
     const [showPasswords, setShowPasswords] = useState({
         current_password: false,
         password: false,
@@ -94,6 +113,13 @@ export default function DoctorProfile({ doctor = {} }) {
     useEffect(() => {
         setHeroPreview(doctor.hero_image || null);
     }, [doctor.hero_image]);
+
+    useEffect(() => {
+        setBrandingData('favicon_url', branding.favicon_url || '');
+        setBrandingData('brand_logo_url', branding.brand_logo_url || '');
+        setBrandingData('sidebar_logo_url', branding.sidebar_logo_url || '');
+        setBrandingData('chamber_icon_url', branding.chamber_icon_url || '');
+    }, [branding, setBrandingData]);
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -239,6 +265,53 @@ export default function DoctorProfile({ doctor = {} }) {
                 setDeletingHero(false);
                 toastError('Failed to delete hero image');
             },
+        });
+    };
+
+    const uploadBrandingFile = async (field, file) => {
+        const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        const formData = new FormData();
+        formData.append('image', file);
+
+        const response = await fetch('/doctor/profile/branding/upload', {
+            method: 'POST',
+            headers: token ? { 'X-CSRF-TOKEN': token, Accept: 'application/json' } : { Accept: 'application/json' },
+            body: formData,
+            credentials: 'same-origin',
+        });
+
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload?.url) {
+            throw new Error(payload?.message || 'Upload failed');
+        }
+
+        const nextBranding = {
+            ...brandingData,
+            [field]: payload.url,
+        };
+
+        setBrandingData(field, payload.url);
+
+        await new Promise((resolve, reject) => {
+            router.put('/doctor/profile/branding', nextBranding, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    toastSuccess('Icon uploaded and saved successfully.');
+                    resolve();
+                },
+                onError: () => {
+                    reject(new Error('Icon uploaded but save failed. Please click Save Icons.'));
+                },
+            });
+        });
+    };
+
+    const handleBrandingSubmit = (e) => {
+        e.preventDefault();
+        putBranding('/doctor/profile/branding', {
+            preserveScroll: true,
+            onSuccess: () => toastSuccess('Branding icons saved successfully.'),
+            onError: () => toastError('Failed to save branding icons.'),
         });
     };
 
@@ -571,6 +644,66 @@ export default function DoctorProfile({ doctor = {} }) {
                             </div>
                         </div>
                     </div>
+
+                    <form onSubmit={handleBrandingSubmit} className="surface-card overflow-hidden rounded-3xl border border-slate-200 p-7 shadow-sm">
+                        <div className="mb-6 flex items-center justify-between gap-3">
+                            <div>
+                                <h2 className="text-xl font-bold text-slate-800">Branding Icons</h2>
+                                <p className="text-sm text-slate-500">Set favicon, brand logo, sidebar icon and chamber icon from doctor profile.</p>
+                            </div>
+                            <button
+                                type="submit"
+                                disabled={brandingProcessing}
+                                className="flex items-center gap-2 rounded-xl bg-[#3556a6] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#2a488f] disabled:opacity-50"
+                            >
+                                <Save className="h-4 w-4" />
+                                {brandingProcessing ? 'Saving...' : 'Save Icons'}
+                            </button>
+                        </div>
+
+                        <div className="grid gap-5 md:grid-cols-2">
+                            {[
+                                { field: 'favicon_url', label: 'Favicon Icon', helper: 'Browser tab icon.' },
+                                { field: 'brand_logo_url', label: 'Brand Logo', helper: 'Public header/brand logo.' },
+                                { field: 'sidebar_logo_url', label: 'Dashboard Sidebar Icon', helper: 'Doctor/Admin/User sidebar logo.' },
+                                { field: 'chamber_icon_url', label: 'Chamber Icon', helper: 'Chamber card and menu icon.' },
+                            ].map((item) => (
+                                <div key={item.field} className="rounded-2xl border border-slate-200 p-4">
+                                    <label className={labelClass}>{item.label}</label>
+                                    {brandingErrors[item.field] && <p className={errorClass}>{brandingErrors[item.field]}</p>}
+                                    <p className="mt-1 text-xs text-slate-400">{item.helper}</p>
+
+                                    <div className="mt-3 flex items-center gap-3">
+                                        <input
+                                            type="file"
+                                            accept=".jpg,.jpeg,.png,.webp,.svg,image/*"
+                                            onChange={async (e) => {
+                                                const file = e.target.files?.[0];
+                                                if (!file) return;
+                                                setUploadingBranding((prev) => ({ ...prev, [item.field]: true }));
+                                                try {
+                                                    await uploadBrandingFile(item.field, file);
+                                                } catch (uploadError) {
+                                                    toastError(uploadError.message || 'Upload failed');
+                                                } finally {
+                                                    setUploadingBranding((prev) => ({ ...prev, [item.field]: false }));
+                                                    e.target.value = '';
+                                                }
+                                            }}
+                                            className="block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                                        />
+                                        {uploadingBranding[item.field] ? <span className="text-xs text-slate-500">Uploading...</span> : null}
+                                    </div>
+
+                                    {brandingData[item.field] ? (
+                                        <div className="mt-3 overflow-hidden rounded-xl border border-slate-200 bg-white p-2">
+                                            <img src={brandingData[item.field]} alt={item.label} className="h-16 w-full object-contain" />
+                                        </div>
+                                    ) : null}
+                                </div>
+                            ))}
+                        </div>
+                    </form>
                 </div>
             )}
 

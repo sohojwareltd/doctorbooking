@@ -514,6 +514,7 @@ export default function Prescription({
 
     const page = usePage();
     const authUser = page?.props?.auth?.user;
+    const branding = page?.props?.site?.branding || {};
     const doctorSpecialization = doctorInfo?.specialization || authUser?.specialization || '';
     const doctorDegree = doctorInfo?.degree || authUser?.degree || '';
     const prefersEyeTemplate = isEyeSpecialist(doctorSpecialization);
@@ -525,7 +526,11 @@ export default function Prescription({
     const chamberQrSrc = chamberMapUrl
         ? `https://api.qrserver.com/v1/create-qr-code/?size=96x96&data=${encodeURIComponent(chamberMapUrl)}`
         : '';
-    const doctorLogoSrc = authUser?.profile_picture || '/stethoscope-2.png';
+    const doctorLogoSrc =
+        branding?.brandLogoUrl ||
+        branding?.sidebarLogoUrl ||
+        authUser?.profile_picture ||
+        '/stethoscope-2.png';
 
     const [state, dispatch] = useReducer(reducer, initialState);
     const [submitting, setSubmitting] = useState(false);

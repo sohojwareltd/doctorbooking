@@ -1,6 +1,6 @@
 import { Head, usePage } from '@inertiajs/react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowRight, Building2, Calendar, CheckCircle2, ChevronLeft, Clock, Loader2, MapPin, Phone, ShieldQuestion, Sparkles, User } from 'lucide-react';
+import { ArrowRight, Building2, Calendar, CheckCircle2, ChevronLeft, Clock, Loader2, MapPin, Phone, ShieldQuestion, Sparkles, Upload, User } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
@@ -27,6 +27,7 @@ function getCookieXsrfToken() {
 export default function PublicBookAppointment() {
   const page = usePage();
   const contactPhone = page?.props?.site?.contactPhone || '';
+  const chamberIconUrl = page?.props?.site?.branding?.chamberIconUrl || '';
   const authUser = page?.props?.auth?.user || null;
   const initialSearch = typeof window !== 'undefined' ? window.location.search : '';
 
@@ -67,6 +68,7 @@ export default function PublicBookAppointment() {
   const [previewSerial, setPreviewSerial] = useState(null);
   const [previewTime, setPreviewTime] = useState(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
+  const [attachmentFile, setAttachmentFile] = useState(null);
   const [requestedChamberId, setRequestedChamberId] = useState(() => {
     const params = new URLSearchParams(initialSearch);
     return params.get('chamber_id');
@@ -465,6 +467,42 @@ export default function PublicBookAppointment() {
     }
   };
 
+  const handleAttachmentChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) {
+      setAttachmentFile(null);
+      return;
+    }
+
+    const allowedMimeTypes = [
+      'image/jpeg',
+      'image/png',
+      'image/webp',
+      'application/pdf',
+    ];
+
+    if (!allowedMimeTypes.includes(file.type)) {
+      const message = 'Only JPG, PNG, WebP, or PDF files are allowed.';
+      setError(message);
+      toastError(message);
+      e.target.value = '';
+      setAttachmentFile(null);
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      const message = 'File size must be 5MB or less.';
+      setError(message);
+      toastError(message);
+      e.target.value = '';
+      setAttachmentFile(null);
+      return;
+    }
+
+    setError('');
+    setAttachmentFile(file);
+  };
+
   const inputClass =
     'w-full rounded-2xl border border-[#00acb1]/30 bg-white px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-4 focus:ring-[#00acb1]/20';
 
@@ -623,7 +661,11 @@ export default function PublicBookAppointment() {
                                     <div className="flex items-start gap-3">
                                       <div className="flex min-w-0 items-start gap-3">
                                         <span className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border transition-colors duration-200 ${isActive ? 'border-[#0c7b79]/25 bg-[#0c7b79]/10 text-[#0c7b79]' : 'border-[#dbe9ec] bg-[#eaf4f3] text-[#0c7b79]'}`}>
-                                          <Building2 className="h-5 w-5" />
+                                          {chamberIconUrl ? (
+                                            <img src={chamberIconUrl} alt="Chamber" className="h-5 w-5 object-contain" />
+                                          ) : (
+                                            <Building2 className="h-5 w-5" />
+                                          )}
                                         </span>
                                         <div className="min-w-0">
                                           <p className="truncate text-[17px] font-semibold leading-snug text-[#1a2f44]">
@@ -685,7 +727,11 @@ export default function PublicBookAppointment() {
                                   <div className="hidden items-center justify-between gap-3.5 sm:flex sm:gap-4">
                                     <div className="flex min-w-0 gap-5 sm:w-[45%] sm:max-w-[45%] sm:shrink-0">
                                       <span className={`inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border transition-colors duration-200 ${isActive ? 'border-[#0c7b79]/25 bg-[#0c7b79]/10 text-[#0c7b79]' : 'border-[#dbe9ec] bg-[#eaf4f3] text-[#0c7b79]'}`}>
-                                        <Building2 className="h-5 w-5" />
+                                        {chamberIconUrl ? (
+                                          <img src={chamberIconUrl} alt="Chamber" className="h-5 w-5 object-contain" />
+                                        ) : (
+                                          <Building2 className="h-5 w-5" />
+                                        )}
                                       </span>
                                       <div className="min-w-0">
                                         <p className="truncate text-[15px] font-semibold leading-snug text-[#1a2f44]">
@@ -1071,6 +1117,26 @@ export default function PublicBookAppointment() {
                           className={`${inputClass} resize-none`}
                           disabled={submitting}
                         />
+                      </div>
+
+                      <div className="mt-4">
+                        <label className="mb-2 block text-sm font-semibold text-[#005963]">Upload Document (optional)</label>
+                        <div className="rounded-2xl border border-[#00acb1]/30 bg-white px-3 py-3">
+                          <div className="flex items-center gap-2 text-xs text-[#005963]">
+                            <Upload className="h-4 w-4" />
+                            Supported: JPG, PNG, WebP, PDF (max 5MB)
+                          </div>
+                          <input
+                            type="file"
+                            accept=".jpg,.jpeg,.png,.webp,.pdf,image/jpeg,image/png,image/webp,application/pdf"
+                            onChange={handleAttachmentChange}
+                            disabled={submitting}
+                            className="mt-2 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                          />
+                          {attachmentFile && (
+                            <p className="mt-2 text-xs text-slate-500">Selected: {attachmentFile.name}</p>
+                          )}
+                        </div>
                       </div>
 
                       <div className="hidden lg:block mt-4 rounded-[24px] border border-[#d6ece8] bg-[linear-gradient(135deg,#f7fdfc_0%,#ffffff_100%)] px-4 py-4 text-xs text-gray-700">

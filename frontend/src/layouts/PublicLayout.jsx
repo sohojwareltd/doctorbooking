@@ -6,13 +6,14 @@ import DoctorLogo from '../components/DoctorLogo';
 export default function PublicLayout({ children, hideHeader = false }) {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [showScrollTop, setShowScrollTop] = useState(false);
-    const { auth, home, doctor, publicDoctor } = usePage().props;
+    const { auth, home, doctor, publicDoctor, site } = usePage().props;
     const authUser = auth?.user ?? null;
     const isAuthenticated = Boolean(authUser?.id);
 
     const header = home?.header || {};
     const footer = home?.footer || {};
-    const headerLogoUrl = header.logoUrl;
+    const branding = site?.branding || {};
+    const headerLogoUrl = header.logoUrl || branding.brandLogoUrl || branding.sidebarLogoUrl || null;
     const brandName = publicDoctor?.name || doctor?.name || authUser?.name || 'Doctor Profile';
     const footerBrandName = footer.brandName || brandName;
     const footerCopyright = footer.copyright || `Copyright ${new Date().getFullYear()} ${footerBrandName}. All rights reserved.`;

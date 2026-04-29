@@ -6,9 +6,10 @@ import {
 } from 'lucide-react';
 
 export default function DoctorSidebar({ currentPath, onClose, collapsed = false, onToggleCollapse }) {
-  const { auth } = usePage().props;
+  const { auth, site } = usePage().props;
   const user = auth?.user;
   const brandName = user?.name || 'Doctor Profile';
+  const chamberIconUrl = site?.branding?.chamberIconUrl || null;
 
   const isCompounder = user?.role === 'compounder';
 
@@ -48,7 +49,7 @@ export default function DoctorSidebar({ currentPath, onClose, collapsed = false,
   ];
 
   const isActive = (href) => currentPath === href || currentPath.startsWith(href + '/');
-  const brandImageUrl = '/stethoscope-2.png';
+  const brandImageUrl = site?.branding?.sidebarLogoUrl || site?.branding?.brandLogoUrl || '/stethoscope-2.png';
 
   return (
     <div className="flex h-full flex-col bg-[#2D3A74] text-white">
@@ -162,7 +163,15 @@ export default function DoctorSidebar({ currentPath, onClose, collapsed = false,
                             }`}
                             style={active ? { background: 'rgba(255,255,255,0.15)', borderLeft: '4px solid #FF7C00', paddingLeft: '40px' } : { paddingLeft: '44px' }}
                           >
-                            <Icon className={`w-4 h-4 mr-3 flex-shrink-0 ${active ? 'text-white' : 'text-white/70'}`} />
+                            {label === 'Chambers' && chamberIconUrl ? (
+                              <img
+                                src={chamberIconUrl}
+                                alt="Chamber"
+                                className="w-4 h-4 mr-3 flex-shrink-0 object-contain"
+                              />
+                            ) : (
+                              <Icon className={`w-4 h-4 mr-3 flex-shrink-0 ${active ? 'text-white' : 'text-white/70'}`} />
+                            )}
                             {!collapsed && <span>{label}</span>}
                           </Link>
                         </li>

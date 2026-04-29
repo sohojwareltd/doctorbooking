@@ -44,10 +44,23 @@ class HandleInertiaRequests extends Middleware
         $contactPhone = null;
         $prescription = null;
         $publicDoctor = null;
+        $branding = [
+            'faviconUrl' => null,
+            'brandLogoUrl' => null,
+            'sidebarLogoUrl' => null,
+            'chamberIconUrl' => null,
+        ];
         if (Schema::hasTable('site_contents')) {
             $homeContent = SiteContent::where('key', 'home')->first()?->value;
             $homeContent = SiteContent::normalizeValue($homeContent);
             $footerLines = data_get($homeContent, 'footer.contactLines', []);
+
+            $branding = [
+                'faviconUrl' => data_get($homeContent, 'branding.faviconUrl') ?: null,
+                'brandLogoUrl' => data_get($homeContent, 'branding.brandLogoUrl') ?: null,
+                'sidebarLogoUrl' => data_get($homeContent, 'branding.sidebarLogoUrl') ?: null,
+                'chamberIconUrl' => data_get($homeContent, 'branding.chamberIconUrl') ?: null,
+            ];
 
             $defaultPrescription = [
                 'clinicName' => data_get($homeContent, 'hero.name') ?: null,
@@ -148,6 +161,7 @@ class HandleInertiaRequests extends Middleware
             'site' => [
                 'contactPhone' => $contactPhone,
                 'prescription' => $prescription,
+                'branding' => $branding,
             ],
             'publicDoctor' => $publicDoctor,
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',

@@ -2,10 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\SiteContent;
 use App\Models\User;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
@@ -56,6 +61,83 @@ class DoctorProfileController extends Controller
                 'about_stats_patient_satisfaction'   => $about['stats'][2]['value'] ?? null,
                 'about_stats_medical_cases'          => $about['stats'][3]['value'] ?? null,
             ],
+            'branding' => $this->getBrandingFromHomeContent(),
+        ]);
+    }
+
+    private function getBrandingFromHomeContent(): array
+    {
+        if (!Schema::hasTable('site_contents')) {
+            return [
+                'favicon_url' => null,
+                'brand_logo_url' => null,
+                'sidebar_logo_url' => null,
+                'chamber_icon_url' => null,
+            ];
+        }
+
+        $homeContent = SiteContent::where('key', 'home')->first()?->value;
+        $homeContent = SiteContent::normalizeValue($homeContent);
+
+        return [
+            'favicon_url' => data_get($homeContent, 'branding.faviconUrl') ?: null,
+            'brand_logo_url' => data_get($homeContent, 'branding.brandLogoUrl') ?: null,
+            'sidebar_logo_url' => data_get($homeContent, 'branding.sidebarLogoUrl') ?: null,
+            'chamber_icon_url' => data_get($homeContent, 'branding.chamberIconUrl') ?: null,
+        ];
+    }
+
+    public function updateBrandingIcons(Request $request)
+    {
+        $validated = $request->validate([
+            'favicon_url' => ['nullable', 'string', 'max:2048'],
+            'brand_logo_url' => ['nullable', 'string', 'max:2048'],
+            'sidebar_logo_url' => ['nullable', 'string', 'max:2048'],
+            'chamber_icon_url' => ['nullable', 'string', 'max:2048'],
+        ]);
+
+        if (!Schema::hasTable('site_contents')) {
+            return back()->with('error', 'Site content table not found.');
+        }
+
+        $home = SiteContent::where('key', 'home')->first()?->value;
+        $home = SiteContent::normalizeValue($home);
+        $home = is_array($home) ? $home : [];
+
+        $branding = [
+            'faviconUrl' => $validated['favicon_url'] ?? null,
+            'brandLogoUrl' => $validated['brand_logo_url'] ?? null,
+            'sidebarLogoUrl' => $validated['sidebar_logo_url'] ?? null,
+            'chamberIconUrl' => $validated['chamber_icon_url'] ?? null,
+        ];
+
+        $home['branding'] = $branding;
+
+        SiteContent::updateOrCreate(
+            ['key' => 'home'],
+            ['value' => $home]
+        );
+
+        return back()->with('success', 'Branding icons updated successfully.');
+    }
+
+    public function uploadBrandingImage(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'image' => ['required', 'file', 'image', 'max:5120'],
+        ]);
+
+        $directory = public_path('site-content');
+        File::ensureDirectoryExists($directory);
+
+        $file = $validated['image'];
+        $extension = $file->getClientOriginalExtension() ?: 'jpg';
+        $filename = Str::random(40).'.'.$extension;
+
+        $file->move($directory, $filename);
+
+        return response()->json([
+            'url' => '/site-content/'.$filename,
         ]);
     }
 

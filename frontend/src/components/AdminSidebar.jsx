@@ -3,8 +3,9 @@ import { BarChart3, CalendarCheck2, LayoutDashboard, PlusCircle, Settings, Users
 import DoctorLogo from './DoctorLogo';
 
 export default function AdminSidebar({ currentPath }) {
-  const { auth } = usePage().props;
+  const { auth, site } = usePage().props;
   const user = auth?.user;
+  const sidebarLogoUrl = site?.branding?.sidebarLogoUrl || site?.branding?.brandLogoUrl || null;
 
   const navGroups = [
     {
@@ -41,7 +42,11 @@ export default function AdminSidebar({ currentPath }) {
       <div className="flex-shrink-0 px-4 py-5 border-b border-gray-200 bg-white">
         <Link href="/admin/dashboard" className="flex items-center gap-3 group">
           <div className="rounded-xl bg-[#111827] p-2.5 shadow-sm group-hover:shadow-md transition-shadow">
-            <DoctorLogo className="h-6 w-6" />
+            {sidebarLogoUrl ? (
+              <img src={sidebarLogoUrl} alt="Brand" className="h-6 w-6 object-contain" />
+            ) : (
+              <DoctorLogo className="h-6 w-6" />
+            )}
           </div>
           <div>
             <div className="text-base font-bold text-gray-900">MediCare</div>
