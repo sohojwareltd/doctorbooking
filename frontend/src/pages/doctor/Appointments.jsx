@@ -105,6 +105,21 @@ function getStatusSummaryTone(status) {
   return tones[value] || tones.scheduled;
 }
 
+function getTodayYmd() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function getFirstDayOfCurrentMonth() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  return `${year}-${month}-01`;
+}
+
 function GenderIconAvatar({ gender }) {
   const value = String(gender || '').toLowerCase();
 
@@ -388,6 +403,7 @@ export default function DoctorAppointments() {
 
   const isUnavailableDate = useCallback((dateStr) => {
     if (!dateStr) return false;
+    if (dateStr < getTodayYmd()) return true;
     if (isClosedByWeekday(dateStr)) return true;
     return unavailableRanges.some((range) => range?.start_date && range?.end_date && range.start_date <= dateStr && dateStr <= range.end_date);
   }, [isClosedByWeekday, unavailableRanges]);
@@ -402,28 +418,9 @@ export default function DoctorAppointments() {
     return `${year}-${month}-${day}`;
   }, []);
 
-  const handleCalendarDayCellDidMount = useCallback((arg) => {
-    const cell = arg?.el;
-    if (!cell) return;
-
-    const frame = cell.querySelector('.fc-daygrid-day-frame') || cell;
-    frame.style.position = 'relative';
-
-    const dayStr = normalizeCalendarDate(arg);
-    const unavailable = isUnavailableDate(dayStr);
-    const existingIcon = cell.querySelector('.fc-unavailable-icon');
-
-    if (unavailable && !existingIcon) {
-      const icon = document.createElement('span');
-      icon.className = 'fc-unavailable-icon';
-      icon.textContent = 'x';
-      icon.setAttribute('aria-label', 'Unavailable date');
-      icon.title = 'Unavailable date';
-      frame.appendChild(icon);
-    } else if (!unavailable && existingIcon) {
-      existingIcon.remove();
-    }
-  }, [isUnavailableDate, normalizeCalendarDate]);
+  const handleCalendarDayCellDidMount = useCallback(() => {
+    // Dates are styled via dayCellClassNames, matching the public booking calendar.
+  }, []);
 
   const handleDateSelect = useCallback((info) => {
     if (!apptForm.chamber_id) {
@@ -432,6 +429,10 @@ export default function DoctorAppointments() {
     }
 
     const dateStr = info.dateStr;
+    if (dateStr < getTodayYmd()) {
+      toastError('Previous dates are not available.');
+      return;
+    }
     if (isUnavailableDate(dateStr)) {
       toastError('Selected chamber is unavailable on this date.');
       return;
@@ -705,7 +706,7 @@ export default function DoctorAppointments() {
     return Array.from({ length: end - start + 1 }, (_, i) => start + i);
   }, [safeCurrentPage, totalPages]);
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = getTodayYmd();
   const stats = useMemo(() => ({
     total: pageMeta.total,
     today: rows.filter((item) => item.appointment_date === today).length,
@@ -1766,18 +1767,19 @@ export default function DoctorAppointments() {
                       plugins={[dayGridPlugin, interactionPlugin]}
                       initialView="dayGridMonth"
                       headerToolbar={{ left: 'prev', center: 'title', right: 'next' }}
-                      height={300}
-                      aspectRatio={0.92}
+                      height="auto"
                       showNonCurrentDates={false}
                       fixedWeekCount={false}
-                      validRange={{ start: new Date().toISOString().split('T')[0] }}
+                      selectable
+                      validRange={{ start: getFirstDayOfCurrentMonth() }}
                       dateClick={handleDateSelect}
                       dayCellDidMount={handleCalendarDayCellDidMount}
                       dayCellClassNames={(arg) => {
                         const dayStr = normalizeCalendarDate(arg);
                         if (isUnavailableDate(dayStr)) return 'fc-unavailable';
+                        if (dayStr === today) return 'fc-day-today-custom';
                         if (selectedDate === dayStr) return 'fc-day-selected';
-                        return '';
+                        return 'fc-day-available';
                       }}
                     />
                   </div>
@@ -1915,6 +1917,98 @@ export default function DoctorAppointments() {
           </div>
         </div>
       </DocModal>
+
+      <style>{`
+        .doctor-appointment-calendar .fc-theme-standard td,
+        .doctor-appointment-calendar .fc-theme-standard th,
+        .doctor-appointment-calendar .fc-scrollgrid,
+        .doctor-appointment-calendar .fc-scrollgrid-section > * {
+          border: 0;
+        }
+
+        .doctor-appointment-calendar .fc-col-header-cell {
+          padding-bottom: 10px;
+        }
+
+        .doctor-appointment-calendar .fc .fc-daygrid-day-frame {
+          padding: 0;
+          min-height: 40px;
+          display: flex;
+          flex-direction: row;
+          justify-content: center;
+        }
+
+        .doctor-appointment-calendar .fc-daygrid-day-top {
+          justify-content: center;
+        }
+
+        .doctor-appointment-calendar .fc-daygrid-day-number {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 40px;
+          height: 40px;
+          font-size: 18px;
+          border-radius: 999px;
+          font-weight: 600;
+          color: #334155;
+          transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .doctor-appointment-calendar .fc-day-available .fc-daygrid-day-number {
+          background: #eef4ff;
+          color: #2563eb;
+        }
+
+        .doctor-appointment-calendar .fc-day-today-custom .fc-daygrid-day-number,
+        .doctor-appointment-calendar .fc-day-selected .fc-daygrid-day-number {
+          background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+          color: #ffffff;
+          box-shadow: 0 10px 22px rgba(37, 99, 235, 0.28);
+        }
+
+        .doctor-appointment-calendar .fc .fc-daygrid-day.fc-unavailable {
+          background-color: white !important;
+        }
+
+        .doctor-appointment-calendar .fc-unavailable .fc-daygrid-day-number {
+          background: transparent !important;
+          background-image: none !important;
+          color: #94a3b8;
+          opacity: 1;
+          box-shadow: none;
+        }
+
+        .doctor-appointment-calendar .fc-day-other .fc-daygrid-day-number {
+          opacity: 0.45;
+        }
+
+        .doctor-appointment-calendar .fc .fc-daygrid-day.fc-day-selected .fc-daygrid-day-number {
+          background: #2563eb !important;
+          box-shadow: none !important;
+        }
+
+        .doctor-appointment-calendar .fc .fc-highlight {
+          background-color: white !important;
+          border: none !important;
+          box-shadow: none !important;
+        }
+
+        @media (max-width: 640px) {
+          .doctor-appointment-calendar .fc .fc-toolbar {
+            flex-direction: row;
+            align-items: center;
+          }
+        }
+
+        @media (min-width: 640px) {
+          .doctor-appointment-calendar .fc-daygrid-day-number {
+            font-size: 14px !important;
+            padding: 27px !important;
+          }
+        }
+      `}</style>
     </DoctorLayout>
   );
 }
+
