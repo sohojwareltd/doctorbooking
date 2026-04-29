@@ -25,8 +25,19 @@ export default function Login({ status, canResetPassword }) {
         remember: false,
     });
 
-    const submit = (e) => {
+    const submit = async (e) => {
         e.preventDefault();
+
+        try {
+            await fetch('/sanctum/csrf-cookie', {
+                method: 'GET',
+                credentials: 'same-origin',
+                headers: { Accept: 'application/json' },
+            });
+        } catch {
+            // Continue with token from page if preflight fails.
+        }
+
         post('/login');
     };
 

@@ -7,20 +7,22 @@ export default function PublicLayout({ children, hideHeader = false }) {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [showScrollTop, setShowScrollTop] = useState(false);
     const { auth, home, doctor, publicDoctor } = usePage().props;
+    const authUser = auth?.user ?? null;
+    const isAuthenticated = Boolean(authUser?.id);
 
     const header = home?.header || {};
     const footer = home?.footer || {};
     const headerLogoUrl = header.logoUrl;
-    const brandName = publicDoctor?.name || doctor?.name || auth?.user?.name || 'Doctor Profile';
+    const brandName = publicDoctor?.name || doctor?.name || authUser?.name || 'Doctor Profile';
     const footerBrandName = footer.brandName || brandName;
     const footerCopyright = footer.copyright || `Copyright ${new Date().getFullYear()} ${footerBrandName}. All rights reserved.`;
 
         const dashboardHref =
-                auth?.user?.role === 'admin'
+                authUser?.role === 'admin'
                         ? '/admin/dashboard'
-                        : auth?.user?.role === 'doctor'
+                        : authUser?.role === 'doctor'
                             ? '/doctor/dashboard'
-                            : auth?.user?.role === 'user'
+                            : authUser?.role === 'user'
                                 ? '/user/dashboard'
                                 : '/dashboard';
 
@@ -96,7 +98,7 @@ export default function PublicLayout({ children, hideHeader = false }) {
                                 <ArrowRight className="h-4 w-4" />
                             </Link>
 
-                            {auth.user ? (
+                            {isAuthenticated ? (
                                 <>
                                     <Link
                                         href={dashboardHref}
@@ -159,7 +161,7 @@ export default function PublicLayout({ children, hideHeader = false }) {
                                 ))}
                             </div>
 
-                            {auth.user && (
+                            {isAuthenticated && (
                                 <div className="mt-3 space-y-2 border-t border-white/10 pt-3">
                                     <Link
                                         href={dashboardHref}
@@ -180,7 +182,7 @@ export default function PublicLayout({ children, hideHeader = false }) {
                                 </div>
                             )}
 
-                            {!auth.user && (
+                            {!isAuthenticated && (
                                 <div className="mt-3 space-y-2 border-t border-white/10 pt-3">
                                     <Link
                                         href="/login"

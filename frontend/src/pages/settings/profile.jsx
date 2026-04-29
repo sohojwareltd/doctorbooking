@@ -7,9 +7,34 @@ export default function ProfileSettings({ mustVerifyEmail, status }) {
     email: '',
   });
 
-  const submit = (e) => {
+  const getCookieXsrfToken = () => {
+    const cookie = document.cookie
+      .split('; ')
+      .find((row) => row.startsWith('XSRF-TOKEN='))
+      ?.split('=')[1];
+
+    return cookie ? decodeURIComponent(cookie) : '';
+  };
+
+  const submit = async (e) => {
     e.preventDefault();
+
+    try {
+      await fetch('/sanctum/csrf-cookie', {
+        method: 'GET',
+        credentials: 'same-origin',
+        headers: { Accept: 'application/json' },
+      });
+    } catch {
+      // Continue with available token and let backend validation decide.
+    }
+
+    const cookieXsrfToken = getCookieXsrfToken();
+
     patch('/settings/profile', {
+      headers: {
+        'X-XSRF-TOKEN': cookieXsrfToken,
+      },
       onSuccess: () => toastSuccess('Profile updated.'),
       onError: () => toastError('Failed to update profile.'),
     });
