@@ -472,6 +472,7 @@ class DoctorController extends Controller
         $prescriptions = Prescription::with([
             'user:id,name,phone',
             'appointment:id,appointment_date,appointment_time,status,symptoms,age,gender',
+            'investigationItems:id,prescription_id,name,note,sort_order',
         ])
             ->where('doctor_id', $doctor->doctorId())
             ->orderByDesc('id')
@@ -500,6 +501,7 @@ class DoctorController extends Controller
         $prescription->load([
             'user:id,name,email,phone',
             'appointment:id,appointment_date,appointment_time,status',
+            'investigationItems:id,prescription_id,name,note,sort_order',
         ]);
 
         $prescription->user?->loadMissing('patientProfile');
