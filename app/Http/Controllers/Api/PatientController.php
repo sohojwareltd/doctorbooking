@@ -276,6 +276,8 @@ class PatientController extends Controller
                 'labs_count' => $this->countDelimitedItems($appointment->prescription?->tests),
                 'prescriptions_count' => $appointment->prescription ? 1 : 0,
                 'has_prescription' => (bool) $appointment->prescription,
+                'prescription_id' => $appointment->prescription?->id,
+                'prescription_uuid' => $appointment->prescription?->uuid,
             ];
 
             if ($this->isUpcomingAppointment($appointment)) {
