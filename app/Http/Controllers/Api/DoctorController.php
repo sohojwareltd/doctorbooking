@@ -202,6 +202,7 @@ class DoctorController extends Controller
     {
         $doctor   = $request->user();
         $doctorId = $doctor->doctorId();
+        $includeAllPatients = $request->boolean('include_all', true);
 
         $search       = trim($request->get('search', ''));
         $gender       = $request->get('gender', 'all');
@@ -211,7 +212,7 @@ class DoctorController extends Controller
         $sortBy       = $request->get('sort_by', 'newest'); // newest | oldest | name_asc | name_desc | prescriptions
 
         $query = User::whereHas('role', fn ($q) => $q->where('name', 'patient'))
-            ->when($doctorId, fn ($q) => $q->whereHas('appointments', fn ($aq) => $aq->where('doctor_id', $doctorId)))
+            ->when($doctorId && !$includeAllPatients, fn ($q) => $q->whereHas('appointments', fn ($aq) => $aq->where('doctor_id', $doctorId)))
             ->with(['patientProfile', 'prescriptions' => fn ($q) => $doctorId
                 ? $q->where('doctor_id', $doctorId)->select('id', 'user_id', 'diagnosis', 'created_at')->latest()
                 : $q->select('id', 'user_id', 'diagnosis', 'created_at')->latest()]);

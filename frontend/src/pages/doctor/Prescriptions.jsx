@@ -214,7 +214,7 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
     setPatientSearching(true);
     const timer = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/doctor/patients?search=${encodeURIComponent(patientSearch.trim())}&per_page=10`, {
+        const res = await fetch(`/api/doctor/patients?search=${encodeURIComponent(patientSearch.trim())}&per_page=10&include_all=1`, {
           headers: { Accept: 'application/json' },
           credentials: 'same-origin',
         });
