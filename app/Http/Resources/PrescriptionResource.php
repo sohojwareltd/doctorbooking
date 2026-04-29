@@ -12,6 +12,8 @@ class PrescriptionResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $investigationItems = $this->resolveInvestigationItems();
+
         return [
             'id'               => $this->id,
             'uuid'             => $this->uuid,
@@ -26,12 +28,9 @@ class PrescriptionResource extends JsonResource
             'dose'             => $this->dose,
             'instructions'     => $this->instructions,
             'tests'            => $this->tests,
-            'investigation_items' => $this->whenLoaded('investigationItems', fn () => $this->investigationItems->map(fn ($item) => [
-                'id' => $item->id,
-                'name' => $item->name,
-                'note' => $item->note,
-                'sort_order' => $item->sort_order,
-            ])->values()),
+            // Keep the original tests text for backward compatibility.
+            'tests_items'      => collect($investigationItems)->pluck('name')->values(),
+            'investigation_items' => $investigationItems,
             'next_visit_date'  => $this->next_visit_date?->toDateString(),
 
             // Snapshot fields stored on the prescription (immutable patient info at time of visit)
@@ -63,5 +62,32 @@ class PrescriptionResource extends JsonResource
             'created_at' => $this->created_at?->toDateTimeString(),
             'updated_at' => $this->updated_at?->toDateTimeString(),
         ];
+    }
+
+    private function resolveInvestigationItems(): array
+    {
+        if ($this->relationLoaded('investigationItems')) {
+            return $this->investigationItems
+                ->map(fn ($item) => [
+                    'id' => $item->id,
+                    'name' => $item->name,
+                    'note' => $item->note,
+                    'sort_order' => $item->sort_order,
+                ])
+                ->values()
+                ->all();
+        }
+
+        return collect(preg_split('/[\r\n,;]+/', strip_tags((string) ($this->tests ?? ''))) ?: [])
+            ->map(fn ($line) => trim((string) $line))
+            ->filter(fn ($line) => $line !== '')
+            ->values()
+            ->map(fn ($line, $index) => [
+                'id' => null,
+                'name' => $line,
+                'note' => null,
+                'sort_order' => $index,
+            ])
+            ->all();
     }
 }
