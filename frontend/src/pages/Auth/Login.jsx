@@ -38,7 +38,19 @@ export default function Login({ status, canResetPassword }) {
             // Continue with token from page if preflight fails.
         }
 
-        post('/login');
+        post('/login', {
+            onSuccess: async () => {
+                try {
+                    await fetch('/sanctum/csrf-cookie', {
+                        method: 'GET',
+                        credentials: 'same-origin',
+                        headers: { Accept: 'application/json' },
+                    });
+                } catch {
+                    // Ignore refresh failures; axios/fetch interceptors can recover on next 419.
+                }
+            },
+        });
     };
 
     const inputClass =
