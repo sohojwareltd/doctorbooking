@@ -51,10 +51,10 @@
         <meta name="twitter:image" content="{{ $metaImage }}">
 
         <link rel="canonical" href="{{ $metaUrl }}">
-        <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
-        <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
-        <link rel="apple-touch-icon" href="{{ asset('favicon.ico') }}">
-<meta name="csrf-token" content="{{ csrf_token() }}">
+        <link rel="icon" href="{{ asset('favicon.svg') }}?v=20260429" sizes="any">
+        <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}?v=20260429">
+        <link rel="shortcut icon" type="image/x-icon" href="{{ asset('favicon.svg') }}?v=20260429">
+        {{-- <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}?v=20260429"> --}}
         <title inertia>{{ config('app.name', 'Doctor Booking') }}</title>
 
         <!-- Fonts -->
