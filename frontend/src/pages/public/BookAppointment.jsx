@@ -86,6 +86,13 @@ export default function PublicBookAppointment() {
     return `${year}-${month}-${day}`;
   };
 
+  const getFirstDayOfCurrentMonth = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    return `${year}-${month}-01`;
+  };
+
   const isClosedByWeekday = (dateStr) => {
     if (!dateStr || !Array.isArray(closedWeekdays) || closedWeekdays.length === 0) return false;
     const dow = new Date(`${dateStr}T00:00:00`).getDay();
@@ -278,6 +285,7 @@ export default function PublicBookAppointment() {
     if (!date || !chamberId) {
       setPreviewSerial(null);
       setPreviewTime(null);
+      setError('');
       return;
     }
 
@@ -299,9 +307,7 @@ export default function PublicBookAppointment() {
         } else {
           setPreviewSerial(null);
           setPreviewTime(null);
-          if (data?.message) {
-            setError(data.message);
-          }
+          setError(data?.message || 'Schedule is fully booked on the selected date. Please choose another date.');
         }
       } catch {
         if (cancelled) return;
@@ -463,7 +469,7 @@ export default function PublicBookAppointment() {
     'w-full rounded-2xl border border-[#00acb1]/30 bg-white px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-4 focus:ring-[#00acb1]/20';
 
   const isStep1Complete = Boolean(selectedChamberId);
-  const isStep2Complete = Boolean(selectedChamberId && formData.date);
+  const isStep2Complete = Boolean(selectedChamberId && formData.date && previewSerial && previewTime && !loadingPreview);
 
   const calendarRenderKey = useMemo(
     () => `${closedWeekdays.join(',')}|${unavailableRanges.map((r) => `${r?.start_date || ''}-${r?.end_date || ''}`).join(',')}`,
@@ -784,7 +790,7 @@ export default function PublicBookAppointment() {
 
                             {/* What's Included */}
                             <div className="space-y-3 border-b border-slate-200 pb-5">
-                              <p className="flex items-center gap-2 text-xs font-semibold text-slate-700">
+                              {/* <p className="flex items-center gap-2 text-xs font-semibold text-slate-700">
                                 <CheckCircle2 className="h-4 w-4 text-emerald-500" />
                                 What's included
                               </p>
@@ -801,7 +807,10 @@ export default function PublicBookAppointment() {
                                   <span className="mt-1.5 flex h-1.5 w-1.5 flex-shrink-0 rounded-full bg-slate-400" />
                                   <span>Prescription and follow-up guidance</span>
                                 </li>
-                              </ul>
+                              </ul> */}
+                              <div className="rounded-xl border border-emerald-100 bg-emerald-50/70 px-3 py-2.5 text-[11px] leading-5 text-emerald-800">
+                                Health tip: small daily habits create long-term wellness. Stay hydrated, get enough sleep, and keep moving a little every day.
+                              </div>
                             </div>
 
                             {/* Before Appointment */}
@@ -867,8 +876,9 @@ export default function PublicBookAppointment() {
                               dateClick={handleDateClick}
                               dayCellDidMount={handleDayCellDidMount}
                               selectable
-                              showNonCurrentDates={true}
+                              showNonCurrentDates={false}
                               fixedWeekCount={false}
+                              validRange={{ start: getFirstDayOfCurrentMonth() }}
                               headerToolbar={{ left: 'prev', center: 'title', right: 'next' }}
                               height="auto"
                               dayCellClassNames={(arg) => {
@@ -899,7 +909,11 @@ export default function PublicBookAppointment() {
                                     <span className="font-bold">{formatDisplayTime12h(previewTime) || previewTime}</span>
                                   </div>
                                 </div>
-                              ) : null}
+                              ) : (
+                                <div className="mx-[10px] lg:mx-0 rounded-[24px] border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-700 shadow-sm">
+                                  {error || 'Schedule is fully booked on the selected date. Please choose another date.'}
+                                </div>
+                              )}
                             </div>
                           )}
 
@@ -1208,8 +1222,8 @@ export default function PublicBookAppointment() {
         }
 
         .public-booking-calendar .fc .fc-daygrid-day-frame {
-          padding: 6px 0;
-          min-height: 58px;
+          padding: 0 0;
+          min-height: 40px;
           display: flex;
           flex-direction: row;
           justify-content: center;
@@ -1244,17 +1258,16 @@ export default function PublicBookAppointment() {
           box-shadow: 0 10px 22px rgba(37, 99, 235, 0.28);
         }
 
+        .public-booking-calendar .fc .fc-daygrid-day.fc-unavailable {
+          background-color: white !important;
+        }
+
         .public-booking-calendar .fc-unavailable .fc-daygrid-day-number {
           background: transparent !important;
           background-image: none !important;
           color: #94a3b8;
           opacity: 1;
           box-shadow: none;
-        }
-
-        .public-booking-calendar .fc-day-available:hover .fc-daygrid-day-number,
-        .public-booking-calendar .fc-day-today-custom:hover .fc-daygrid-day-number {
-          filter: brightness(0.98);
         }
 
         .public-booking-calendar .fc-day-other .fc-daygrid-day-number {
@@ -1266,6 +1279,11 @@ export default function PublicBookAppointment() {
           padding: 8px !important;
         }
 
+        .fc .fc-highlight{
+          background-color: white !important;
+          border: none !important;
+          box-shadow: none !important;
+          }
         @media (max-width: 640px) {
           .public-booking-calendar .fc .fc-toolbar {
             flex-direction: row;
@@ -1275,7 +1293,7 @@ export default function PublicBookAppointment() {
 
         @media (min-width: 640px) {
           .fc-daygrid-day-number {
-            font-size: 16px !important;
+            font-size: 14px !important;
             padding: 27px !important;
           }
         }
