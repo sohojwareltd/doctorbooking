@@ -6,6 +6,126 @@ import {
   formatTime12hFromDateTime,
 } from '../../utils/dateFormat';
 
+const EYE_DIRECTION_ORDER = ['R/E', 'L/E', 'R>L', 'L>R'];
+
+function emptyEyeDirectionPayload() {
+  return {
+    sph: '',
+    cyl: '',
+    axis: '',
+    va: '',
+    add: '',
+    note: '',
+  };
+}
+
+function normalizeEyeDirectionSide(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+
+  const normalized = raw.toUpperCase().replace(/\s+/g, '');
+  const compact = normalized.replace(/[^A-Z0-9><]/g, '');
+
+  if (['RE', 'OD', 'R', 'RIGHT'].includes(compact)) return 'R/E';
+  if (['LE', 'OS', 'L', 'LEFT'].includes(compact)) return 'L/E';
+  if (['R>L', 'RE>LE', 'OD>OS', 'RIGHT>LEFT'].includes(normalized) || ['R>L', 'RE>LE', 'OD>OS', 'RIGHT>LEFT'].includes(compact)) return 'R>L';
+  if (['L>R', 'LE>RE', 'OS>OD', 'LEFT>RIGHT'].includes(normalized) || ['L>R', 'LE>RE', 'OS>OD', 'LEFT>RIGHT'].includes(compact)) return 'L>R';
+
+  return raw;
+}
+
+function normalizeEyeDirectionDetail(value) {
+  const next = emptyEyeDirectionPayload();
+  if (!value || typeof value !== 'object') return next;
+
+  Object.entries(value).forEach(([rawKey, rawVal]) => {
+    const key = String(rawKey || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const val = String(rawVal ?? '').trim();
+
+    if (key === 'sph') next.sph = val;
+    if (key === 'cyl') next.cyl = val;
+    if (key === 'axis') next.axis = val;
+    if (key === 'va') next.va = val;
+    if (key === 'add') next.add = val;
+    if (key === 'note' || key === 'notes' || key === 'remark' || key === 'remarks') next.note = val;
+  });
+
+  return next;
+}
+
+function hasEyeDirectionDetail(detail) {
+  if (!detail || typeof detail !== 'object') return false;
+  return ['sph', 'cyl', 'axis', 'va', 'add', 'note'].some((key) => String(detail[key] || '').trim() !== '');
+}
+
+function parseEyeDirectionDetails(prescription = {}) {
+  const directionMap = {};
+
+  const addDetail = (sideRaw, detailRaw) => {
+    const side = normalizeEyeDirectionSide(sideRaw);
+    if (!side) return;
+    const detail = normalizeEyeDirectionDetail(detailRaw);
+    if (!hasEyeDirectionDetail(detail)) return;
+    directionMap[side] = {
+      ...(directionMap[side] || emptyEyeDirectionPayload()),
+      ...detail,
+    };
+  };
+
+  const diagnosisLines = String(prescription?.diagnosis || '')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  diagnosisLines.forEach((line) => {
+    const match = line.match(/^Eye Assessment Note \[(.+?)\]:\s*(.*)$/i);
+    if (!match) return;
+    const side = normalizeEyeDirectionSide(match[1]);
+    const raw = String(match[2] || '').trim();
+    if (!side) return;
+
+    const next = emptyEyeDirectionPayload();
+    const tokenParts = raw.split(';').map((item) => item.trim()).filter(Boolean);
+    tokenParts.forEach((token) => {
+      const [kRaw, ...rest] = token.split('=');
+      const key = String(kRaw || '').trim().toLowerCase();
+      const value = rest.join('=').trim();
+      if (key === 'sph') next.sph = value;
+      if (key === 'cyl') next.cyl = value;
+      if (key === 'axis') next.axis = value;
+      if (key === 'v/a' || key === 'va') next.va = value;
+      if (key === 'add') next.add = value;
+      if (key === 'note') next.note = value;
+    });
+    if (!tokenParts.length) next.note = raw;
+    if (hasEyeDirectionDetail(next)) {
+      directionMap[side] = next;
+    }
+  });
+
+  const specialtyDirection = prescription?.specialty_data?.eye_direction_assessment;
+  if (specialtyDirection && typeof specialtyDirection === 'object') {
+    const rawNotes = specialtyDirection.notes;
+    if (Array.isArray(rawNotes)) {
+      rawNotes.forEach((item) => {
+        if (!item || typeof item !== 'object') return;
+        addDetail(item.side || item.direction || item.key, item);
+      });
+    } else if (rawNotes && typeof rawNotes === 'object') {
+      Object.entries(rawNotes).forEach(([side, detail]) => addDetail(side, detail));
+    }
+
+    Object.entries(specialtyDirection).forEach(([key, value]) => {
+      if (['notes', 'selected_sides', 'selectedSides', 'sides'].includes(key)) return;
+      addDetail(key, value);
+    });
+  }
+
+  return EYE_DIRECTION_ORDER
+    .filter((side) => hasEyeDirectionDetail(directionMap[side]))
+    .map((side) => ({ side, detail: directionMap[side] }));
+}
+
 function parseMedicationsText(text) {
   if (!text?.trim()) return [];
 
@@ -56,8 +176,11 @@ function parseInvestigations(items = [], text = '') {
   if (Array.isArray(items) && items.length) {
     const rows = [...items]
       .sort((a, b) => Number(a?.sort_order ?? 0) - Number(b?.sort_order ?? 0))
-      .map((item) => String(item?.name || '').trim())
-      .filter(Boolean);
+      .map((item) => ({
+        name: String(item?.name || '').trim(),
+        note: String(item?.note || '').trim(),
+      }))
+      .filter((item) => item.name);
 
     if (rows.length) {
       return rows;
@@ -83,6 +206,10 @@ export default function PublicPrescriptionShow({ prescription = {}, doctorInfo =
     () => parseInvestigations(prescription?.investigation_items, prescription?.tests),
     [prescription?.investigation_items, prescription?.tests],
   );
+  const eyeDirectionDetails = useMemo(
+    () => parseEyeDirectionDetails(prescription),
+    [prescription],
+  );
   const prescriptionRows = useMemo(
     () => medicines.filter((m) => String(m?.name || m?.dosage || m?.duration || m?.instruction || '').trim()),
     [medicines],
@@ -91,7 +218,8 @@ export default function PublicPrescriptionShow({ prescription = {}, doctorInfo =
   const showClinicalSections =
     diagnosisSections.complaints.length > 0 ||
     diagnosisSections.exam.length > 0 ||
-    investigationLines.length > 0;
+    investigationLines.length > 0 ||
+    eyeDirectionDetails.length > 0;
 
   const prescriptionRef = useRef(null);
   const [downloadingPDF, setDownloadingPDF] = useState(false);
@@ -236,7 +364,39 @@ export default function PublicPrescriptionShow({ prescription = {}, doctorInfo =
                   {investigationLines.length ? (
                     <div>
                       <p className="mb-1 text-sm font-bold text-[#0d2f63]">Investigation Advised</p>
-                      {investigationLines.map((line, idx) => <p key={`inv-${idx}`}>- {line}</p>)}
+                      {investigationLines.map((line, idx) => {
+                        const name = typeof line === 'string' ? line : String(line?.name || '').trim();
+                        const note = typeof line === 'string' ? '' : String(line?.note || '').trim();
+
+                        return (
+                          <div key={`inv-${idx}`} className="mb-1.5">
+                            <p>- {name}</p>
+                            {note ? <p className="pl-3 text-slate-600">Lab / Note: {note}</p> : null}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+
+                  {eyeDirectionDetails.length ? (
+                    <div>
+                      <p className="mb-1 text-sm font-bold text-[#0d2f63]">Eye Direction Assessment</p>
+                      {eyeDirectionDetails.map(({ side, detail }) => {
+                        const parts = [];
+                        if (detail?.sph) parts.push(`SPH ${detail.sph}`);
+                        if (detail?.cyl) parts.push(`CYL ${detail.cyl}`);
+                        if (detail?.axis) parts.push(`AXIS ${detail.axis}`);
+                        if (detail?.va) parts.push(`V/A ${detail.va}`);
+                        if (detail?.add) parts.push(`ADD ${detail.add}`);
+                        if (detail?.note) parts.push(`NOTE ${detail.note}`);
+
+                        return (
+                          <div key={`eye-dir-${side}`} className="mb-1.5">
+                            <p className="font-semibold text-slate-800">{side}</p>
+                            {parts.map((part, idx) => <p key={`eye-dir-${side}-${idx}`} className="pl-2">- {part}</p>)}
+                          </div>
+                        );
+                      })}
                     </div>
                   ) : null}
 

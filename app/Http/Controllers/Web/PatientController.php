@@ -15,6 +15,7 @@ class PatientController extends Controller
     /** GET /doctor/patients */
     public function index(): Response
     {
+        /** @var User|null $doctor */
         $doctor = Auth::user();
 
         $patientQuery = User::whereHas('role', fn ($q) => $q->where('name', 'patient'));
@@ -70,23 +71,10 @@ class PatientController extends Controller
     /** GET /doctor/patients/{patient} */
     public function show(User $patient): Response
     {
-        $doctor = Auth::user();
-
-        if (! $doctor?->hasRole('compounder')) {
-            abort_unless(
-                $patient->appointments()->where('doctor_id', $doctor->doctorId())->exists(),
-                403
-            );
-        }
-
         $patient->load([
             'patientProfile',
-            'appointments' => fn ($q) => $doctor?->hasRole('compounder')
-                ? $q->latest()
-                : $q->where('doctor_id', $doctor->doctorId())->latest(),
-            'prescriptions' => fn ($q) => $doctor?->hasRole('compounder')
-                ? $q->latest()
-                : $q->where('doctor_id', $doctor->doctorId())->latest(),
+            'appointments' => fn ($q) => $q->latest(),
+            'prescriptions' => fn ($q) => $q->latest(),
         ]);
 
         return Inertia::render('doctor/PatientShow', [

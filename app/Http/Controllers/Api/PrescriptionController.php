@@ -177,7 +177,38 @@ class PrescriptionController extends Controller
                 ->firstOrFail();
 
             if ($appointment->prescription) {
-                return response()->json(['message' => 'Prescription already exists for this appointment.'], 422);
+                $existingPrescription = $appointment->prescription;
+
+                $existingPrescription->update([
+                    'visit_type'       => $validated['visit_type'] ?? $existingPrescription->visit_type,
+                    'template_type'    => $validated['template_type'] ?? $existingPrescription->template_type ?? 'general',
+                    'specialty_data'   => $validated['specialty_data'] ?? $existingPrescription->specialty_data,
+                    'diagnosis'        => trim($validated['diagnosis'] ?? ''),
+                    'medications'      => $validated['medications'] ?? '',
+                    'dose'             => $validated['dose'] ?? $existingPrescription->dose,
+                    'instructions'     => $validated['instructions'] ?? $existingPrescription->instructions,
+                    'tests'            => $validated['tests'] ?? $existingPrescription->tests,
+                    'next_visit_date'  => $validated['next_visit_date'] ?? $existingPrescription->next_visit_date,
+                    'patient_name'     => $validated['patient_name'] ?? $existingPrescription->patient_name,
+                    'patient_age'      => $validated['patient_age'] ?? $existingPrescription->patient_age,
+                    'patient_age_unit' => $validated['patient_age_unit'] ?? $existingPrescription->patient_age_unit,
+                    'patient_gender'   => $validated['patient_gender'] ?? $existingPrescription->patient_gender,
+                    'patient_weight'   => $validated['patient_weight'] ?? $existingPrescription->patient_weight,
+                    'patient_contact'  => $validated['patient_contact'] ?? $existingPrescription->patient_contact,
+                ]);
+
+                $investigationItems = $validated['investigation_items'] ?? $this->linesToInvestigationItems($validated['tests'] ?? null);
+                $this->syncInvestigationItems($existingPrescription, $investigationItems);
+
+                if ($validated['appointment_action'] ?? null) {
+                    $appointment->update(['status' => $validated['appointment_action']]);
+                }
+
+                return response()->json([
+                    'message' => 'Prescription updated for this appointment.',
+                    'prescription_id' => $existingPrescription->id,
+                    'prescription_uuid' => $existingPrescription->uuid,
+                ]);
             }
             $userId = $appointment->user_id;
         }

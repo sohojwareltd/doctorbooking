@@ -148,21 +148,20 @@ class PrescriptionController extends Controller
         $appointment   = null;
 
         if ($appointmentId) {
-            $appointment = Appointment::with('user:id,name,phone,email')
+            $appointment = Appointment::query()
                 ->where('doctor_id', $doctor->doctorId())
                 ->where('id', $appointmentId)
                 ->first();
 
-            if ($appointment?->user) {
-                $u = $appointment->user;
+            if ($appointment) {
                 $selectedPatient = [
-                    'id'    => $u->id,
-                    'name'  => $u->name,
-                    'phone' => $u->phone,
-                    'email' => $u->email,
-                    'gender'=> $u->patientProfile?->gender,
-                    'age'   => $u->patientProfile?->age,
-                    'weight'=> $u->patientProfile?->weight,
+                    'id'    => $appointment->user_id,
+                    'name'  => $appointment->name,
+                    'phone' => $appointment->phone,
+                    'email' => $appointment->email,
+                    'gender'=> $appointment->gender,
+                    'age'   => $appointment->age,
+                    'weight'=> null,
                 ];
             }
         } elseif ($patientId) {
@@ -227,7 +226,7 @@ class PrescriptionController extends Controller
 
         $prescription->load([
             'user:id,name,email,phone',
-            'appointment:id,appointment_date,appointment_time,status',
+            'appointment:id,appointment_date,appointment_time,status,name,age,gender,phone,email',
             'investigationItems:id,prescription_id,name,note,sort_order',
         ]);
 
@@ -256,11 +255,11 @@ class PrescriptionController extends Controller
                 'visit_type'       => $prescription->visit_type,
                 'template_type'    => $prescription->template_type,
                 'specialty_data'   => $prescription->specialty_data,
-                'patient_name'     => $prescription->patient_name ?? $prescription->user?->name,
-                'patient_contact'  => $prescription->patient_contact ?? $prescription->user?->phone,
-                'patient_age'      => $prescription->patient_age ?? $prescription->user?->patientProfile?->age,
+                'patient_name'     => $prescription->appointment?->name ?? $prescription->patient_name,
+                'patient_contact'  => $prescription->appointment?->phone ?? $prescription->patient_contact,
+                'patient_age'      => $prescription->appointment?->age ?? $prescription->patient_age,
                 'patient_age_unit' => $prescription->patient_age_unit ?? 'years',
-                'patient_gender'   => $prescription->patient_gender ?? $prescription->user?->patientProfile?->gender,
+                'patient_gender'   => $prescription->appointment?->gender ?? $prescription->patient_gender,
                 'patient_weight'   => $prescription->patient_weight ?? $prescription->user?->patientProfile?->weight,
                 'user'             => $prescription->user ? [
                     'id'      => $prescription->user->id,
@@ -298,7 +297,7 @@ class PrescriptionController extends Controller
 
         $prescription->load([
             'user:id,name,email,phone',
-            'appointment:id,appointment_date,appointment_time,status',
+            'appointment:id,appointment_date,appointment_time,status,name,age,gender,phone,email',
             'investigationItems:id,prescription_id,name,note,sort_order',
         ]);
 
@@ -327,11 +326,11 @@ class PrescriptionController extends Controller
                 'visit_type'       => $prescription->visit_type,
                 'template_type'    => $prescription->template_type,
                 'specialty_data'   => $prescription->specialty_data,
-                'patient_name'     => $prescription->patient_name ?? $prescription->user?->name,
-                'patient_contact'  => $prescription->patient_contact ?? $prescription->user?->phone,
-                'patient_age'      => $prescription->patient_age ?? $prescription->user?->patientProfile?->age,
+                'patient_name'     => $prescription->appointment?->name ?? $prescription->patient_name,
+                'patient_contact'  => $prescription->appointment?->phone ?? $prescription->patient_contact,
+                'patient_age'      => $prescription->appointment?->age ?? $prescription->patient_age,
                 'patient_age_unit' => $prescription->patient_age_unit ?? 'years',
-                'patient_gender'   => $prescription->patient_gender ?? $prescription->user?->patientProfile?->gender,
+                'patient_gender'   => $prescription->appointment?->gender ?? $prescription->patient_gender,
                 'patient_weight'   => $prescription->patient_weight ?? $prescription->user?->patientProfile?->weight,
                 'user'             => $prescription->user ? [
                     'id'      => $prescription->user->id,

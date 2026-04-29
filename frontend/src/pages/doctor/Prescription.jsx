@@ -20,13 +20,14 @@ import {
     Stethoscope,
     Trash2,
     User,
+    X,
 } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import DoctorLayout from '../../layouts/DoctorLayout';
 import { DocCard } from '../../components/doctor/DocUI';
 import EyePrescriptionSection, {
     createEmptyEyePrescriptionData,
-    isEyeSpecialist,
     normalizeEyePrescriptionData,
 } from '../../components/prescription/EyePrescriptionSection';
 import PrescriptionMedicineSection from '../../components/prescription/PrescriptionFormSection';
@@ -42,6 +43,65 @@ const emptyMedicine = () => ({
 });
 
 const todayYmd = () => new Date().toISOString().split('T')[0];
+const EYE_INVESTIGATION_TESTS = [
+    'Refraction',
+    'Fundus Examination',
+    'IOP Measurement',
+    'Slit Lamp Examination',
+    'OCT',
+    'Visual Field Test',
+];
+const EYE_DIRECTIONS = ['R/E', 'L/E', 'R>L', 'L>R'];
+
+function emptyEyeDirectionPayload() {
+    return {
+        sph: '',
+        cyl: '',
+        axis: '',
+        va: '',
+        add: '',
+        note: '',
+    };
+}
+
+function normalizeEyeDirectionSide(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+
+    const normalized = raw.toUpperCase().replace(/\s+/g, '');
+    const compact = normalized.replace(/[^A-Z0-9><]/g, '');
+
+    if (['RE', 'OD', 'R', 'RIGHT'].includes(compact)) return 'R/E';
+    if (['LE', 'OS', 'L', 'LEFT'].includes(compact)) return 'L/E';
+    if (['R>L', 'RE>LE', 'OD>OS', 'RIGHT>LEFT'].includes(normalized) || ['R>L', 'RE>LE', 'OD>OS', 'RIGHT>LEFT'].includes(compact)) return 'R>L';
+    if (['L>R', 'LE>RE', 'OS>OD', 'LEFT>RIGHT'].includes(normalized) || ['L>R', 'LE>RE', 'OS>OD', 'LEFT>RIGHT'].includes(compact)) return 'L>R';
+
+    return raw;
+}
+
+function normalizeEyeDirectionDetail(value) {
+    const next = emptyEyeDirectionPayload();
+    if (!value || typeof value !== 'object') return next;
+
+    Object.entries(value).forEach(([rawKey, rawVal]) => {
+        const key = String(rawKey || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const val = String(rawVal ?? '').trim();
+
+        if (key === 'sph') next.sph = val;
+        if (key === 'cyl') next.cyl = val;
+        if (key === 'axis') next.axis = val;
+        if (key === 'va') next.va = val;
+        if (key === 'add') next.add = val;
+        if (key === 'note' || key === 'notes' || key === 'remark' || key === 'remarks') next.note = val;
+    });
+
+    return next;
+}
+
+function hasEyeDirectionDetail(detail) {
+    if (!detail || typeof detail !== 'object') return false;
+    return ['sph', 'cyl', 'axis', 'va', 'add', 'note'].some((key) => String(detail[key] || '').trim() !== '');
+}
 
 function normalizeMedicineName(value) {
     return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
@@ -49,6 +109,47 @@ function normalizeMedicineName(value) {
 
 function normalizeText(value) {
     return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function cleanInvestigationLabel(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    return raw
+        .replace(/^[-*•\u2022\d.)\s]+/, '')
+        .replace(/\s*[:\-]+\s*$/, '')
+        .trim();
+}
+
+function splitLegacyInvestigationsText(value) {
+    const text = String(value || '').trim();
+    if (!text) return [];
+
+    return text
+        .split(/\n|,|;/)
+        .map((part) => cleanInvestigationLabel(part))
+        .filter(Boolean);
+}
+
+function findBestCatalogInvestigation(catalogSource, rawName) {
+    const clean = cleanInvestigationLabel(rawName);
+    const normalized = normalizeText(clean).replace(/[^a-z0-9]+/g, '');
+    if (!normalized) return null;
+
+    for (const candidate of catalogSource) {
+        const candidateNorm = normalizeText(candidate).replace(/[^a-z0-9]+/g, '');
+        if (!candidateNorm) continue;
+        if (candidateNorm === normalized) return candidate;
+    }
+
+    for (const candidate of catalogSource) {
+        const candidateNorm = normalizeText(candidate).replace(/[^a-z0-9]+/g, '');
+        if (!candidateNorm) continue;
+        if (normalized.includes(candidateNorm) || candidateNorm.includes(normalized)) {
+            return candidate;
+        }
+    }
+
+    return null;
 }
 
 function buildMedicineWithStrength(name, strength) {
@@ -120,10 +221,13 @@ const initialState = {
     diagnosis: {
         provisional: '',
         final: '',
+        eye_assessment: [],
+        eye_assessment_notes: {},
     },
     medicines: [],
     investigations: {
         common: {},
+        commonSample: {},
         custom: [''],
         notes: '',
     },
@@ -176,15 +280,12 @@ function parseInvestigationRows(items, testsText = '') {
     if (Array.isArray(items) && items.length) {
         const rows = [...items]
             .sort((a, b) => Number(a?.sort_order ?? 0) - Number(b?.sort_order ?? 0))
-            .map((item) => String(item?.name || '').trim())
+            .map((item) => cleanInvestigationLabel(item?.name))
             .filter(Boolean);
         if (rows.length) return rows;
     }
 
-    const fromText = String(testsText || '')
-        .split('\n')
-        .map((line) => line.trim())
-        .filter(Boolean);
+    const fromText = splitLegacyInvestigationsText(testsText);
 
     return fromText.length ? fromText : [''];
 }
@@ -249,11 +350,47 @@ function parseDiagnosisText(text = '') {
         }
     });
 
+    const eyeAssessmentLine = lines.find((l) => /^Eye Assessment:/i.test(l)) || '';
+    const eye_assessment = eyeAssessmentLine
+        ? Array.from(new Set(
+            eyeAssessmentLine
+                .replace(/^Eye Assessment:\s*/i, '')
+                .split(',')
+                .map((s) => normalizeEyeDirectionSide(s))
+                .filter(Boolean),
+        ))
+        : [];
+    const eye_assessment_notes = {};
+    lines.forEach((line) => {
+        const match = line.match(/^Eye Assessment Note \[(.+?)\]:\s*(.*)$/i);
+        if (!match) return;
+        const side = normalizeEyeDirectionSide(match[1]);
+        const raw = String(match[2] || '').trim();
+        if (!side) return;
+        const next = emptyEyeDirectionPayload();
+        const tokenParts = raw.split(';').map((x) => x.trim()).filter(Boolean);
+        tokenParts.forEach((token) => {
+            const [kRaw, ...rest] = token.split('=');
+            const key = String(kRaw || '').trim().toLowerCase();
+            const value = rest.join('=').trim();
+            if (key === 'sph') next.sph = value;
+            if (key === 'cyl') next.cyl = value;
+            if (key === 'axis') next.axis = value;
+            if (key === 'v/a' || key === 'va') next.va = value;
+            if (key === 'add') next.add = value;
+            if (key === 'note') next.note = value;
+        });
+        if (!tokenParts.length) next.note = raw;
+        eye_assessment_notes[side] = next;
+    });
+
     return {
         complaints: complaints.length ? complaints : [emptyComplaint()],
         diagnosis: {
             provisional,
             final: finalDiagnosis,
+            eye_assessment,
+            eye_assessment_notes,
         },
         exam: {
             bp,
@@ -325,6 +462,75 @@ function buildStateFromPrescription(prescription) {
     const parsedDiagnosis = parseDiagnosisText(prescription.diagnosis || '');
     const parsedInstructions = parseInstructionsText(prescription.instructions || '');
 
+    const specialtyDirection = prescription.specialty_data?.eye_direction_assessment;
+
+    const parsedNotesNormalized = Object.entries(parsedDiagnosis.diagnosis.eye_assessment_notes || {})
+        .reduce((acc, [sideRaw, detailRaw]) => {
+            const side = normalizeEyeDirectionSide(sideRaw);
+            if (!side) return acc;
+            acc[side] = normalizeEyeDirectionDetail(detailRaw);
+            return acc;
+        }, {});
+
+    const specialtyDirectionNotes = {};
+    const addSpecialtyNote = (sideRaw, detailRaw) => {
+        const side = normalizeEyeDirectionSide(sideRaw);
+        if (!side) return;
+        const normalizedDetail = normalizeEyeDirectionDetail(detailRaw);
+        if (!hasEyeDirectionDetail(normalizedDetail)) return;
+        specialtyDirectionNotes[side] = {
+            ...(specialtyDirectionNotes[side] || emptyEyeDirectionPayload()),
+            ...normalizedDetail,
+        };
+    };
+
+    if (specialtyDirection && typeof specialtyDirection === 'object') {
+        const rawNotes = specialtyDirection.notes;
+        if (Array.isArray(rawNotes)) {
+            rawNotes.forEach((item) => {
+                if (!item || typeof item !== 'object') return;
+                addSpecialtyNote(item.side || item.direction || item.key, item);
+            });
+        } else if (rawNotes && typeof rawNotes === 'object') {
+            Object.entries(rawNotes).forEach(([side, detail]) => addSpecialtyNote(side, detail));
+        }
+
+        // Backward compatibility: some payloads may store side keys directly under eye_direction_assessment.
+        Object.entries(specialtyDirection).forEach(([key, value]) => {
+            if (['notes', 'selected_sides', 'selectedSides', 'sides'].includes(key)) return;
+            addSpecialtyNote(key, value);
+        });
+    }
+
+    const rawSelectedSides =
+        specialtyDirection?.selected_sides
+        || specialtyDirection?.selectedSides
+        || specialtyDirection?.sides
+        || [];
+
+    const specialtyDirectionSides = (
+        Array.isArray(rawSelectedSides)
+            ? rawSelectedSides
+            : String(rawSelectedSides || '').split(',')
+    )
+        .map((side) => normalizeEyeDirectionSide(side))
+        .filter(Boolean);
+
+    const mergedDirectionNotes = {
+        ...parsedNotesNormalized,
+        ...specialtyDirectionNotes,
+    };
+
+    const mergedDirectionSides = Array.from(new Set([
+        ...((Array.isArray(parsedDiagnosis.diagnosis.eye_assessment)
+            ? parsedDiagnosis.diagnosis.eye_assessment.map((side) => normalizeEyeDirectionSide(side))
+            : []).filter(Boolean)),
+        ...specialtyDirectionSides,
+        ...Object.entries(mergedDirectionNotes)
+            .filter(([, detail]) => hasEyeDirectionDetail(detail))
+            .map(([side]) => normalizeEyeDirectionSide(side)),
+    ]));
+
     return {
         ...initialState,
         template_type: prescription.template_type || 'general',
@@ -342,10 +548,25 @@ function buildStateFromPrescription(prescription) {
         },
         complaints: parsedDiagnosis.complaints,
         exam: parsedDiagnosis.exam,
-        diagnosis: parsedDiagnosis.diagnosis,
+        diagnosis: {
+            ...parsedDiagnosis.diagnosis,
+            eye_assessment: mergedDirectionSides,
+            eye_assessment_notes: mergedDirectionNotes,
+        },
         medicines: parseMedicationsText(prescription.medications || '', prescription.dose || ''),
         investigations: {
             common: {},
+            commonSample: (() => {
+                const sampleMap = {};
+                if (Array.isArray(prescription.investigation_items)) {
+                    for (const item of prescription.investigation_items) {
+                        if (item?.name && item?.note) {
+                            sampleMap[String(item.name).trim()] = String(item.note).trim();
+                        }
+                    }
+                }
+                return sampleMap;
+            })(),
             custom: parseInvestigationRows(prescription.investigation_items, prescription.tests),
             notes: '',
         },
@@ -436,6 +657,49 @@ function reducer(state, action) {
                 },
             };
         }
+        case 'setTestSample': {
+            const { testName, value } = action;
+            return {
+                ...state,
+                investigations: {
+                    ...state.investigations,
+                    commonSample: {
+                        ...state.investigations.commonSample,
+                        [testName]: value,
+                    },
+                },
+            };
+        }
+        case 'setEyeAssessmentSelection': {
+            const { side, selected } = action;
+            const prev = Array.isArray(state.diagnosis.eye_assessment)
+                ? state.diagnosis.eye_assessment
+                : [];
+            const has = prev.includes(side);
+            const next = selected
+                ? (has ? prev : [...prev, side])
+                : prev.filter((s) => s !== side);
+            return {
+                ...state,
+                diagnosis: {
+                    ...state.diagnosis,
+                    eye_assessment: next,
+                },
+            };
+        }
+        case 'setEyeAssessmentDetail': {
+            const { side, value } = action;
+            return {
+                ...state,
+                diagnosis: {
+                    ...state.diagnosis,
+                    eye_assessment_notes: {
+                        ...(state.diagnosis.eye_assessment_notes || {}),
+                        [side]: value,
+                    },
+                },
+            };
+        }
         case 'syncCommonTests': {
             const tests = Array.isArray(action.tests) ? action.tests : [];
             const prevCommon = state.investigations.common || {};
@@ -503,6 +767,7 @@ function reducer(state, action) {
 
 export default function Prescription({
     mode = 'create',
+    defaultTemplateType = null,
     appointmentId = null,
     chamberInfo,
     selectedPatient,
@@ -517,7 +782,6 @@ export default function Prescription({
     const branding = page?.props?.site?.branding || {};
     const doctorSpecialization = doctorInfo?.specialization || authUser?.specialization || '';
     const doctorDegree = doctorInfo?.degree || authUser?.degree || '';
-    const prefersEyeTemplate = isEyeSpecialist(doctorSpecialization);
 
     const chamberName = chamberInfo?.name || '';
     const chamberAddress = chamberInfo?.location || '';
@@ -540,6 +804,7 @@ export default function Prescription({
     const medicineMatchCacheRef = useRef(new Map());
     const medicineQuerySeqRef = useRef({});
     const didHydrateEditRef = useRef(false);
+    const didApplyDefaultTemplateRef = useRef(false);
 
     // Medicine form state (fix for getElementById issue)
     const [newMedicine, setNewMedicine] = useState({
@@ -550,6 +815,12 @@ export default function Prescription({
         instruction: '',
     });
     const [focusedMedicineIndex, setFocusedMedicineIndex] = useState(null);
+    const [eyeAssessmentModal, setEyeAssessmentModal] = useState({
+        open: false,
+        side: 'R/E',
+        include: false,
+        ...emptyEyeDirectionPayload(),
+    });
 
     const loadInvestigationTests = async () => {
         try {
@@ -567,7 +838,9 @@ export default function Prescription({
                 .filter(Boolean);
 
             setInvestigationCatalog(names);
-            dispatch({ type: 'syncCommonTests', tests: names });
+            if (!isEditMode) {
+                dispatch({ type: 'syncCommonTests', tests: names });
+            }
         } catch {
             // Keep manual custom tests usable even if this list fails to load.
         }
@@ -753,28 +1026,52 @@ export default function Prescription({
     }, [isEditMode, prescription]);
 
     useEffect(() => {
-        if (!isEditMode || !didHydrateEditRef.current || !investigationCatalog.length) return;
+        if (isEditMode || didApplyDefaultTemplateRef.current) return;
+
+        const normalized = String(defaultTemplateType || '').trim().toLowerCase();
+        if (normalized !== 'eye' && normalized !== 'general') return;
+
+        didApplyDefaultTemplateRef.current = true;
+        if (state.template_type !== normalized) {
+            dispatch({ type: 'setTemplateType', value: normalized });
+        }
+    }, [isEditMode, defaultTemplateType, state.template_type]);
+
+    useEffect(() => {
+        if (!isEditMode || !didHydrateEditRef.current) return;
+
+        const catalogSource = state.template_type === 'eye'
+            ? EYE_INVESTIGATION_TESTS
+            : investigationCatalog;
+
+        if (!catalogSource.length) return;
 
         const prevCommon = state.investigations.common || {};
         const prevCustom = Array.isArray(state.investigations.custom)
             ? state.investigations.custom
             : [];
-
-        const catalogByNormalized = new Map(
-            investigationCatalog.map((name) => [normalizeText(name), name]),
-        );
+        const prevCommonSample = state.investigations.commonSample || {};
 
         const nextCommon = Object.fromEntries(
-            investigationCatalog.map((name) => [name, !!prevCommon[name]]),
+            catalogSource.map((name) => [name, !!prevCommon[name]]),
         );
+        const nextCommonSample = { ...prevCommonSample };
 
         const remainingCustom = [];
         prevCustom.forEach((rawItem) => {
-            const clean = String(rawItem || '').trim();
+            const rawText = String(rawItem || '').trim();
+            const clean = cleanInvestigationLabel(rawText);
             if (!clean) return;
-            const matchedKey = catalogByNormalized.get(normalizeText(clean));
+            const matchedKey = findBestCatalogInvestigation(catalogSource, clean);
             if (matchedKey) {
                 nextCommon[matchedKey] = true;
+                // carry over sample from raw item name if not yet set via catalog key
+                if (!nextCommonSample[matchedKey]) {
+                    nextCommonSample[matchedKey] =
+                        prevCommonSample[rawText]
+                        || prevCommonSample[clean]
+                        || '';
+                }
             } else {
                 remainingCustom.push(clean);
             }
@@ -794,25 +1091,27 @@ export default function Prescription({
                 value: {
                     ...state.investigations,
                     common: nextCommon,
+                    commonSample: nextCommonSample,
                     custom: remainingCustom.length ? remainingCustom : [''],
                 },
             });
         }
     }, [
         isEditMode,
+        state.template_type,
         investigationCatalog,
         state.investigations,
     ]);
 
     useEffect(() => {
-        if (prefersEyeTemplate && state.template_type === 'general') {
-            dispatch({ type: 'setTemplateType', value: 'eye' });
-        }
-    }, [prefersEyeTemplate, state.template_type]);
+        if (isEditMode || state.template_type !== 'eye') return;
+        dispatch({ type: 'syncCommonTests', tests: EYE_INVESTIGATION_TESTS });
+    }, [isEditMode, state.template_type]);
 
     useEffect(() => {
+        if (state.template_type === 'eye') return;
         void loadInvestigationTests();
-    }, []);
+    }, [state.template_type]);
 
     const visitDateLabel = useMemo(
         () => formatDisplayDate(state.visit.date),
@@ -862,6 +1161,34 @@ export default function Prescription({
         const fin = String(state.diagnosis.final || '').trim();
         if (prov) lines.push(`Provisional Diagnosis: ${prov}`);
         if (fin) lines.push(`Final Diagnosis: ${fin}`);
+
+        const eyeAss = Array.isArray(state.diagnosis.eye_assessment)
+            ? state.diagnosis.eye_assessment.filter(Boolean)
+            : [];
+        const eyeAssNotes = state.diagnosis.eye_assessment_notes || {};
+        const detailSides = Object.entries(eyeAssNotes)
+            .filter(([, detail]) => {
+                if (!detail || typeof detail !== 'object') return false;
+                return ['sph', 'cyl', 'axis', 'va', 'add', 'note']
+                    .some((key) => String(detail[key] || '').trim() !== '');
+            })
+            .map(([side]) => String(side || '').trim())
+            .filter(Boolean);
+        const serializedSides = Array.from(new Set([...eyeAss, ...detailSides]));
+
+        if (serializedSides.length) lines.push(`Eye Assessment: ${serializedSides.join(', ')}`);
+        serializedSides.forEach((side) => {
+            const detail = eyeAssNotes?.[side];
+            if (!detail || typeof detail !== 'object') return;
+            const parts = [];
+            if (String(detail.sph || '').trim()) parts.push(`SPH=${String(detail.sph || '').trim()}`);
+            if (String(detail.cyl || '').trim()) parts.push(`CYL=${String(detail.cyl || '').trim()}`);
+            if (String(detail.axis || '').trim()) parts.push(`AXIS=${String(detail.axis || '').trim()}`);
+            if (String(detail.va || '').trim()) parts.push(`V/A=${String(detail.va || '').trim()}`);
+            if (String(detail.add || '').trim()) parts.push(`ADD=${String(detail.add || '').trim()}`);
+            if (String(detail.note || '').trim()) parts.push(`NOTE=${String(detail.note || '').trim()}`);
+            if (parts.length) lines.push(`Eye Assessment Note [${side}]: ${parts.join('; ')}`);
+        });
 
         const vitals = [];
         if (String(state.exam.bp || '').trim())
@@ -922,16 +1249,22 @@ export default function Prescription({
             .filter(([, v]) => !!v)
             .map(([k]) => String(k || '').trim())
             .filter(Boolean);
+        const commonSample = state.investigations.commonSample || {};
         const custom = (state.investigations.custom || [])
             .map((t) => String(t || '').trim())
             .filter(Boolean);
         const notes = String(state.investigations.notes || '').trim();
         const merged = [...common, ...custom, ...(notes ? [notes] : [])];
-        return merged.map((name, index) => ({
-            name,
-            note: null,
-            sort_order: index,
-        }));
+        return merged.map((name, index) => {
+            const sample = common.includes(name)
+                ? String(commonSample[name] || '').trim()
+                : '';
+            return {
+                name,
+                note: sample || null,
+                sort_order: index,
+            };
+        });
     };
 
     const buildInstructionsText = () => {
@@ -956,6 +1289,60 @@ export default function Prescription({
         return lines.join('\n').trim();
     };
 
+    const openEyeAssessmentModal = (side) => {
+        const targetSide = side || 'R/E';
+        const details = state.diagnosis.eye_assessment_notes?.[targetSide];
+        const normalizedDetail =
+            details && typeof details === 'object'
+                ? { ...emptyEyeDirectionPayload(), ...details }
+                : { ...emptyEyeDirectionPayload() };
+        const selected = Array.isArray(state.diagnosis.eye_assessment)
+            ? state.diagnosis.eye_assessment.includes(targetSide)
+            : false;
+        setEyeAssessmentModal({
+            open: true,
+            side: targetSide,
+            include: selected,
+            ...normalizedDetail,
+        });
+    };
+
+    const saveEyeAssessmentModal = () => {
+        const { side, include, sph, cyl, axis, va, add, note } = eyeAssessmentModal;
+        if (!side) {
+            setEyeAssessmentModal({
+                open: false,
+                side: 'R/E',
+                include: false,
+                ...emptyEyeDirectionPayload(),
+            });
+            return;
+        }
+        const hasAnyDetail = [sph, cyl, axis, va, add, note]
+            .some((value) => String(value || '').trim() !== '');
+        const shouldInclude = include || hasAnyDetail;
+
+        dispatch({ type: 'setEyeAssessmentSelection', side, selected: shouldInclude });
+        dispatch({
+            type: 'setEyeAssessmentDetail',
+            side,
+            value: {
+                sph: String(sph || '').trim(),
+                cyl: String(cyl || '').trim(),
+                axis: String(axis || '').trim(),
+                va: String(va || '').trim(),
+                add: String(add || '').trim(),
+                note: String(note || '').trim(),
+            },
+        });
+        setEyeAssessmentModal({
+            open: false,
+            side: 'R/E',
+            include: false,
+            ...emptyEyeDirectionPayload(),
+        });
+    };
+
     const handleSubmit = async (submitType = 'save') => {
         const role = String(authUser?.role || '').toLowerCase();
         const computedAppointmentAction = submitType === 'complete'
@@ -978,7 +1365,18 @@ export default function Prescription({
         const instructionsText = buildInstructionsText();
         const specialtyData =
             state.template_type === 'eye'
-                ? normalizeEyePrescriptionData(state.specialty_data)
+                ? {
+                    ...normalizeEyePrescriptionData(state.specialty_data),
+                    eye_direction_assessment: {
+                        selected_sides: Array.isArray(state.diagnosis.eye_assessment)
+                            ? state.diagnosis.eye_assessment.filter(Boolean)
+                            : [],
+                        notes:
+                            state.diagnosis.eye_assessment_notes && typeof state.diagnosis.eye_assessment_notes === 'object'
+                                ? state.diagnosis.eye_assessment_notes
+                                : {},
+                    },
+                }
                 : null;
 
         setSubmitting(true);
@@ -1214,7 +1612,7 @@ export default function Prescription({
                     {/* Form Main Content - Real Prescription Pad Layout */}
                     <div className="min-h-[500px] bg-white p-4 sm:p-8 pb-6 sm:pb-12">
                         <form onSubmit={(e) => e.preventDefault()}>
-                            {/* <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-4 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-4 sm:flex-row sm:items-center sm:justify-between">
                                 <div>
                                     <div className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">Prescription Template</div>
                                     <div className="mt-1 text-sm text-slate-600">
@@ -1253,7 +1651,7 @@ export default function Prescription({
                                         onChange={(nextValue) => dispatch({ type: 'setSpecialtyData', value: nextValue })}
                                     />
                                 </div>
-                            ) : null} */}
+                            ) : null}
 
                             {/* Prescription Pad Layout - Two Column Grid */}
                             <div className="grid grid-cols-12 gap-4 sm:gap-8">
@@ -1266,28 +1664,33 @@ export default function Prescription({
                                             Investigations
                                         </div>
 
-                                        {investigationCatalog.length > 0 ? (
+                                        {(state.template_type === 'eye'
+                                            ? EYE_INVESTIGATION_TESTS
+                                            : investigationCatalog).length > 0 ? (
                                             <div className="space-y-1 px-1">
-                                                {investigationCatalog.map((testName) => {
+                                                {(state.template_type === 'eye'
+                                                    ? EYE_INVESTIGATION_TESTS
+                                                    : investigationCatalog).map((testName) => {
                                                     const checked = !!state.investigations.common?.[testName];
                                                     return (
-                                                        <button
-                                                            key={testName}
-                                                            type="button"
-                                                            className={`flex w-full items-center justify-between gap-2 rounded-md border px-2 py-1 text-left text-xs transition ${checked
-                                                                ? 'border-[#0b4fa3] bg-[#eaf2ff] text-[#0b3f86]'
-                                                                : 'border-transparent text-slate-700 hover:border-[#d4e1f6] hover:bg-[#f7faff]'
-                                                            }`}
-                                                            onClick={() => dispatch({ type: 'toggleCommonTest', testName })}
-                                                        >
-                                                            <span className="truncate">{testName}</span>
-                                                            <span className={`inline-flex h-4 w-4 items-center justify-center rounded border text-[10px] font-bold ${checked
-                                                                ? 'border-[#0b4fa3] bg-[#0b4fa3] text-white'
-                                                                : 'border-slate-300 bg-white text-transparent'
-                                                            }`}>
-                                                                ✓
-                                                            </span>
-                                                        </button>
+                                                        <div key={testName}>
+                                                            <button
+                                                                type="button"
+                                                                className={`flex w-full items-center justify-between gap-2 rounded-md border px-2 py-1 text-left text-xs transition ${checked
+                                                                    ? 'border-[#0b4fa3] bg-[#eaf2ff] text-[#0b3f86]'
+                                                                    : 'border-transparent text-slate-700 hover:border-[#d4e1f6] hover:bg-[#f7faff]'
+                                                                }`}
+                                                                onClick={() => dispatch({ type: 'toggleCommonTest', testName })}
+                                                            >
+                                                                <span className="truncate">{testName}</span>
+                                                                <span className={`inline-flex h-4 w-4 items-center justify-center rounded border text-[10px] font-bold ${checked
+                                                                    ? 'border-[#0b4fa3] bg-[#0b4fa3] text-white'
+                                                                    : 'border-slate-300 bg-white text-transparent'
+                                                                }`}>
+                                                                    ✓
+                                                                </span>
+                                                            </button>
+                                                        </div>
                                                     );
                                                 })}
                                             </div>
@@ -1342,6 +1745,90 @@ export default function Prescription({
                                         <HeartPulse className="h-4 w-4" />
                                         <div className="h-px flex-1 bg-[#7b8fac]" />
                                     </div>
+
+                                    {state.template_type === 'eye' ? (
+                                        <div className="flex min-h-[180px] flex-col rounded-xl border border-[#cad6e8] bg-[#f2f5fa] p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
+                                            <div className="mb-3 inline-flex items-center gap-2 bg-[#0b4fa3] px-3 py-1.5 text-sm font-bold uppercase tracking-wide text-white" style={{ clipPath: 'polygon(0 0, 92% 0, 100% 100%, 0 100%)' }}>
+                                                <FlaskConical className="h-4 w-4" />
+                                                Eye Lab / Assessment
+                                            </div>
+
+                                            <div className="space-y-2 px-1">
+                                                {EYE_INVESTIGATION_TESTS.filter((testName) => !!state.investigations.common?.[testName]).length ? (
+                                                    EYE_INVESTIGATION_TESTS
+                                                        .filter((testName) => !!state.investigations.common?.[testName])
+                                                        .map((testName) => (
+                                                            <div key={`sample-${testName}`}>
+                                                                <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-600">{testName} sample / note</label>
+                                                                <input
+                                                                    className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-800 focus:border-[#0b4fa3] focus:outline-none"
+                                                                    value={String(state.investigations.commonSample?.[testName] || '')}
+                                                                    onChange={(e) => dispatch({ type: 'setTestSample', testName, value: e.target.value })}
+                                                                    placeholder="Lab sample / note"
+                                                                />
+                                                            </div>
+                                                        ))
+                                                ) : (
+                                                    <p className="text-[11px] text-slate-500">First select eye investigations above, then add sample/note here.</p>
+                                                )}
+                                            </div>
+
+                                            <div className="mt-3 border-t border-dotted border-[#9aa8be] pt-2">
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <span className="text-[10px] font-bold uppercase tracking-wide text-slate-600">Eye Direction Details</span>
+                                                    <button
+                                                        type="button"
+                                                        className="rounded border border-[#9fb5d8] bg-white px-2 py-0.5 text-[10px] font-semibold text-[#0b4fa3] hover:bg-[#edf3ff]"
+                                                        onClick={() => openEyeAssessmentModal('R/E')}
+                                                    >
+                                                        Open Modal
+                                                    </button>
+                                                </div>
+
+                                                <div className="mt-2 space-y-1.5">
+                                                    {EYE_DIRECTIONS.filter((direction) =>
+                                                        ['sph', 'cyl', 'axis', 'va', 'add', 'note']
+                                                            .some((key) => String(state.diagnosis.eye_assessment_notes?.[direction]?.[key] || '').trim() !== ''),
+                                                    ).length ? (
+                                                        EYE_DIRECTIONS.filter((direction) =>
+                                                            ['sph', 'cyl', 'axis', 'va', 'add', 'note']
+                                                                .some((key) => String(state.diagnosis.eye_assessment_notes?.[direction]?.[key] || '').trim() !== ''),
+                                                        ).map((direction) => {
+                                                            const detail = state.diagnosis.eye_assessment_notes?.[direction] || {};
+                                                            const parts = [];
+                                                            if (String(detail.sph || '').trim()) parts.push({ key: 'SPH', value: String(detail.sph).trim() });
+                                                            if (String(detail.cyl || '').trim()) parts.push({ key: 'CYL', value: String(detail.cyl).trim() });
+                                                            if (String(detail.axis || '').trim()) parts.push({ key: 'AXIS', value: String(detail.axis).trim() });
+                                                            if (String(detail.va || '').trim()) parts.push({ key: 'V/A', value: String(detail.va).trim() });
+                                                            if (String(detail.add || '').trim()) parts.push({ key: 'ADD', value: String(detail.add).trim() });
+                                                            if (String(detail.note || '').trim()) parts.push({ key: 'NOTE', value: String(detail.note).trim() });
+
+                                                            return (
+                                                                <button
+                                                                    key={`eye-summary-${direction}`}
+                                                                    type="button"
+                                                                    onClick={() => openEyeAssessmentModal(direction)}
+                                                                    className="w-full rounded border border-[#c8d5ea] bg-white px-2 py-1.5 text-left text-[11px] text-slate-700 hover:border-[#93b0db]"
+                                                                >
+                                                                    <span className="mr-2 inline-flex min-w-[36px] rounded bg-[#eaf2ff] px-1.5 py-0.5 font-bold text-[#0b3f86]">{direction}</span>
+                                                                    <span>
+                                                                        {parts.map((part, idx) => (
+                                                                            <span key={`${direction}-${part.key}-${idx}`}>
+                                                                                {idx > 0 ? ' | ' : ''}
+                                                                                <strong>{part.key}</strong> {part.value}
+                                                                            </span>
+                                                                        ))}
+                                                                    </span>
+                                                                </button>
+                                                            );
+                                                        })
+                                                    ) : (
+                                                        <p className="text-[11px] text-slate-500">No direction values saved yet.</p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ) : null}
 
                                     <div className="flex min-h-[250px] flex-col rounded-xl border border-[#cad6e8] bg-[#f2f5fa] p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
                                         <div className="mb-3 inline-flex items-center gap-2 bg-[#0b4fa3] px-3 py-1.5 text-sm font-bold uppercase tracking-wide text-white" style={{ clipPath: 'polygon(0 0, 92% 0, 100% 100%, 0 100%)' }}>
@@ -1583,6 +2070,143 @@ export default function Prescription({
                                     </div>
                                 </div>
                             </div>
+
+                    {eyeAssessmentModal.open && typeof document !== 'undefined'
+                        ? createPortal(
+                            <div className="fixed inset-0 z-[120] flex items-start justify-center bg-slate-950/70 p-3 pt-3 backdrop-blur-[3px] sm:p-6 sm:pt-4">
+                            <div className="w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-[0_30px_80px_-20px_rgba(2,6,23,0.65)] ring-1 ring-slate-900/15">
+                                {/* Header */}
+                                <div className="flex items-center justify-between bg-gradient-to-r from-[#0b3f86] to-[#2563eb] px-5 py-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20">
+                                            <Eye className="h-4 w-4 text-white" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-sm font-bold leading-tight text-white">Eye Direction Assessment</h3>
+                                            <p className="text-[11px] text-blue-200">SPH · CYL · AXIS · V/A per direction</p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        className="flex h-7 w-7 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-white/30"
+                                        onClick={() => setEyeAssessmentModal({ open: false, side: 'R/E', include: false, ...emptyEyeDirectionPayload() })}
+                                        aria-label="Close"
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </button>
+                                </div>
+
+                                <div className="max-h-[78vh] overflow-y-auto bg-white px-5 pt-4 pb-5">
+                                    {/* Direction Tabs */}
+                                    <div className="mb-4 flex gap-2 rounded-xl bg-slate-100 p-1">
+                                        {EYE_DIRECTIONS.map((direction) => {
+                                            const active = eyeAssessmentModal.side === direction;
+                                            const hasSaved = !!state.diagnosis.eye_assessment_notes?.[direction]?.sph
+                                                || !!state.diagnosis.eye_assessment_notes?.[direction]?.cyl;
+                                            return (
+                                                <button
+                                                    key={direction}
+                                                    type="button"
+                                                    onClick={() => openEyeAssessmentModal(direction)}
+                                                    className={`relative flex-1 rounded-lg py-1.5 text-xs font-bold tracking-wide transition-all duration-150 ${
+                                                        active
+                                                            ? 'bg-white text-[#0b3f86] shadow-sm ring-1 ring-slate-200'
+                                                            : 'text-slate-500 hover:text-slate-700'
+                                                    }`}
+                                                >
+                                                    {direction}
+                                                    {hasSaved && (
+                                                        <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-400 ring-1 ring-white" />
+                                                    )}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+
+                                    {/* Include toggle */}
+                                    <label className="mb-4 flex cursor-pointer items-center gap-2.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 transition hover:bg-blue-50 hover:border-blue-200">
+                                        <input
+                                            type="checkbox"
+                                            className="h-4 w-4 accent-[#0b3f86]"
+                                            checked={eyeAssessmentModal.include}
+                                            onChange={(e) => setEyeAssessmentModal((prev) => ({ ...prev, include: e.target.checked }))}
+                                        />
+                                        <span className="text-xs font-medium text-slate-700">Include <span className="font-bold text-[#0b3f86]">{eyeAssessmentModal.side}</span> in prescription diagnosis</span>
+                                    </label>
+
+                                    {/* Fields Grid */}
+                                    <div className="grid grid-cols-2 gap-3">
+                                        {[
+                                            { key: 'sph', label: 'SPH', placeholder: 'e.g. −1.50' },
+                                            { key: 'cyl', label: 'CYL', placeholder: 'e.g. −0.75' },
+                                            { key: 'axis', label: 'AXIS', placeholder: 'e.g. 180°' },
+                                            { key: 'va', label: 'V / A', placeholder: 'e.g. 6/6' },
+                                        ].map(({ key, label, placeholder }) => (
+                                            <div key={key} className="group">
+                                                <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-slate-400 transition group-focus-within:text-[#0b3f86]">
+                                                    {label}
+                                                </label>
+                                                <input
+                                                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800 transition placeholder:text-slate-300 focus:border-[#2563eb] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#2563eb]/20"
+                                                    value={eyeAssessmentModal[key]}
+                                                    onChange={(e) => setEyeAssessmentModal((prev) => ({ ...prev, [key]: e.target.value }))}
+                                                    placeholder={placeholder}
+                                                />
+                                            </div>
+                                        ))}
+                                        <div className="group">
+                                            <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-slate-400 transition group-focus-within:text-[#0b3f86]">
+                                                ADD
+                                            </label>
+                                            <input
+                                                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800 transition placeholder:text-slate-300 focus:border-[#2563eb] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#2563eb]/20"
+                                                value={eyeAssessmentModal.add}
+                                                onChange={(e) => setEyeAssessmentModal((prev) => ({ ...prev, add: e.target.value }))}
+                                                placeholder="Near add"
+                                            />
+                                        </div>
+                                        <div className="group col-span-2">
+                                            <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-slate-400 transition group-focus-within:text-[#0b3f86]">
+                                                Clinical Note
+                                            </label>
+                                            <textarea
+                                                rows={2}
+                                                className="w-full resize-none rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 transition placeholder:text-slate-300 focus:border-[#2563eb] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#2563eb]/20"
+                                                value={eyeAssessmentModal.note}
+                                                onChange={(e) => setEyeAssessmentModal((prev) => ({ ...prev, note: e.target.value }))}
+                                                placeholder="Additional clinical observations…"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Actions */}
+                                    <div className="mt-4 flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
+                                        <span className="text-[11px] text-slate-400">
+                                            {EYE_DIRECTIONS.filter((d) => ['sph', 'cyl', 'axis', 'va', 'add', 'note'].some((k) => String(state.diagnosis.eye_assessment_notes?.[d]?.[k] || '').trim() !== '')).length} of 4 directions saved
+                                        </span>
+                                        <div className="flex gap-2">
+                                            <button
+                                                type="button"
+                                                className="rounded-lg border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
+                                                onClick={() => setEyeAssessmentModal({ open: false, side: 'R/E', include: false, ...emptyEyeDirectionPayload() })}
+                                            >
+                                                Cancel
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className="rounded-lg bg-gradient-to-r from-[#0b3f86] to-[#2563eb] px-5 py-2 text-xs font-bold text-white shadow-sm transition hover:from-[#0a3673] hover:to-[#1d4ed8] hover:shadow-md"
+                                                onClick={saveEyeAssessmentModal}
+                                            >
+                                                Save {eyeAssessmentModal.side}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>,
+                            document.body,
+                        )
+                        : null}
 
                     {/* Form Submit Section - Enhanced */}
                     <div className="mt-6 sm:mt-10 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:p-6">

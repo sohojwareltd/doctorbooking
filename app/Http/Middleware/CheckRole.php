@@ -33,9 +33,24 @@ class CheckRole
                 return response()->json(['message' => 'Forbidden.'], 403);
             }
 
-            abort(403, 'Unauthorized access.');
+            $redirectTo = $this->defaultPathForRole($user->role?->name);
+
+            if ('/' . ltrim($request->path(), '/') === $redirectTo) {
+                abort(403, 'Unauthorized access.');
+            }
+
+            return redirect()->to($redirectTo)->with('error', 'You do not have permission to access that page.');
         }
 
         return $next($request);
+    }
+
+    private function defaultPathForRole(?string $roleName): string
+    {
+        return match ($roleName) {
+            'doctor', 'compounder' => '/doctor/dashboard',
+            'patient' => '/patient/dashboard',
+            default => '/dashboard',
+        };
     }
 }

@@ -189,6 +189,7 @@ export default function DoctorAppointments() {
   const [selectedDate, setSelectedDate] = useState(null);
   const [previewSerial, setPreviewSerial] = useState(null);
   const [previewTime, setPreviewTime] = useState(null);
+  const [previewMessage, setPreviewMessage] = useState('');
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [unavailableRanges, setUnavailableRanges] = useState([]);
   const [closedWeekdays, setClosedWeekdays] = useState([]);
@@ -368,6 +369,7 @@ export default function DoctorAppointments() {
     setSelectedDate(null);
     setPreviewSerial(null);
     setPreviewTime(null);
+    setPreviewMessage('');
     setUnavailableRanges([]);
     setClosedWeekdays([]);
   };
@@ -438,6 +440,7 @@ export default function DoctorAppointments() {
     setSelectedDate(dateStr);
     setPreviewSerial(null);
     setPreviewTime(null);
+    setPreviewMessage('');
     setApptForm((prev) => ({ ...prev, appointment_date: dateStr, appointment_time: '' }));
   }, [apptForm.chamber_id, isUnavailableDate]);
 
@@ -485,6 +488,7 @@ export default function DoctorAppointments() {
     if (!showCreateModal || !date || !chamberId) {
       setPreviewSerial(null);
       setPreviewTime(null);
+      setPreviewMessage('');
       setApptForm((prev) => (prev.appointment_time ? { ...prev, appointment_time: '' } : prev));
       return;
     }
@@ -493,6 +497,7 @@ export default function DoctorAppointments() {
     const run = async () => {
       try {
         setLoadingPreview(true);
+        setPreviewMessage('');
         const params = new URLSearchParams({ date, chamber_id: String(chamberId) });
         const res = await fetch(`/api/public/booking-preview?${params.toString()}`, {
           headers: { Accept: 'application/json' },
@@ -503,11 +508,15 @@ export default function DoctorAppointments() {
         const nextTime = data?.estimated_time ?? null;
         setPreviewSerial(data?.serial_no ?? null);
         setPreviewTime(nextTime);
+        if (!nextTime) {
+          setPreviewMessage(data?.message || 'No estimated time is available for this date in the selected chamber. Please choose another date or chamber.');
+        }
         setApptForm((prev) => ({ ...prev, appointment_time: nextTime || '' }));
       } catch {
         if (cancelled) return;
         setPreviewSerial(null);
         setPreviewTime(null);
+        setPreviewMessage('Unable to load appointment preview right now. Please retry or pick another date.');
         setApptForm((prev) => ({ ...prev, appointment_time: '' }));
       } finally {
         if (cancelled) return;
@@ -1811,7 +1820,7 @@ export default function DoctorAppointments() {
                     </div>
                   ) : (
                     <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
-                      Preview unavailable.
+                      {previewMessage || 'No preview details are available for this selected date.'}
                     </div>
                   )}
                   {apptErrors.appointment_time && <p className="mt-2 text-xs text-rose-500">{apptErrors.appointment_time}</p>}

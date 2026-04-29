@@ -119,6 +119,10 @@ function getNextVisitLabel(prescription) {
     : 'No follow-up';
 }
 
+function getEditPrescriptionParam(prescription) {
+  return prescription?.id || prescription?.uuid || '';
+}
+
 function sanitizePhoneDigits(value) {
   return String(value ?? '').replace(/\D/g, '');
 }
@@ -818,7 +822,7 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
                       <Eye className="h-3.5 w-3.5" />
                     </a>
                     <Link
-                      href={`/doctor/prescriptions/${prescription.uuid || prescription.id}/edit`}
+                      href={`/doctor/prescriptions/${getEditPrescriptionParam(prescription)}/edit`}
                       className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
                       aria-label="Edit prescription"
                     >
@@ -930,7 +934,7 @@ export default function DoctorPrescriptions({ prescriptions = [], stats = {} }) 
                           </a>
 
                           <Link
-                            href={`/doctor/prescriptions/${prescription.uuid || prescription.id}/edit`}
+                            href={`/doctor/prescriptions/${getEditPrescriptionParam(prescription)}/edit`}
                             className="group relative inline-flex h-7 w-7 items-center justify-center rounded-md border border-indigo-200 bg-indigo-50 text-indigo-700 transition hover:border-indigo-300 hover:bg-indigo-100 hover:text-indigo-800"
                             aria-label="Edit prescription"
                           >

@@ -143,92 +143,93 @@ export default function EyePrescriptionSection({ value, onChange, readOnly = fal
     );
 
     return (
-        <div className="space-y-4 rounded-2xl border border-[#d9e4f4] bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] p-4 shadow-sm">
-            <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
-                <Eye className="h-4 w-4 text-[#3556a6]" />
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-700">Eye Assessment</span>
-            </div>
+        // <div className="space-y-4 rounded-2xl border border-[#d9e4f4] bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] p-4 shadow-sm">
+        //     <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
+        //         <Eye className="h-4 w-4 text-[#3556a6]" />
+        //         <span className="text-xs font-bold uppercase tracking-wider text-slate-700">Eye Assessment</span>
+        //     </div>
 
-            <div className="overflow-x-auto">
-                <div className="min-w-[760px] space-y-2">
-                    <div className="grid grid-cols-[52px_repeat(4,minmax(0,1fr))_repeat(4,minmax(0,1fr))] gap-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
-                        <div />
-                        <div className="col-span-4 rounded border border-slate-200 bg-slate-50 px-2 py-1 text-center">OD (RE)</div>
-                        <div className="col-span-4 rounded border border-slate-200 bg-slate-50 px-2 py-1 text-center">OS (LE)</div>
-                    </div>
-                    <div className="grid grid-cols-[52px_repeat(4,minmax(0,1fr))_repeat(4,minmax(0,1fr))] gap-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
-                        <div />
-                        {['SPH', 'CYL', 'AXIS', 'V/A', 'SPH', 'CYL', 'AXIS', 'V/A'].map((label, index) => (
-                            <div key={`${label}-${index}`} className="px-1 text-center">{label}</div>
-                        ))}
-                    </div>
-                    {renderRow('D', 'distance')}
-                    {renderRow('N', 'near')}
-                </div>
-            </div>
+        //     <div className="overflow-x-auto">
+        //         <div className="min-w-[760px] space-y-2">
+        //             <div className="grid grid-cols-[52px_repeat(4,minmax(0,1fr))_repeat(4,minmax(0,1fr))] gap-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+        //                 <div />
+        //                 <div className="col-span-4 rounded border border-slate-200 bg-slate-50 px-2 py-1 text-center">OD (RE)</div>
+        //                 <div className="col-span-4 rounded border border-slate-200 bg-slate-50 px-2 py-1 text-center">OS (LE)</div>
+        //             </div>
+        //             <div className="grid grid-cols-[52px_repeat(4,minmax(0,1fr))_repeat(4,minmax(0,1fr))] gap-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
+        //                 <div />
+        //                 {['SPH', 'CYL', 'AXIS', 'V/A', 'SPH', 'CYL', 'AXIS', 'V/A'].map((label, index) => (
+        //                     <div key={`${label}-${index}`} className="px-1 text-center">{label}</div>
+        //                 ))}
+        //             </div>
+        //             {renderRow('D', 'distance')}
+        //             {renderRow('N', 'near')}
+        //         </div>
+        //     </div>
 
-            <div className="grid gap-3 md:grid-cols-3">
-                <div>
-                    <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">IOP Right</div>
-                    <CellField
-                        readOnly={readOnly}
-                        value={data.eye.iop_right}
-                        placeholder="mmHg"
-                        onChange={(nextValue) => updateEye({ iop_right: nextValue })}
-                    />
-                </div>
-                <div>
-                    <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">IOP Left</div>
-                    <CellField
-                        readOnly={readOnly}
-                        value={data.eye.iop_left}
-                        placeholder="mmHg"
-                        onChange={(nextValue) => updateEye({ iop_left: nextValue })}
-                    />
-                </div>
-                <div>
-                    <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">PD</div>
-                    <CellField
-                        readOnly={readOnly}
-                        value={data.eye.pd}
-                        placeholder="PD"
-                        onChange={(nextValue) => updateEye({ pd: nextValue })}
-                    />
-                </div>
-            </div>
+        //     <div className="grid gap-3 md:grid-cols-3">
+        //         <div>
+        //             <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">IOP Right</div>
+        //             <CellField
+        //                 readOnly={readOnly}
+        //                 value={data.eye.iop_right}
+        //                 placeholder="mmHg"
+        //                 onChange={(nextValue) => updateEye({ iop_right: nextValue })}
+        //             />
+        //         </div>
+        //         <div>
+        //             <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">IOP Left</div>
+        //             <CellField
+        //                 readOnly={readOnly}
+        //                 value={data.eye.iop_left}
+        //                 placeholder="mmHg"
+        //                 onChange={(nextValue) => updateEye({ iop_left: nextValue })}
+        //             />
+        //         </div>
+        //         <div>
+        //             <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">PD</div>
+        //             <CellField
+        //                 readOnly={readOnly}
+        //                 value={data.eye.pd}
+        //                 placeholder="PD"
+        //                 onChange={(nextValue) => updateEye({ pd: nextValue })}
+        //             />
+        //         </div>
+        //     </div>
 
-            <div>
-                <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Findings</div>
-                <TextBlock
-                    readOnly={readOnly}
-                    value={data.eye.findings}
-                    rows={3}
-                    placeholder="Anterior segment, lens, fundus, ocular movement, etc."
-                    onChange={(nextValue) => updateEye({ findings: nextValue })}
-                />
-            </div>
+        //     <div>
+        //         <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Findings</div>
+        //         <TextBlock
+        //             readOnly={readOnly}
+        //             value={data.eye.findings}
+        //             rows={3}
+        //             placeholder="Anterior segment, lens, fundus, ocular movement, etc."
+        //             onChange={(nextValue) => updateEye({ findings: nextValue })}
+        //         />
+        //     </div>
 
-            <div>
-                <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Clinical Notes</div>
-                <TextBlock
-                    readOnly={readOnly}
-                    value={data.eye.notes}
-                    rows={3}
-                    placeholder="Visual complaint summary, constant use note, lens advice, etc."
-                    onChange={(nextValue) => updateEye({ notes: nextValue })}
-                />
-            </div>
+        //     <div>
+        //         <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Clinical Notes</div>
+        //         <TextBlock
+        //             readOnly={readOnly}
+        //             value={data.eye.notes}
+        //             rows={3}
+        //             placeholder="Visual complaint summary, constant use note, lens advice, etc."
+        //             onChange={(nextValue) => updateEye({ notes: nextValue })}
+        //         />
+        //     </div>
 
-            <div>
-                <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Optical Advice</div>
-                <TextBlock
-                    readOnly={readOnly}
-                    value={data.eye.advice}
-                    rows={2}
-                    placeholder="Glasses advice, lens use, follow-up instruction, etc."
-                    onChange={(nextValue) => updateEye({ advice: nextValue })}
-                />
-            </div>
-        </div>
+        //     <div>
+        //         <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Optical Advice</div>
+        //         <TextBlock
+        //             readOnly={readOnly}
+        //             value={data.eye.advice}
+        //             rows={2}
+        //             placeholder="Glasses advice, lens use, follow-up instruction, etc."
+        //             onChange={(nextValue) => updateEye({ advice: nextValue })}
+        //         />
+        //     </div>
+        // </div>
+        ''
     );
 }
