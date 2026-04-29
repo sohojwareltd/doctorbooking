@@ -822,6 +822,21 @@ class DoctorController extends Controller
             $appointmentData['is_guest'] = true;
         }
 
+        $alreadyBooked = Appointment::hasDuplicatePatientBooking(
+            doctorId: $doctor->doctorId(),
+            dateString: (string) $appointmentDate,
+            chamberId: $validated['chamber_id'] ?? null,
+            userId: $appointmentData['user_id'] ?? null,
+            phone: $appointmentData['phone'] ?? null,
+            email: null,
+        );
+
+        if ($alreadyBooked) {
+            return response()->json([
+                'message' => 'This patient already has a booking in the selected chamber on this date.',
+            ], 422);
+        }
+
         $appointment = Appointment::create($appointmentData);
 
         return response()->json([

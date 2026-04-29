@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -81,5 +82,48 @@ class Appointment extends Model
     public function getPatientNameAttribute(): string
     {
         return $this->user?->name ?? $this->name ?? '';
+    }
+
+    /**
+     * Check if a patient already has a non-cancelled booking
+     * in the same chamber on the same date.
+     */
+    public static function hasDuplicatePatientBooking(
+        int $doctorId,
+        string $dateString,
+        ?int $chamberId,
+        ?int $userId = null,
+        ?string $phone = null,
+        ?string $email = null,
+    ): bool {
+        $query = static::query()
+            ->where('doctor_id', $doctorId)
+            ->whereDate('appointment_date', $dateString)
+            ->whereNotIn('status', ['cancelled'])
+            ->when(
+                $chamberId !== null,
+                fn (Builder $q) => $q->where('chamber_id', $chamberId),
+                fn (Builder $q) => $q->whereNull('chamber_id')
+            );
+
+        if ($userId !== null) {
+            return $query->where('user_id', $userId)->exists();
+        }
+
+        $normalizedPhone = $phone !== null ? preg_replace('/\s+/', '', trim($phone)) : null;
+        $normalizedEmail = $email !== null ? trim($email) : null;
+
+        if ($normalizedPhone === null && $normalizedEmail === null) {
+            return false;
+        }
+
+        return $query->where(function (Builder $q) use ($normalizedPhone, $normalizedEmail) {
+            if ($normalizedPhone !== null && $normalizedPhone !== '') {
+                $q->orWhereRaw('REPLACE(phone, " ", "") = ?', [$normalizedPhone]);
+            }
+            if ($normalizedEmail !== null && $normalizedEmail !== '') {
+                $q->orWhereRaw('LOWER(email) = ?', [strtolower($normalizedEmail)]);
+            }
+        })->exists();
     }
 }

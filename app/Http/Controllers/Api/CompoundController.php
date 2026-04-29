@@ -134,6 +134,22 @@ class CompoundController extends Controller
         }
 
         $today  = now()->toDateString();
+
+        $alreadyBooked = Appointment::hasDuplicatePatientBooking(
+            doctorId: $doctor->doctorId(),
+            dateString: $today,
+            chamberId: null,
+            userId: $user->id,
+            phone: $validated['phone'],
+            email: null,
+        );
+
+        if ($alreadyBooked) {
+            return response()->json([
+                'message' => 'This patient already has a booking for today in this chamber.',
+            ], 422);
+        }
+
         $serial = Appointment::where('doctor_id', $doctor->doctorId())
             ->whereDate('appointment_date', $today)
             ->count() + 1;

@@ -416,6 +416,21 @@ class PublicController extends Controller
                 ->first();
         }
 
+        $alreadyBooked = Appointment::hasDuplicatePatientBooking(
+            doctorId: $doctor->doctorId(),
+            dateString: $dateString,
+            chamberId: $chamber?->id,
+            userId: $linkedUser?->id,
+            phone: $validated['phone'] ?? null,
+            email: $validated['email'] ?? null,
+        );
+
+        if ($alreadyBooked) {
+            return response()->json([
+                'message' => 'This patient already has a booking in the selected chamber on this date.',
+            ], 422);
+        }
+
         $countQuery = Appointment::where('doctor_id', $doctor->doctorId())
             ->whereDate('appointment_date', $dateString)
             ->whereNotIn('status', ['cancelled']);

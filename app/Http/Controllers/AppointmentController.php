@@ -155,6 +155,25 @@ class AppointmentController extends Controller
         $userEmail = $validated['email'] ?? null;
         $user = $userEmail ? User::where('email', $userEmail)->first() : null;
 
+        $alreadyBooked = Appointment::hasDuplicatePatientBooking(
+            doctorId: $doctor->doctorId(),
+            dateString: $dateString,
+            chamberId: $chamber?->id,
+            userId: $user?->id,
+            phone: $validated['phone'] ?? null,
+            email: $validated['email'] ?? null,
+        );
+
+        if ($alreadyBooked) {
+            $message = 'This patient already has a booking in the selected chamber on this date.';
+
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $message], 422);
+            }
+
+            return back()->withErrors(['booking' => $message])->withInput();
+        }
+
         $time = $validated['time'] ?? null;
 
         // Determine serial number and estimated start time for this date.
