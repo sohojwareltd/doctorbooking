@@ -49,6 +49,8 @@ export default function Login({ status, canResetPassword }) {
                 } catch {
                     // Ignore refresh failures; axios/fetch interceptors can recover on next 419.
                 }
+
+                window.location.reload();
             },
         });
     };
