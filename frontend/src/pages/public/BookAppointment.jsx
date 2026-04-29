@@ -561,7 +561,7 @@ export default function PublicBookAppointment() {
               );
             })}
           </div>
-{/* 
+          {/* 
           {error && (
             <GlassCard variant="solid" className="mb-6 border-rose-200 bg-rose-50/75 p-4">
               <div className="text-sm font-semibold text-rose-800">{error}</div>
@@ -998,36 +998,36 @@ export default function PublicBookAppointment() {
                         </div>
 
                         {/* <div className="grid grid-cols-2 lg:grid-cols-1 gap-3"> */}
-                          <div>
-                            <label className="mb-2 block text-sm font-semibold text-[#005963]">Age</label>
-                            <input
-                              type="number"
-                              name="age"
-                              placeholder="Age (optional)"
-                              min={1}
-                              max={150}
-                              value={formData.age}
-                              onChange={(e) => setFormData((p) => ({ ...p, age: e.target.value }))}
-                              className={inputClass}
-                              disabled={submitting}
-                            />
-                          </div>
+                        <div>
+                          <label className="mb-2 block text-sm font-semibold text-[#005963]">Age</label>
+                          <input
+                            type="number"
+                            name="age"
+                            placeholder="Age (optional)"
+                            min={1}
+                            max={150}
+                            value={formData.age}
+                            onChange={(e) => setFormData((p) => ({ ...p, age: e.target.value }))}
+                            className={inputClass}
+                            disabled={submitting}
+                          />
+                        </div>
 
-                          <div>
-                            <label className="mb-2 block text-sm font-semibold text-[#005963]">Gender</label>
-                            <select
-                              name="gender"
-                              value={formData.gender}
-                              onChange={(e) => setFormData((p) => ({ ...p, gender: e.target.value }))}
-                              className={inputClass}
-                              disabled={submitting}
-                            >
-                              <option value="">Select gender (optional)</option>
-                              <option value="male">Male</option>
-                              <option value="female">Female</option>
-                              <option value="other">Other</option>
-                            </select>
-                          </div>
+                        <div>
+                          <label className="mb-2 block text-sm font-semibold text-[#005963]">Gender</label>
+                          <select
+                            name="gender"
+                            value={formData.gender}
+                            onChange={(e) => setFormData((p) => ({ ...p, gender: e.target.value }))}
+                            className={inputClass}
+                            disabled={submitting}
+                          >
+                            <option value="">Select gender (optional)</option>
+                            <option value="male">Male</option>
+                            <option value="female">Female</option>
+                            <option value="other">Other</option>
+                          </select>
+                        </div>
                         {/* </div> */}
                       </div>
 
@@ -1278,6 +1278,11 @@ export default function PublicBookAppointment() {
           font-size: 14px !important;
           padding: 8px !important;
         }
+.public-booking-calendar .fc .fc-daygrid-day.fc-day-selected .fc-daygrid-day-number
+{
+background:#2563eb !important;
+box-shadow:none !important;
+  }
 
         .fc .fc-highlight{
           background-color: white !important;

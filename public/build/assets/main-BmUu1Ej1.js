@@ -397,6 +397,11 @@ Board Certified, American Academy...`}),$.about_credentials_text&&s.jsx("p",{cla
           font-size: 14px !important;
           padding: 8px !important;
         }
+.public-booking-calendar .fc .fc-daygrid-day.fc-day-selected .fc-daygrid-day-number
+{
+background:#2563eb !important;
+box-shadow:none !important;
+  }
 
         .fc .fc-highlight{
           background-color: white !important;
