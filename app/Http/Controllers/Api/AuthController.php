@@ -19,7 +19,7 @@ class AuthController extends Controller
 {
     /**
      * Login with username + password.
-     * username is the email or phone used during registration.
+     * username can be username, email, or phone used during registration.
      *
      * POST /api/auth/login
      * Body: { username, password, device_name? }
@@ -32,8 +32,11 @@ class AuthController extends Controller
             'device_name' => ['nullable', 'string', 'max:255'],
         ]);
 
+        $identifier = trim((string) $request->username);
         $user = User::with('role')
-            ->where('username', $request->username)
+            ->where('username', $identifier)
+            ->orWhere('email', $identifier)
+            ->orWhere('phone', $identifier)
             ->first();
 
         if (! $user || ! Hash::check($request->password, $user->password)) {
@@ -60,7 +63,7 @@ class AuthController extends Controller
      *   name         string  required
      *   email        string  required if phone absent  (unique)
      *   phone        string  required if email absent  (unique)
-     *   password     string  required – min 8 chars, 1 uppercase, 1 number
+     *   password     string  required – minimum 8 characters
      *   password_confirmation  string  required
      *   device_name  string  optional (defaults to "mobile-app")
      *
@@ -76,7 +79,7 @@ class AuthController extends Controller
             'password' => [
                 'required',
                 'confirmed',
-                PasswordRule::min(8)->mixedCase()->numbers(),
+                PasswordRule::min(8),
             ],
             'device_name' => ['nullable', 'string', 'max:255'],
         ]);
@@ -198,7 +201,7 @@ class AuthController extends Controller
         $request->validate([
             'token' => ['required', 'string'],
             'email' => ['required', 'email'],
-            'password' => ['required', 'confirmed', PasswordRule::min(8)->mixedCase()->numbers()],
+            'password' => ['required', 'confirmed', PasswordRule::min(8)],
         ]);
 
         $status = Password::reset(
