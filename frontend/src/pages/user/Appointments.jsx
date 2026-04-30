@@ -391,7 +391,7 @@ export default function UserAppointments() {
                       </button>
                       {hasPrescription(a) ? (
                         <Link
-                          href={`/patient/prescriptions/${a.prescription_id}`}
+                          href={`/prescription/${a.prescription_uuid || a.prescription_id}`}
                           className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-emerald-200 bg-emerald-50 text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100"
                           title="Prescription"
                         >
@@ -485,7 +485,7 @@ export default function UserAppointments() {
                         </button>
                         {hasPrescription(a) ? (
                           <Link
-                            href={`/patient/prescriptions/${a.prescription_id}`}
+                            href={`/prescription/${a.prescription_uuid || a.prescription_id}`}
                             className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-emerald-200 bg-emerald-50 text-emerald-700 transition hover:border-emerald-300 hover:text-emerald-800"
                             title="Prescription"
                           >
@@ -699,7 +699,7 @@ export default function UserAppointments() {
                 <div className="mt-4 flex items-center justify-end gap-2">
                   {hasPrescription(viewRow) ? (
                     <Link
-                      href={`/patient/prescriptions/${viewRow.prescription_id}`}
+                      href={`/prescription/${viewRow.prescription_uuid || viewRow.prescription_id}`}
                       className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
                     >
                       <FileText className="h-4 w-4" />
