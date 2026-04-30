@@ -369,7 +369,7 @@ class PrescriptionController extends Controller
     /** POST /api/doctor/prescriptions/{prescription}/messages */
     public function storeMessage(Request $request, Prescription $prescription, SmsService $smsService): JsonResponse
     {
-        $doctor = $request->user();
+       
       
 
         $validated = $request->validate([
@@ -382,7 +382,7 @@ class PrescriptionController extends Controller
         if (! str_contains($messageBody, $publicUrl)) {
             $messageBody = trim($messageBody."\n\n".$publicUrl);
         }
-
+dd($messageBody);
         $saved = PrescriptionMessage::create([
             'prescription_id' => $prescription->id,
             'doctor_id' => $prescription->doctor_id,
