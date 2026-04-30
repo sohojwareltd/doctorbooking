@@ -392,12 +392,9 @@ export default function DoctorDashboard({
             </div>
           </div>
         </section>
-        <div className="grid gap-6 ">
+        <div className="space-y-6">
 
-          {/* LEFT (2/3) */}
-          <div className="space-y-6">
-
-            {/* ACTIVE PATIENT CARD */}
+          {/* ACTIVE PATIENT CARD */}
             {visitPatient && !hideActiveVisitCard ? (
               <div className="relative overflow-hidden rounded-xl border border-emerald-200 bg-white shadow-sm">
                 <div className="h-1 w-full bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500" />
@@ -535,8 +532,13 @@ export default function DoctorDashboard({
 
             ) : null}
 
-            {/* TABBED APPOINTMENTS TABLE — admin table style */}
-            <div className="hidden md:block surface-card rounded-3xl overflow-hidden">
+          {/* REPORT SUBMITTED + AWAITING TESTS — 2-column row */}
+          {(tabAppointments.length > 0 || awaitingList.length > 0) && (
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+
+            {/* Report Submitted */}
+            {tabAppointments.length > 0 && (
+            <div className={`hidden md:block surface-card rounded-3xl overflow-hidden ${awaitingList.length === 0 ? 'lg:col-span-2' : ''}`}>
               <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between gap-4">
                 <div>
                   <h2 className="flex items-center gap-2 text-xl font-semibold text-[#2D3A74]">
@@ -548,87 +550,52 @@ export default function DoctorDashboard({
                 <Link href="/doctor/appointments" className="text-sm font-semibold text-[#4055A8] hover:text-[#2D3A74]">View all</Link>
               </div>
 
-
-
-              {tabAppointments.length > 0 ? (
-                <div className="overflow-x-auto border-t border-slate-100">
-                  <table className="min-w-full text-sm">
+              <div className="overflow-x-auto border-t border-slate-100">
+                <table className="min-w-full text-sm">
                     <thead className="bg-slate-50 text-slate-500 uppercase text-xs tracking-[0.12em]">
                       <tr>
-                        <th className="px-6 py-4 text-left">#</th>
-                        <th className="px-6 py-4 text-left">Patient</th>
-                        <th className="px-6 py-4 text-left">Contact</th>
-                        <th className="px-6 py-4 text-left">Chamber</th>
-                        <th className="px-6 py-4 text-left">Time</th>
-                        <th className="px-6 py-4 text-left">Action</th>
+                        <th className="px-4 py-3 text-left">Patient</th>
+                        <th className="px-4 py-3 text-left">Chamber</th>
+                        <th className="px-4 py-3 text-left">Time</th>
+                        <th className="px-4 py-3 text-left">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 bg-white">
                       {tabAppointments.map((a, i) => (
                         <tr key={a.id || i} className="cursor-pointer hover:bg-slate-50/80 transition-colors" onClick={() => setSelectedPatient(a)}>
-                          <td className="px-6 py-4">
-                            <span className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-600">
-                              <Hash className="h-3.5 w-3.5 text-slate-400" />
-                              {i + 1}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-3">
-                              <span className={`inline-flex h-9 w-9 items-center justify-center rounded-full border ${genderIconTone(getGender(a))}`}>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2.5">
+                              <span className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border ${genderIconTone(getGender(a))}`}>
                                 <User className="h-4 w-4" />
                               </span>
                               <div className="min-w-0">
-                                <div className="font-medium text-slate-900">{getName(a)}</div>
-                                <div className="text-xs text-slate-500">{getAge(a) ? `${getAge(a)}y` : 'Age N/A'} • {formatGender(getGender(a))}</div>
+                                <div className="font-semibold text-slate-900 truncate">{getName(a)}</div>
+                                <div className="mt-0.5 text-xs font-medium text-slate-500">{getPhone(a) || 'N/A'}</div>
+                                <div className="mt-0.5 text-xs font-medium text-slate-500">{getAge(a) ? `${getAge(a)}y` : 'Age N/A'} • {formatGender(getGender(a))}</div>
                               </div>
                             </div>
                           </td>
-                          <td className="px-6 py-4 text-[13px] font-medium text-slate-700 whitespace-nowrap">
-                            <span className="inline-flex items-center gap-1.5">
-                              <Phone className="h-3.5 w-3.5 text-slate-400" />
-                              {getPhone(a) || 'N/A'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-[13px] font-medium text-slate-700 whitespace-nowrap">
-                            <span className="inline-flex items-center gap-1.5">
-                              <Building2 className="h-3.5 w-3.5 text-slate-400" />
+                          <td className="px-4 py-3 text-xs font-medium text-slate-700 whitespace-nowrap">
+                            <span className="inline-flex items-center gap-1">
+                              <Building2 className="h-3 w-3 text-slate-400" />
                               {getChamberName(a)}
                             </span>
                           </td>
-                          <td className="px-6 py-4 text-[13px] font-medium text-slate-700 whitespace-nowrap">
-                            <span className="inline-flex items-center gap-1.5">
-                              <Clock className="h-3.5 w-3.5 text-slate-400" />
+                          <td className="px-4 py-3 text-xs font-medium text-slate-700 whitespace-nowrap">
+                            <span className="inline-flex items-center gap-1">
+                              <Clock className="h-3 w-3 text-slate-400" />
                               {fmtTime(a.appointment_time)}
                             </span>
                           </td>
-                          <td className="px-6 py-4 pr-8" onClick={(e) => e.stopPropagation()}>
-                            {(a.status === 'scheduled' || a.status === 'arrived') && (
-                              <DocButton
-                                variant="primary"
-                                size="xs"
-                                onClick={async () => {
-                                  setActiveVisitPatient({ ...a, status: 'in_consultation' });
-                                  const ok = await updateStatus(a.id, 'in_consultation');
-                                  if (!ok) setActiveVisitPatient(null);
-                                }}
-                              >
-                                <Stethoscope className="h-3 w-3" /> Start
-                              </DocButton>
-                            )}
-                            {a.status === 'in_consultation' && user?.role !== 'compounder' && (
-                              <Link
-                                href={a.prescription_id ? '/doctor/prescriptions/' + (a.prescription_uuid || a.prescription_id) : '/doctor/prescriptions/create?appointment_id=' + a.id}
-                                className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 transition"
-                              >
-                                <FileText className="h-3 w-3" /> Prescribe
-                              </Link>
-                            )}
+                          <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                           
+                    
                             {(a.status === 'test_registered' || a.status === 'awaiting_tests') && a.prescription_id && (
                               <Link
-                                href={'/doctor/prescriptions/' + (a.prescription_uuid || a.prescription_id) + '?from=dashboard'}
-                                className="inline-flex items-center gap-1 rounded-lg bg-orange-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-orange-700 transition"
+                                href={'/doctor/prescriptions/' + (a.prescription_uuid || a.prescription_id)}
+                                className="inline-flex items-center gap-1 rounded-lg bg-[#4055A8] px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-[#2D3A74] transition"
                               >
-                                <FlaskConical className="h-3 w-3" /> Complete
+                                <FileText className="h-3 w-3" /> View
                               </Link>
                             )}
                           </td>
@@ -637,21 +604,12 @@ export default function DoctorDashboard({
                     </tbody>
                   </table>
                 </div>
-              ) : (
-                <DocEmptyState
-                  icon={CalendarDays}
-                  title="No appointments found"
-                  description="Try selecting a different tab"
-                />
-              )}
             </div>
-          </div>
+            )}
 
-          {/* RIGHT SIDEBAR (1/3) */}
-          <div className="space-y-5">
-
-            {/* Awaiting Tests — full 6-column table */}
-            <div className="hidden md:block surface-card rounded-3xl overflow-hidden">
+            {/* Awaiting Tests */}
+            {awaitingList.length > 0 && (
+            <div className={`hidden md:block surface-card rounded-3xl overflow-hidden ${tabAppointments.length === 0 ? 'lg:col-span-2' : ''}`}>
               <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between gap-4">
                 <div>
                   <h2 className="flex items-center gap-2 text-xl font-semibold text-[#2D3A74]">
@@ -666,91 +624,63 @@ export default function DoctorDashboard({
                 <Link href="/doctor/appointments" className="text-sm font-semibold text-[#4055A8] hover:text-[#2D3A74]">View all</Link>
               </div>
 
-              {awaitingList.length > 0 ? (
-                <div className="overflow-x-auto border-t border-slate-100">
-                  <table className="min-w-full text-sm">
+              <div className="overflow-x-auto border-t border-slate-100">
+                <table className="min-w-full text-sm">
                     <thead className="bg-orange-50/60 text-orange-700 uppercase text-xs tracking-[0.12em]">
                       <tr>
-                        <th className="px-6 py-4 text-left">#</th>
-                        <th className="px-6 py-4 text-left">Patient</th>
-                        <th className="px-6 py-4 text-left">Contact</th>
-                        <th className="px-6 py-4 text-left">Chamber</th>
-                        <th className="px-6 py-4 text-left">Time</th>
-                        <th className="px-6 py-4 text-left">Action</th>
+                        <th className="px-4 py-3 text-left">Patient</th>
+                        <th className="px-4 py-3 text-left">Chamber</th>
+                        <th className="px-4 py-3 text-left">Time</th>
+                        <th className="px-4 py-3 text-left">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-orange-100 bg-white">
                       {awaitingList.map((a, i) => (
                         <tr key={a.id || i} className="cursor-pointer hover:bg-orange-50/40 transition-colors" onClick={() => setSelectedPatient(a)}>
-                          <td className="px-6 py-4">
-                            <span className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-600">
-                              <Hash className="h-3.5 w-3.5 text-slate-400" />
-                              {i + 1}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-3">
-                              <span className={`inline-flex h-9 w-9 items-center justify-center rounded-full border ${genderIconTone(getGender(a))}`}>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2.5">
+                              <span className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border ${genderIconTone(getGender(a))}`}>
                                 <User className="h-4 w-4" />
                               </span>
                               <div className="min-w-0">
-                                <div className="font-medium text-slate-900">{getName(a)}</div>
-                                <div className="text-xs text-slate-500">{getAge(a) ? `${getAge(a)}y` : 'Age N/A'} • {formatGender(getGender(a))}</div>
+                                <div className="font-semibold text-slate-900 truncate">{getName(a)}</div>
+                                <div className="mt-0.5 text-xs font-medium text-slate-500">{getPhone(a) || 'N/A'}</div>
+                                <div className="mt-0.5 text-xs font-medium text-slate-500">{getAge(a) ? `${getAge(a)}y` : 'Age N/A'} • {formatGender(getGender(a))}</div>
                               </div>
                             </div>
                           </td>
-                          <td className="px-6 py-4 text-[13px] font-medium text-slate-700 whitespace-nowrap">
-                            <span className="inline-flex items-center gap-1.5">
-                              <Phone className="h-3.5 w-3.5 text-slate-400" />
-                              {getPhone(a) || 'N/A'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-[13px] font-medium text-slate-700 whitespace-nowrap">
-                            <span className="inline-flex items-center gap-1.5">
-                              <Building2 className="h-3.5 w-3.5 text-slate-400" />
+                          <td className="px-4 py-3 text-xs font-medium text-slate-700 whitespace-nowrap">
+                            <span className="inline-flex items-center gap-1">
+                              <Building2 className="h-3 w-3 text-slate-400" />
                               {getChamberName(a)}
                             </span>
                           </td>
-                          <td className="px-6 py-4 text-[13px] font-medium text-slate-700 whitespace-nowrap">
-                            <span className="inline-flex items-center gap-1.5">
-                              <Clock className="h-3.5 w-3.5 text-slate-400" />
+                          <td className="px-4 py-3 text-xs font-medium text-slate-700 whitespace-nowrap">
+                            <span className="inline-flex items-center gap-1">
+                              <Clock className="h-3 w-3 text-slate-400" />
                               {fmtTime(a.appointment_time)}
                             </span>
                           </td>
-                          <td className="px-6 py-4 pr-8" onClick={(e) => e.stopPropagation()}>
-                            {a.prescription_id ? (
+                          <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                         
                               <Link
-                                href={'/doctor/prescriptions/' + (a.prescription_uuid || a.prescription_id) + '?from=dashboard'}
-                                className="inline-flex items-center gap-1 rounded-lg bg-orange-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-orange-700 transition"
+                                href={'/doctor/prescriptions/' + (a.prescription_uuid || a.prescription_id)}
+                                className="inline-flex items-center gap-1 rounded-lg bg-[#4055A8] px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-[#2D3A74] transition"
                               >
-                                <FlaskConical className="h-3 w-3" /> Complete
+                                <FileText className="h-3 w-3" /> View
                               </Link>
-                            ) : user?.role !== 'compounder' ? (
-                              <Link
-                                href={'/doctor/prescriptions/create?appointment_id=' + a.id}
-                                className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 transition"
-                              >
-                                <FileText className="h-3 w-3" /> Prescribe
-                              </Link>
-                            ) : null}
+                    
                           </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
-              ) : (
-                <DocEmptyState
-                  icon={FlaskConical}
-                  title="No patients awaiting tests"
-                  description="Patients pending test results will appear here"
-                />
-              )}
             </div>
+            )}
 
-            {/* Today's Schedule */}
-
-          </div>
+            </div>
+          )}
         </div>
         <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <div className="rounded-2xl border border-slate-200 bg-white p-4">
