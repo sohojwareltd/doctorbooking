@@ -41,7 +41,7 @@ Route::middleware('guest')->group(function () {
 
 // Public booking page (Inertia render only data fetched via /api/public/*)
 Route::get('/book-appointment', [PublicController::class, 'bookAppointment'])->name('public.book-appointment.view');
-Route::get('/prescription/{prescription}', [WebPrescriptionController::class, 'publicShow'])->name('public.prescriptions.show');
+Route::get('/prescription/{uuid}', [WebPrescriptionController::class, 'publicShow'])->name('public.prescriptions.show');
 
 
 // Booking profile pre-fill (session auth — for logged-in users on the public booking page)

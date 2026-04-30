@@ -16,9 +16,10 @@ use Inertia\Response;
 
 class PrescriptionController extends Controller
 {
-    /** GET /public/prescriptions/{prescription} */
-    public function publicShow(Prescription $prescription): Response
+    /** GET /public/prescriptions/{uuid} */
+    public function publicShow(string $uuid): Response
     {
+        $prescription = Prescription::where('uuid', $uuid)->firstOrFail();
         $prescription->load([
             'appointment:id,appointment_date,appointment_time,status',
             'doctor:id,user_id,specialization,degree',
