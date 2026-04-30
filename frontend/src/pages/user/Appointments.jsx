@@ -390,13 +390,15 @@ export default function UserAppointments() {
                         <Eye className="h-4 w-4" />
                       </button>
                       {hasPrescription(a) ? (
-                        <Link
+                        <a
                           href={`/prescription/${a.prescription_uuid || a.prescription_id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
                           className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-emerald-200 bg-emerald-50 text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100"
                           title="Prescription"
                         >
                           <FileText className="h-4 w-4" />
-                        </Link>
+                        </a>
                       ) : (
                         <span
                           className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 bg-slate-100 text-slate-300"
@@ -484,13 +486,15 @@ export default function UserAppointments() {
                           <Eye className="h-3.5 w-3.5" />
                         </button>
                         {hasPrescription(a) ? (
-                          <Link
+                          <a
                             href={`/prescription/${a.prescription_uuid || a.prescription_id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
                             className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-emerald-200 bg-emerald-50 text-emerald-700 transition hover:border-emerald-300 hover:text-emerald-800"
                             title="Prescription"
                           >
                             <FileText className="h-3.5 w-3.5" />
-                          </Link>
+                          </a>
                         ) : (
                           <span
                             className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-slate-300"
@@ -698,13 +702,15 @@ export default function UserAppointments() {
 
                 <div className="mt-4 flex items-center justify-end gap-2">
                   {hasPrescription(viewRow) ? (
-                    <Link
+                    <a
                       href={`/prescription/${viewRow.prescription_uuid || viewRow.prescription_id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
                     >
                       <FileText className="h-4 w-4" />
                       View Prescription
-                    </Link>
+                    </a>
                   ) : null}
                   <button
                     type="button"
