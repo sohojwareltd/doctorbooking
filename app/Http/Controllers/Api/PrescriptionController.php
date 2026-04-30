@@ -153,6 +153,8 @@ class PrescriptionController extends Controller
             'visit_type'        => ['nullable', 'string', 'max:50'],
             'template_type'     => ['nullable', 'in:general,eye'],
             'specialty_data'    => ['nullable', 'array'],
+            'chief_complaints'  => ['nullable', 'string', 'max:10000'],
+            'oe_data'           => ['nullable', 'array'],
             'diagnosis'         => ['nullable', 'string', 'max:5000'],
             'medications'       => ['nullable', 'string', 'max:10000'],
             'dose'              => ['nullable', 'string', 'max:10000'],
@@ -233,6 +235,12 @@ class PrescriptionController extends Controller
                     'visit_type'       => $validated['visit_type'] ?? $existingPrescription->visit_type,
                     'template_type'    => $validated['template_type'] ?? $existingPrescription->template_type ?? 'general',
                     'specialty_data'   => $validated['specialty_data'] ?? $existingPrescription->specialty_data,
+                    'chief_complaints' => array_key_exists('chief_complaints', $validated)
+                        ? $toNullableString($validated['chief_complaints'])
+                        : ($existingPrescription->chief_complaints ?? $this->extractChiefComplaintsFromDiagnosis($validated['diagnosis'] ?? null)),
+                    'oe_data'          => array_key_exists('oe_data', $validated)
+                        ? $this->normalizeOeData($validated['oe_data'])
+                        : ($existingPrescription->oe_data ?? $this->extractOeDataFromDiagnosis($validated['diagnosis'] ?? null)),
                     'diagnosis'        => trim($validated['diagnosis'] ?? ''),
                     'medications'      => $validated['medications'] ?? '',
                     'dose'             => $validated['dose'] ?? $existingPrescription->dose,
@@ -314,6 +322,10 @@ class PrescriptionController extends Controller
             'visit_type'       => $validated['visit_type'] ?? null,
             'template_type'    => $validated['template_type'] ?? 'general',
             'specialty_data'   => $validated['specialty_data'] ?? null,
+            'chief_complaints' => $toNullableString($validated['chief_complaints'] ?? null)
+                ?? $this->extractChiefComplaintsFromDiagnosis($validated['diagnosis'] ?? null),
+            'oe_data'          => $this->normalizeOeData($validated['oe_data'] ?? null)
+                ?? $this->extractOeDataFromDiagnosis($validated['diagnosis'] ?? null),
             'diagnosis'        => trim($validated['diagnosis'] ?? ''),
             'medications'      => $validated['medications'] ?? '',
             'dose'             => $validated['dose'] ?? null,
@@ -431,6 +443,8 @@ class PrescriptionController extends Controller
             'visit_type'        => ['nullable', 'string', 'max:50'],
             'template_type'     => ['nullable', 'in:general,eye'],
             'specialty_data'    => ['nullable', 'array'],
+            'chief_complaints'  => ['nullable', 'string', 'max:10000'],
+            'oe_data'           => ['nullable', 'array'],
             'appointment_action'=> ['nullable', 'string', 'in:arrived,awaiting_tests,prescribed'],
         ]);
 
@@ -469,6 +483,12 @@ class PrescriptionController extends Controller
             : $prescription->patient_contact;
 
         $prescription->update([
+            'chief_complaints' => array_key_exists('chief_complaints', $validated)
+                ? $toNullableString($validated['chief_complaints'])
+                : ($prescription->chief_complaints ?? $this->extractChiefComplaintsFromDiagnosis($validated['diagnosis'] ?? null)),
+            'oe_data'          => array_key_exists('oe_data', $validated)
+                ? $this->normalizeOeData($validated['oe_data'])
+                : ($prescription->oe_data ?? $this->extractOeDataFromDiagnosis($validated['diagnosis'] ?? null)),
             'diagnosis'        => trim($validated['diagnosis'] ?? ''),
             'medications'      => $validated['medications'] ?? '',
             'dose'             => $validated['dose'] ?? $prescription->dose,
@@ -768,5 +788,145 @@ class PrescriptionController extends Controller
         if (!empty($normalized)) {
             $prescription->investigationItems()->createMany($normalized);
         }
+    }
+
+    private function normalizeOeData($oeData): ?array
+    {
+        if (!is_array($oeData)) {
+            return null;
+        }
+
+        $normalized = collect($oeData)
+            ->map(function ($item) {
+                if (!is_array($item)) {
+                    return null;
+                }
+
+                $key = trim((string) ($item['key'] ?? ''));
+                $label = trim((string) ($item['label'] ?? $key));
+                $value = trim((string) ($item['value'] ?? ''));
+
+                if ($key === '' || $value === '') {
+                    return null;
+                }
+
+                return [
+                    'key' => strtoupper($key),
+                    'label' => $label !== '' ? $label : strtoupper($key),
+                    'value' => $value,
+                ];
+            })
+            ->filter()
+            ->values()
+            ->all();
+
+        return $normalized !== [] ? $normalized : null;
+    }
+
+    private function extractChiefComplaintsFromDiagnosis(?string $diagnosis): ?string
+    {
+        $text = trim((string) ($diagnosis ?? ''));
+        if ($text === '') {
+            return null;
+        }
+
+        $lines = preg_split('/\r\n|\r|\n/', $text) ?: [];
+        $inCc = false;
+        $cc = [];
+
+        foreach ($lines as $line) {
+            $line = trim((string) $line);
+            if ($line === '') {
+                if ($inCc) {
+                    break;
+                }
+                continue;
+            }
+
+            if (preg_match('/^Chief Complaints\s*:/i', $line)) {
+                $inCc = true;
+                continue;
+            }
+
+            if ($inCc) {
+                if (!str_starts_with($line, '-')) {
+                    break;
+                }
+
+                $item = trim((string) preg_replace('/^-\s*/', '', $line));
+                if ($item !== '') {
+                    $cc[] = $item;
+                }
+            }
+        }
+
+        return $cc !== [] ? implode("\n", $cc) : null;
+    }
+
+    private function extractOeDataFromDiagnosis(?string $diagnosis): ?array
+    {
+        $text = trim((string) ($diagnosis ?? ''));
+        if ($text === '') {
+            return null;
+        }
+
+        $lines = preg_split('/\r\n|\r|\n/', $text) ?: [];
+        $inOe = false;
+        $data = [];
+
+        foreach ($lines as $line) {
+            $line = trim((string) $line);
+            if ($line === '') {
+                if ($inOe) {
+                    break;
+                }
+                continue;
+            }
+
+            if (preg_match('/^(O\/E|OE|Vitals)\s*:/i', $line)) {
+                $inOe = true;
+
+                $inline = trim((string) preg_replace('/^(O\/E|OE|Vitals)\s*:\s*/i', '', $line));
+                if ($inline !== '') {
+                    foreach (explode(',', $inline) as $chunk) {
+                        $chunk = trim((string) $chunk);
+                        if ($chunk === '') {
+                            continue;
+                        }
+
+                        if (preg_match('/^([A-Za-z][A-Za-z0-9\/ ]*)\s*[: ]\s*(.+)$/', $chunk, $m)) {
+                            $key = strtoupper(trim((string) $m[1]));
+                            $value = trim((string) $m[2]);
+                            if ($key !== '' && $value !== '') {
+                                $data[] = ['key' => $key, 'label' => $key, 'value' => $value];
+                            }
+                        }
+                    }
+                }
+
+                continue;
+            }
+
+            if ($inOe) {
+                if (!str_starts_with($line, '-')) {
+                    break;
+                }
+
+                $item = trim((string) preg_replace('/^-\s*/', '', $line));
+                if ($item === '') {
+                    continue;
+                }
+
+                if (preg_match('/^([A-Za-z][A-Za-z0-9\/ ]*)\s*:\s*(.+)$/', $item, $m)) {
+                    $key = strtoupper(trim((string) $m[1]));
+                    $value = trim((string) $m[2]);
+                    if ($key !== '' && $value !== '') {
+                        $data[] = ['key' => $key, 'label' => $key, 'value' => $value];
+                    }
+                }
+            }
+        }
+
+        return $data !== [] ? $data : null;
     }
 }

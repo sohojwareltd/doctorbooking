@@ -13,6 +13,8 @@ use Illuminate\Support\Str;
  * @property int|null $user_id
  * @property int $doctor_id
  * @property string|null $visit_type
+ * @property string|null $chief_complaints
+ * @property array<int, array<string, mixed>>|null $oe_data
  * @property string|null $diagnosis
  * @property string|null $medications
  * @property string|null $dose
@@ -43,6 +45,8 @@ class Prescription extends Model
         'visit_type',
         'template_type',
         'specialty_data',
+        'chief_complaints',
+        'oe_data',
         'diagnosis',
         'medications',
         'dose',
@@ -54,6 +58,7 @@ class Prescription extends Model
     protected $casts = [
         'next_visit_date' => 'date',
         'specialty_data' => 'array',
+        'oe_data' => 'array',
     ];
 
     protected static function booted(): void
