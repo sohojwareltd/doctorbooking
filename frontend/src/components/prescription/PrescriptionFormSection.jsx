@@ -23,16 +23,16 @@ export default function PrescriptionMedicineSection({
       <div className="mb-2 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-5xl font-serif font-bold text-[#0d2f63]">Rx</span>
-          <span className="text-2xl font-bold uppercase tracking-wide text-[#0d2f63]">Prescription</span>
+          {/* <span className="text-2xl font-bold uppercase tracking-wide text-[#0d2f63]">Prescription</span> */}
         </div>
-        <div className="inline-flex items-center rounded-full border border-[#ccd8ea] bg-white p-1 text-[11px] font-semibold text-[#0d2f63]">
+        {/* <div className="inline-flex items-center rounded-full border border-[#ccd8ea] bg-white p-1 text-[11px] font-semibold text-[#0d2f63]">
           <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 ${templateType === 'eye' ? 'text-slate-500' : 'bg-[#0b3f86] text-white'}`}>
             <span className="h-1.5 w-1.5 rounded-full bg-current" /> General
           </span>
           <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 ${templateType === 'eye' ? 'bg-[#0b3f86] text-white' : 'text-slate-500'}`}>
             <Eye className="h-3.5 w-3.5" /> Eye
           </span>
-        </div>
+        </div> */}
       </div>
 
       <div className="overflow-hidden rounded-xl border border-[#c7d3e4] bg-white">

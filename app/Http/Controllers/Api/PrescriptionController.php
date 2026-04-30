@@ -169,12 +169,62 @@ class PrescriptionController extends Controller
         $userId = null;
         $appointment = null;
         $userCreated = false;
+        $toNullableString = static function ($value): ?string {
+            if ($value === null) {
+                return null;
+            }
+
+            $text = trim((string) $value);
+
+            return $text !== '' ? $text : null;
+        };
+
+        $toNullableInt = static function ($value): ?int {
+            if ($value === null || $value === '') {
+                return null;
+            }
+
+            return is_numeric($value) ? (int) $value : null;
+        };
+
+        $effectivePatientName = trim((string) ($validated['patient_name'] ?? ''));
+        $effectivePatientAge = $toNullableString($validated['patient_age'] ?? null);
+        $effectivePatientAgeUnit = $toNullableString($validated['patient_age_unit'] ?? null) ?? 'years';
+        $effectivePatientGender = $toNullableString($validated['patient_gender'] ?? null);
+        $effectivePatientWeight = $toNullableString($validated['patient_weight'] ?? null);
+        $effectivePatientContact = $toNullableString($validated['patient_contact'] ?? null);
 
         if ($validated['appointment_id'] ?? null) {
             $appointment = Appointment::with('prescription')
                 ->where('doctor_id', $actor->doctorId())
                 ->where('id', $validated['appointment_id'])
                 ->firstOrFail();
+
+            $appointment->loadMissing('user.patientProfile');
+
+            if (! $effectivePatientName) {
+                $effectivePatientName = $appointment->name
+                    ?? $appointment->user?->name
+                    ?? $effectivePatientName;
+            }
+
+            if (! $effectivePatientContact) {
+                $effectivePatientContact = $toNullableString($appointment->phone)
+                    ?? $toNullableString($appointment->user?->phone)
+                    ?? $effectivePatientContact;
+            }
+
+            if (! $effectivePatientAge) {
+                $effectivePatientAge = $toNullableString($appointment->age)
+                    ?? $toNullableString($appointment->user?->patientProfile?->age)
+                    ?? $effectivePatientAge;
+            }
+
+            if (! $effectivePatientGender) {
+                $effectivePatientGender = $toNullableString($appointment->gender)
+                    ?? $toNullableString($appointment->user?->patientProfile?->gender)
+                    ?? $effectivePatientGender;
+            }
 
             if ($appointment->prescription) {
                 $existingPrescription = $appointment->prescription;
@@ -189,12 +239,19 @@ class PrescriptionController extends Controller
                     'instructions'     => $validated['instructions'] ?? $existingPrescription->instructions,
                     'tests'            => $validated['tests'] ?? $existingPrescription->tests,
                     'next_visit_date'  => $validated['next_visit_date'] ?? $existingPrescription->next_visit_date,
-                    'patient_name'     => $validated['patient_name'] ?? $existingPrescription->patient_name,
-                    'patient_age'      => $validated['patient_age'] ?? $existingPrescription->patient_age,
-                    'patient_age_unit' => $validated['patient_age_unit'] ?? $existingPrescription->patient_age_unit,
-                    'patient_gender'   => $validated['patient_gender'] ?? $existingPrescription->patient_gender,
-                    'patient_weight'   => $validated['patient_weight'] ?? $existingPrescription->patient_weight,
-                    'patient_contact'  => $validated['patient_contact'] ?? $existingPrescription->patient_contact,
+                    'patient_name'     => $effectivePatientName ?: $existingPrescription->patient_name,
+                    'patient_age'      => $effectivePatientAge ?? $existingPrescription->patient_age,
+                    'patient_age_unit' => $effectivePatientAgeUnit ?: ($existingPrescription->patient_age_unit ?? 'years'),
+                    'patient_gender'   => $effectivePatientGender ?? $existingPrescription->patient_gender,
+                    'patient_weight'   => $effectivePatientWeight ?? $existingPrescription->patient_weight,
+                    'patient_contact'  => $effectivePatientContact ?? $existingPrescription->patient_contact,
+                ]);
+
+                $appointment->update([
+                    'name' => $effectivePatientName ?: ($appointment->name ?? $appointment->user?->name),
+                    'phone' => $effectivePatientContact ?? ($appointment->phone ?? $appointment->user?->phone),
+                    'age' => $toNullableInt($effectivePatientAge) ?? ($appointment->age ?? $appointment->user?->patientProfile?->age),
+                    'gender' => $effectivePatientGender ?? ($appointment->gender ?? $appointment->user?->patientProfile?->gender),
                 ]);
 
                 $investigationItems = $validated['investigation_items'] ?? $this->linesToInvestigationItems($validated['tests'] ?? null);
@@ -213,8 +270,8 @@ class PrescriptionController extends Controller
             $userId = $appointment->user_id;
         }
 
-        if (! $userId && ! empty($validated['patient_contact'])) {
-            $phone = $validated['patient_contact'];
+        if (! $userId && ! empty($effectivePatientContact)) {
+            $phone = $effectivePatientContact;
             $patientRole = Role::where('name', 'patient')->first();
 
             $existingUser = User::where('phone', $phone)
@@ -226,13 +283,14 @@ class PrescriptionController extends Controller
                 $existingUser->patientProfile()->updateOrCreate(
                     ['user_id' => $existingUser->id],
                     array_filter([
-                        'weight' => $validated['patient_weight'] ?? null,
-                        'gender' => $validated['patient_gender'] ?? null,
+                        'age' => $toNullableInt($effectivePatientAge),
+                        'weight' => $effectivePatientWeight,
+                        'gender' => $effectivePatientGender,
                     ])
                 );
             } elseif ($patientRole) {
                 $newUser = User::create([
-                    'name'     => $validated['patient_name'],
+                    'name'     => $effectivePatientName,
                     'username' => $phone,
                     'phone'    => $phone,
                     'email'    => null,
@@ -240,8 +298,9 @@ class PrescriptionController extends Controller
                     'role_id'  => $patientRole->id,
                 ]);
                 $newUser->patientProfile()->create([
-                    'gender' => $validated['patient_gender'] ?? null,
-                    'weight' => $validated['patient_weight'] ?? null,
+                    'age' => $toNullableInt($effectivePatientAge),
+                    'gender' => $effectivePatientGender,
+                    'weight' => $effectivePatientWeight,
                 ]);
                 $userId = $newUser->id;
                 $userCreated = true;
@@ -261,13 +320,22 @@ class PrescriptionController extends Controller
             'instructions'     => $validated['instructions'] ?? null,
             'tests'            => $validated['tests'] ?? null,
             'next_visit_date'  => $validated['next_visit_date'] ?? null,
-            'patient_name'     => $validated['patient_name'],
-            'patient_age'      => $validated['patient_age'] ?? null,
-            'patient_age_unit' => $validated['patient_age_unit'] ?? 'years',
-            'patient_gender'   => $validated['patient_gender'] ?? null,
-            'patient_weight'   => $validated['patient_weight'] ?? null,
-            'patient_contact'  => $validated['patient_contact'] ?? null,
+            'patient_name'     => $effectivePatientName,
+            'patient_age'      => $effectivePatientAge,
+            'patient_age_unit' => $effectivePatientAgeUnit,
+            'patient_gender'   => $effectivePatientGender,
+            'patient_weight'   => $effectivePatientWeight,
+            'patient_contact'  => $effectivePatientContact,
         ]);
+
+        if ($appointment) {
+            $appointment->update([
+                'name' => $effectivePatientName ?: ($appointment->name ?? $appointment->user?->name),
+                'phone' => $effectivePatientContact ?? ($appointment->phone ?? $appointment->user?->phone),
+                'age' => $toNullableInt($effectivePatientAge) ?? ($appointment->age ?? $appointment->user?->patientProfile?->age),
+                'gender' => $effectivePatientGender ?? ($appointment->gender ?? $appointment->user?->patientProfile?->gender),
+            ]);
+        }
 
         $investigationItems = $validated['investigation_items'] ?? $this->linesToInvestigationItems($validated['tests'] ?? null);
         $this->syncInvestigationItems($prescription, $investigationItems);
@@ -366,6 +434,40 @@ class PrescriptionController extends Controller
             'appointment_action'=> ['nullable', 'string', 'in:arrived,awaiting_tests,prescribed'],
         ]);
 
+        $toNullableString = static function ($value): ?string {
+            if ($value === null) {
+                return null;
+            }
+
+            $text = trim((string) $value);
+
+            return $text !== '' ? $text : null;
+        };
+
+        $toNullableInt = static function ($value): ?int {
+            if ($value === null || $value === '') {
+                return null;
+            }
+
+            return is_numeric($value) ? (int) $value : null;
+        };
+
+        $effectivePatientAge = array_key_exists('patient_age', $validated)
+            ? $toNullableString($validated['patient_age'])
+            : $prescription->patient_age;
+        $effectivePatientAgeUnit = array_key_exists('patient_age_unit', $validated)
+            ? ($toNullableString($validated['patient_age_unit']) ?? 'years')
+            : ($prescription->patient_age_unit ?? 'years');
+        $effectivePatientGender = array_key_exists('patient_gender', $validated)
+            ? $toNullableString($validated['patient_gender'])
+            : $prescription->patient_gender;
+        $effectivePatientWeight = array_key_exists('patient_weight', $validated)
+            ? $toNullableString($validated['patient_weight'])
+            : $prescription->patient_weight;
+        $effectivePatientContact = array_key_exists('patient_contact', $validated)
+            ? $toNullableString($validated['patient_contact'])
+            : $prescription->patient_contact;
+
         $prescription->update([
             'diagnosis'        => trim($validated['diagnosis'] ?? ''),
             'medications'      => $validated['medications'] ?? '',
@@ -376,11 +478,11 @@ class PrescriptionController extends Controller
             'visit_type'       => $validated['visit_type'] ?? null,
             'template_type'    => $validated['template_type'] ?? $prescription->template_type ?? 'general',
             'specialty_data'   => $validated['specialty_data'] ?? $prescription->specialty_data,
-            'patient_contact'  => $validated['patient_contact'] ?? $prescription->patient_contact,
-            'patient_age'      => $validated['patient_age'] ?? $prescription->patient_age,
-            'patient_age_unit' => $validated['patient_age_unit'] ?? $prescription->patient_age_unit,
-            'patient_gender'   => $validated['patient_gender'] ?? $prescription->patient_gender,
-            'patient_weight'   => $validated['patient_weight'] ?? $prescription->patient_weight,
+            'patient_contact'  => $effectivePatientContact,
+            'patient_age'      => $effectivePatientAge,
+            'patient_age_unit' => $effectivePatientAgeUnit,
+            'patient_gender'   => $effectivePatientGender,
+            'patient_weight'   => $effectivePatientWeight,
         ]);
 
         if (array_key_exists('investigation_items', $validated) || array_key_exists('tests', $validated)) {
@@ -392,10 +494,21 @@ class PrescriptionController extends Controller
             $prescription->user->patientProfile()->updateOrCreate(
                 ['user_id' => $prescription->user_id],
                 array_filter([
-                    'gender' => $validated['patient_gender'] ?? null,
-                    'weight' => $validated['patient_weight'] ?? null,
+                    'age' => $toNullableInt($effectivePatientAge),
+                    'gender' => $effectivePatientGender,
+                    'weight' => $effectivePatientWeight,
                 ])
             );
+        }
+
+        if ($prescription->appointment) {
+            $prescription->appointment->loadMissing('user.patientProfile');
+            $prescription->appointment->update([
+                'name' => $prescription->patient_name ?: ($prescription->appointment->name ?? $prescription->appointment->user?->name),
+                'phone' => $effectivePatientContact ?? ($prescription->appointment->phone ?? $prescription->appointment->user?->phone),
+                'age' => $toNullableInt($effectivePatientAge) ?? ($prescription->appointment->age ?? $prescription->appointment->user?->patientProfile?->age),
+                'gender' => $effectivePatientGender ?? ($prescription->appointment->gender ?? $prescription->appointment->user?->patientProfile?->gender),
+            ]);
         }
 
         if (($validated['appointment_action'] ?? null) && $prescription->appointment) {
@@ -434,6 +547,7 @@ class PrescriptionController extends Controller
         $this->authorizeReportAccess($request, $prescription);
 
         $validated = $request->validate([
+            'title' => ['nullable', 'string', 'max:255'],
             'report_file' => ['nullable', 'file', 'max:10240', 'mimes:pdf,jpg,jpeg,png,webp'],
             'report_text' => ['nullable', 'string', 'max:20000'],
             'note' => ['nullable', 'string', 'max:255'],
@@ -450,26 +564,31 @@ class PrescriptionController extends Controller
 
         $ownerUserId = $prescription->user_id ?: $request->user()->id;
 
+        $title = trim((string) ($validated['title'] ?? ''));
+
         if ($hasFile) {
             $file = $validated['report_file'];
             $path = $file->store("patient-reports/{$ownerUserId}", 'public');
             $originalName = $file->getClientOriginalName();
             $mimeType = $file->getClientMimeType();
             $fileSize = $file->getSize();
+            if ($title === '') {
+                $title = pathinfo((string) $originalName, PATHINFO_FILENAME) ?: 'Report';
+            }
         } else {
-            $baseName = trim((string) ($validated['note'] ?? ''));
-            $slug = Str::slug($baseName) ?: 'text-report';
-            $fileName = now()->format('Ymd_His').'_'.$slug.'_'.Str::lower(Str::random(6)).'.txt';
-            $path = "patient-reports/{$ownerUserId}/{$fileName}";
-            Storage::disk('public')->put($path, $reportText);
-            $originalName = $fileName;
-            $mimeType = 'text/plain';
-            $fileSize = strlen($reportText);
+            $path = null;
+            $originalName = $title !== '' ? $title : 'Text Report';
+            $mimeType = null;
+            $fileSize = null;
+            if ($title === '') {
+                $title = 'Text Report';
+            }
         }
 
         $report = PatientReport::create([
             'user_id' => $ownerUserId,
             'prescription_id' => $prescription->id,
+            'title' => $title,
             'original_name' => $originalName,
             'file_path' => $path,
             'mime_type' => $mimeType,
@@ -526,6 +645,23 @@ class PrescriptionController extends Controller
         ]);
     }
 
+    /** DELETE /api/doctor/prescriptions/{prescription}/reports/{report} */
+    public function deleteReport(Request $request, Prescription $prescription, PatientReport $report): JsonResponse
+    {
+        $this->authorizeReportAccess($request, $prescription);
+        abort_unless((int) $report->prescription_id === (int) $prescription->id, 404);
+
+        if ($report->file_path) {
+            Storage::disk('public')->delete($report->file_path);
+        }
+
+        $report->delete();
+
+        return response()->json([
+            'message' => 'Report deleted successfully.',
+        ]);
+    }
+
     private function authorizeReportAccess(Request $request, Prescription $prescription): void
     {
         $user = $request->user();
@@ -542,8 +678,9 @@ class PrescriptionController extends Controller
     {
         return [
             'id' => $report->id,
+            'title' => $report->title,
             'original_name' => $report->original_name,
-            'file_url' => asset('storage/'.$report->file_path),
+            'file_url' => $report->file_path ? asset('storage/'.$report->file_path) : null,
             'mime_type' => $report->mime_type,
             'file_size' => $report->file_size,
             'note' => $report->note,

@@ -774,17 +774,24 @@ class DoctorController extends Controller
             'serial_no'        => $serial,
             'status'           => $validated['status'] ?? 'scheduled',
             'symptoms'         => $validated['symptoms'] ?? null,
-            'name'             => $validated['name'] ?? null,
-            'phone'            => $validated['phone'] ?? null,
-            'address'          => $validated['address'] ?? null,
-            'age'              => $validated['age'] ?? null,
-            'gender'           => $validated['gender'] ?? null,
+            'name'             => null,
+            'phone'            => null,
+            'address'          => null,
+            'age'              => null,
+            'gender'           => null,
         ];
 
         if ($mode === 'select_patient') {
             // Use existing registered patient
-            $appointmentData['user_id']  = $validated['user_id'];
+            $selectedUser = User::with('patientProfile')->findOrFail((int) $validated['user_id']);
+
+            $appointmentData['user_id']  = $selectedUser->id;
             $appointmentData['is_guest'] = false;
+            $appointmentData['name'] = $validated['name'] ?? $selectedUser->name;
+            $appointmentData['phone'] = $validated['phone'] ?? $selectedUser->phone;
+            $appointmentData['address'] = $validated['address'] ?? $selectedUser->patientProfile?->address;
+            $appointmentData['age'] = $validated['age'] ?? $selectedUser->patientProfile?->age;
+            $appointmentData['gender'] = $validated['gender'] ?? $selectedUser->patientProfile?->gender;
 
         } elseif ($mode === 'new_patient') {
             // Create or find patient account by phone
@@ -811,16 +818,29 @@ class DoctorController extends Controller
                 array_filter([
                     'age'    => $validated['age'] ?? null,
                     'gender' => $validated['gender'] ?? null,
+                    'address'=> $validated['address'] ?? null,
                 ], fn ($v) => $v !== null)
             );
 
+            $user->loadMissing('patientProfile');
+
             $appointmentData['user_id']  = $user->id;
             $appointmentData['is_guest'] = false;
+            $appointmentData['name'] = $validated['name'] ?? $user->name;
+            $appointmentData['phone'] = $validated['phone'] ?? $user->phone;
+            $appointmentData['address'] = $validated['address'] ?? $user->patientProfile?->address;
+            $appointmentData['age'] = $validated['age'] ?? $user->patientProfile?->age;
+            $appointmentData['gender'] = $validated['gender'] ?? $user->patientProfile?->gender;
 
         } else {
             // Walk-in guest — no user account
             $appointmentData['user_id']  = null;
             $appointmentData['is_guest'] = true;
+            $appointmentData['name'] = $validated['name'] ?? null;
+            $appointmentData['phone'] = $validated['phone'] ?? null;
+            $appointmentData['address'] = $validated['address'] ?? null;
+            $appointmentData['age'] = $validated['age'] ?? null;
+            $appointmentData['gender'] = $validated['gender'] ?? null;
         }
 
         $alreadyBooked = Appointment::hasDuplicatePatientBooking(

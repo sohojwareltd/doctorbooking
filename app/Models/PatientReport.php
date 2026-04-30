@@ -10,6 +10,7 @@ class PatientReport extends Model
     protected $fillable = [
         'user_id',
         'prescription_id',
+        'title',
         'original_name',
         'file_path',
         'mime_type',

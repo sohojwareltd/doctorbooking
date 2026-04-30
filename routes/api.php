@@ -110,6 +110,8 @@ Route::middleware(['auth:sanctum', 'role:doctor,compounder'])
         Route::post('/prescriptions/{prescription}/reports', [ApiPrescriptionController::class, 'uploadReport']);
         Route::put('/prescriptions/{prescription}/reports/{report}', [ApiPrescriptionController::class, 'updateReport'])
             ->whereNumber('report');
+        Route::delete('/prescriptions/{prescription}/reports/{report}', [ApiPrescriptionController::class, 'deleteReport'])
+            ->whereNumber('report');
 
         // Schedule
         Route::get('/schedule', [DoctorController::class, 'schedule']);

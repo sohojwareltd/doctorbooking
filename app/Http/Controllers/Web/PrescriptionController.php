@@ -149,6 +149,7 @@ class PrescriptionController extends Controller
 
         if ($appointmentId) {
             $appointment = Appointment::query()
+                ->with(['user:id,name,email,phone', 'user.patientProfile:user_id,age,gender,weight'])
                 ->where('doctor_id', $doctor->doctorId())
                 ->where('id', $appointmentId)
                 ->first();
@@ -156,12 +157,12 @@ class PrescriptionController extends Controller
             if ($appointment) {
                 $selectedPatient = [
                     'id'    => $appointment->user_id,
-                    'name'  => $appointment->name,
-                    'phone' => $appointment->phone,
-                    'email' => $appointment->email,
-                    'gender'=> $appointment->gender,
-                    'age'   => $appointment->age,
-                    'weight'=> null,
+                    'name'  => $appointment->name ?? $appointment->user?->name,
+                    'phone' => $appointment->phone ?? $appointment->user?->phone,
+                    'email' => $appointment->email ?? $appointment->user?->email,
+                    'gender'=> $appointment->gender ?? $appointment->user?->patientProfile?->gender,
+                    'age'   => $appointment->age ?? $appointment->user?->patientProfile?->age,
+                    'weight'=> $appointment->user?->patientProfile?->weight,
                 ];
             }
         } elseif ($patientId) {
@@ -228,6 +229,7 @@ class PrescriptionController extends Controller
             'user:id,name,email,phone',
             'appointment:id,appointment_date,appointment_time,status,name,age,gender,phone,email',
             'investigationItems:id,prescription_id,name,note,sort_order',
+            'reports:id,prescription_id,title,original_name,file_path,mime_type,file_size,note,report_text,created_at',
         ]);
 
         $prescription->user?->loadMissing('patientProfile');
@@ -282,6 +284,20 @@ class PrescriptionController extends Controller
                 'phone'    => $chamber->phone,
             ] : null,
             'medicines' => Medicine::orderBy('name')->get(['id', 'name', 'strength']),
+            'reports' => $prescription->reports
+                ->sortByDesc('id')
+                ->values()
+                ->map(fn ($report) => [
+                    'id' => $report->id,
+                    'title' => $report->title,
+                    'original_name' => $report->original_name,
+                    'file_url' => $report->file_path ? asset('storage/'.$report->file_path) : null,
+                    'mime_type' => $report->mime_type,
+                    'file_size' => $report->file_size,
+                    'note' => $report->note,
+                    'report_text' => $report->report_text,
+                    'created_at' => $report->created_at?->toDateTimeString(),
+                ]),
         ]);
     }
 
