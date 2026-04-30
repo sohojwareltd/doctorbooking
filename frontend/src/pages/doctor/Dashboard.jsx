@@ -558,8 +558,8 @@ export default function DoctorDashboard({
                         <th className="px-6 py-4 text-left">#</th>
                         <th className="px-6 py-4 text-left">Patient</th>
                         <th className="px-6 py-4 text-left">Contact</th>
-                        <th className="px-6 py-4 text-left hidden md:table-cell">Time</th>
-                        <th className="px-6 py-4 text-left">Status</th>
+                        <th className="px-6 py-4 text-left">Chamber</th>
+                        <th className="px-6 py-4 text-left">Time</th>
                         <th className="px-6 py-4 text-left">Action</th>
                       </tr>
                     </thead>
@@ -589,14 +589,17 @@ export default function DoctorDashboard({
                               {getPhone(a) || 'N/A'}
                             </span>
                           </td>
-                          <td className="px-6 py-4 text-[13px] font-medium text-slate-700 hidden md:table-cell">
+                          <td className="px-6 py-4 text-[13px] font-medium text-slate-700 whitespace-nowrap">
+                            <span className="inline-flex items-center gap-1.5">
+                              <Building2 className="h-3.5 w-3.5 text-slate-400" />
+                              {getChamberName(a)}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-[13px] font-medium text-slate-700 whitespace-nowrap">
                             <span className="inline-flex items-center gap-1.5">
                               <Clock className="h-3.5 w-3.5 text-slate-400" />
                               {fmtTime(a.appointment_time)}
                             </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <StatusBadge status={a.status} size="xs" />
                           </td>
                           <td className="px-6 py-4 pr-8" onClick={(e) => e.stopPropagation()}>
                             {(a.status === 'scheduled' || a.status === 'arrived') && (
@@ -620,7 +623,7 @@ export default function DoctorDashboard({
                                 <FileText className="h-3 w-3" /> Prescribe
                               </Link>
                             )}
-                            {a.status === 'awaiting_tests' && a.prescription_id && (
+                            {(a.status === 'test_registered' || a.status === 'awaiting_tests') && a.prescription_id && (
                               <Link
                                 href={'/doctor/prescriptions/' + (a.prescription_uuid || a.prescription_id) + '?from=dashboard'}
                                 className="inline-flex items-center gap-1 rounded-lg bg-orange-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-orange-700 transition"
@@ -647,37 +650,103 @@ export default function DoctorDashboard({
           {/* RIGHT SIDEBAR (1/3) */}
           <div className="space-y-5">
 
-            {/* Awaiting Tests */}
-            {awaitingList.length > 0 && (
-              <div className="surface-card rounded-3xl overflow-hidden">
-                <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <FlaskConical className="h-4 w-4 text-[#FF7C00]" />
-                    <span className="text-sm font-semibold text-[#2D3A74]">Awaiting Tests</span>
-                  </div>
-                  <span className="rounded-full bg-[#FF7C00] px-2.5 py-0.5 text-xs font-bold text-white">{awaitingList.length}</span>
+            {/* Awaiting Tests — full 6-column table */}
+            <div className="hidden md:block surface-card rounded-3xl overflow-hidden">
+              <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between gap-4">
+                <div>
+                  <h2 className="flex items-center gap-2 text-xl font-semibold text-[#2D3A74]">
+                    <FlaskConical className="h-5 w-5 text-[#FF7C00]" />
+                    <span>Awaiting Tests</span>
+                    {awaitingList.length > 0 && (
+                      <span className="rounded-full bg-[#FF7C00] px-2.5 py-0.5 text-xs font-bold text-white">{awaitingList.length}</span>
+                    )}
+                  </h2>
+                  <p className="text-sm text-slate-500">Patients waiting for test results.</p>
                 </div>
-                <div className="divide-y divide-slate-100">
-                  {awaitingList.map((a, i) => (
-                    <div key={a.id || i} className="flex items-center gap-3 px-5 py-3 hover:bg-slate-50/80 transition-colors">
-                      <PatientAvatar name={a.patient_name || ''} size="sm" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-slate-900 truncate">{a.patient_name || 'Patient'}</p>
-                        <p className="text-xs text-slate-400">{fmtTime(a.appointment_time)}</p>
-                      </div>
-                      {a.prescription_id && (
-                        <Link
-                          href={'/doctor/prescriptions/' + (a.prescription_uuid || a.prescription_id) + '?from=dashboard'}
-                          className="rounded-lg bg-[#FF7C00] px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-[#E56D00] transition whitespace-nowrap flex-shrink-0"
-                        >
-                          Complete
-                        </Link>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                <Link href="/doctor/appointments" className="text-sm font-semibold text-[#4055A8] hover:text-[#2D3A74]">View all</Link>
               </div>
-            )}
+
+              {awaitingList.length > 0 ? (
+                <div className="overflow-x-auto border-t border-slate-100">
+                  <table className="min-w-full text-sm">
+                    <thead className="bg-orange-50/60 text-orange-700 uppercase text-xs tracking-[0.12em]">
+                      <tr>
+                        <th className="px-6 py-4 text-left">#</th>
+                        <th className="px-6 py-4 text-left">Patient</th>
+                        <th className="px-6 py-4 text-left">Contact</th>
+                        <th className="px-6 py-4 text-left">Chamber</th>
+                        <th className="px-6 py-4 text-left">Time</th>
+                        <th className="px-6 py-4 text-left">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-orange-100 bg-white">
+                      {awaitingList.map((a, i) => (
+                        <tr key={a.id || i} className="cursor-pointer hover:bg-orange-50/40 transition-colors" onClick={() => setSelectedPatient(a)}>
+                          <td className="px-6 py-4">
+                            <span className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-600">
+                              <Hash className="h-3.5 w-3.5 text-slate-400" />
+                              {i + 1}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <span className={`inline-flex h-9 w-9 items-center justify-center rounded-full border ${genderIconTone(getGender(a))}`}>
+                                <User className="h-4 w-4" />
+                              </span>
+                              <div className="min-w-0">
+                                <div className="font-medium text-slate-900">{getName(a)}</div>
+                                <div className="text-xs text-slate-500">{getAge(a) ? `${getAge(a)}y` : 'Age N/A'} • {formatGender(getGender(a))}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-[13px] font-medium text-slate-700 whitespace-nowrap">
+                            <span className="inline-flex items-center gap-1.5">
+                              <Phone className="h-3.5 w-3.5 text-slate-400" />
+                              {getPhone(a) || 'N/A'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-[13px] font-medium text-slate-700 whitespace-nowrap">
+                            <span className="inline-flex items-center gap-1.5">
+                              <Building2 className="h-3.5 w-3.5 text-slate-400" />
+                              {getChamberName(a)}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-[13px] font-medium text-slate-700 whitespace-nowrap">
+                            <span className="inline-flex items-center gap-1.5">
+                              <Clock className="h-3.5 w-3.5 text-slate-400" />
+                              {fmtTime(a.appointment_time)}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 pr-8" onClick={(e) => e.stopPropagation()}>
+                            {a.prescription_id ? (
+                              <Link
+                                href={'/doctor/prescriptions/' + (a.prescription_uuid || a.prescription_id) + '?from=dashboard'}
+                                className="inline-flex items-center gap-1 rounded-lg bg-orange-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-orange-700 transition"
+                              >
+                                <FlaskConical className="h-3 w-3" /> Complete
+                              </Link>
+                            ) : user?.role !== 'compounder' ? (
+                              <Link
+                                href={'/doctor/prescriptions/create?appointment_id=' + a.id}
+                                className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 transition"
+                              >
+                                <FileText className="h-3 w-3" /> Prescribe
+                              </Link>
+                            ) : null}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <DocEmptyState
+                  icon={FlaskConical}
+                  title="No patients awaiting tests"
+                  description="Patients pending test results will appear here"
+                />
+              )}
+            </div>
 
             {/* Today's Schedule */}
 

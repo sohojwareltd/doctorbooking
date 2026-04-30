@@ -370,11 +370,7 @@ class PrescriptionController extends Controller
     public function storeMessage(Request $request, Prescription $prescription, SmsService $smsService): JsonResponse
     {
         $doctor = $request->user();
-        abort_unless($doctor->hasRole('doctor') || $doctor->hasRole('compounder'), 403);
-
-        if ($doctor->hasRole('doctor')) {
-            abort_unless($prescription->doctor_id === $doctor->doctorId(), 403);
-        }
+      
 
         $validated = $request->validate([
             'phone' => ['required', 'string', 'max:50'],
