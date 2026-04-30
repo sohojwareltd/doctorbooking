@@ -43,6 +43,7 @@ class DoctorProfileController extends Controller
                 'specialization'   => $doctor?->specialization,
                 'degree'           => $doctor?->degree,
                 'registration_no'  => $doctor?->registration_no,
+                'preferred_template_type' => $doctor?->preferred_template_type ?? 'general',
                 'profile_picture'  => $doctor?->profile_picture ? asset('storage/' . $doctor->profile_picture) : null,
                 'hero_image'       => $doctor?->hero_image ? asset('storage/' . $doctor->hero_image) : null,
                 'bio'              => $doctor?->bio,
@@ -155,6 +156,7 @@ class DoctorProfileController extends Controller
             'specialization'                    => ['nullable', 'string', 'max:255'],
             'degree'                            => ['nullable', 'string', 'max:500'],
             'registration_no'                   => ['nullable', 'string', 'max:100'],
+            'preferred_template_type'           => ['nullable', 'in:general,eye'],
             'about_subtitle'                    => ['nullable', 'string', 'max:255'],
             'about_bio_details'                 => ['nullable', 'string', 'max:6000'],
             'about_credentials_title'           => ['nullable', 'string', 'max:255'],
@@ -212,6 +214,7 @@ class DoctorProfileController extends Controller
                 'specialization' => $validated['specialization'] ?? null,
                 'degree'         => $validated['degree'] ?? null,
                 'registration_no'=> $validated['registration_no'] ?? null,
+                'preferred_template_type' => $validated['preferred_template_type'] ?? 'general',
                 'bio'            => $paragraphs[0] ?? null,
                 'about_content'  => $aboutContent,
             ]

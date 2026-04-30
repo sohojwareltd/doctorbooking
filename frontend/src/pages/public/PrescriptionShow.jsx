@@ -1,12 +1,13 @@
 import { useMemo, useRef, useState } from 'react';
 import PublicLayout from '../../layouts/PublicLayout';
+import html2pdf from 'html2pdf.js';
 import {
   formatDisplayDate,
   formatDisplayFromDateLike,
   formatTime12hFromDateTime,
 } from '../../utils/dateFormat';
 
-const EYE_DIRECTION_ORDER = ['R/E', 'L/E', 'R>L', 'L>R'];
+const EYE_DIRECTION_ORDER = ['R/E', 'L/E', 'B/E', 'NV', 'R>L', 'L>R'];
 
 function emptyEyeDirectionPayload() {
   return {
@@ -28,6 +29,8 @@ function normalizeEyeDirectionSide(value) {
 
   if (['RE', 'OD', 'R', 'RIGHT'].includes(compact)) return 'R/E';
   if (['LE', 'OS', 'L', 'LEFT'].includes(compact)) return 'L/E';
+  if (['BE', 'OU', 'BOTH'].includes(compact)) return 'B/E';
+  if (['NV', 'NEAR', 'NEARVISION'].includes(compact)) return 'NV';
   if (['R>L', 'RE>LE', 'OD>OS', 'RIGHT>LEFT'].includes(normalized) || ['R>L', 'RE>LE', 'OD>OS', 'RIGHT>LEFT'].includes(compact)) return 'R>L';
   if (['L>R', 'LE>RE', 'OS>OD', 'LEFT>RIGHT'].includes(normalized) || ['L>R', 'LE>RE', 'OS>OD', 'LEFT>RIGHT'].includes(compact)) return 'L>R';
 
@@ -85,11 +88,13 @@ function parseEyeDirectionDetails(prescription = {}) {
     if (!side) return;
 
     const next = emptyEyeDirectionPayload();
-    const tokenParts = raw.split(';').map((item) => item.trim()).filter(Boolean);
+    const tokenParts = raw.split(/[|;]/).map((item) => item.trim()).filter(Boolean);
     tokenParts.forEach((token) => {
-      const [kRaw, ...rest] = token.split('=');
-      const key = String(kRaw || '').trim().toLowerCase();
-      const value = rest.join('=').trim();
+      const kv = token.match(/^([^:=]+)\s*[:=]\s*(.+)$/);
+      if (!kv) return;
+
+      const key = String(kv[1] || '').trim().toLowerCase();
+      const value = String(kv[2] || '').trim();
       if (key === 'sph') next.sph = value;
       if (key === 'cyl') next.cyl = value;
       if (key === 'axis') next.axis = value;
@@ -153,19 +158,59 @@ function parseSectionLines(text = '') {
   const complaints = [];
   const exam = [];
   const diagnoses = [];
+  let section = '';
 
   lines.forEach((line) => {
-    if (line.startsWith('-')) {
-      complaints.push(line.replace(/^-\s*/, ''));
+    if (/^Chief Complaints:/i.test(line)) {
+      section = 'complaints';
       return;
     }
-    if (/^Vitals:/i.test(line) || /^Exam Notes:/i.test(line)) {
-      exam.push(line.replace(/^Vitals:\s*/i, '').replace(/^Exam Notes:\s*/i, '').trim());
+
+    if (/^O\/?E:/i.test(line) || /^Vitals:/i.test(line)) {
+      section = 'exam';
+      const rest = line.replace(/^(O\/?E|Vitals):\s*/i, '').trim();
+      if (rest) {
+        rest
+          .split(',')
+          .map((part) => part.trim())
+          .filter(Boolean)
+          .forEach((part) => exam.push(part));
+      }
       return;
     }
+
+    if (/^Exam Notes:/i.test(line)) {
+      section = 'exam';
+      const rest = line.replace(/^Exam Notes:\s*/i, '').trim();
+      if (rest) exam.push(rest);
+      return;
+    }
+
     if (/^Provisional Diagnosis:/i.test(line) || /^Final Diagnosis:/i.test(line)) {
+      section = 'diagnosis';
       diagnoses.push(line.replace(/^Provisional Diagnosis:\s*/i, '').replace(/^Final Diagnosis:\s*/i, '').trim());
       return;
+    }
+
+    if (/^Eye Assessment Note\s*\[/i.test(line)) {
+      return;
+    }
+
+    if (line.startsWith('-')) {
+      const cleaned = line.replace(/^-\s*/, '').trim();
+      if (!cleaned) return;
+      if (section === 'complaints') complaints.push(cleaned);
+      if (section === 'exam') exam.push(cleaned);
+      return;
+    }
+
+    if (section === 'exam') {
+      exam.push(line);
+      return;
+    }
+
+    if (section === 'diagnosis') {
+      diagnoses.push(line);
     }
   });
 
@@ -237,27 +282,6 @@ export default function PublicPrescriptionShow({ prescription = {}, doctorInfo =
         return;
       }
 
-      const loadHtml2pdf = () => new Promise((resolve, reject) => {
-        if (window.html2pdf) {
-          resolve(window.html2pdf);
-          return;
-        }
-
-        const script = document.createElement('script');
-        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.12.0/html2pdf.bundle.min.js';
-        script.onload = () => (window.html2pdf ? resolve(window.html2pdf) : reject(new Error('html2pdf unavailable')));
-        script.onerror = () => reject(new Error('Failed to load html2pdf'));
-        document.head.appendChild(script);
-      });
-
-      let html2pdf;
-      try {
-        html2pdf = await loadHtml2pdf();
-      } catch {
-        handlePrint();
-        return;
-      }
-
       const opt = {
         margin: [0.3, 0.3, 0.3, 0.3],
         filename: `prescription-${prescription?.id || 'prescription'}-${patientName.replace(/\s+/g, '-')}.pdf`,
@@ -268,6 +292,8 @@ export default function PublicPrescriptionShow({ prescription = {}, doctorInfo =
       };
 
       await html2pdf().set(opt).from(element).save();
+    } catch {
+      handlePrint();
     } finally {
       setDownloadingPDF(false);
     }
@@ -356,7 +382,7 @@ export default function PublicPrescriptionShow({ prescription = {}, doctorInfo =
 
                   {diagnosisSections.exam.length ? (
                     <div>
-                      <p className="mb-1 text-sm font-bold text-[#0d2f63]">On Examination</p>
+                      <p className="mb-1 text-sm font-bold text-[#0d2f63]">O/E</p>
                       {diagnosisSections.exam.map((line, idx) => <p key={`ex-${idx}`}>{line}</p>)}
                     </div>
                   ) : null}

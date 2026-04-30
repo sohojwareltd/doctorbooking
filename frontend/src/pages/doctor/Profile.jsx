@@ -49,6 +49,7 @@ export default function DoctorProfile({ doctor = {} }) {
         specialization: doctor.specialization || '',
         degree: doctor.degree || '',
         registration_no: doctor.registration_no || '',
+        preferred_template_type: doctor.preferred_template_type || 'general',
         about_subtitle: doctor.about_subtitle || '',
         about_bio_details: doctor.about_bio_details || '',
         about_credentials_title: doctor.about_credentials_title || '',
@@ -892,6 +893,27 @@ export default function DoctorProfile({ doctor = {} }) {
                                 )}
                                 <p className="mt-1 text-xs text-slate-400">
                                     Your Bangladesh Medical & Dental Council registration number
+                                </p>
+                            </div>
+
+                            <div>
+                                <label className={labelClass}>
+                                    <Stethoscope className="mr-2 inline h-4 w-4" />
+                                    Prescription Template Preference
+                                </label>
+                                <select
+                                    className={inputClass}
+                                    value={data.preferred_template_type}
+                                    onChange={(e) => setData('preferred_template_type', e.target.value)}
+                                >
+                                    <option value="general">General</option>
+                                    <option value="eye">Eye</option>
+                                </select>
+                                {errors.preferred_template_type && (
+                                    <p className={errorClass}>{errors.preferred_template_type}</p>
+                                )}
+                                <p className="mt-1 text-xs text-slate-400">
+                                    This controls which prescription layout opens by default.
                                 </p>
                             </div>
                         </div>

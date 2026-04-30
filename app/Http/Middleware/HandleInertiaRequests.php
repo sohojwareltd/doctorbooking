@@ -142,6 +142,7 @@ class HandleInertiaRequests extends Middleware
                     'phone'        => $request->user()->phone,
                     'specialization' => $request->user()->doctorProfile?->specialization,
                     'degree' => $request->user()->doctorProfile?->degree,
+                    'preferred_template_type' => $request->user()->doctorProfile?->preferred_template_type ?? 'general',
                     'profile_picture' => $request->user()->loadMissing('doctorProfile')->doctorProfile?->profile_picture
                         ? asset('storage/' . $request->user()->doctorProfile->profile_picture)
                         : null,
