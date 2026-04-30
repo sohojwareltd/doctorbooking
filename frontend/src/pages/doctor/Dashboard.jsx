@@ -458,7 +458,7 @@ export default function DoctorDashboard({
                       </DocButton>
                       {user?.role !== 'compounder' && (visitPatient.prescription_id ? (
                         <Link
-                          href={'/doctor/prescriptions/' + (visitPatient.prescription_uuid || visitPatient.prescription_id)}
+                          href={'/doctor/prescriptions/' + (visitPatient.prescription_uuid || visitPatient.prescription_id) + '/edit'}
                           className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 active:scale-[0.97] transition"
                         >
                           <FileText className="h-3.5 w-3.5" /> Edit Rx
@@ -592,7 +592,7 @@ export default function DoctorDashboard({
                     
                             {(a.status === 'test_registered' || a.status === 'awaiting_tests') && a.prescription_id && (
                               <Link
-                                href={'/doctor/prescriptions/' + (a.prescription_uuid || a.prescription_id)}
+                                href={'/doctor/prescriptions/' + (a.prescription_uuid || a.prescription_id) + '/edit'}
                                 className="inline-flex items-center gap-1 rounded-lg bg-[#4055A8] px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-[#2D3A74] transition"
                               >
                                 <FileText className="h-3 w-3" /> View
@@ -664,7 +664,7 @@ export default function DoctorDashboard({
                           <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                          
                               <Link
-                                href={'/doctor/prescriptions/' + (a.prescription_uuid || a.prescription_id)}
+                                href={'/doctor/prescriptions/' + (a.prescription_uuid || a.prescription_id) + '/edit'}
                                 className="inline-flex items-center gap-1 rounded-lg bg-[#4055A8] px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-[#2D3A74] transition"
                               >
                                 <FileText className="h-3 w-3" /> View

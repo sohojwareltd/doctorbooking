@@ -1,6 +1,6 @@
 {
   "frontend/src/main.jsx": {
-    "file": "assets/main-D2WKdqCh.js",
+    "file": "assets/main-53Q8eypX.js",
     "name": "main",
     "src": "frontend/src/main.jsx",
     "isEntry": true,
@@ -10,11 +10,11 @@
       "node_modules/canvg/lib/index.es.js"
     ],
     "css": [
-      "assets/main-CF7_VRj9.css"
+      "assets/main-9Or3KBf9.css"
     ]
   },
   "node_modules/canvg/lib/index.es.js": {
-    "file": "assets/index.es-D-umb2Br.js",
+    "file": "assets/index.es-cqWWyHTE.js",
     "name": "index.es",
     "src": "node_modules/canvg/lib/index.es.js",
     "isDynamicEntry": true,
