@@ -377,12 +377,12 @@ class PrescriptionController extends Controller
             'message' => ['required', 'string', 'max:2000'],
         ]);
 
-        $publicUrl = route('public.prescriptions.show', ['prescription' => $prescription->uuid ?: $prescription->id]);
+        $publicUrl = route('public.prescriptions.show', ['uuid' => $prescription->uuid ?: $prescription->id]);
         $messageBody = trim((string) $validated['message']);
         if (! str_contains($messageBody, $publicUrl)) {
             $messageBody = trim($messageBody."\n\n".$publicUrl);
         }
-dd($messageBody);
+
         $saved = PrescriptionMessage::create([
             'prescription_id' => $prescription->id,
             'doctor_id' => $prescription->doctor_id,
