@@ -442,6 +442,7 @@ export default function PublicBookAppointment() {
           setSuccessDetails({
             serial: data.serial_no ?? null,
             estimated_time: data.estimated_time ?? null,
+            date: data.appointment_date ?? selectedDateRef.current ?? formData.date ?? null,
           });
         }
         toastSuccess(message);
@@ -822,7 +823,7 @@ export default function PublicBookAppointment() {
                             </div>
 
                             {/* Consultation Info */}
-                            <div className="space-y-4 border-b border-slate-200 pb-5">
+                            {/* <div className="space-y-4 border-b border-slate-200 pb-5">
                               <div className="flex items-start gap-3">
                                 <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[#e0f2f1] text-[#0c7b79]">
                                   <Clock className="h-5 w-5" />
@@ -832,7 +833,7 @@ export default function PublicBookAppointment() {
                                   <p className="mt-1 text-sm font-semibold text-slate-900">30 min</p>
                                 </div>
                               </div>
-                            </div>
+                            </div> */}
 
                             {/* What's Included */}
                             <div className="space-y-3 border-b border-slate-200 pb-5">
@@ -1093,7 +1094,7 @@ export default function PublicBookAppointment() {
                         </div>
                       </div>
 
-                      <div className="mt-4">
+                      {/* <div className="mt-4">
                         <label className="mb-2 block text-sm font-semibold text-[#005963]">Symptoms / Chief Complaint</label>
                         <textarea
                           name="symptoms"
@@ -1176,7 +1177,7 @@ export default function PublicBookAppointment() {
                             </div>
                           </div>
                         </div>
-                      </div>
+                      </div> */}
 
                       <div className="mt-4">
                         <label className="mb-2 block text-sm font-semibold text-[#005963]">Captcha</label>
@@ -1244,6 +1245,16 @@ export default function PublicBookAppointment() {
                               <div className="text-[11px] text-gray-500">Serial Number</div>
                               <div className="text-lg font-extrabold text-emerald-600">
                                 #{successDetails.serial}
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-[11px] text-gray-500">Date</div>
+                              <div className="text-sm font-semibold text-[#005963]">
+                                {successDetails.date
+                                  ? formatDisplayDateWithYear(successDetails.date) || successDetails.date
+                                  : formData.date
+                                    ? formatDisplayDateWithYear(formData.date) || formData.date
+                                    : '—'}
                               </div>
                             </div>
                             <div>

@@ -1095,7 +1095,7 @@ export default function DoctorAppointments() {
             <table className="min-w-full text-sm">
               <thead className="bg-slate-50 text-slate-500 uppercase text-xs tracking-[0.12em]">
                 <tr>
-                  <th className="px-6 py-4 text-center">#</th>
+                  <th className="px-6 py-4 text-center">SL</th>
                   <th className="px-6 py-4 text-center">Patient</th>
                   <th className="px-6 py-4 text-center">Chamber</th>
                   <th className="px-6 py-4 text-center">Date</th>
@@ -1114,7 +1114,7 @@ export default function DoctorAppointments() {
                     </td>
                   </tr>
                 ) : paginatedRows.map((appointment, index) => {
-                  const serial = appointment.id;
+                  const serial = appointment.serial_no ?? appointment.id;
                   const patientPhone = getPatientPhone(appointment);
                   const appointmentTimeLabel = formatDisplayTime12h(appointment.appointment_time) || appointment.appointment_time || 'N/A';
 
