@@ -548,21 +548,21 @@ export default function PrescriptionTemplates() {
                 <label className="mb-1 block text-xs font-semibold text-slate-600">Investigations</label>
                 <div className="rounded-xl border border-slate-200 p-3">
                     {investigationCatalog.length > 0 ? (
-                      <div className="space-y-1">
+                      <div className="grid grid-cols-2 gap-1 sm:grid-cols-3">
                         {investigationCatalog.map((testName) => {
                           const checked = !!form.investigationCommon?.[testName];
                           return (
                             <button
                               key={testName}
                               type="button"
-                              className={`flex w-full items-center justify-between gap-2 rounded-md border px-2 py-1 text-left text-xs transition ${checked
+                              className={`flex items-center justify-between gap-2 rounded-md border px-2 py-1 text-left text-xs transition ${checked
                                 ? 'border-[#2D3A74] bg-[#eef2ff] text-[#2D3A74]'
                                 : 'border-transparent text-slate-700 hover:border-slate-200 hover:bg-slate-50'
                                 }`}
                               onClick={() => toggleInvestigation(testName)}
                             >
                               <span className="truncate">{testName}</span>
-                              <span className={`inline-flex h-4 w-4 items-center justify-center rounded border text-[10px] font-bold ${checked
+                              <span className={`inline-flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border text-[10px] font-bold ${checked
                                 ? 'border-[#2D3A74] bg-[#2D3A74] text-white'
                                 : 'border-slate-300 bg-white text-transparent'
                                 }`}
