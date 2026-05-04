@@ -91,4 +91,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(PatientReport::class);
     }
+
+    public function prescriptionTemplates(): HasMany
+    {
+        return $this->hasMany(PrescriptionTemplate::class, 'created_by');
+    }
 }

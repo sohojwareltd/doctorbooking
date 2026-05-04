@@ -103,6 +103,7 @@ Route::middleware(['auth', 'role:doctor,compounder'])
 
         // Prescriptions (doctor only â€” compounder blocked via frontend; route still needs to exist for doctor)
         Route::get('/prescriptions', [WebPrescriptionController::class, 'doctorIndex'])->name('prescriptions');
+        Route::get('/prescription-templates', [WebPrescriptionController::class, 'doctorTemplates'])->name('prescription-templates');
         Route::get('/investigation-tests', [WebPrescriptionController::class, 'doctorInvestigationTests'])->name('investigation-tests');
         Route::get('/prescriptions/create', [WebPrescriptionController::class, 'doctorCreate'])->name('prescriptions.create');
         Route::post('/prescriptions', [WebPrescriptionController::class, 'doctorStore'])->name('prescriptions.store');

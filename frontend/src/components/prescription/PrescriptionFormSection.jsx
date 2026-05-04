@@ -17,6 +17,7 @@ export default function PrescriptionMedicineSection({
   onRemove,
   onAdd,
   showNoMatchHint = false,
+  isDoctor = true,
 }) {
   return (
     <div>
@@ -58,7 +59,9 @@ export default function PrescriptionMedicineSection({
                   <input
                     className="w-full border-0 bg-transparent px-0 py-0.5 text-sm text-slate-900 focus:outline-none"
                     value={m.name}
+                    readOnly={!isDoctor}
                     onFocus={() => {
+                      if (!isDoctor) return;
                       setFocusedMedicineIndex?.(idx);
                       onNameFocus?.(idx, m.name);
                     }}
@@ -67,7 +70,7 @@ export default function PrescriptionMedicineSection({
                         onNameBlur?.(idx);
                       }, 120);
                     }}
-                    onChange={(e) => onNameChange?.(idx, e.target.value)}
+                    onChange={(e) => isDoctor && onNameChange?.(idx, e.target.value)}
                     placeholder="Medicine"
                   />
                   {showMedicineMatchDropdown ? (
@@ -97,7 +100,8 @@ export default function PrescriptionMedicineSection({
                   <input
                     className="w-full border-0 bg-transparent px-0 py-0.5 text-sm text-slate-900 focus:outline-none"
                     value={m.dosage || ''}
-                    onChange={(e) => onDoseChange?.(idx, e.target.value)}
+                    readOnly={!isDoctor}
+                    onChange={(e) => isDoctor && onDoseChange?.(idx, e.target.value)}
                     placeholder="1+0+1"
                   />
                 </div>
@@ -105,7 +109,8 @@ export default function PrescriptionMedicineSection({
                   <input
                     className="w-full border-0 bg-transparent px-0 py-0.5 text-sm text-slate-900 focus:outline-none"
                     value={m.duration || ''}
-                    onChange={(e) => onDurationChange?.(idx, e.target.value)}
+                    readOnly={!isDoctor}
+                    onChange={(e) => isDoctor && onDurationChange?.(idx, e.target.value)}
                     placeholder="-"
                   />
                 </div>
@@ -113,12 +118,14 @@ export default function PrescriptionMedicineSection({
                   <select
                     className="w-full border-0 bg-transparent px-0 py-0.5 text-xs text-slate-900 focus:outline-none"
                     value={m.instruction || ''}
-                    onChange={(e) => onInstructionChange?.(idx, e.target.value)}
+                    disabled={!isDoctor}
+                    onChange={(e) => isDoctor && onInstructionChange?.(idx, e.target.value)}
                   >
                     <option value="">None</option>
                     <option value="After meal">After meal</option>
                     <option value="Before meal">Before meal</option>
                   </select>
+                  {isDoctor && (
                   <button
                     type="button"
                     className="rounded border border-rose-300 bg-rose-50 px-1.5 py-1 text-xs text-rose-800 hover:bg-rose-100"
@@ -126,11 +133,13 @@ export default function PrescriptionMedicineSection({
                   >
                     x
                   </button>
+                  )}
                 </div>
               </div>
             );
           })}
 
+          {isDoctor && (
           <button
             type="button"
             onClick={onAdd}
@@ -138,6 +147,7 @@ export default function PrescriptionMedicineSection({
           >
             + Add Medicine Row
           </button>
+          )}
         </div>
       </div>
     </div>

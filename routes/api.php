@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\DoctorController;
 use App\Http\Controllers\Api\InvestigationTestController;
 use App\Http\Controllers\Api\PatientController;
 use App\Http\Controllers\Api\PrescriptionController as ApiPrescriptionController;
+use App\Http\Controllers\Api\PrescriptionTemplateController;
 use App\Http\Controllers\Api\PublicController;
 use App\Http\Controllers\DoctorScheduleController;
 use Illuminate\Support\Facades\Route;
@@ -46,6 +47,20 @@ Route::prefix('public')->group(function () {
     Route::middleware('throttle:booking-submit')->post('/contact', [PublicController::class, 'contact']);
     Route::middleware('throttle:booking-submit')->post('/book-appointment', [PublicController::class, 'bookAppointment']);
     Route::get('/site-content/home', [App\Http\Controllers\Api\SiteContentApiController::class, 'home']);
+});
+
+/*
+|--------------------------------------------------------------------------
+| Prescription Templates (direct API aliases)
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware(['auth:sanctum', 'role:doctor,compounder'])->group(function () {
+    Route::get('/templates', [PrescriptionTemplateController::class, 'index']);
+    Route::post('/templates', [PrescriptionTemplateController::class, 'store']);
+    Route::get('/templates/{template}', [PrescriptionTemplateController::class, 'show']);
+    Route::put('/templates/{template}', [PrescriptionTemplateController::class, 'update']);
+    Route::delete('/templates/{template}', [PrescriptionTemplateController::class, 'destroy']);
 });
 
 /*
@@ -101,6 +116,11 @@ Route::middleware(['auth:sanctum', 'role:doctor,compounder'])
         Route::post('/prescriptions', [ApiPrescriptionController::class, 'store']);
         Route::get('/prescriptions/{prescription}', [DoctorController::class, 'prescriptionShow']);
         Route::put('/prescriptions/{prescription}', [ApiPrescriptionController::class, 'update']);
+        Route::get('/templates', [PrescriptionTemplateController::class, 'index']);
+        Route::post('/templates', [PrescriptionTemplateController::class, 'store']);
+        Route::get('/templates/{template}', [PrescriptionTemplateController::class, 'show']);
+        Route::put('/templates/{template}', [PrescriptionTemplateController::class, 'update']);
+        Route::delete('/templates/{template}', [PrescriptionTemplateController::class, 'destroy']);
         Route::get('/investigation-tests', [InvestigationTestController::class, 'index']);
         Route::post('/investigation-tests', [InvestigationTestController::class, 'store']);
         Route::put('/investigation-tests/{item}', [InvestigationTestController::class, 'update']);

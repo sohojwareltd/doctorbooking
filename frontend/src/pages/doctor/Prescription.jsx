@@ -403,6 +403,22 @@ function parseInstructionsText(text = '') {
     return { lifestyle, diet_rest, emergency_note };
 }
 
+function normalizeTemplateStringList(value) {
+    if (Array.isArray(value)) {
+        return value
+            .map((item) => String(item || '').trim())
+            .filter(Boolean);
+    }
+
+    const text = String(value || '').trim();
+    if (!text) return [];
+
+    return text
+        .split(/\n|,|;/)
+        .map((item) => String(item || '').trim())
+        .filter(Boolean);
+}
+
 function buildStateFromPrescription(prescription) {
     if (!prescription) return initialState;
 
@@ -481,6 +497,11 @@ function reducer(state, action) {
             return {
                 ...state,
                 investigations: action.value,
+            };
+        case 'replaceSection':
+            return {
+                ...state,
+                [action.section]: action.value,
             };
         case 'setField': {
             const { path, value } = action;
@@ -631,14 +652,15 @@ export default function Prescription({
 
     const page = usePage();
     const authUser = page?.props?.auth?.user;
+    const isDoctor = String(authUser?.role || '').toLowerCase() === 'doctor';
     const branding = page?.props?.site?.branding || {};
     const doctorSpecialization = doctorInfo?.specialization || authUser?.specialization || '';
     const doctorDegree = doctorInfo?.degree || authUser?.degree || '';
     const preferredTemplateType = String(
         doctorInfo?.preferred_template_type
-            || authUser?.preferred_template_type
-            || defaultTemplateType
-            || 'general',
+        || authUser?.preferred_template_type
+        || defaultTemplateType
+        || 'general',
     ).toLowerCase();
     const useEyeTemplate = preferredTemplateType === 'eye';
 
@@ -649,15 +671,25 @@ export default function Prescription({
     const chamberQrSrc = chamberMapUrl
         ? `https://api.qrserver.com/v1/create-qr-code/?size=96x96&data=${encodeURIComponent(chamberMapUrl)}`
         : '';
+    const doctorName = doctorInfo?.user?.name || doctorInfo?.name || '';
+    const doctorPhone = doctorInfo?.phone || doctorInfo?.user?.phone || '';
+    const doctorEmail = doctorInfo?.email || doctorInfo?.user?.email || '';
     const doctorLogoSrc =
         branding?.brandLogoUrl ||
         branding?.sidebarLogoUrl ||
-        authUser?.profile_picture ||
+        doctorInfo?.profile_picture ||
+        doctorInfo?.user?.profile_picture ||
         '/stethoscope-2.png';
 
     const [state, dispatch] = useReducer(reducer, initialState);
     const [submitting, setSubmitting] = useState(false);
     const [appointmentAction, setAppointmentAction] = useState(null);
+    const [templates, setTemplates] = useState([]);
+    const [loadingTemplates, setLoadingTemplates] = useState(false);
+    const [selectedTemplateId, setSelectedTemplateId] = useState('');
+    const [selectedTemplate, setSelectedTemplate] = useState(null);
+    const [loadingTemplateDetails, setLoadingTemplateDetails] = useState(false);
+    const [applyingTemplate, setApplyingTemplate] = useState(false);
     const [investigationCatalog, setInvestigationCatalog] = useState([]);
     const [medicineMatchesByRow, setMedicineMatchesByRow] = useState({});
     const medicineMatchCacheRef = useRef(new Map());
@@ -821,6 +853,131 @@ export default function Prescription({
             }
         } catch {
             // Keep manual custom tests usable even if this list fails to load.
+        }
+    };
+
+    const loadTemplates = async () => {
+        try {
+            setLoadingTemplates(true);
+            const res = await fetch('/api/doctor/templates', {
+                headers: { Accept: 'application/json' },
+                credentials: 'same-origin',
+            });
+            const body = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                toastError(body?.message || 'Failed to load prescription templates.');
+                return;
+            }
+            setTemplates(Array.isArray(body?.templates) ? body.templates : []);
+        } catch {
+            toastError('Failed to load prescription templates.');
+        } finally {
+            setLoadingTemplates(false);
+        }
+    };
+
+    const loadTemplateDetails = async (id) => {
+        if (!id) {
+            setSelectedTemplate(null);
+            return;
+        }
+
+        try {
+            setLoadingTemplateDetails(true);
+            const res = await fetch(`/api/doctor/templates/${id}`, {
+                headers: { Accept: 'application/json' },
+                credentials: 'same-origin',
+            });
+            const body = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                toastError(body?.message || 'Failed to load template details.');
+                return;
+            }
+            setSelectedTemplate(body?.template || null);
+        } catch {
+            toastError('Failed to load template details.');
+        } finally {
+            setLoadingTemplateDetails(false);
+        }
+    };
+
+    const applySelectedTemplate = () => {
+        if (!selectedTemplate) {
+            toastError('Select a template first.');
+            return;
+        }
+
+        setApplyingTemplate(true);
+        try {
+            const complaints = normalizeTemplateStringList(selectedTemplate.chief_complaints);
+            dispatch({
+                type: 'setField',
+                path: ['diagnosis', 'complaints_text'],
+                value: complaints.join('\n'),
+            });
+
+            dispatch({
+                type: 'setField',
+                path: ['exam', 'notes'],
+                value: String(selectedTemplate.oe || '').trim(),
+            });
+
+            const source = normalizeTemplateStringList(selectedTemplate.investigations);
+            const nextCommon = Object.fromEntries(
+                (investigationCatalog || []).map((testName) => [testName, false]),
+            );
+            const custom = [];
+
+            source.forEach((item) => {
+                const matched = findBestCatalogInvestigation(investigationCatalog, item);
+                if (matched) {
+                    nextCommon[matched] = true;
+                    return;
+                }
+                custom.push(item);
+            });
+
+            dispatch({
+                type: 'setInvestigations',
+                value: {
+                    ...state.investigations,
+                    common: nextCommon,
+                    commonSample: {},
+                    custom: custom.length ? custom : [''],
+                    notes: '',
+                },
+            });
+
+            const parsedInstructions = parseInstructionsText(selectedTemplate.instructions || '');
+            const combinedAdvice = [parsedInstructions.lifestyle, parsedInstructions.diet_rest, parsedInstructions.emergency_note]
+                .filter(Boolean)
+                .join('\n');
+            dispatch({
+                type: 'setField',
+                path: ['advice', 'lifestyle'],
+                value: combinedAdvice,
+            });
+
+            const mappedMedicines = (Array.isArray(selectedTemplate.medicines) ? selectedTemplate.medicines : [])
+                .map((item) => ({
+                    name: String(item?.medicine_name || '').trim(),
+                    strength: '',
+                    dosage: String(item?.dose || '').trim(),
+                    duration: String(item?.duration || '').trim(),
+                    instruction: String(item?.instruction || '').trim(),
+                }))
+                .filter((item) => item.name);
+
+            dispatch({
+                type: 'replaceSection',
+                section: 'medicines',
+                value: mappedMedicines.length ? mappedMedicines : [emptyMedicine()],
+            });
+            setMedicineMatchesByRow({});
+
+            toastSuccess('Template applied successfully. You can still edit any field.');
+        } finally {
+            setApplyingTemplate(false);
         }
     };
 
@@ -1077,8 +1234,16 @@ export default function Prescription({
     }, []);
 
     useEffect(() => {
+        void loadTemplates();
+    }, []);
+
+    useEffect(() => {
+        void loadTemplateDetails(selectedTemplateId);
+    }, [selectedTemplateId]);
+
+    useEffect(() => {
         if (prescription?.id) void loadReports();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [prescription?.id]);
 
     const visitDateLabel = useMemo(
@@ -1406,16 +1571,56 @@ export default function Prescription({
                         <ArrowLeft className="h-4 w-4" />
                         Back to List
                     </Link>
+                    
+                    <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-end sm:justify-end">
+                        {isDoctor && (
+                        <div className="w-full sm:w-auto sm:min-w-[420px]">
+                            <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+                                    <div>
+                                        <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Prescription Template</label>
+                                        <select
+                                            value={selectedTemplateId}
+                                            onChange={(e) => setSelectedTemplateId(e.target.value)}
+                                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+                                            disabled={loadingTemplates}
+                                        >
+                                            <option value="">Select template</option>
+                                            {templates.map((template) => (
+                                                <option key={template.id} value={String(template.id)}>{template.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
 
-                    <button
-                        type="button"
-                        onClick={() => setShowReportUploadModal(true)}
-                        className="inline-flex items-center gap-2 rounded-lg bg-[#3556a6] px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-[#2a488f]"
-                    >
-                        <Upload className="h-4 w-4" />
-                        Upload Report
-                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={applySelectedTemplate}
+                                        disabled={!selectedTemplate || loadingTemplateDetails || applyingTemplate}
+                                        className="inline-flex h-[48px] items-center justify-center rounded-2xl bg-[#2D3A74] px-5 text-sm font-semibold text-white transition hover:bg-[#243063] disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        {loadingTemplateDetails
+                                            ? 'Loading...'
+                                            : applyingTemplate
+                                                ? 'Applying...'
+                                                : 'Apply Template'}
+                                    </button>
+                            </div>
+                        </div>
+                           )}
+
+                        <button
+                            type="button"
+                            onClick={() => setShowReportUploadModal(true)}
+                            className="inline-flex h-[48px] items-center justify-center gap-2 rounded-lg bg-[#3556a6] px-3.5 text-sm font-semibold text-white transition hover:bg-[#2a488f]"
+                        >
+                            <Upload className="h-4 w-4" />
+                            Upload Report
+                        </button>
+                    </div>
+                 
                 </div>
+
+
+
 
                 {/* Prescription Header Card - Like real prescription pad (Matching PrescriptionShow) */}
 
@@ -1443,22 +1648,22 @@ export default function Prescription({
                                                     <span className="text-[10px] font-bold uppercase tracking-widest text-[#0b3f86]">Doctor</span>
                                                 </div>
                                                 <p className="text-2xl font-black tracking-tight text-[#0d2f63]">
-                                                    {authUser?.name || 'Doctor'}
+                                                    {doctorName || 'Doctor'}
                                                 </p>
                                                 <p className="mt-0.5 text-sm font-medium text-slate-600">
                                                     {doctorSpecialization || doctorDegree || 'MBBS, FCPS'}
                                                 </p>
                                                 <div className="mt-3 space-y-1.5">
-                                                    {authUser?.phone ? (
+                                                    {doctorPhone ? (
                                                         <div className="flex items-center gap-1.5 text-sm text-slate-700">
                                                             <Phone className="h-3.5 w-3.5 shrink-0 text-[#0b3f86]" />
-                                                            <span>{authUser.phone}</span>
+                                                            <span>{doctorPhone}</span>
                                                         </div>
                                                     ) : null}
-                                                    {authUser?.email ? (
+                                                    {doctorEmail ? (
                                                         <div className="flex items-center gap-1.5 text-sm text-slate-700">
                                                             <Mail className="h-3.5 w-3.5 shrink-0 text-[#0b3f86]" />
-                                                            <span>{authUser.email}</span>
+                                                            <span>{doctorEmail}</span>
                                                         </div>
                                                     ) : null}
                                                 </div>
@@ -1572,7 +1777,7 @@ export default function Prescription({
                                 {/* Prescription Pad Layout - Two Column Grid */}
                                 <div className="grid grid-cols-12 gap-4 sm:gap-8">
 
-              
+
                                     <div className="col-span-12 sm:col-span-3 space-y-6 sm:border-r-2 border-dashed border-slate-200 pr-0 sm:pr-8">
                                         <div className="flex flex-col rounded-xl border border-[#cad6e8] bg-[#f2f5fa] p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
                                             <div className="mb-3 inline-flex items-center gap-2 bg-[#0b4fa3] px-3 py-1.5 text-sm font-bold uppercase tracking-wide text-white" style={{ clipPath: 'polygon(0 0, 92% 0, 100% 100%, 0 100%)' }}>
@@ -1583,7 +1788,8 @@ export default function Prescription({
                                                 className="w-full resize-none rounded-lg border border-[#d4e0f0] bg-white px-2 py-1.5 text-sm text-slate-800 placeholder:text-slate-400 focus:border-[#0b4fa3] focus:outline-none"
                                                 rows={4}
                                                 value={state.diagnosis.complaints_text}
-                                                onChange={(e) => dispatch({
+                                                readOnly={!isDoctor}
+                                                onChange={(e) => isDoctor && dispatch({
                                                     type: 'setField',
                                                     path: ['diagnosis', 'complaints_text'],
                                                     value: e.target.value,
@@ -1603,7 +1809,8 @@ export default function Prescription({
                                                     <input
                                                         className="w-full rounded border border-[#d4e0f0] bg-white px-1.5 py-1 text-xs text-slate-800 placeholder-slate-400 focus:border-[#0b4fa3] focus:outline-none"
                                                         value={state.exam.pulse}
-                                                        onChange={(e) => dispatch({
+                                                        readOnly={!isDoctor}
+                                                        onChange={(e) => isDoctor && dispatch({
                                                             type: 'setField',
                                                             path: ['exam', 'pulse'],
                                                             value: e.target.value,
@@ -1616,7 +1823,8 @@ export default function Prescription({
                                                     <input
                                                         className="w-full rounded border border-[#d4e0f0] bg-white px-1.5 py-1 text-xs text-slate-800 placeholder-slate-400 focus:border-[#0b4fa3] focus:outline-none"
                                                         value={state.exam.bp}
-                                                        onChange={(e) => dispatch({
+                                                        readOnly={!isDoctor}
+                                                        onChange={(e) => isDoctor && dispatch({
                                                             type: 'setField',
                                                             path: ['exam', 'bp'],
                                                             value: e.target.value,
@@ -1629,7 +1837,8 @@ export default function Prescription({
                                                     <input
                                                         className="w-full rounded border border-[#d4e0f0] bg-white px-1.5 py-1 text-xs text-slate-800 placeholder-slate-400 focus:border-[#0b4fa3] focus:outline-none"
                                                         value={state.exam.temperature}
-                                                        onChange={(e) => dispatch({
+                                                        readOnly={!isDoctor}
+                                                        onChange={(e) => isDoctor && dispatch({
                                                             type: 'setField',
                                                             path: ['exam', 'temperature'],
                                                             value: e.target.value,
@@ -1642,7 +1851,8 @@ export default function Prescription({
                                                     <input
                                                         className="w-full rounded border border-[#d4e0f0] bg-white px-1.5 py-1 text-xs text-slate-800 placeholder-slate-400 focus:border-[#0b4fa3] focus:outline-none"
                                                         value={state.exam.weight}
-                                                        onChange={(e) => dispatch({
+                                                        readOnly={!isDoctor}
+                                                        onChange={(e) => isDoctor && dispatch({
                                                             type: 'setField',
                                                             path: ['exam', 'weight'],
                                                             value: e.target.value,
@@ -1662,28 +1872,28 @@ export default function Prescription({
                                             {investigationCatalog.length > 0 ? (
                                                 <div className="space-y-1 px-1">
                                                     {investigationCatalog.map((testName) => {
-                                                            const checked = !!state.investigations.common?.[testName];
-                                                            return (
-                                                                <div key={testName}>
-                                                                    <button
-                                                                        type="button"
-                                                                        className={`flex w-full items-center justify-between gap-2 rounded-md border px-2 py-1 text-left text-xs transition ${checked
-                                                                            ? 'border-[#0b4fa3] bg-[#eaf2ff] text-[#0b3f86]'
-                                                                            : 'border-transparent text-slate-700 hover:border-[#d4e1f6] hover:bg-[#f7faff]'
-                                                                            }`}
-                                                                        onClick={() => dispatch({ type: 'toggleCommonTest', testName })}
-                                                                    >
-                                                                        <span className="truncate">{testName}</span>
-                                                                        <span className={`inline-flex h-4 w-4 items-center justify-center rounded border text-[10px] font-bold ${checked
-                                                                            ? 'border-[#0b4fa3] bg-[#0b4fa3] text-white'
-                                                                            : 'border-slate-300 bg-white text-transparent'
-                                                                            }`}>
-                                                                            ✓
-                                                                        </span>
-                                                                    </button>
-                                                                </div>
-                                                            );
-                                                        })}
+                                                        const checked = !!state.investigations.common?.[testName];
+                                                        return (
+                                                            <div key={testName}>
+                                                                <button
+                                                                    type="button"
+                                                                    className={`flex w-full items-center justify-between gap-2 rounded-md border px-2 py-1 text-left text-xs transition ${checked
+                                                                        ? 'border-[#0b4fa3] bg-[#eaf2ff] text-[#0b3f86]'
+                                                                        : 'border-transparent text-slate-700 hover:border-[#d4e1f6] hover:bg-[#f7faff]'
+                                                                        }`}
+                                                                    onClick={() => isDoctor && dispatch({ type: 'toggleCommonTest', testName })}
+                                                                >
+                                                                    <span className="truncate">{testName}</span>
+                                                                    <span className={`inline-flex h-4 w-4 items-center justify-center rounded border text-[10px] font-bold ${checked
+                                                                        ? 'border-[#0b4fa3] bg-[#0b4fa3] text-white'
+                                                                        : 'border-slate-300 bg-white text-transparent'
+                                                                        }`}>
+                                                                        ✓
+                                                                    </span>
+                                                                </button>
+                                                            </div>
+                                                        );
+                                                    })}
                                                 </div>
                                             ) : null}
 
@@ -1695,14 +1905,15 @@ export default function Prescription({
                                                         <input
                                                             className="w-full border-0 bg-transparent px-0 py-0.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none"
                                                             value={test}
-                                                            onChange={(e) => dispatch({
+                                                            readOnly={!isDoctor}
+                                                            onChange={(e) => isDoctor && dispatch({
                                                                 type: 'setCustomTest',
                                                                 index: idx,
                                                                 value: e.target.value,
                                                             })}
                                                             placeholder="Add test"
                                                         />
-                                                        {(state.investigations.custom || []).length > 1 ? (
+                                                        {isDoctor && (state.investigations.custom || []).length > 1 ? (
                                                             <button
                                                                 type="button"
                                                                 className="rounded border border-rose-300 bg-rose-50 px-1.5 py-0 text-[11px] text-rose-800 opacity-0 transition group-hover:opacity-100"
@@ -1722,6 +1933,7 @@ export default function Prescription({
                                             <div className="border-b border-dotted border-[#9aa8be]" />
                                         </div> */}
 
+                                            {isDoctor && (
                                             <button
                                                 type="button"
                                                 className="mt-3 self-start text-xs font-semibold text-[#0b4fa3] hover:underline"
@@ -1729,6 +1941,7 @@ export default function Prescription({
                                             >
                                                 + Add Test
                                             </button>
+                                            )}
                                         </div>
 
                                         {useEyeTemplate ? (
@@ -1815,7 +2028,8 @@ export default function Prescription({
                                                     <input
                                                         className="w-full border-0 bg-transparent px-0 py-0.5 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none"
                                                         value={state.diagnosis.provisional}
-                                                        onChange={(e) => dispatch({
+                                                        readOnly={!isDoctor}
+                                                        onChange={(e) => isDoctor && dispatch({
                                                             type: 'setField',
                                                             path: ['diagnosis', 'provisional'],
                                                             value: e.target.value,
@@ -1828,7 +2042,8 @@ export default function Prescription({
                                                     <input
                                                         className="w-full border-0 bg-transparent px-0 py-0.5 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none"
                                                         value={state.diagnosis.final}
-                                                        onChange={(e) => dispatch({
+                                                        readOnly={!isDoctor}
+                                                        onChange={(e) => isDoctor && dispatch({
                                                             type: 'setField',
                                                             path: ['diagnosis', 'final'],
                                                             value: e.target.value,
@@ -1869,28 +2084,28 @@ export default function Prescription({
                                             onRemove={handleRemoveMedicine}
                                             onAdd={handleAddMedicine}
                                             showNoMatchHint
+                                            isDoctor={isDoctor}
                                         />
 
                                         {/* Advice Section - Bottom Right */}
                                         <div className="border-t-2 border-dotted border-slate-200 pt-4">
-                                            {/* <div className="mb-2 flex items-center gap-2">
+                                            <div className="mb-2 flex items-center gap-2">
                                                 <FileText className="h-4 w-4 text-[#3556a6]" />
                                                 <span className="text-xs font-bold uppercase tracking-wider text-slate-700">Advice</span>
                                             </div>
 
-                                            <div className="rounded-lg border border-[#d5deea] bg-[#f5f8fd] px-3 py-2.5 text-sm text-slate-800">
-                                                <p className="mb-1 font-semibold text-slate-800">Emergency Note:</p>
-                                                <textarea
-                                                    className="w-full rounded-md border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-900 doc-input-focus"
-                                                    rows={2}
-                                                    value={state.follow_up.emergency_note}
-                                                    onChange={(e) => dispatch({
-                                                        type: 'setField',
-                                                        path: ['follow_up', 'emergency_note'],
-                                                        value: e.target.value,
-                                                    })}
-                                                />
-                                            </div> */}
+                                            <textarea
+                                                className="w-full rounded-lg border border-[#d5deea] bg-[#f5f8fd] px-2.5 py-1.5 text-sm text-slate-800 placeholder:text-slate-400 focus:border-[#3556a6] focus:outline-none"
+                                                rows={3}
+                                                value={state.advice.lifestyle}
+                                                readOnly={!isDoctor}
+                                                onChange={(e) => isDoctor && dispatch({
+                                                    type: 'setField',
+                                                    path: ['advice', 'lifestyle'],
+                                                    value: e.target.value,
+                                                })}
+                                                placeholder="e.g. Exercise regularly, light diet, adequate rest…"
+                                            />
 
                                             <div className="mt-4 flex flex-wrap items-end justify-between gap-4 border-t border-[#dbe3ef] pt-3">
                                                 <div className="flex items-center gap-2">
@@ -1910,7 +2125,7 @@ export default function Prescription({
 
                                                 <div className="flex items-end gap-3 text-right">
                                                     <div>
-                                                        <div className="mb-1 border-b border-[#0d2f63] pb-1 text-lg font-semibold italic text-[#0d2f63]">{authUser?.name || 'Doctor'}</div>
+                                                        <div className="mb-1 border-b border-[#0d2f63] pb-1 text-lg font-semibold italic text-[#0d2f63]">{doctorName || 'Doctor'}</div>
                                                         <div className="text-xs text-slate-600">{doctorSpecialization || doctorDegree || 'MBBS, FCPS'}</div>
                                                         <div className="text-xs text-slate-500">Reg. No: {doctorInfo?.registration_no || '123456'}</div>
                                                     </div>
@@ -1967,8 +2182,8 @@ export default function Prescription({
                                                                     type="button"
                                                                     onClick={() => openEyeAssessmentModal(direction)}
                                                                     className={`relative flex-1 rounded-lg py-1.5 text-xs font-bold tracking-wide transition-all duration-150 ${active
-                                                                            ? 'bg-white text-[#0b3f86] shadow-sm ring-1 ring-slate-200'
-                                                                            : 'text-slate-500 hover:text-slate-700'
+                                                                        ? 'bg-white text-[#0b3f86] shadow-sm ring-1 ring-slate-200'
+                                                                        : 'text-slate-500 hover:text-slate-700'
                                                                         }`}
                                                                 >
                                                                     {direction}
@@ -2118,6 +2333,7 @@ export default function Prescription({
                                                     </>
                                                 )}
                                             </button>
+                                            {isDoctor && (
                                             <button
                                                 type="button"
                                                 className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#3556a6] px-8 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#2a488f] disabled:opacity-50 sm:w-auto"
@@ -2136,6 +2352,7 @@ export default function Prescription({
                                                     </>
                                                 )}
                                             </button>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -2146,80 +2363,80 @@ export default function Prescription({
 
                 {/* Report Upload Section */}
                 <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-                        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-                            <div className="flex items-center gap-2">
-                                <FileUp className="h-5 w-5 text-[#3556a6]" />
-                                <span className="text-sm font-semibold text-slate-800">Test Reports</span>
-                                {loadingReports ? (
-                                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#3556a6] border-t-transparent" />
-                                ) : (
-                                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">{reports.length}</span>
-                                )}
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => setShowReportUploadModal(true)}
-                                className="inline-flex items-center gap-1.5 rounded-lg bg-[#3556a6] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#2a488f]"
-                            >
-                                <Upload className="h-3.5 w-3.5" />
-                                Upload Report
-                            </button>
+                    <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+                        <div className="flex items-center gap-2">
+                            <FileUp className="h-5 w-5 text-[#3556a6]" />
+                            <span className="text-sm font-semibold text-slate-800">Test Reports</span>
+                            {loadingReports ? (
+                                <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#3556a6] border-t-transparent" />
+                            ) : (
+                                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">{reports.length}</span>
+                            )}
                         </div>
-
-                        {!prescription?.id ? (
-                            <div className="border-b border-slate-100 bg-amber-50 px-5 py-2 text-xs text-amber-800">
-                                Save prescription first to upload and persist reports.
-                            </div>
-                        ) : null}
-
-                        {reports.length === 0 && !loadingReports ? (
-                            <div className="px-5 py-8 text-center text-sm text-slate-400">
-                                No reports uploaded yet.
-                            </div>
-                        ) : (
-                            <div className="overflow-x-auto">
-                                <table className="min-w-full divide-y divide-slate-200">
-                                    <thead className="bg-slate-50">
-                                        <tr>
-                                            <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">Title</th>
-                                            <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100 bg-white">
-                                        {reports.map((report) => (
-                                            <tr key={report.id}>
-                                                <td className="px-5 py-3 text-sm font-medium text-slate-800">{report.title || report.original_name || report.note || 'Report'}</td>
-                                                <td className="px-5 py-3 text-right">
-                                                    <div className="inline-flex items-center gap-2">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => {
-                                                                setViewingReport(report);
-                                                                setShowReportViewModal(true);
-                                                            }}
-                                                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100"
-                                                        >
-                                                            <Eye className="h-3.5 w-3.5" />
-                                                            View
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            disabled={deletingReportId === report.id}
-                                                            onClick={() => handleDeleteReport(report)}
-                                                            className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs font-medium text-rose-700 transition hover:bg-rose-100 disabled:opacity-60"
-                                                        >
-                                                            <Trash2 className="h-3.5 w-3.5" />
-                                                            {deletingReportId === report.id ? 'Deleting...' : 'Delete'}
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
+                        <button
+                            type="button"
+                            onClick={() => setShowReportUploadModal(true)}
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-[#3556a6] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#2a488f]"
+                        >
+                            <Upload className="h-3.5 w-3.5" />
+                            Upload Report
+                        </button>
                     </div>
+
+                    {!prescription?.id ? (
+                        <div className="border-b border-slate-100 bg-amber-50 px-5 py-2 text-xs text-amber-800">
+                            Save prescription first to upload and persist reports.
+                        </div>
+                    ) : null}
+
+                    {reports.length === 0 && !loadingReports ? (
+                        <div className="px-5 py-8 text-center text-sm text-slate-400">
+                            No reports uploaded yet.
+                        </div>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full divide-y divide-slate-200">
+                                <thead className="bg-slate-50">
+                                    <tr>
+                                        <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">Title</th>
+                                        <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 bg-white">
+                                    {reports.map((report) => (
+                                        <tr key={report.id}>
+                                            <td className="px-5 py-3 text-sm font-medium text-slate-800">{report.title || report.original_name || report.note || 'Report'}</td>
+                                            <td className="px-5 py-3 text-right">
+                                                <div className="inline-flex items-center gap-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setViewingReport(report);
+                                                            setShowReportViewModal(true);
+                                                        }}
+                                                        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100"
+                                                    >
+                                                        <Eye className="h-3.5 w-3.5" />
+                                                        View
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        disabled={deletingReportId === report.id}
+                                                        onClick={() => handleDeleteReport(report)}
+                                                        className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs font-medium text-rose-700 transition hover:bg-rose-100 disabled:opacity-60"
+                                                    >
+                                                        <Trash2 className="h-3.5 w-3.5" />
+                                                        {deletingReportId === report.id ? 'Deleting...' : 'Delete'}
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
 
                 {/* Report upload modal */}
                 {showReportUploadModal && typeof document !== 'undefined'
