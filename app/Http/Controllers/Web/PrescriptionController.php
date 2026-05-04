@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Web;
 use App\Http\Controllers\Api\PrescriptionController as ApiPrescriptionController;
 use App\Http\Controllers\Controller;
 use App\Models\Chamber;
+use App\Models\Doctor;
 use App\Models\Medicine;
 use App\Models\Prescription;
 use App\Models\User;
@@ -74,6 +75,8 @@ class PrescriptionController extends Controller
                 'phone'          => $prescription->doctor?->user?->phone,
                 'specialization' => $prescription->doctor?->specialization,
                 'degree'         => $prescription->doctor?->degree,
+                'registration_no'=> $prescription->doctor?->registration_no,
+                'profile_picture'=> $prescription->doctor?->profile_picture ?? null,
             ],
             'chamberInfo' => $chamber ? [
                 'name'     => $chamber->name,
@@ -145,8 +148,10 @@ class PrescriptionController extends Controller
     /** GET /doctor/prescriptions/create */
     public function doctorCreate(Request $request): Response
     {
-        /** @var User $doctor */
-        $doctor        = Auth::user();
+        /** @var User $authUser */
+        $authUser      = Auth::user();
+        $doctorId      = $authUser->doctorId();
+        $doctorProfile = $doctorId ? Doctor::with('user')->find($doctorId) : Doctor::with('user')->first();
         $appointmentId = $request->query('appointment_id');
         $patientId     = $request->query('patient_id') ?? $request->query('patient');
         $selectedPatient = null;
@@ -155,7 +160,7 @@ class PrescriptionController extends Controller
         if ($appointmentId) {
             $appointment = Appointment::query()
                 ->with(['user:id,name,email,phone', 'user.patientProfile:user_id,age,gender,weight'])
-                ->where('doctor_id', $doctor->doctorId())
+                ->where('doctor_id', $doctorProfile?->id)
                 ->where('id', $appointmentId)
                 ->first();
 
@@ -190,12 +195,12 @@ class PrescriptionController extends Controller
         }
 
         $chamber = $appointment?->chamber_id
-            ? Chamber::where('doctor_id', $doctor->doctorId())->where('id', $appointment->chamber_id)->first()
+            ? Chamber::where('doctor_id', $doctorProfile?->id)->where('id', $appointment->chamber_id)->first()
             : null;
 
         if (! $chamber) {
-            $chamber = Chamber::where('doctor_id', $doctor->doctorId())->where('is_active', true)->first()
-                ?? Chamber::where('doctor_id', $doctor->doctorId())->first();
+            $chamber = Chamber::where('doctor_id', $doctorProfile?->id)->where('is_active', true)->first()
+                ?? Chamber::where('doctor_id', $doctorProfile?->id)->first();
         }
 
         $chamberInfo = $chamber ? [
@@ -211,11 +216,13 @@ class PrescriptionController extends Controller
             'selectedPatient' => $selectedPatient,
             'chamberInfo'     => $chamberInfo,
             'doctorInfo'      => [
-                'name' => $doctor->name,
-                'email' => $doctor->email,
-                'phone' => $doctor->phone,
-                'specialization' => $doctor->doctorProfile?->specialization,
-                'degree' => $doctor->doctorProfile?->degree,
+                'name'           => $doctorProfile?->user?->name,
+                'email'          => $doctorProfile?->user?->email,
+                'phone'          => $doctorProfile?->user?->phone,
+                'specialization' => $doctorProfile?->specialization,
+                'degree'         => $doctorProfile?->degree,
+                'registration_no'=> $doctorProfile?->registration_no,
+                'profile_picture'=> $doctorProfile?->profile_picture ?? null,
             ],
         ]);
     }
@@ -311,9 +318,10 @@ class PrescriptionController extends Controller
     /** GET /doctor/prescriptions/{prescription}/edit */
     public function doctorEdit(Prescription $prescription): Response
     {
-        /** @var User $doctor */
-        $doctor   = Auth::user();
-        $doctorId = $doctor->doctorId();
+        /** @var User $authUser */
+        $authUser      = Auth::user();
+        $doctorId      = $authUser->doctorId();
+        $doctorProfile = $doctorId ? Doctor::with('user')->find($doctorId) : Doctor::with('user')->first();
         if ($doctorId) {
             abort_unless($prescription->doctor_id === $doctorId, 403);
         }
@@ -326,7 +334,7 @@ class PrescriptionController extends Controller
 
         $prescription->user?->loadMissing('patientProfile');
 
-        $chamber = $doctorId ? Chamber::where('doctor_id', $doctorId)->where('is_active', true)->first() : null;
+        $chamber = $doctorProfile ? (Chamber::where('doctor_id', $doctorProfile->id)->where('is_active', true)->first() ?? Chamber::where('doctor_id', $doctorProfile->id)->first()) : null;
 
         return Inertia::render('doctor/EditPrescription', [
             'prescription' => [
@@ -377,6 +385,15 @@ class PrescriptionController extends Controller
                 'location' => $chamber->location,
                 'phone'    => $chamber->phone,
             ] : null,
+            'doctorInfo' => [
+                'name'           => $doctorProfile?->user?->name,
+                'email'          => $doctorProfile?->user?->email,
+                'phone'          => $doctorProfile?->user?->phone,
+                'specialization' => $doctorProfile?->specialization,
+                'degree'         => $doctorProfile?->degree,
+                'registration_no'=> $doctorProfile?->registration_no,
+                'profile_picture'=> $doctorProfile?->profile_picture ?? null,
+            ],
             'medicines' => Medicine::orderBy('name')->get(['id', 'name', 'strength']),
         ]);
     }

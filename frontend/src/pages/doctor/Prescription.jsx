@@ -654,11 +654,10 @@ export default function Prescription({
     const authUser = page?.props?.auth?.user;
     const isDoctor = String(authUser?.role || '').toLowerCase() === 'doctor';
     const branding = page?.props?.site?.branding || {};
-    const doctorSpecialization = doctorInfo?.specialization || authUser?.specialization || '';
-    const doctorDegree = doctorInfo?.degree || authUser?.degree || '';
+    const doctorSpecialization = doctorInfo?.specialization || '';
+    const doctorDegree = doctorInfo?.degree || '';
     const preferredTemplateType = String(
         doctorInfo?.preferred_template_type
-        || authUser?.preferred_template_type
         || defaultTemplateType
         || 'general',
     ).toLowerCase();
@@ -671,14 +670,13 @@ export default function Prescription({
     const chamberQrSrc = chamberMapUrl
         ? `https://api.qrserver.com/v1/create-qr-code/?size=96x96&data=${encodeURIComponent(chamberMapUrl)}`
         : '';
-    const doctorName = doctorInfo?.user?.name || doctorInfo?.name || '';
-    const doctorPhone = doctorInfo?.phone || doctorInfo?.user?.phone || '';
-    const doctorEmail = doctorInfo?.email || doctorInfo?.user?.email || '';
+    const doctorName = doctorInfo?.name || '';
+    const doctorPhone = doctorInfo?.phone || '';
+    const doctorEmail = doctorInfo?.email || '';
     const doctorLogoSrc =
         branding?.brandLogoUrl ||
         branding?.sidebarLogoUrl ||
         doctorInfo?.profile_picture ||
-        doctorInfo?.user?.profile_picture ||
         '/stethoscope-2.png';
 
     const [state, dispatch] = useReducer(reducer, initialState);
@@ -1809,7 +1807,7 @@ export default function Prescription({
                                                     <input
                                                         className="w-full rounded border border-[#d4e0f0] bg-white px-1.5 py-1 text-xs text-slate-800 placeholder-slate-400 focus:border-[#0b4fa3] focus:outline-none"
                                                         value={state.exam.pulse}
-                                                        readOnly={!isDoctor}
+                                                      
                                                         onChange={(e) => isDoctor && dispatch({
                                                             type: 'setField',
                                                             path: ['exam', 'pulse'],
@@ -1823,7 +1821,7 @@ export default function Prescription({
                                                     <input
                                                         className="w-full rounded border border-[#d4e0f0] bg-white px-1.5 py-1 text-xs text-slate-800 placeholder-slate-400 focus:border-[#0b4fa3] focus:outline-none"
                                                         value={state.exam.bp}
-                                                        readOnly={!isDoctor}
+                                                  
                                                         onChange={(e) => isDoctor && dispatch({
                                                             type: 'setField',
                                                             path: ['exam', 'bp'],
@@ -1837,7 +1835,7 @@ export default function Prescription({
                                                     <input
                                                         className="w-full rounded border border-[#d4e0f0] bg-white px-1.5 py-1 text-xs text-slate-800 placeholder-slate-400 focus:border-[#0b4fa3] focus:outline-none"
                                                         value={state.exam.temperature}
-                                                        readOnly={!isDoctor}
+                                                       
                                                         onChange={(e) => isDoctor && dispatch({
                                                             type: 'setField',
                                                             path: ['exam', 'temperature'],
@@ -1851,7 +1849,7 @@ export default function Prescription({
                                                     <input
                                                         className="w-full rounded border border-[#d4e0f0] bg-white px-1.5 py-1 text-xs text-slate-800 placeholder-slate-400 focus:border-[#0b4fa3] focus:outline-none"
                                                         value={state.exam.weight}
-                                                        readOnly={!isDoctor}
+                                              
                                                         onChange={(e) => isDoctor && dispatch({
                                                             type: 'setField',
                                                             path: ['exam', 'weight'],

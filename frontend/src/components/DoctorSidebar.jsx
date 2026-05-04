@@ -8,7 +8,8 @@ import {
 export default function DoctorSidebar({ currentPath, onClose, collapsed = false, onToggleCollapse }) {
   const { auth, site } = usePage().props;
   const user = auth?.user;
-  const brandName = user?.name || 'Doctor Profile';
+  const publicDoctor = usePage().props.publicDoctor;
+  const brandName = publicDoctor?.name || user?.name || 'Doctor Profile';
   const chamberIconUrl = site?.branding?.chamberIconUrl || null;
 
   const isCompounder = user?.role === 'compounder';

@@ -27,6 +27,8 @@ export default function DoctorProfile({ doctor = {} }) {
     const page = usePage();
     const flash = page?.props?.flash || {};
     const branding = page?.props?.branding || {};
+    const authUser = page?.props?.auth?.user;
+    const isDoctor = String(authUser?.role || '').toLowerCase() === 'doctor';
     const [photoPreview, setPhotoPreview] = useState(doctor.profile_picture || null);
     const [heroPreview, setHeroPreview] = useState(doctor.hero_image || null);
     const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -357,7 +359,7 @@ export default function DoctorProfile({ doctor = {} }) {
             icon: User,
             accent: 'from-[#d6e1fa]/26 to-[#c7d6f7]/16',
         },
-        {
+        ...(isDoctor ? [{
             key: 'about',
             label: 'About Content',
             compactLabel: 'About',
@@ -369,7 +371,7 @@ export default function DoctorProfile({ doctor = {} }) {
             count: `${aboutReadyCount}/10`,
             icon: FileText,
             accent: 'from-[#f0bf97]/28 to-[#e5b894]/18',
-        },
+        }] : []),
     ];
 
     return (
@@ -418,7 +420,7 @@ export default function DoctorProfile({ doctor = {} }) {
                     </div>
                 </div>
             )}
-            {activeTab === 'profile' && (
+            {activeTab === 'profile' && isDoctor && (
                 <div className="space-y-6">
                     <div className="surface-card overflow-hidden rounded-3xl">
                         <div className="relative bg-gradient-to-br from-slate-50 via-white to-slate-100/70 p-8">
@@ -710,7 +712,7 @@ export default function DoctorProfile({ doctor = {} }) {
 
             <form onSubmit={handleSubmit}>
                 {activeTab === 'profile' && (
-                <div className="grid gap-8 lg:grid-cols-2">
+                <div className={`grid gap-8 ${isDoctor ? 'lg:grid-cols-2' : 'grid-cols-1'}`}>
                     {/* Personal Information */}
                     <div className="surface-card rounded-3xl border border-slate-200 p-7 shadow-sm">
                         <div className="mb-6 flex items-center gap-3">
@@ -823,7 +825,7 @@ export default function DoctorProfile({ doctor = {} }) {
                     </div>
 
                     {/* Professional Information */}
-                    <div className="surface-card rounded-3xl border border-slate-200 p-7 shadow-sm">
+                    {isDoctor && (<div className="surface-card rounded-3xl border border-slate-200 p-7 shadow-sm">
                         <div className="mb-6 flex items-center gap-3">
                             <div className="rounded-xl bg-[#edf1fb] p-3">
                                 <Stethoscope className="h-6 w-6 text-[#3556a6]" />
@@ -917,11 +919,11 @@ export default function DoctorProfile({ doctor = {} }) {
                                 </p>
                             </div>
                         </div>
-                    </div>
+                    </div>)}
                 </div>
                 )}
 
-                {activeTab === 'about' && (
+                {isDoctor && activeTab === 'about' && (
                     <div className="surface-card rounded-3xl border border-slate-200 p-7 shadow-sm">
                         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
                           <div className="flex items-center gap-3">
@@ -930,7 +932,7 @@ export default function DoctorProfile({ doctor = {} }) {
                             </div>
                             <div>
                                 <h2 className="text-lg font-semibold text-slate-800">About Section Content</h2>
-                                <p className="text-sm text-slate-500">Homepage About section data manage করুন</p>
+                                <p className="text-sm text-slate-500">Homepage About section data manage </p>
                             </div>
                           </div>
 
