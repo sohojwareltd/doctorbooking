@@ -1,6 +1,6 @@
 import { Head } from '@inertiajs/react';
-import { Edit3, Pill, Plus, Save, Search, Trash2, X } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Edit3, Pill, Plus, Search, Trash2, X, ChevronDown } from 'lucide-react';
+import { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { DocButton, DocEmptyState } from '../../components/doctor/DocUI';
 import DoctorLayout from '../../layouts/DoctorLayout';
@@ -14,7 +14,9 @@ function getCsrfToken() {
 
 export default function DoctorMedicines() {
   const [rows, setRows] = useState([]);
+  const [generics, setGenerics] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingGenerics, setLoadingGenerics] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -27,9 +29,15 @@ export default function DoctorMedicines() {
     to: 0,
   });
   const [modalOpen, setModalOpen] = useState(false);
-  const [form, setForm] = useState({ id: null, name: '', strength: '' });
+  const [form, setForm] = useState({ id: null, name: '', strength: '', generic_id: '' });
+  const [showGenericDropdown, setShowGenericDropdown] = useState(false);
+  const [genericSearch, setGenericSearch] = useState('');
+  const genericDropdownRef = useRef(null);
 
   const isEditing = form.id !== null;
+  const filteredGenerics = generics.filter((generic) =>
+    (generic?.name || '').toLowerCase().includes(genericSearch.trim().toLowerCase()),
+  );
 
   const loadMedicines = async (pageNumber = 1, query = '') => {
     try {
@@ -91,14 +99,50 @@ export default function DoctorMedicines() {
     void loadMedicines(page, searchTerm);
   }, [page, searchTerm]);
 
-  const clearForm = () => setForm({ id: null, name: '', strength: '' });
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (genericDropdownRef.current && !genericDropdownRef.current.contains(e.target)) {
+        setShowGenericDropdown(false);
+      }
+    };
+
+    if (showGenericDropdown && modalOpen) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [showGenericDropdown, modalOpen]);
+
+  const loadGenerics = async () => {
+    try {
+      setLoadingGenerics(true);
+      const res = await fetch('/api/doctor/generics?per_page=999', {
+        headers: { Accept: 'application/json' },
+        credentials: 'same-origin',
+      });
+      if (!res.ok) throw new Error('Failed to load generics');
+      const payload = await res.json();
+      const data = Array.isArray(payload?.data) ? payload.data : [];
+      setGenerics(data);
+    } catch {
+      toastError('Unable to load generics.');
+      setGenerics([]);
+    } finally {
+      setLoadingGenerics(false);
+    }
+  };
+
+  const clearForm = () => setForm({ id: null, name: '', strength: '', generic_id: '' });
   const closeModal = () => {
     setModalOpen(false);
+    setShowGenericDropdown(false);
+    setGenericSearch('');
     clearForm();
   };
 
-  const openCreateModal = () => {
+  const openCreateModal = async () => {
     clearForm();
+    setGenericSearch('');
+    await loadGenerics();
     setModalOpen(true);
   };
 
@@ -127,7 +171,11 @@ export default function DoctorMedicines() {
           'X-Requested-With': 'XMLHttpRequest',
         },
         credentials: 'same-origin',
-        body: JSON.stringify({ name, strength }),
+        body: JSON.stringify({
+          name,
+          strength,
+          generic_id: form.generic_id || null
+        }),
       });
 
       const payload = await res.json().catch(() => ({}));
@@ -146,11 +194,14 @@ export default function DoctorMedicines() {
     }
   };
 
-  const onEdit = (row) => {
+  const onEdit = async (row) => {
+    await loadGenerics();
+    setGenericSearch('');
     setForm({
       id: row.id,
       name: row.name || '',
       strength: row.strength || '',
+      generic_id: row.generic_id || '',
     });
     setModalOpen(true);
   };
@@ -191,183 +242,256 @@ export default function DoctorMedicines() {
     <DoctorLayout title="Medicines">
       <Head title="Medicines" />
 
-      <div className="mx-auto max-w-[1400px] space-y-6">
-        <section className="surface-card rounded-3xl overflow-hidden">
-          <div className="px-6 py-5 border-b border-slate-100 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div>
-              <h2 className="text-xl font-semibold text-[#2D3A74]">Medicine </h2>
-              <p className="text-sm text-slate-500">Create, edit, and remove medicine master data used in prescriptions.</p>
-            </div>
-            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-700">
-              Total: <span className="font-semibold text-slate-900">{pagination.total}</span>
+      <div className="mx-auto max-w-4xl space-y-6">
+        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+          <div className="border-b border-slate-200 px-8 py-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-[#EEF2FF] text-[#2D3A74]">
+                  <Pill className="h-6 w-6" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-semibold text-[#2D3A74]">Medicines Management</h1>
+                  <p className="text-sm text-slate-500">Manage medicines used in prescriptions</p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={openCreateModal}
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#2D3A74] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#243063]"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Add Medicine</span>
+              </button>
             </div>
           </div>
-        </section>
 
-        <div className="grid gap-6">
-          <section className="surface-card rounded-3xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-slate-100 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-400">Medicine List</h2>
-              <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-                <div className="relative w-full sm:w-64">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <input
-                    type="text"
-                    value={searchTerm}
-                    onChange={(e) => {
-                      setSearchTerm(e.target.value);
-                      setPage(1);
-                    }}
-                    placeholder="Search medicine..."
-                    className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm text-slate-900 transition "
-                  />
-                </div>
-                <DocButton type="button" size="sm" onClick={openCreateModal}>
-                  <Plus className="h-4 w-4" /> Add Medicine
-                </DocButton>
-              </div>
+          <div className="px-8 py-6 space-y-4">
+            <div className="relative w-full">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setPage(1);
+                }}
+                placeholder="Search by medicine name or generic..."
+                className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm text-slate-900 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+              />
             </div>
 
-            <div className="p-5">
-              {loading ? (
-                <div className="text-sm text-slate-500">Loading medicines...</div>
-              ) : rows.length === 0 ? (
-                <DocEmptyState icon={Pill} title="No medicines found." description="Click Add Medicine to create your first item." />
-              ) : (
-                <div className="space-y-3">
-                  {rows.map((row) => (
-                    <div
-                      key={row.id}
-                      className="flex w-full items-start justify-between gap-4 rounded-xl border border-slate-200 bg-white px-4 py-3.5 text-sm transition group hover:border-[#d9c2ac] hover:bg-[#fff7f0]"
-                    >
-                      <div className="min-w-0 flex-1 pr-3">
-                        <div className="font-semibold text-slate-800 transition-colors group-hover:text-[#3556a6]">{row.name}</div>
-                        <div className="mt-0.5 text-xs text-slate-500">{row.strength || 'No strength'}</div>
-                      </div>
+            {loading ? (
+              <div className="py-8 text-center text-sm text-slate-500">Loading medicines...</div>
+            ) : rows.length === 0 ? (
+              <DocEmptyState icon={Pill} title="No medicines found." description="Click Add Medicine to create your first item." />
+            ) : (
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-slate-50 text-xs font-semibold text-slate-700 border-b border-slate-200">
+                      <tr>
+                        <th className="px-6 py-4 text-center w-12">SL</th>
+                        <th className="px-6 py-4 text-left">Medicine</th>
+                        <th className="px-6 py-4 text-left">Strength</th>
+                        <th className="px-6 py-4 text-left">Generic</th>
+                        <th className="px-6 py-4 text-right w-28">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 bg-white">
+                      {rows.map((row, index) => (
+                        <tr key={row.id} className="border-b border-slate-100 transition hover:bg-slate-50/60">
+                          <td className="px-6 py-4 text-center text-sm font-medium text-slate-600 bg-slate-50/30">{index + 1}</td>
+                          <td className="px-6 py-4 text-sm font-semibold text-slate-900">{row.name}</td>
+                          <td className="px-6 py-4 text-sm text-slate-600">{row.strength || '—'}</td>
+                          <td className="px-6 py-4 text-sm text-indigo-600 font-medium">{row.generic_name || '—'}</td>
+                          <td className="px-6 py-4 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={() => onEdit(row)}
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-amber-200 bg-amber-50 text-amber-700 transition hover:border-amber-300 hover:bg-amber-100"
+                                title="Edit"
+                                aria-label="Edit"
+                              >
+                                <Edit3 className="h-4 w-4" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => onDelete(row)}
+                                disabled={deletingId === row.id}
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-rose-200 bg-rose-50 text-rose-700 transition hover:border-rose-300 hover:bg-rose-100 disabled:opacity-60"
+                                title="Delete"
+                                aria-label="Delete"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
 
-                      <div className="ml-2 flex shrink-0 items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => onEdit(row)}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-[#d8e2f8] bg-white px-3 py-1.5 text-xs font-semibold text-[#3556a6] transition hover:bg-[#f3f7ff]"
-                        >
-                          <Edit3 className="h-3 w-3" />
-                          Edit
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => onDelete(row)}
-                          disabled={deletingId === row.id}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-[#f2c4c4] bg-[#fff6f6] px-3 py-1.5 text-xs font-semibold text-[#b74444] transition hover:bg-[#ffeaea] disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                          {deletingId === row.id ? 'Deleting...' : 'Delete'}
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-
-                  <div className="flex flex-col gap-3 border-t border-slate-100 pt-4 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      Showing <span className="font-semibold text-slate-900">{pagination.from || 0}-{pagination.to || rows.length}</span> of <span className="font-semibold text-slate-900">{pagination.total}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-                        onClick={() => setPage((current) => Math.max(1, current - 1))}
-                        disabled={loading || page <= 1}
-                      >
-                        Previous
-                      </button>
-                      <span className="text-xs font-semibold text-slate-500">
-                        Page {pagination.currentPage} of {pagination.lastPage}
-                      </span>
-                      <button
-                        type="button"
-                        className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-                        onClick={() => setPage((current) => Math.min(pagination.lastPage, current + 1))}
-                        disabled={loading || page >= pagination.lastPage}
-                      >
-                        Next
-                      </button>
-                    </div>
+                <div className="flex flex-col gap-3 border-t border-slate-200 pt-4 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    Showing <span className="font-semibold text-slate-900">{pagination.from || 0}-{pagination.to || rows.length}</span> of{' '}
+                    <span className="font-semibold text-slate-900">{pagination.total}</span>
                   </div>
-                </div>
-              )}
-            </div>
-          </section>
-        </div>
-
-        {modalOpen && typeof document !== 'undefined'
-          ? createPortal(
-              <div className="fixed inset-0 z-[120] h-screen w-screen bg-slate-900/45">
-                <button
-                  type="button"
-                  className="absolute inset-0"
-                  aria-label="Close modal"
-                  onClick={closeModal}
-                />
-                <div className="fixed left-1/2 top-1/2 z-10 w-[calc(100vw-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-slate-200 bg-white shadow-2xl">
-                  <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-                    <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-500">
-                      {isEditing ? 'Edit Medicine' : 'Add Medicine'}
-                    </h2>
+                  <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={closeModal}
-                      className="rounded-md p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
-                      aria-label="Close modal"
+                      className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      onClick={() => setPage((current) => Math.max(1, current - 1))}
+                      disabled={loading || page <= 1}
                     >
-                      <X className="h-4 w-4" />
+                      Previous
+                    </button>
+                    <span className="text-sm font-semibold text-slate-600">
+                      Page {pagination.currentPage} of {pagination.lastPage}
+                    </span>
+                    <button
+                      type="button"
+                      className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      onClick={() => setPage((current) => Math.min(pagination.lastPage, current + 1))}
+                      disabled={loading || page >= pagination.lastPage}
+                    >
+                      Next
                     </button>
                   </div>
-
-                  <form onSubmit={onSubmit} className="space-y-4 p-5">
-                    <div>
-                      <label className="mb-1.5 block text-sm font-medium text-slate-700">Medicine Name</label>
-                      <div className="relative">
-                        <Pill className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                        <input
-                          type="text"
-                          required
-                          autoFocus
-                          value={form.name}
-                          onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-                          placeholder="e.g. Napa"
-                          className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm text-slate-900 transition "
-                          disabled={saving}
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="mb-1.5 block text-sm font-medium text-slate-700">Strength</label>
-                      <input
-                        type="text"
-                        value={form.strength}
-                        onChange={(e) => setForm((prev) => ({ ...prev, strength: e.target.value }))}
-                        placeholder="e.g. 500mg"
-                        className="w-full rounded-lg border border-slate-200 bg-white py-2.5 px-3 text-sm text-slate-900 transition "
-                        disabled={saving}
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-end gap-2 pt-2">
-                      <DocButton type="button" variant="secondary" size="sm" onClick={closeModal} disabled={saving}>
-                        Cancel
-                      </DocButton>
-                      <DocButton type="submit" size="sm" disabled={saving}>
-                        {saving ? 'Saving...' : isEditing ? <><Save className="h-4 w-4" /> Update</> : <><Plus className="h-4 w-4" /> Add</>}
-                      </DocButton>
-                    </div>
-                  </form>
                 </div>
-              </div>,
-              document.body,
-            )
-          : null}
+              </>
+            )}
+          </div>
+        </section>
       </div>
+
+      {modalOpen && typeof document !== 'undefined'
+        ? createPortal(
+          <div className="fixed inset-0 z-[130] flex items-center justify-center overflow-y-auto bg-[rgba(15,23,42,0.52)] p-4 backdrop-blur-[4px]">
+            <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_24px_60px_-12px_rgba(15,23,42,0.3)]">
+              <div className="flex items-center justify-between border-b border-slate-200 px-8 py-6">
+                <h3 className="text-lg font-semibold text-slate-900">{isEditing ? 'Edit Medicine' : 'Add Medicine'}</h3>
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  className="rounded-lg p-1.5 text-slate-500 transition hover:bg-slate-100"
+                  aria-label="Close modal"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <form onSubmit={onSubmit} className="space-y-6 px-8 py-6">
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-slate-900">Medicine Name *</label>
+                  <div className="relative">
+                    <Pill className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="text"
+                      required
+                      autoFocus
+                      value={form.name}
+                      onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+                      placeholder="e.g. Napa"
+                      className="block w-full rounded-lg border border-slate-200 bg-white py-3 pl-9 pr-4 text-sm text-slate-900 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+                      disabled={saving}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-slate-900">Generic</label>
+                  <div className="relative" ref={genericDropdownRef}>
+                    <button
+                      type="button"
+                      onClick={() => setShowGenericDropdown(!showGenericDropdown)}
+                      disabled={saving || loadingGenerics}
+                      className="flex w-full items-center justify-between rounded-lg border border-slate-200 bg-white py-3 px-4 text-sm text-slate-900 transition hover:border-slate-300 focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20 disabled:opacity-50"
+                    >
+                      <span>
+                        {loadingGenerics ? 'Loading...' : form.generic_id ? generics.find((g) => g.id === parseInt(form.generic_id, 10))?.name || 'Select a generic' : 'Select a generic'}
+                      </span>
+                      <ChevronDown className="h-4 w-4 text-slate-400" />
+                    </button>
+
+                    {showGenericDropdown && (
+                      <div className="absolute top-full left-0 right-0 z-10 mt-2 max-h-48 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg">
+                        <div className="sticky top-0 z-10 border-b border-slate-100 bg-white p-2">
+                          <div className="relative">
+                            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+                            <input
+                              type="text"
+                              value={genericSearch}
+                              onChange={(e) => setGenericSearch(e.target.value)}
+                              placeholder="Search generic..."
+                              className="w-full rounded-md border border-slate-200 py-2 pl-8 pr-3 text-xs text-slate-900 focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+                            />
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setForm((prev) => ({ ...prev, generic_id: '' }));
+                            setShowGenericDropdown(false);
+                          }}
+                          className="w-full px-4 py-3 text-left text-sm hover:bg-slate-50 text-slate-600 font-medium"
+                        >
+                          None
+                        </button>
+                        {filteredGenerics.map((generic) => (
+                          <button
+                            key={generic.id}
+                            type="button"
+                            onClick={() => {
+                              setForm((prev) => ({ ...prev, generic_id: String(generic.id) }));
+                              setShowGenericDropdown(false);
+                            }}
+                            className={`w-full px-4 py-3 text-left text-sm transition ${form.generic_id === String(generic.id)
+                                ? 'bg-[#EEF2FF] text-[#2D3A74] font-semibold'
+                                : 'hover:bg-slate-50 text-slate-700'
+                              }`}
+                          >
+                            {generic.name}
+                          </button>
+                        ))}
+                        {filteredGenerics.length === 0 && (
+                          <div className="px-4 py-3 text-xs text-slate-500">No generic found.</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-slate-900">Strength</label>
+                  <input
+                    type="text"
+                    value={form.strength}
+                    onChange={(e) => setForm((prev) => ({ ...prev, strength: e.target.value }))}
+                    placeholder="e.g. 500mg"
+                    className="block w-full rounded-lg border border-slate-200 bg-white py-3 px-4 text-sm text-slate-900 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+                    disabled={saving}
+                  />
+                </div>
+
+
+
+                <div className="flex items-center justify-end gap-3 border-t border-slate-200 pt-6">
+                  <button type="button" onClick={closeModal} disabled={saving} className="rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-70">
+                    Cancel
+                  </button>
+                  <button type="submit" disabled={saving} className="inline-flex items-center gap-2 rounded-lg bg-[#2D3A74] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#243063] disabled:opacity-70">
+                    {saving ? 'Saving...' : isEditing ? 'Update Medicine' : 'Add Medicine'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>,
+          document.body,
+        )
+        : null}
     </DoctorLayout>
   );
 }

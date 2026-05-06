@@ -648,6 +648,7 @@ class DoctorController extends Controller
                 'medicines.id',
                 'medicines.name',
                 'medicines.strength',
+                'medicines.generic_id',
                 'generics.name as generic_name',
             ])
             ->leftJoin('generics', 'generics.id', '=', 'medicines.generic_id');
@@ -664,7 +665,7 @@ class DoctorController extends Controller
             }
         }
 
-        $builder->orderBy('medicines.name');
+        $builder->orderByDesc('medicines.id');
         if ($exact || $limit !== null) {
             if ($limit !== null) {
                 $builder->limit($limit);
@@ -696,16 +697,18 @@ class DoctorController extends Controller
                 ),
             ],
             'strength' => ['nullable', 'string', 'max:60'],
+            'generic_id' => ['nullable', 'integer', 'exists:generics,id'],
         ]);
 
         $medicine = Medicine::create([
             'name' => $validated['name'],
             'strength' => $validated['strength'] ?? null,
+            'generic_id' => $validated['generic_id'] ?? null,
         ]);
 
         return response()->json([
             'message' => 'Medicine created successfully.',
-            'medicine' => $medicine->only(['id', 'name', 'strength']),
+            'medicine' => $medicine->only(['id', 'name', 'strength', 'generic_id']),
         ], 201);
     }
 
@@ -725,16 +728,18 @@ class DoctorController extends Controller
                 )->ignore($medicine->id),
             ],
             'strength' => ['nullable', 'string', 'max:60'],
+            'generic_id' => ['nullable', 'integer', 'exists:generics,id'],
         ]);
 
         $medicine->update([
             'name' => $validated['name'],
             'strength' => $validated['strength'] ?? null,
+            'generic_id' => $validated['generic_id'] ?? null,
         ]);
 
         return response()->json([
             'message' => 'Medicine updated successfully.',
-            'medicine' => $medicine->only(['id', 'name', 'strength']),
+            'medicine' => $medicine->only(['id', 'name', 'strength', 'generic_id']),
         ]);
     }
 
