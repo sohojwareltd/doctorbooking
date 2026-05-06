@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Link, usePage } from '@inertiajs/react';
 import {
   CalendarDays, ClipboardList, LayoutDashboard, Users, User, UserCog, UserPlus, X,
-  Stethoscope, Globe, CalendarClock, LogOut, ChevronLeft, ChevronRight, ChevronDown, Settings, Pill, FlaskConical
+  Stethoscope, Globe, CalendarClock, LogOut, ChevronLeft, ChevronRight, ChevronDown, Settings, Pill, FlaskConical, Database
 } from 'lucide-react';
 
 export default function DoctorSidebar({ currentPath, onClose, collapsed = false, onToggleCollapse }) {
@@ -17,6 +17,7 @@ export default function DoctorSidebar({ currentPath, onClose, collapsed = false,
   const practiceSettingsItems = [
     { href: '/doctor/chambers', label: 'Chambers', Icon: Stethoscope },
     { href: '/doctor/medicines', label: 'Medicines', Icon: Pill },
+    { href: '/doctor/generics', label: 'Generics', Icon: Database },
     { href: '/doctor/schedule', label: 'Schedule', Icon: CalendarClock },
     { href: '/doctor/profile', label: 'Profile', Icon: UserCog },
   ];

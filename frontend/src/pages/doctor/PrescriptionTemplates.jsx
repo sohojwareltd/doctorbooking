@@ -235,7 +235,7 @@ export default function PrescriptionTemplates() {
     medicineQuerySeqRef.current[rowIndex] = seq;
 
     try {
-      const params = new URLSearchParams({ query: rawName, limit: '8' });
+      const params = new URLSearchParams({ query: rawName, limit: '30' });
       const res = await fetch(`/api/doctor/medicines?${params.toString()}`, {
         headers: { Accept: 'application/json' },
         credentials: 'same-origin',
@@ -547,78 +547,69 @@ export default function PrescriptionTemplates() {
               <div>
                 <label className="mb-1 block text-xs font-semibold text-slate-600">Investigations</label>
                 <div className="rounded-xl border border-slate-200 p-3">
-                    {investigationCatalog.length > 0 ? (
-                      <div className="grid grid-cols-2 gap-1 sm:grid-cols-3">
-                        {investigationCatalog.map((testName) => {
-                          const checked = !!form.investigationCommon?.[testName];
-                          return (
-                            <button
-                              key={testName}
-                              type="button"
-                              className={`flex items-center justify-between gap-2 rounded-md border px-2 py-1 text-left text-xs transition ${checked
-                                ? 'border-[#2D3A74] bg-[#eef2ff] text-[#2D3A74]'
-                                : 'border-transparent text-slate-700 hover:border-slate-200 hover:bg-slate-50'
-                                }`}
-                              onClick={() => toggleInvestigation(testName)}
-                            >
-                              <span className="truncate">{testName}</span>
-                              <span className={`inline-flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border text-[10px] font-bold ${checked
-                                ? 'border-[#2D3A74] bg-[#2D3A74] text-white'
-                                : 'border-slate-300 bg-white text-transparent'
-                                }`}
-                              >
-                                ✓
-                              </span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <p className="text-xs text-slate-500">No investigation tests found.</p>
-                    )}
-
-                    <div className="mt-3 space-y-1">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Additional tests</p>
-                      {(form.investigationCustom || []).map((row, index) => (
-                        <div key={`custom-investigation-${index}`} className="flex items-center gap-2">
-                          <input
-                            type="text"
-                            value={row}
-                            onChange={(e) => updateCustomInvestigation(index, e.target.value)}
-                            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
-                            placeholder="Custom investigation"
-                          />
+                  {investigationCatalog.length > 0 ? (
+                    <div className="grid grid-cols-2 gap-1 sm:grid-cols-3">
+                      {investigationCatalog.map((testName) => {
+                        const checked = !!form.investigationCommon?.[testName];
+                        return (
                           <button
+                            key={testName}
                             type="button"
-                            onClick={() => removeCustomInvestigation(index)}
-                            className="inline-flex h-[38px] w-[38px] items-center justify-center rounded-lg border border-rose-200 bg-rose-50 text-rose-700"
-                            title="Remove"
+                            className={`flex items-center justify-between gap-2 rounded-md border px-2 py-1 text-left text-xs transition ${checked
+                              ? 'border-[#2D3A74] bg-[#eef2ff] text-[#2D3A74]'
+                              : 'border-transparent text-slate-700 hover:border-slate-200 hover:bg-slate-50'
+                              }`}
+                            onClick={() => toggleInvestigation(testName)}
                           >
-                            <Trash2 className="h-3.5 w-3.5" />
+                            <span className="truncate">{testName}</span>
+                            <span className={`inline-flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border text-[10px] font-bold ${checked
+                              ? 'border-[#2D3A74] bg-[#2D3A74] text-white'
+                              : 'border-slate-300 bg-white text-transparent'
+                              }`}
+                            >
+                              ✓
+                            </span>
                           </button>
-                        </div>
-                      ))}
-                      <button
-                        type="button"
-                        onClick={addCustomInvestigation}
-                        className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
-                      >
-                        <Plus className="h-3 w-3" /> Add custom
-                      </button>
+                        );
+                      })}
                     </div>
+                  ) : (
+                    <p className="text-xs text-slate-500">No investigation tests found.</p>
+                  )}
+
+                  <div className="mt-3 space-y-1">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Additional tests</p>
+                    {(form.investigationCustom || []).map((row, index) => (
+                      <div key={`custom-investigation-${index}`} className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={row}
+                          onChange={(e) => updateCustomInvestigation(index, e.target.value)}
+                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                          placeholder="Custom investigation"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeCustomInvestigation(index)}
+                          className="inline-flex h-[38px] w-[38px] items-center justify-center rounded-lg border border-rose-200 bg-rose-50 text-rose-700"
+                          title="Remove"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={addCustomInvestigation}
+                      className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                    >
+                      <Plus className="h-3 w-3" /> Add custom
+                    </button>
                   </div>
                 </div>
-
-              <div>
-                <label className="mb-1 block text-xs font-semibold text-slate-600">Advice</label>
-                <textarea
-                  rows={5}
-                  value={form.instructions}
-                  onChange={(e) => setForm((prev) => ({ ...prev, instructions: e.target.value }))}
-                  className="block w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
-                  placeholder={'e.g. Exercise regularly, light diet, adequate rest…'}
-                />
               </div>
+
+
 
               <div className="rounded-xl border border-slate-200 p-3">
                 <div className="mb-2 flex items-center justify-between">
@@ -655,8 +646,8 @@ export default function PrescriptionTemplates() {
                           placeholder="Medicine"
                         />
                         {focusedMedicineIndex === index && (medicineMatchesByRow[index] || []).length > 0 ? (
-                          <div className="absolute left-0 right-0 z-20 mt-1 rounded-md border border-[#c7d6f7] bg-white shadow-lg">
-                            {(medicineMatchesByRow[index] || []).slice(0, 8).map((med, optionIndex) => (
+                          <div className="absolute left-0 right-0 z-20 mt-1 max-h-64 overflow-y-auto overscroll-contain rounded-md border border-[#c7d6f7] bg-white shadow-lg">
+                            {(medicineMatchesByRow[index] || []).map((med, optionIndex) => (
                               <button
                                 key={`${med.id ?? med.name}-${med.strength}-${optionIndex}`}
                                 type="button"
@@ -708,8 +699,18 @@ export default function PrescriptionTemplates() {
                     </div>
                   ))}
                 </div>
-              </div>
 
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-slate-600">Advice</label>
+                <textarea
+                  rows={5}
+                  value={form.instructions}
+                  onChange={(e) => setForm((prev) => ({ ...prev, instructions: e.target.value }))}
+                  className="block w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+                  placeholder={'e.g. Exercise regularly, light diet, adequate rest…'}
+                />
+              </div>
               <div className="flex items-center justify-end gap-2 border-t border-slate-100 pt-3">
                 <button type="button" onClick={closeModal} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
                   Cancel

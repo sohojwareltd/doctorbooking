@@ -1027,10 +1027,12 @@ export default function Prescription({
                     id: med.id,
                     name: med.name || '',
                     strength: med.strength || '',
+                       generic_name: med.generic_name || '',
                 }))
                 : [];
 
             // Exact matches first, then starts-with, then rest
+               // Sort: exact name > starts-with name > generic match > rest
             const matches = [...raw].sort((a, b) => {
                 const aN = normalizeMedicineName(a.name);
                 const bN = normalizeMedicineName(b.name);

@@ -9,6 +9,7 @@ use App\Models\Appointment;
 use App\Models\DoctorSchedule;
 use App\Models\DoctorScheduleRange;
 use App\Models\DoctorUnavailableRange;
+use App\Models\Generic;
 use App\Models\Medicine;
 use App\Models\Prescription;
 use App\Models\Role;
@@ -642,18 +643,28 @@ class DoctorController extends Controller
         $limit = array_key_exists('limit', $validated) ? (int) $validated['limit'] : null;
         $perPage = array_key_exists('per_page', $validated) ? (int) $validated['per_page'] : 10;
 
-        $builder = Medicine::query()->select(['id', 'name', 'strength']);
+        $builder = Medicine::query()
+            ->select([
+                'medicines.id',
+                'medicines.name',
+                'medicines.strength',
+                'generics.name as generic_name',
+            ])
+            ->leftJoin('generics', 'generics.id', '=', 'medicines.generic_id');
 
         if ($query !== '') {
             $normalized = preg_replace('/\s+/', ' ', Str::lower($query));
             if ($exact) {
-                $builder->whereRaw('LOWER(TRIM(name)) = ?', [$normalized]);
+                $builder->whereRaw('LOWER(TRIM(medicines.name)) = ?', [$normalized]);
             } else {
-                $builder->where('name', 'like', '%' . $query . '%');
+                $builder->where(function ($q) use ($query) {
+                    $q->where('medicines.name', 'like', '%' . $query . '%')
+                      ->orWhere('generics.name', 'like', '%' . $query . '%');
+                });
             }
         }
 
-        $builder->orderBy('name');
+        $builder->orderBy('medicines.name');
         if ($exact || $limit !== null) {
             if ($limit !== null) {
                 $builder->limit($limit);
@@ -734,6 +745,80 @@ class DoctorController extends Controller
 
         return response()->json([
             'message' => 'Medicine deleted successfully.',
+        ]);
+    }
+
+    public function generics(Request $request): JsonResponse
+    {
+        $query = trim((string) ($request->input('query') ?? ''));
+        $limit = $request->input('limit') ? (int) $request->input('limit') : null;
+        $perPage = $request->input('per_page') ? (int) $request->input('per_page') : 15;
+
+        $builder = Generic::query()->select(['id', 'name', 'descriptions']);
+
+        if ($query !== '') {
+            $builder->where('name', 'like', '%' . $query . '%')
+                    ->orWhere('descriptions', 'like', '%' . $query . '%');
+        }
+
+        $builder->orderBy('name');
+
+        if ($limit !== null) {
+            $builder->limit($limit);
+            return response()->json($builder->get());
+        }
+
+        $paginator = $builder->paginate($perPage)->appends($request->query());
+        return response()->json($paginator);
+    }
+
+    public function storeGeneric(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255', 'unique:generics,name'],
+            'descriptions' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $generic = Generic::create([
+            'name' => $validated['name'],
+            'descriptions' => $validated['descriptions'] ?? null,
+        ]);
+
+        return response()->json([
+            'message' => 'Generic created successfully.',
+            'generic' => $generic,
+        ], 201);
+    }
+
+    public function updateGeneric(Request $request, Generic $generic): JsonResponse
+    {
+        $validated = $request->validate([
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('generics', 'name')->ignore($generic->id),
+            ],
+            'descriptions' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $generic->update([
+            'name' => $validated['name'],
+            'descriptions' => $validated['descriptions'] ?? null,
+        ]);
+
+        return response()->json([
+            'message' => 'Generic updated successfully.',
+            'generic' => $generic,
+        ]);
+    }
+
+    public function destroyGeneric(Generic $generic): JsonResponse
+    {
+        $generic->delete();
+
+        return response()->json([
+            'message' => 'Generic deleted successfully.',
         ]);
     }
 

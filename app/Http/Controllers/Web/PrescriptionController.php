@@ -410,6 +410,11 @@ class PrescriptionController extends Controller
         return Inertia::render('doctor/PrescriptionTemplates');
     }
 
+    public function doctorGenerics(): Response
+    {
+        return Inertia::render('doctor/Generics');
+    }
+
     /** POST /doctor/prescriptions — delegate to API controller */
     public function doctorStore(Request $request): mixed
     {

@@ -74,8 +74,8 @@ export default function PrescriptionMedicineSection({
                     placeholder="Medicine"
                   />
                   {showMedicineMatchDropdown ? (
-                    <div className="absolute left-0 right-0 z-20 mt-1 rounded-md border border-[#c7d6f7] bg-white shadow-lg">
-                      {matchedSuggestions.slice(0, 8).map((med, optionIdx) => (
+                    <div className="absolute left-0 right-0 z-20 mt-1 max-h-64 overflow-y-auto overscroll-contain rounded-md border border-[#c7d6f7] bg-white shadow-lg">
+                      {matchedSuggestions.map((med, optionIdx) => (
                         <button
                           key={`${med.id ?? med.name}-${med.strength}-${optionIdx}`}
                           type="button"
@@ -86,8 +86,13 @@ export default function PrescriptionMedicineSection({
                             setFocusedMedicineIndex?.(null);
                           }}
                         >
-                          <span className="font-semibold text-slate-800">{med.name}</span>
-                          <span className="text-slate-500">{med.strength || 'No strength'}</span>
+                           <span className="flex flex-col gap-0.5">
+                             <span className="font-semibold text-slate-800">{med.name}</span>
+                             {med.generic_name ? (
+                               <span className="text-[10px] text-indigo-500 font-medium">{med.generic_name}</span>
+                             ) : null}
+                           </span>
+                           <span className="text-slate-500 shrink-0 ml-2">{med.strength || 'No strength'}</span>
                         </button>
                       ))}
                     </div>
