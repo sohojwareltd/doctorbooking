@@ -151,6 +151,7 @@ Route::middleware(['auth:sanctum', 'role:doctor,compounder'])
         Route::post('/generics', [DoctorController::class, 'storeGeneric'])->middleware('role:doctor');
         Route::put('/generics/{generic}', [DoctorController::class, 'updateGeneric'])->middleware('role:doctor');
         Route::delete('/generics/{generic}', [DoctorController::class, 'destroyGeneric'])->middleware('role:doctor');
+        Route::get('/suppliers', [DoctorController::class, 'suppliers']);
         Route::get('/profile', [DoctorController::class, 'profile']);
         Route::put('/profile', [DoctorController::class, 'updateProfile']);
     });

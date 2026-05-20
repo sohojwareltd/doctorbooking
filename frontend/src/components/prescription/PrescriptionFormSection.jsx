@@ -79,20 +79,22 @@ export default function PrescriptionMedicineSection({
                         <button
                           key={`${med.id ?? med.name}-${med.strength}-${optionIdx}`}
                           type="button"
-                          className="flex w-full items-center justify-between border-b border-slate-100 px-3 py-2 text-left text-xs last:border-b-0 hover:bg-[#edf2ff]"
+                          className="w-full border-b border-slate-100 px-3 py-2 text-left text-xs last:border-b-0 hover:bg-[#edf2ff]"
                           onMouseDown={(event) => {
                             event.preventDefault();
                             onSelectSuggestion?.(idx, med);
                             setFocusedMedicineIndex?.(null);
                           }}
                         >
-                           <span className="flex flex-col gap-0.5">
-                             <span className="font-semibold text-slate-800">{med.name}</span>
-                             {med.generic_name ? (
-                               <span className="text-[10px] text-indigo-500 font-medium">{med.generic_name}</span>
-                             ) : null}
-                           </span>
-                           <span className="text-slate-500 shrink-0 ml-2">{med.strength || 'No strength'}</span>
+                          <div className="flex items-start justify-between gap-3">
+                            <span className="font-semibold text-slate-800">{med.name}</span>
+                            <span className="shrink-0 text-slate-500">{med.strength || 'No strength'}</span>
+                          </div>
+                          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-slate-500">
+                            <span>Generic: {med.generic_name || 'N/A'}</span>
+                            <span className="text-slate-300">|</span>
+                            <span>Supplier: {med.supplier_name || 'N/A'}</span>
+                          </div>
                         </button>
                       ))}
                     </div>

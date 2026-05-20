@@ -13,6 +13,7 @@ use App\Models\Generic;
 use App\Models\Medicine;
 use App\Models\Prescription;
 use App\Models\Role;
+use App\Models\Supplier;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -649,9 +650,12 @@ class DoctorController extends Controller
                 'medicines.name',
                 'medicines.strength',
                 'medicines.generic_id',
+                'medicines.supplier_id',
                 'generics.name as generic_name',
+                'suppliers.name as supplier_name',
             ])
-            ->leftJoin('generics', 'generics.id', '=', 'medicines.generic_id');
+            ->leftJoin('generics', 'generics.id', '=', 'medicines.generic_id')
+            ->leftJoin('suppliers', 'suppliers.id', '=', 'medicines.supplier_id');
 
         if ($query !== '') {
             $normalized = preg_replace('/\s+/', ' ', Str::lower($query));
@@ -660,7 +664,8 @@ class DoctorController extends Controller
             } else {
                 $builder->where(function ($q) use ($query) {
                     $q->where('medicines.name', 'like', '%' . $query . '%')
-                      ->orWhere('generics.name', 'like', '%' . $query . '%');
+                      ->orWhere('generics.name', 'like', '%' . $query . '%')
+                      ->orWhere('suppliers.name', 'like', '%' . $query . '%');
                 });
             }
         }
@@ -698,17 +703,19 @@ class DoctorController extends Controller
             ],
             'strength' => ['nullable', 'string', 'max:60'],
             'generic_id' => ['nullable', 'integer', 'exists:generics,id'],
+            'supplier_id' => ['nullable', 'integer', 'exists:suppliers,id'],
         ]);
 
         $medicine = Medicine::create([
             'name' => $validated['name'],
             'strength' => $validated['strength'] ?? null,
             'generic_id' => $validated['generic_id'] ?? null,
+            'supplier_id' => $validated['supplier_id'] ?? null,
         ]);
 
         return response()->json([
             'message' => 'Medicine created successfully.',
-            'medicine' => $medicine->only(['id', 'name', 'strength', 'generic_id']),
+            'medicine' => $medicine->only(['id', 'name', 'strength', 'generic_id', 'supplier_id']),
         ], 201);
     }
 
@@ -729,17 +736,19 @@ class DoctorController extends Controller
             ],
             'strength' => ['nullable', 'string', 'max:60'],
             'generic_id' => ['nullable', 'integer', 'exists:generics,id'],
+            'supplier_id' => ['nullable', 'integer', 'exists:suppliers,id'],
         ]);
 
         $medicine->update([
             'name' => $validated['name'],
             'strength' => $validated['strength'] ?? null,
             'generic_id' => $validated['generic_id'] ?? null,
+            'supplier_id' => $validated['supplier_id'] ?? null,
         ]);
 
         return response()->json([
             'message' => 'Medicine updated successfully.',
-            'medicine' => $medicine->only(['id', 'name', 'strength', 'generic_id']),
+            'medicine' => $medicine->only(['id', 'name', 'strength', 'generic_id', 'supplier_id']),
         ]);
     }
 
@@ -825,6 +834,29 @@ class DoctorController extends Controller
         return response()->json([
             'message' => 'Generic deleted successfully.',
         ]);
+    }
+
+    public function suppliers(Request $request): JsonResponse
+    {
+        $query = trim((string) ($request->input('query') ?? ''));
+        $limit = $request->input('limit') ? (int) $request->input('limit') : null;
+        $perPage = $request->input('per_page') ? (int) $request->input('per_page') : 15;
+
+        $builder = Supplier::query()->select(['id', 'name']);
+
+        if ($query !== '') {
+            $builder->where('name', 'like', '%' . $query . '%');
+        }
+
+        $builder->orderBy('name');
+
+        if ($limit !== null) {
+            $builder->limit($limit);
+            return response()->json($builder->get());
+        }
+
+        $paginator = $builder->paginate($perPage)->appends($request->query());
+        return response()->json($paginator);
     }
 
     // ── Walk-in appointment ───────────────────────────────────────────────────

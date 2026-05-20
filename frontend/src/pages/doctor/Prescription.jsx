@@ -989,20 +989,6 @@ export default function Prescription({
         const cached = medicineMatchCacheRef.current.get(normalized);
         if (cached) {
             setMedicineMatchesByRow((prev) => ({ ...prev, [rowIndex]: cached }));
-            const exactCachedMatch = cached.find(
-                (item) => normalizeMedicineName(item.name) === normalized,
-            );
-            if (exactCachedMatch) {
-                dispatch({
-                    type: 'setArrayItem',
-                    path: ['medicines'],
-                    index: rowIndex,
-                    patch: {
-                        name: buildMedicineWithStrength(exactCachedMatch.name, exactCachedMatch.strength) || String(rawName || '').trim(),
-                        strength: String(exactCachedMatch.strength || '').trim(),
-                    },
-                });
-            }
             return;
         }
 
@@ -1027,7 +1013,8 @@ export default function Prescription({
                     id: med.id,
                     name: med.name || '',
                     strength: med.strength || '',
-                       generic_name: med.generic_name || '',
+                    generic_name: med.generic_name || '',
+                    supplier_name: med.supplier_name || '',
                 }))
                 : [];
 
@@ -1043,22 +1030,6 @@ export default function Prescription({
 
             medicineMatchCacheRef.current.set(normalized, matches);
             setMedicineMatchesByRow((prev) => ({ ...prev, [rowIndex]: matches }));
-
-            const exactMatch = matches.find(
-                (item) => normalizeMedicineName(item.name) === normalized,
-            );
-
-            if (exactMatch) {
-                dispatch({
-                    type: 'setArrayItem',
-                    path: ['medicines'],
-                    index: rowIndex,
-                    patch: {
-                        name: buildMedicineWithStrength(exactMatch.name, exactMatch.strength) || String(rawName || '').trim(),
-                        strength: String(exactMatch.strength || '').trim(),
-                    },
-                });
-            }
         } catch {
             if (medicineQuerySeqRef.current[rowIndex] !== seq) return;
             setMedicineMatchesByRow((prev) => ({ ...prev, [rowIndex]: [] }));

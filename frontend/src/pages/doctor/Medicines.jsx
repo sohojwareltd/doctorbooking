@@ -15,8 +15,10 @@ function getCsrfToken() {
 export default function DoctorMedicines() {
   const [rows, setRows] = useState([]);
   const [generics, setGenerics] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingGenerics, setLoadingGenerics] = useState(false);
+  const [loadingSuppliers, setLoadingSuppliers] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -29,14 +31,20 @@ export default function DoctorMedicines() {
     to: 0,
   });
   const [modalOpen, setModalOpen] = useState(false);
-  const [form, setForm] = useState({ id: null, name: '', strength: '', generic_id: '' });
+  const [form, setForm] = useState({ id: null, name: '', strength: '', generic_id: '', supplier_id: '' });
   const [showGenericDropdown, setShowGenericDropdown] = useState(false);
   const [genericSearch, setGenericSearch] = useState('');
+  const [showSupplierDropdown, setShowSupplierDropdown] = useState(false);
+  const [supplierSearch, setSupplierSearch] = useState('');
   const genericDropdownRef = useRef(null);
+  const supplierDropdownRef = useRef(null);
 
   const isEditing = form.id !== null;
   const filteredGenerics = generics.filter((generic) =>
     (generic?.name || '').toLowerCase().includes(genericSearch.trim().toLowerCase()),
+  );
+  const filteredSuppliers = suppliers.filter((supplier) =>
+    (supplier?.name || '').toLowerCase().includes(supplierSearch.trim().toLowerCase()),
   );
 
   const loadMedicines = async (pageNumber = 1, query = '') => {
@@ -104,13 +112,16 @@ export default function DoctorMedicines() {
       if (genericDropdownRef.current && !genericDropdownRef.current.contains(e.target)) {
         setShowGenericDropdown(false);
       }
+      if (supplierDropdownRef.current && !supplierDropdownRef.current.contains(e.target)) {
+        setShowSupplierDropdown(false);
+      }
     };
 
-    if (showGenericDropdown && modalOpen) {
+    if ((showGenericDropdown || showSupplierDropdown) && modalOpen) {
       document.addEventListener('click', handleClickOutside);
       return () => document.removeEventListener('click', handleClickOutside);
     }
-  }, [showGenericDropdown, modalOpen]);
+  }, [showGenericDropdown, showSupplierDropdown, modalOpen]);
 
   const loadGenerics = async () => {
     try {
@@ -131,18 +142,40 @@ export default function DoctorMedicines() {
     }
   };
 
-  const clearForm = () => setForm({ id: null, name: '', strength: '', generic_id: '' });
+  const loadSuppliers = async () => {
+    try {
+      setLoadingSuppliers(true);
+      const res = await fetch('/api/doctor/suppliers?per_page=999', {
+        headers: { Accept: 'application/json' },
+        credentials: 'same-origin',
+      });
+      if (!res.ok) throw new Error('Failed to load suppliers');
+      const payload = await res.json();
+      const data = Array.isArray(payload?.data) ? payload.data : [];
+      setSuppliers(data);
+    } catch {
+      toastError('Unable to load suppliers.');
+      setSuppliers([]);
+    } finally {
+      setLoadingSuppliers(false);
+    }
+  };
+
+  const clearForm = () => setForm({ id: null, name: '', strength: '', generic_id: '', supplier_id: '' });
   const closeModal = () => {
     setModalOpen(false);
     setShowGenericDropdown(false);
+    setShowSupplierDropdown(false);
     setGenericSearch('');
+    setSupplierSearch('');
     clearForm();
   };
 
   const openCreateModal = async () => {
     clearForm();
     setGenericSearch('');
-    await loadGenerics();
+    setSupplierSearch('');
+    await Promise.all([loadGenerics(), loadSuppliers()]);
     setModalOpen(true);
   };
 
@@ -174,7 +207,8 @@ export default function DoctorMedicines() {
         body: JSON.stringify({
           name,
           strength,
-          generic_id: form.generic_id || null
+          generic_id: form.generic_id || null,
+          supplier_id: form.supplier_id || null,
         }),
       });
 
@@ -195,13 +229,15 @@ export default function DoctorMedicines() {
   };
 
   const onEdit = async (row) => {
-    await loadGenerics();
+    await Promise.all([loadGenerics(), loadSuppliers()]);
     setGenericSearch('');
+    setSupplierSearch('');
     setForm({
       id: row.id,
       name: row.name || '',
       strength: row.strength || '',
       generic_id: row.generic_id || '',
+      supplier_id: row.supplier_id || '',
     });
     setModalOpen(true);
   };
@@ -277,7 +313,7 @@ export default function DoctorMedicines() {
                   setSearchTerm(e.target.value);
                   setPage(1);
                 }}
-                placeholder="Search by medicine name or generic..."
+                placeholder="Search by medicine, generic, or supplier..."
                 className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm text-slate-900 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
               />
             </div>
@@ -296,6 +332,7 @@ export default function DoctorMedicines() {
                         <th className="px-6 py-4 text-left">Medicine</th>
                         <th className="px-6 py-4 text-left">Strength</th>
                         <th className="px-6 py-4 text-left">Generic</th>
+                        <th className="px-6 py-4 text-left">Supplier</th>
                         <th className="px-6 py-4 text-right w-28">Actions</th>
                       </tr>
                     </thead>
@@ -306,6 +343,7 @@ export default function DoctorMedicines() {
                           <td className="px-6 py-4 text-sm font-semibold text-slate-900">{row.name}</td>
                           <td className="px-6 py-4 text-sm text-slate-600">{row.strength || '—'}</td>
                           <td className="px-6 py-4 text-sm text-indigo-600 font-medium">{row.generic_name || '—'}</td>
+                          <td className="px-6 py-4 text-sm text-slate-700 font-medium">{row.supplier_name || '—'}</td>
                           <td className="px-6 py-4 text-right">
                             <div className="flex items-center justify-end gap-2">
                               <button
@@ -458,6 +496,69 @@ export default function DoctorMedicines() {
                         ))}
                         {filteredGenerics.length === 0 && (
                           <div className="px-4 py-3 text-xs text-slate-500">No generic found.</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-slate-900">Supplier</label>
+                  <div className="relative" ref={supplierDropdownRef}>
+                    <button
+                      type="button"
+                      onClick={() => setShowSupplierDropdown(!showSupplierDropdown)}
+                      disabled={saving || loadingSuppliers}
+                      className="flex w-full items-center justify-between rounded-lg border border-slate-200 bg-white py-3 px-4 text-sm text-slate-900 transition hover:border-slate-300 focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20 disabled:opacity-50"
+                    >
+                      <span>
+                        {loadingSuppliers ? 'Loading...' : form.supplier_id ? suppliers.find((s) => s.id === parseInt(form.supplier_id, 10))?.name || 'Select a supplier' : 'Select a supplier'}
+                      </span>
+                      <ChevronDown className="h-4 w-4 text-slate-400" />
+                    </button>
+
+                    {showSupplierDropdown && (
+                      <div className="absolute top-full left-0 right-0 z-10 mt-2 max-h-48 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg">
+                        <div className="sticky top-0 z-10 border-b border-slate-100 bg-white p-2">
+                          <div className="relative">
+                            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+                            <input
+                              type="text"
+                              value={supplierSearch}
+                              onChange={(e) => setSupplierSearch(e.target.value)}
+                              placeholder="Search supplier..."
+                              className="w-full rounded-md border border-slate-200 py-2 pl-8 pr-3 text-xs text-slate-900 focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+                            />
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setForm((prev) => ({ ...prev, supplier_id: '' }));
+                            setShowSupplierDropdown(false);
+                          }}
+                          className="w-full px-4 py-3 text-left text-sm hover:bg-slate-50 text-slate-600 font-medium"
+                        >
+                          None
+                        </button>
+                        {filteredSuppliers.map((supplier) => (
+                          <button
+                            key={supplier.id}
+                            type="button"
+                            onClick={() => {
+                              setForm((prev) => ({ ...prev, supplier_id: String(supplier.id) }));
+                              setShowSupplierDropdown(false);
+                            }}
+                            className={`w-full px-4 py-3 text-left text-sm transition ${form.supplier_id === String(supplier.id)
+                                ? 'bg-[#EEF2FF] text-[#2D3A74] font-semibold'
+                                : 'hover:bg-slate-50 text-slate-700'
+                              }`}
+                          >
+                            {supplier.name}
+                          </button>
+                        ))}
+                        {filteredSuppliers.length === 0 && (
+                          <div className="px-4 py-3 text-xs text-slate-500">No supplier found.</div>
                         )}
                       </div>
                     )}

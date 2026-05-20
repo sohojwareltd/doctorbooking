@@ -248,6 +248,8 @@ export default function PrescriptionTemplates() {
         ? data.map((item) => ({
           id: item.id,
           name: String(item.name || '').trim(),
+          generic_name: String(item.generic_name || '').trim(),
+          supplier_name: String(item.supplier_name || '').trim(),
           strength: String(item.strength || '').trim(),
         }))
         : [];
@@ -651,7 +653,7 @@ export default function PrescriptionTemplates() {
                               <button
                                 key={`${med.id ?? med.name}-${med.strength}-${optionIndex}`}
                                 type="button"
-                                className="flex w-full items-center justify-between border-b border-slate-100 px-3 py-2 text-left text-xs last:border-b-0 hover:bg-[#edf2ff]"
+                                className="w-full border-b border-slate-100 px-3 py-2 text-left text-xs last:border-b-0 hover:bg-[#edf2ff]"
                                 onMouseDown={(event) => {
                                   event.preventDefault();
                                   updateMedicineRow(index, {
@@ -660,8 +662,15 @@ export default function PrescriptionTemplates() {
                                   setFocusedMedicineIndex(null);
                                 }}
                               >
-                                <span className="font-semibold text-slate-800">{med.name}</span>
-                                <span className="text-slate-500">{med.strength || 'No strength'}</span>
+                                <div className="flex items-start justify-between gap-3">
+                                  <span className="font-semibold text-slate-800">{med.name}</span>
+                                  <span className="text-slate-500">{med.strength || 'No strength'}</span>
+                                </div>
+                                <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-slate-500">
+                                  <span>Generic: {med.generic_name || 'N/A'}</span>
+                                  <span className="text-slate-300">|</span>
+                                  <span>Supplier: {med.supplier_name || 'N/A'}</span>
+                                </div>
                               </button>
                             ))}
                           </div>
