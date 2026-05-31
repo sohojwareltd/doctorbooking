@@ -108,4 +108,8 @@ class PublicController extends Controller
 
         return Inertia::render('public/BookAppointment');
     }
+    public function purchase()
+    {
+        return view('purchase');
+    }
 }
