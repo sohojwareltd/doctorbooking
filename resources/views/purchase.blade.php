@@ -10,6 +10,7 @@
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
 
 	<style>
 		:root {
@@ -46,7 +47,7 @@
 		}
 
 		.hero {
-			padding: 22px 0 18px;
+			padding: 28px 0 28px;
 		}
 
 		.pill {
@@ -166,7 +167,11 @@
 		}
 
 		.section {
-			padding: 26px 0 4px;
+			padding: 44px 0 10px;
+		}
+
+		.section:first-of-type {
+			padding-top: 16px;
 		}
 
 		h2 {
@@ -183,7 +188,7 @@
 		}
 
 		.grid {
-			margin-top: 16px;
+			margin-top: 22px;
 			display: grid;
 			gap: 12px;
 			grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -194,6 +199,7 @@
 			border-radius: var(--radius);
 			padding: 18px;
 			background: var(--surface);
+			box-shadow: 0 8px 22px rgba(16, 34, 27, 0.04);
 		}
 
 		.card h3 {
@@ -249,11 +255,11 @@
 		}
 
 		.cta-box {
-			margin-top: 20px;
+			margin-top: 28px;
 			border: 1px solid #cde3d8;
 			background: linear-gradient(160deg, #f7fcf9 0%, #edf7f2 100%);
 			border-radius: 20px;
-			padding: 20px;
+			padding: 24px;
 		}
 
 		.cta-box h3 {
@@ -263,6 +269,215 @@
 
 		.cta-box p {
 			margin: 8px 0 0;
+			color: var(--muted);
+		}
+
+		.hero-preview {
+			margin-top: 22px;
+			background: rgba(255, 255, 255, 0.8);
+			border: 1px solid var(--line);
+			border-radius: 22px;
+			padding: 14px;
+			box-shadow: var(--shadow);
+		}
+
+		.hero-preview-button {
+			width: 100%;
+			padding: 0;
+			border: 0;
+			background: transparent;
+			cursor: zoom-in;
+		}
+
+		.hero-preview img {
+			display: block;
+			width: 100%;
+			border-radius: 16px;
+			transition: transform 0.25s ease;
+		}
+
+		.hero-preview-button:hover img,
+		.hero-preview-button:focus-visible img {
+			transform: scale(1.01);
+		}
+
+		.gallery-shell {
+			margin-top: 24px;
+			padding: 18px;
+			background: linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(249, 252, 250, 0.98) 100%);
+			border: 1px solid var(--line);
+			border-radius: 22px;
+			box-shadow: var(--shadow);
+		}
+
+		.gallery-lead {
+			margin-top: 6px;
+			margin-bottom: 0;
+		}
+
+		.gallery-tile {
+			position: relative;
+			display: block;
+			width: 100%;
+			padding: 0;
+			border: 0;
+			border-radius: 18px;
+			overflow: hidden;
+			background: #fff;
+			box-shadow: 0 10px 24px rgba(16, 34, 27, 0.08);
+			cursor: pointer;
+		}
+
+		.gallery-tile img {
+			display: block;
+			width: 100%;
+			height: 100%;
+			aspect-ratio: 4 / 5;
+			object-fit: cover;
+			transition: transform 0.28s ease;
+		}
+
+		.gallery-tile:hover img,
+		.gallery-tile:focus-visible img {
+			transform: scale(1.05);
+		}
+
+		.gallery-tile-label {
+			position: absolute;
+			left: 12px;
+			bottom: 12px;
+			padding: 7px 10px;
+			border-radius: 999px;
+			background: rgba(16, 34, 27, 0.7);
+			color: #fff;
+			font-size: 13px;
+			font-weight: 600;
+		}
+
+		.modal-content.gallery-modal {
+			border: 0;
+			border-radius: 22px;
+			overflow: hidden;
+			background: linear-gradient(180deg, #0f1e18 0%, #152922 100%);
+		}
+
+		.gallery-modal .modal-header {
+			border: 0;
+			padding: 14px 16px 8px;
+		}
+
+		.gallery-modal .modal-title {
+			color: #eff9f4;
+			font-size: 18px;
+			font-weight: 700;
+		}
+
+		.gallery-modal .btn-close {
+			filter: invert(1);
+			opacity: 0.85;
+		}
+
+		.gallery-stage {
+			padding: 0 14px 14px;
+		}
+
+		.gallery-stage-frame {
+			position: relative;
+			background: #08120f;
+			border-radius: 18px;
+			overflow: hidden;
+			padding: 8px;
+		}
+
+		.gallery-nav {
+			position: absolute;
+			top: 50%;
+			transform: translateY(-50%);
+			width: 42px;
+			height: 42px;
+			border: 0;
+			border-radius: 50%;
+			background: rgba(12, 27, 21, 0.72);
+			color: #ffffff;
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			font-size: 24px;
+			line-height: 1;
+			cursor: pointer;
+			z-index: 3;
+			transition: background-color 0.2s ease, transform 0.2s ease;
+		}
+
+		.gallery-nav:hover {
+			background: rgba(12, 27, 21, 0.9);
+		}
+
+		.gallery-nav:active {
+			transform: translateY(-50%) scale(0.96);
+		}
+
+		.gallery-nav-prev {
+			left: 16px;
+		}
+
+		.gallery-nav-next {
+			right: 16px;
+		}
+
+		.gallery-stage img {
+			display: block;
+			width: 100%;
+			max-height: 72vh;
+			object-fit: contain;
+			margin: 0 auto;
+			border-radius: 12px;
+			transition: transform 0.18s ease;
+			transform-origin: center center;
+			cursor: zoom-in;
+			user-select: none;
+			-webkit-user-drag: none;
+		}
+
+		.gallery-stage img.zoomed {
+			cursor: grab;
+			touch-action: none;
+		}
+
+		.gallery-stage img.zoomed.dragging {
+			cursor: grabbing;
+		}
+
+		.gallery-help {
+			margin-top: 10px;
+			color: #cfe2d9;
+			font-size: 14px;
+			text-align: center;
+		}
+
+		.gallery-thumbs {
+			padding: 0 14px 16px;
+		}
+
+		.gallery-thumb {
+			width: 100%;
+			padding: 0;
+			border: 2px solid transparent;
+			border-radius: 14px;
+			overflow: hidden;
+			background: #10221b;
+		}
+
+		.gallery-thumb.active {
+			border-color: #7be0b3;
+		}
+
+		.gallery-thumb img {
+			display: block;
+			width: 100%;
+			aspect-ratio: 1 / 1;
+			object-fit: cover;
+		}
 			color: var(--muted);
 		}
 
@@ -363,7 +578,7 @@
 		}
 
 		footer {
-			margin: 26px 0 30px;
+			margin: 42px 0 30px;
 			color: #4a5e56;
 			text-align: center;
 			font-size: 14px;
@@ -389,6 +604,10 @@
 				padding: 18px 16px;
 			}
 
+			.section {
+				padding: 34px 0 6px;
+			}
+
 			.sub {
 				font-size: 16px;
 			}
@@ -403,6 +622,32 @@
 
 			.btn {
 				width: 100%;
+			}
+
+			.gallery-shell {
+				padding: 14px;
+			}
+
+			.gallery-stage {
+				padding: 0 10px 12px;
+			}
+
+			.gallery-nav {
+				width: 38px;
+				height: 38px;
+				font-size: 21px;
+			}
+
+			.gallery-nav-prev {
+				left: 10px;
+			}
+
+			.gallery-nav-next {
+				right: 10px;
+			}
+
+			.gallery-thumbs {
+				padding: 0 10px 14px;
 			}
 		}
 	</style>
@@ -421,11 +666,15 @@
 
 					<div class="hero-actions">
 						<a href="#leadForm" class="btn btn-primary" data-track-click="hero_demo_click">ফ্রি ডেমো চাই</a>
-						<a href="{{ route('public.book-appointment.view') }}" class="btn btn-secondary" data-track-click="hero_booking_click">বুকিং পেজ দেখুন</a>
+						<a href="https://wa.me/8801738324024" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" data-track-click="hero_booking_click">WhatsApp এ যোগাযোগ করুন</a>
 					</div>
 				</div>
 			</div>
-            <img src="{{ asset('landing/prescription.png') }}" alt="" style="width:100%">
+			<div class="hero-preview mt-4">
+				<button type="button" class="hero-preview-button" data-bs-toggle="modal" data-bs-target="#galleryModal" data-gallery-index="5" data-track-click="hero_preview_open" aria-label="প্রেসক্রিপশন প্রিভিউ দেখুন">
+					<img src="{{ asset('landing/prescription.png') }}" alt="ডিজিটাল প্রেসক্রিপশন প্রিভিউ">
+				</button>
+			</div>
 		</div>
 	</header>
 
@@ -470,6 +719,53 @@
 			</div>
 		</section>
 
+		<section class="section">
+			<div class="wrap">
+				<div class="gallery-shell">
+					<h2>গ্যালারি</h2>
+
+					<div class="row row-cols-2 row-cols-md-3 g-3 mt-1">
+						<div class="col">
+							<button type="button" class="gallery-tile" data-bs-toggle="modal" data-bs-target="#galleryModal" data-gallery-index="0" data-track-click="gallery_open_1">
+								<img src="{{ asset('landing/pic-1.png') }}" alt="সফটওয়্যার স্ক্রিনশট ১">
+								<span class="gallery-tile-label">স্ক্রিন ১</span>
+							</button>
+						</div>
+						<div class="col">
+							<button type="button" class="gallery-tile" data-bs-toggle="modal" data-bs-target="#galleryModal" data-gallery-index="1" data-track-click="gallery_open_2">
+								<img src="{{ asset('landing/pic-2.png') }}" alt="সফটওয়্যার স্ক্রিনশট ২">
+								<span class="gallery-tile-label">স্ক্রিন ২</span>
+							</button>
+						</div>
+						<div class="col">
+							<button type="button" class="gallery-tile" data-bs-toggle="modal" data-bs-target="#galleryModal" data-gallery-index="2" data-track-click="gallery_open_3">
+								<img src="{{ asset('landing/pic-3.jpg') }}" alt="সফটওয়্যার স্ক্রিনশট ৩">
+								<span class="gallery-tile-label">স্ক্রিন ৩</span>
+							</button>
+						</div>
+						<div class="col">
+							<button type="button" class="gallery-tile" data-bs-toggle="modal" data-bs-target="#galleryModal" data-gallery-index="3" data-track-click="gallery_open_4">
+								<img src="{{ asset('landing/pic-4.jpg') }}" alt="সফটওয়্যার স্ক্রিনশট ৪">
+								<span class="gallery-tile-label">স্ক্রিন ৪</span>
+							</button>
+						</div>
+						<div class="col">
+							<button type="button" class="gallery-tile" data-bs-toggle="modal" data-bs-target="#galleryModal" data-gallery-index="4" data-track-click="gallery_open_5">
+								<img src="{{ asset('landing/pic-5.jpg') }}" alt="সফটওয়্যার স্ক্রিনশট ৫">
+								<span class="gallery-tile-label">স্ক্রিন ৫</span>
+							</button>
+						</div>
+						<div class="col">
+							<button type="button" class="gallery-tile" data-bs-toggle="modal" data-bs-target="#galleryModal" data-gallery-index="6" data-track-click="gallery_open_6">
+								<img src="{{ asset('landing/pic-6.png') }}" alt="সফটওয়্যার স্ক্রিনশট ৬">
+								<span class="gallery-tile-label">স্ক্রিন ৬</span>
+							</button>
+						</div>
+					</div>
+				</div>
+			</div>
+		</section>
+
 
 
 		<section class="section" id="leadForm">
@@ -490,24 +786,7 @@
 							</div>
 						</div>
 
-						<div class="row">
-							<div class="field">
-								<label for="email">ইমেইল (ঐচ্ছিক)</label>
-								<input id="email" name="email" type="email" placeholder="doctor@example.com">
-							</div>
-							<div class="field">
-								<label for="subject">বিষয়</label>
-								<input id="subject" name="subject" type="text" required value="ডেমো/প্রাইসিং জানতে চাই">
-							</div>
-						</div>
-
-						<div class="field">
-							<label for="message">মেসেজ</label>
-							<textarea id="message" name="message" required placeholder="চেম্বারের সংখ্যা, স্পেশালিটি বা আপনার চাহিদা লিখুন"></textarea>
-						</div>
-
-						<button class="btn btn-primary" id="leadSubmitBtn" type="submit" data-track-click="lead_submit_click">ডেমো রিকোয়েস্ট পাঠান</button>
-						<div class="note">টিপ: আপনি চাইলে একই সাথে বুকিং পেজও দেখতে পারেন।</div>
+						<button class="btn btn-primary mt-3" id="leadSubmitBtn" type="submit" data-track-click="lead_submit_click">ডেমো রিকোয়েস্ট পাঠান</button>
 						<div class="status" id="formStatus"></div>
 					</form>
 				</div>
@@ -515,15 +794,55 @@
 		</section>
 	</main>
 
+	<div class="modal fade" id="galleryModal" tabindex="-1" aria-labelledby="galleryModalLabel" aria-hidden="true">
+		<div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down modal-xl">
+			<div class="modal-content gallery-modal">
+				<div class="modal-header">
+					<h2 class="modal-title" id="galleryModalLabel">সফটওয়্যার স্ক্রিনশট</h2>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="gallery-stage">
+					<div class="gallery-stage-frame">
+						<button type="button" class="gallery-nav gallery-nav-prev" id="galleryPrevBtn" aria-label="আগের ছবি">‹</button>
+						<img id="galleryStageImage" src="{{ asset('landing/pic-1.png') }}" alt="সফটওয়্যার স্ক্রিনশট বড় প্রিভিউ">
+						<button type="button" class="gallery-nav gallery-nav-next" id="galleryNextBtn" aria-label="পরের ছবি">›</button>
+					</div>
+					<div class="gallery-help">ছবিতে ট্যাপ/ক্লিক করলে zoom হবে, তারপর ধরে টেনে move করে প্রতিটি অংশ দেখুন</div>
+				</div>
+				<div class="gallery-thumbs">
+					<div class="row row-cols-6 g-2">
+						<div class="col"><button type="button" class="gallery-thumb active" data-gallery-thumb="0"><img src="{{ asset('landing/pic-1.png') }}" alt="স্ক্রিনশট থাম্ব ১"></button></div>
+						<div class="col"><button type="button" class="gallery-thumb" data-gallery-thumb="1"><img src="{{ asset('landing/pic-2.png') }}" alt="স্ক্রিনশট থাম্ব ২"></button></div>
+						<div class="col"><button type="button" class="gallery-thumb" data-gallery-thumb="6"><img src="{{ asset('landing/pic-6.png') }}" alt="স্ক্রিনশট থাম্ব ২"></button></div>
+						<div class="col"><button type="button" class="gallery-thumb" data-gallery-thumb="2"><img src="{{ asset('landing/pic-3.jpg') }}" alt="স্ক্রিনশট থাম্ব ৩"></button></div>
+						<div class="col"><button type="button" class="gallery-thumb" data-gallery-thumb="3"><img src="{{ asset('landing/pic-4.jpg') }}" alt="স্ক্রিনশট থাম্ব ৪"></button></div>
+						<div class="col"><button type="button" class="gallery-thumb" data-gallery-thumb="4"><img src="{{ asset('landing/pic-5.jpg') }}" alt="স্ক্রিনশট থাম্ব ৫"></button></div>
+						<div class="col"><button type="button" class="gallery-thumb" data-gallery-thumb="5"><img src="{{ asset('landing/prescription.png') }}" alt="স্ক্রিনশট থাম্ব প্রেসক্রিপশন"></button></div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
 	<footer>
 		Doctor Booking & Prescription Digital System
 	</footer>
 
+	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
 	<script>
 		(function () {
 			const params = new URLSearchParams(window.location.search);
 			const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 			const trackingUrl = "{{ route('purchase.track') }}";
+			const galleryImages = [
+				"{{ asset('landing/pic-1.png') }}",
+				"{{ asset('landing/pic-2.png') }}",
+				"{{ asset('landing/pic-3.jpg') }}",
+				"{{ asset('landing/pic-4.jpg') }}",
+				"{{ asset('landing/pic-5.jpg') }}",
+				"{{ asset('landing/prescription.png') }}",
+				"{{ asset('landing/pic-6.png') }}"
+			];
 
 			const utm = {
 				source: params.get('utm_source'),
@@ -594,6 +913,196 @@
 					});
 				});
 			});
+
+			const galleryModal = document.getElementById('galleryModal');
+			const galleryStageImage = document.getElementById('galleryStageImage');
+			const galleryPrevBtn = document.getElementById('galleryPrevBtn');
+			const galleryNextBtn = document.getElementById('galleryNextBtn');
+			const galleryThumbs = document.querySelectorAll('[data-gallery-thumb]');
+			const galleryTriggers = document.querySelectorAll('[data-gallery-index]');
+			let galleryIndex = 0;
+			let zoomScale = 1;
+			let offsetX = 0;
+			let offsetY = 0;
+			let pointerActive = false;
+			let dragMoved = false;
+			let startX = 0;
+			let startY = 0;
+			let startOffsetX = 0;
+			let startOffsetY = 0;
+
+			function clamp(value, min, max) {
+				return Math.min(Math.max(value, min), max);
+			}
+
+			function getPanBounds() {
+				if (!galleryStageImage || zoomScale <= 1) {
+					return { maxX: 0, maxY: 0 };
+				}
+
+				const rect = galleryStageImage.getBoundingClientRect();
+				const maxX = Math.max(0, (rect.width * (zoomScale - 1)) / 2);
+				const maxY = Math.max(0, (rect.height * (zoomScale - 1)) / 2);
+
+				return { maxX, maxY };
+			}
+
+			function applyTransform() {
+				if (!galleryStageImage) {
+					return;
+				}
+
+				if (zoomScale <= 1) {
+					galleryStageImage.style.transform = 'translate(0px, 0px) scale(1)';
+					galleryStageImage.classList.remove('zoomed');
+					galleryStageImage.classList.remove('dragging');
+					return;
+				}
+
+				galleryStageImage.classList.add('zoomed');
+				galleryStageImage.style.transform = 'translate(' + offsetX + 'px, ' + offsetY + 'px) scale(' + zoomScale + ')';
+			}
+
+			function resetZoom() {
+				zoomScale = 1;
+				offsetX = 0;
+				offsetY = 0;
+				applyTransform();
+			}
+
+			function toggleZoom() {
+				if (zoomScale > 1) {
+					resetZoom();
+				} else {
+					zoomScale = 2;
+					offsetX = 0;
+					offsetY = 0;
+					applyTransform();
+				}
+			}
+
+			function renderGallery(index) {
+				galleryIndex = index;
+				if (!galleryStageImage || !galleryImages[index]) {
+					return;
+				}
+
+				galleryStageImage.src = galleryImages[index];
+				resetZoom();
+				galleryThumbs.forEach(function (thumb) {
+					const thumbValue = Number(thumb.getAttribute('data-gallery-thumb') || -1);
+					thumb.classList.toggle('active', thumbValue === index);
+				});
+			}
+
+			function goToNextImage() {
+				const nextIndex = (galleryIndex + 1) % galleryImages.length;
+				renderGallery(nextIndex);
+			}
+
+			function goToPrevImage() {
+				const prevIndex = (galleryIndex - 1 + galleryImages.length) % galleryImages.length;
+				renderGallery(prevIndex);
+			}
+
+			galleryTriggers.forEach(function (trigger) {
+				trigger.addEventListener('click', function () {
+					const index = Number(trigger.getAttribute('data-gallery-index') || 0);
+					renderGallery(index);
+				});
+			});
+
+			galleryThumbs.forEach(function (thumb) {
+				thumb.addEventListener('click', function () {
+					const index = Number(thumb.getAttribute('data-gallery-thumb') || 0);
+					renderGallery(index);
+				});
+			});
+
+			if (galleryPrevBtn) {
+				galleryPrevBtn.addEventListener('click', goToPrevImage);
+			}
+
+			if (galleryNextBtn) {
+				galleryNextBtn.addEventListener('click', goToNextImage);
+			}
+
+			if (galleryStageImage) {
+				galleryStageImage.addEventListener('click', function () {
+					if (dragMoved) {
+						dragMoved = false;
+						return;
+					}
+					toggleZoom();
+				});
+
+				galleryStageImage.addEventListener('pointerdown', function (event) {
+					if (zoomScale <= 1) {
+						return;
+					}
+
+					pointerActive = true;
+					dragMoved = false;
+					startX = event.clientX;
+					startY = event.clientY;
+					startOffsetX = offsetX;
+					startOffsetY = offsetY;
+					galleryStageImage.classList.add('dragging');
+					if (galleryStageImage.setPointerCapture) {
+						galleryStageImage.setPointerCapture(event.pointerId);
+					}
+				});
+
+				galleryStageImage.addEventListener('pointermove', function (event) {
+					if (!pointerActive || zoomScale <= 1) {
+						return;
+					}
+
+					const dx = event.clientX - startX;
+					const dy = event.clientY - startY;
+					if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+						dragMoved = true;
+					}
+
+					const bounds = getPanBounds();
+					offsetX = clamp(startOffsetX + dx, -bounds.maxX, bounds.maxX);
+					offsetY = clamp(startOffsetY + dy, -bounds.maxY, bounds.maxY);
+					applyTransform();
+				});
+
+				galleryStageImage.addEventListener('pointerup', function (event) {
+					pointerActive = false;
+					galleryStageImage.classList.remove('dragging');
+					if (galleryStageImage.releasePointerCapture) {
+						try {
+							galleryStageImage.releasePointerCapture(event.pointerId);
+						} catch (_) {}
+					}
+				});
+
+				galleryStageImage.addEventListener('pointercancel', function () {
+					pointerActive = false;
+					galleryStageImage.classList.remove('dragging');
+				});
+			}
+
+			if (galleryModal) {
+				galleryModal.addEventListener('keydown', function (event) {
+					if (event.key === 'ArrowRight') {
+						event.preventDefault();
+						goToNextImage();
+					}
+					if (event.key === 'ArrowLeft') {
+						event.preventDefault();
+						goToPrevImage();
+					}
+				});
+
+				galleryModal.addEventListener('hidden.bs.modal', function () {
+					pointerActive = false;
+					resetZoom();
+				});
+			}
 
 			const leadForm = document.getElementById('purchaseLeadForm');
 			const submitBtn = document.getElementById('leadSubmitBtn');
