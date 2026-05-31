@@ -6,7 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\Chamber;
 use App\Models\SiteContent;
 use App\Models\User;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -111,5 +114,43 @@ class PublicController extends Controller
     public function purchase()
     {
         return view('purchase');
+    }
+
+    public function trackPurchaseEvent(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'event_name' => ['required', 'string', 'max:100'],
+            'event_id' => ['nullable', 'string', 'max:120'],
+            'page_url' => ['nullable', 'url', 'max:2000'],
+            'referrer' => ['nullable', 'url', 'max:2000'],
+            'utm' => ['nullable', 'array'],
+            'utm.source' => ['nullable', 'string', 'max:255'],
+            'utm.medium' => ['nullable', 'string', 'max:255'],
+            'utm.campaign' => ['nullable', 'string', 'max:255'],
+            'utm.content' => ['nullable', 'string', 'max:255'],
+            'utm.term' => ['nullable', 'string', 'max:255'],
+            'ad_ids' => ['nullable', 'array'],
+            'ad_ids.fbclid' => ['nullable', 'string', 'max:255'],
+            'ad_ids.gclid' => ['nullable', 'string', 'max:255'],
+            'ad_ids.wbraid' => ['nullable', 'string', 'max:255'],
+            'ad_ids.gbraid' => ['nullable', 'string', 'max:255'],
+            'metadata' => ['nullable', 'array'],
+        ]);
+
+        Log::info('purchase_landing_event', [
+            'event_name' => $validated['event_name'],
+            'event_id' => $validated['event_id'] ?? null,
+            'page_url' => $validated['page_url'] ?? null,
+            'referrer' => $validated['referrer'] ?? null,
+            'utm' => $validated['utm'] ?? [],
+            'ad_ids' => $validated['ad_ids'] ?? [],
+            'metadata' => $validated['metadata'] ?? [],
+            'ip' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'user_id' => $request->user()?->id,
+            'captured_at' => now()->toIso8601String(),
+        ]);
+
+        return response()->json(['ok' => true]);
     }
 }
