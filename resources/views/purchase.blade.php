@@ -772,7 +772,7 @@
 			<div class="wrap">
 				<div class="cta-box">
 					<h3>ডেমো বা প্রাইসিং জানতে চান?</h3>
-					<p>ফর্মটি পূরণ করলে আমরা দ্রুত যোগাযোগ করবো। আপনার বিজ্ঞাপনের সোর্স (Facebook/Google) server-side tracking এ সংরক্ষণ হবে।</p>
+					<p>ফর্মটি পূরণ করলে আমরা দ্রুত যোগাযোগ করবো।</p>
 
 					<form class="lead-form" id="purchaseLeadForm" novalidate>
 						<div class="row">
