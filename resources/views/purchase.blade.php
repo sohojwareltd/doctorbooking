@@ -727,38 +727,38 @@
 					<div class="row row-cols-2 row-cols-md-3 g-3 mt-1">
 						<div class="col">
 							<button type="button" class="gallery-tile" data-bs-toggle="modal" data-bs-target="#galleryModal" data-gallery-index="0" data-track-click="gallery_open_1">
-								<img src="{{ asset('landing/pic-1.png') }}" alt="সফটওয়্যার স্ক্রিনশট ১">
-								<span class="gallery-tile-label">স্ক্রিন ১</span>
+								<img src="{{ asset('landing/pic-1.png') }}" alt="ড্যাশবোর্ড">
+								<span class="gallery-tile-label">ড্যাশবোর্ড</span>
 							</button>
 						</div>
 						<div class="col">
 							<button type="button" class="gallery-tile" data-bs-toggle="modal" data-bs-target="#galleryModal" data-gallery-index="1" data-track-click="gallery_open_2">
-								<img src="{{ asset('landing/pic-2.png') }}" alt="সফটওয়্যার স্ক্রিনশট ২">
-								<span class="gallery-tile-label">স্ক্রিন ২</span>
+								<img src="{{ asset('landing/pic-2.png') }}" alt="অনলাইন অ্যাপয়েন্টমেন্ট বুকিং">
+								<span class="gallery-tile-label">অনলাইন অ্যাপয়েন্টমেন্ট বুকিং</span>
 							</button>
 						</div>
 						<div class="col">
 							<button type="button" class="gallery-tile" data-bs-toggle="modal" data-bs-target="#galleryModal" data-gallery-index="2" data-track-click="gallery_open_3">
 								<img src="{{ asset('landing/pic-3.jpg') }}" alt="সফটওয়্যার স্ক্রিনশট ৩">
-								<span class="gallery-tile-label">স্ক্রিন ৩</span>
+								<span class="gallery-tile-label">হোম পেজ</span>
 							</button>
 						</div>
 						<div class="col">
 							<button type="button" class="gallery-tile" data-bs-toggle="modal" data-bs-target="#galleryModal" data-gallery-index="3" data-track-click="gallery_open_4">
-								<img src="{{ asset('landing/pic-4.jpg') }}" alt="সফটওয়্যার স্ক্রিনশট ৪">
-								<span class="gallery-tile-label">স্ক্রিন ৪</span>
+								<img src="{{ asset('landing/pic-4.jpg') }}" alt="রোগীর প্রোফাইল">
+								<span class="gallery-tile-label">রোগীর মেডিকেল প্রোফাইল</span>
 							</button>
 						</div>
 						<div class="col">
 							<button type="button" class="gallery-tile" data-bs-toggle="modal" data-bs-target="#galleryModal" data-gallery-index="4" data-track-click="gallery_open_5">
-								<img src="{{ asset('landing/pic-5.jpg') }}" alt="সফটওয়্যার স্ক্রিনশট ৫">
-								<span class="gallery-tile-label">স্ক্রিন ৫</span>
+								<img src="{{ asset('landing/pic-5.jpg') }}" alt="চেম্বার শিডিউল ম্যানেজমেন্ট">
+								<span class="gallery-tile-label">চেম্বার শিডিউল ম্যানেজমেন্ট</span>
 							</button>
 						</div>
 						<div class="col">
 							<button type="button" class="gallery-tile" data-bs-toggle="modal" data-bs-target="#galleryModal" data-gallery-index="6" data-track-click="gallery_open_6">
-								<img src="{{ asset('landing/pic-6.png') }}" alt="সফটওয়্যার স্ক্রিনশট ৬">
-								<span class="gallery-tile-label">স্ক্রিন ৬</span>
+								<img src="{{ asset('landing/pic-6.png') }}" alt="অ্যাপয়েন্টমেন্ট ম্যানেজমেন্ট">
+								<span class="gallery-tile-label">অ্যাপয়েন্টমেন্ট তালিকা ও স্ট্যাটাস</span>
 							</button>
 						</div>
 					</div>
