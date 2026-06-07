@@ -36,7 +36,7 @@ export default function PrescriptionMedicineSection({
         </div> */}
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-[#c7d3e4] bg-white">
+      <div className="rounded-xl border border-[#c7d3e4] bg-white">
         <div className="grid grid-cols-12 bg-[#0b3f86] px-2 py-2 text-[11px] font-bold uppercase tracking-[0.08em] text-white">
           <div className="col-span-1">No.</div>
           <div className="col-span-5">Medicine</div>
@@ -53,7 +53,7 @@ export default function PrescriptionMedicineSection({
             const showMedicineMatchDropdown = focusedMedicineIndex === idx && hasMedicineMatches;
 
             return (
-              <div key={idx} className="grid grid-cols-12 items-center gap-2 border-b border-dotted border-[#b9c7dc] pb-1">
+              <div key={idx} className={`grid grid-cols-12 items-center gap-2 border-b border-dotted border-[#b9c7dc] pb-1 ${showMedicineMatchDropdown ? 'relative z-40' : ''}`}>
                 <div className="col-span-1 text-center text-sm font-bold text-slate-500">{idx + 1}</div>
                 <div className="col-span-5 relative">
                   <input
@@ -74,7 +74,7 @@ export default function PrescriptionMedicineSection({
                     placeholder="Medicine"
                   />
                   {showMedicineMatchDropdown ? (
-                    <div className="absolute left-0 right-0 z-20 mt-1 max-h-64 overflow-y-auto overscroll-contain rounded-md border border-[#c7d6f7] bg-white shadow-lg">
+                    <div className="absolute left-0 z-50 mt-1 min-w-[min(520px,calc(100vw-3rem))] w-[max(100%,min(520px,calc(100vw-3rem)))] max-h-80 overflow-y-auto overscroll-contain rounded-md border border-[#c7d6f7] bg-white shadow-xl">
                       {matchedSuggestions.map((med, optionIdx) => (
                         <button
                           key={`${med.id ?? med.name}-${med.strength}-${optionIdx}`}

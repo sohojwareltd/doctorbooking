@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
+use App\Models\Category;
 use App\Models\Generic;
 use App\Models\Medicine;
 use App\Models\Supplier;
@@ -12,7 +13,7 @@ class ImportMedicinesFromOldDb extends Command
 {
     protected $signature = 'import:medicines';
 
-    protected $description = 'Import generics, suppliers, and medicines from the medine_olds database into the doctor database';
+    protected $description = 'Import categories, generics, suppliers, and medicines from the medine_olds database into the doctor database';
 
     public function handle(): void
     {
@@ -88,12 +89,38 @@ class ImportMedicinesFromOldDb extends Command
         $this->newLine();
         $this->info("Imported {$oldGenerics->count()} generics.");
 
-        // ── Step 3: Import medicines (products) ──────────────────────────────
+        // ── Step 3: Import categories ────────────────────────────────────────
+        $this->info('Importing categories...');
+
+        $oldCategories = DB::connection('mysql2')
+            ->table('categories')
+            ->select('id', 'name', 'image')
+            ->get();
+
+        $categoryIdMap = []; // old_id => new_id
+
+        $categoriesBar = $this->output->createProgressBar($oldCategories->count());
+        $categoriesBar->start();
+
+        foreach ($oldCategories as $oldCategory) {
+            $newCategory = Category::firstOrCreate(
+                ['name' => $oldCategory->name],
+                ['image' => $oldCategory->image]
+            );
+            $categoryIdMap[$oldCategory->id] = $newCategory->id;
+            $categoriesBar->advance();
+        }
+
+        $categoriesBar->finish();
+        $this->newLine();
+        $this->info("Imported {$oldCategories->count()} categories.");
+
+        // ── Step 4: Import medicines (products) ──────────────────────────────
         $this->info('Importing medicines from products table...');
 
         $oldProducts = DB::connection('mysql2')
             ->table('products')
-            ->select('name', 'strength', 'generic_id', 'supplier_id')
+            ->select('name', 'strength', 'generic_id', 'supplier_id', 'category_id')
             ->get();
 
         $medicinesBar = $this->output->createProgressBar($oldProducts->count());
@@ -111,19 +138,29 @@ class ImportMedicinesFromOldDb extends Command
                 ? $supplierIdMap[$product->supplier_id]
                 : null;
 
-            $exists = Medicine::where('name', $product->name)
-                ->where('strength', $product->strength)
-                ->exists();
+            $newCategoryId = isset($product->category_id, $categoryIdMap[$product->category_id])
+                ? $categoryIdMap[$product->category_id]
+                : null;
 
-            if (! $exists) {
+            $existingMedicine = Medicine::where('name', $product->name)
+                ->where('strength', $product->strength)
+                ->first();
+
+            if (! $existingMedicine) {
                 Medicine::create([
                     'name'        => $product->name,
                     'strength'    => $product->strength,
                     'generic_id'  => $newGenericId,
                     'supplier_id' => $newSupplierId,
+                    'category_id' => $newCategoryId,
                 ]);
                 $imported++;
             } else {
+                $existingMedicine->update([
+                    'generic_id'  => $newGenericId ?? $existingMedicine->generic_id,
+                    'supplier_id' => $newSupplierId ?? $existingMedicine->supplier_id,
+                    'category_id' => $newCategoryId ?? $existingMedicine->category_id,
+                ]);
                 $skipped++;
             }
 

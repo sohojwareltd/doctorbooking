@@ -1,35 +1,26 @@
-import { Head } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Edit3, Pill, Plus, Search, Trash2, X, ChevronDown } from 'lucide-react';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { DocButton, DocEmptyState } from '../../components/doctor/DocUI';
+import { DocEmptyState } from '../../components/doctor/DocUI';
 import DoctorLayout from '../../layouts/DoctorLayout';
 import { toastError, toastSuccess } from '../../utils/toast';
-
-const MEDICINES_PER_PAGE = 10;
 
 function getCsrfToken() {
   return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 }
 
-export default function DoctorMedicines() {
-  const [rows, setRows] = useState([]);
+export default function DoctorMedicines({ medicines = {}, filters = {} }) {
+  const { processing } = usePage();
+  const rows = medicines?.data ?? [];
+  const searchTimerRef = useRef(null);
   const [generics, setGenerics] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [loadingGenerics, setLoadingGenerics] = useState(false);
   const [loadingSuppliers, setLoadingSuppliers] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [page, setPage] = useState(1);
-  const [pagination, setPagination] = useState({
-    currentPage: 1,
-    lastPage: 1,
-    total: 0,
-    from: 0,
-    to: 0,
-  });
+  const [searchTerm, setSearchTerm] = useState(filters?.query ?? '');
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState({ id: null, name: '', strength: '', generic_id: '', supplier_id: '' });
   const [showGenericDropdown, setShowGenericDropdown] = useState(false);
@@ -47,65 +38,39 @@ export default function DoctorMedicines() {
     (supplier?.name || '').toLowerCase().includes(supplierSearch.trim().toLowerCase()),
   );
 
-  const loadMedicines = async (pageNumber = 1, query = '') => {
-    try {
-      setLoading(true);
-      const params = new URLSearchParams({
-        page: String(pageNumber),
-        per_page: String(MEDICINES_PER_PAGE),
-      });
-      const trimmedQuery = query.trim();
-      if (trimmedQuery) {
-        params.set('query', trimmedQuery);
-      }
+  const prevLink = (medicines.links || []).find((item) => String(item.label).toLowerCase().includes('previous'));
+  const nextLink = (medicines.links || []).find((item) => String(item.label).toLowerCase().includes('next'));
 
-      const res = await fetch(`/api/doctor/medicines?${params.toString()}`, {
-        headers: { Accept: 'application/json' },
-        credentials: 'same-origin',
-      });
-      if (!res.ok) throw new Error('Failed to load medicines');
-      const payload = await res.json();
-      let nextRows = Array.isArray(payload?.data) ? payload.data : [];
+  useEffect(() => {
+    setSearchTerm(filters?.query ?? '');
+  }, [filters?.query]);
 
-      // Exact matches first, then starts-with, then rest
-      if (trimmedQuery) {
-        const q = trimmedQuery.toLowerCase();
-        nextRows = [...nextRows].sort((a, b) => {
-          const aN = (a.name || '').toLowerCase();
-          const bN = (b.name || '').toLowerCase();
-          const aRank = aN === q ? 0 : aN.startsWith(q) ? 1 : 2;
-          const bRank = bN === q ? 0 : bN.startsWith(q) ? 1 : 2;
-          return aRank - bRank;
-        });
-      }
+  useEffect(() => {
+    if (searchTimerRef.current) {
+      window.clearTimeout(searchTimerRef.current);
+    }
 
-      const nextLastPage = Number(payload?.last_page || 1);
+    searchTimerRef.current = window.setTimeout(() => {
+      const nextQuery = searchTerm.trim();
+      const currentQuery = String(filters?.query ?? '').trim();
 
-      if (pageNumber > nextLastPage && nextLastPage > 0) {
-        setPage(nextLastPage);
+      if (nextQuery === currentQuery) {
         return;
       }
 
-      setRows(nextRows);
-      setPagination({
-        currentPage: Number(payload?.current_page || pageNumber),
-        lastPage: nextLastPage,
-        total: Number(payload?.total || nextRows.length),
-        from: Number(payload?.from || 0),
-        to: Number(payload?.to || 0),
-      });
-    } catch {
-      toastError('Unable to load medicines.');
-      setRows([]);
-      setPagination({ currentPage: 1, lastPage: 1, total: 0, from: 0, to: 0 });
-    } finally {
-      setLoading(false);
-    }
-  };
+      router.get(
+        '/doctor/medicines',
+        { query: nextQuery || undefined, page: 1 },
+        { preserveState: true, replace: true, only: ['medicines', 'filters'] },
+      );
+    }, 300);
 
-  useEffect(() => {
-    void loadMedicines(page, searchTerm);
-  }, [page, searchTerm]);
+    return () => {
+      if (searchTimerRef.current) {
+        window.clearTimeout(searchTimerRef.current);
+      }
+    };
+  }, [searchTerm, filters?.query]);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -220,7 +185,7 @@ export default function DoctorMedicines() {
 
       toastSuccess(isUpdate ? 'Medicine updated.' : 'Medicine added.');
       closeModal();
-      await loadMedicines(page, searchTerm);
+      router.reload({ only: ['medicines'] });
     } catch (error) {
       toastError(error?.message || 'Unable to save medicine.');
     } finally {
@@ -266,7 +231,7 @@ export default function DoctorMedicines() {
 
       toastSuccess('Medicine deleted.');
       if (form.id === row.id) closeModal();
-      await loadMedicines(page, searchTerm);
+      router.reload({ only: ['medicines'] });
     } catch (error) {
       toastError(error?.message || 'Unable to delete medicine.');
     } finally {
@@ -278,24 +243,27 @@ export default function DoctorMedicines() {
     <DoctorLayout title="Medicines">
       <Head title="Medicines" />
 
-      <div className="mx-auto max-w-4xl space-y-6">
-        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-          <div className="border-b border-slate-200 px-8 py-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-[#EEF2FF] text-[#2D3A74]">
-                  <Pill className="h-6 w-6" />
+      <div className="mx-auto max-w-[1400px]">
+        <section className="surface-card overflow-hidden rounded-3xl">
+          <div className="border-b border-slate-100 px-6 py-5">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-[#EEF2FF] text-[#2D3A74]">
+                  <Pill className="h-5 w-5" />
                 </div>
                 <div>
                   <h1 className="text-xl font-semibold text-[#2D3A74]">Medicines Management</h1>
                   <p className="text-sm text-slate-500">Manage medicines used in prescriptions</p>
                 </div>
+                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
+                  {medicines.total ?? 0}
+                </span>
               </div>
 
               <button
                 type="button"
                 onClick={openCreateModal}
-                className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#2D3A74] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#243063]"
+                className="inline-flex items-center gap-2 rounded-lg bg-[#2D3A74] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#243063]"
               >
                 <Plus className="h-4 w-4" />
                 <span>Add Medicine</span>
@@ -303,30 +271,27 @@ export default function DoctorMedicines() {
             </div>
           </div>
 
-          <div className="px-8 py-6 space-y-4">
+          <div className="space-y-4 border-t border-slate-100 px-6 py-5">
             <div className="relative w-full">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
                 value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setPage(1);
-                }}
+                onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Search by medicine, generic, or supplier..."
                 className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm text-slate-900 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
               />
             </div>
 
-            {loading ? (
+            {processing ? (
               <div className="py-8 text-center text-sm text-slate-500">Loading medicines...</div>
             ) : rows.length === 0 ? (
               <DocEmptyState icon={Pill} title="No medicines found." description="Click Add Medicine to create your first item." />
             ) : (
               <>
                 <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-slate-50 text-xs font-semibold text-slate-700 border-b border-slate-200">
+                  <table className="min-w-full text-sm">
+                    <thead className="bg-slate-50 text-xs uppercase tracking-[0.12em] text-slate-500">
                       <tr>
                         <th className="px-6 py-4 text-center w-12">SL</th>
                         <th className="px-6 py-4 text-left">Medicine</th>
@@ -339,7 +304,7 @@ export default function DoctorMedicines() {
                     <tbody className="divide-y divide-slate-100 bg-white">
                       {rows.map((row, index) => (
                         <tr key={row.id} className="border-b border-slate-100 transition hover:bg-slate-50/60">
-                          <td className="px-6 py-4 text-center text-sm font-medium text-slate-600 bg-slate-50/30">{index + 1}</td>
+                          <td className="px-6 py-4 text-center text-sm font-medium text-slate-600 bg-slate-50/30">{(medicines.from || 1) + index}</td>
                           <td className="px-6 py-4 text-sm font-semibold text-slate-900">{row.name}</td>
                           <td className="px-6 py-4 text-sm text-slate-600">{row.strength || '—'}</td>
                           <td className="px-6 py-4 text-sm text-indigo-600 font-medium">{row.generic_name || '—'}</td>
@@ -375,29 +340,39 @@ export default function DoctorMedicines() {
 
                 <div className="flex flex-col gap-3 border-t border-slate-200 pt-4 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    Showing <span className="font-semibold text-slate-900">{pagination.from || 0}-{pagination.to || rows.length}</span> of{' '}
-                    <span className="font-semibold text-slate-900">{pagination.total}</span>
+                    Showing <span className="font-semibold text-slate-900">{medicines.from || 0}-{medicines.to || rows.length}</span> of{' '}
+                    <span className="font-semibold text-slate-900">{medicines.total || 0}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-                      onClick={() => setPage((current) => Math.max(1, current - 1))}
-                      disabled={loading || page <= 1}
-                    >
-                      Previous
-                    </button>
+                    {prevLink?.url ? (
+                      <Link
+                        href={prevLink.url}
+                        className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                        preserveScroll
+                      >
+                        Previous
+                      </Link>
+                    ) : (
+                      <span className="rounded-lg border border-slate-200 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-400">
+                        Previous
+                      </span>
+                    )}
                     <span className="text-sm font-semibold text-slate-600">
-                      Page {pagination.currentPage} of {pagination.lastPage}
+                      Page {medicines.current_page || 1} of {medicines.last_page || 1}
                     </span>
-                    <button
-                      type="button"
-                      className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-                      onClick={() => setPage((current) => Math.min(pagination.lastPage, current + 1))}
-                      disabled={loading || page >= pagination.lastPage}
-                    >
-                      Next
-                    </button>
+                    {nextLink?.url ? (
+                      <Link
+                        href={nextLink.url}
+                        className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                        preserveScroll
+                      >
+                        Next
+                      </Link>
+                    ) : (
+                      <span className="rounded-lg border border-slate-200 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-400">
+                        Next
+                      </span>
+                    )}
                   </div>
                 </div>
               </>

@@ -764,25 +764,38 @@ class DoctorController extends Controller
 
     public function generics(Request $request): JsonResponse
     {
-        $query = trim((string) ($request->input('query') ?? ''));
-        $limit = $request->input('limit') ? (int) $request->input('limit') : null;
-        $perPage = $request->input('per_page') ? (int) $request->input('per_page') : 15;
+        $validated = $request->validate([
+            'query' => ['nullable', 'string', 'max:255'],
+            'limit' => ['nullable', 'integer', 'min:1', 'max:1000'],
+            'page' => ['nullable', 'integer', 'min:1'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+        ]);
+
+        $query = trim((string) ($validated['query'] ?? ''));
+        $limit = array_key_exists('limit', $validated) ? (int) $validated['limit'] : null;
+        $perPage = array_key_exists('per_page', $validated) ? (int) $validated['per_page'] : 10;
 
         $builder = Generic::query()->select(['id', 'name', 'descriptions']);
 
         if ($query !== '') {
-            $builder->where('name', 'like', '%' . $query . '%')
+            $builder->where(function ($q) use ($query) {
+                $q->where('name', 'like', '%' . $query . '%')
                     ->orWhere('descriptions', 'like', '%' . $query . '%');
+            });
         }
 
         $builder->orderBy('name');
 
         if ($limit !== null) {
             $builder->limit($limit);
+
             return response()->json($builder->get());
         }
 
-        $paginator = $builder->paginate($perPage)->appends($request->query());
+        $paginator = $builder
+            ->paginate($perPage)
+            ->appends($request->query());
+
         return response()->json($paginator);
     }
 

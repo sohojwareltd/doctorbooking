@@ -1596,7 +1596,7 @@ export default function Prescription({
                 {/* Prescription Header Card - Like real prescription pad (Matching PrescriptionShow) */}
 
                 <div>
-                    <div className="overflow-hidden rounded-xl border border-slate-300 bg-[#f8fafc] shadow-sm">
+                    <div className="overflow-visible rounded-xl border border-slate-300 bg-[#f8fafc] shadow-sm">
                         <div className="h-4 bg-[#0b3f86]" />
 
                         {/* Prescription Header - Doctor left, Chamber right (matching PrescriptionShow) */}

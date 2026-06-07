@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\PrescriptionController as ApiPrescriptionController
 use App\Http\Controllers\Controller;
 use App\Models\Chamber;
 use App\Models\Doctor;
+use App\Models\Generic;
 use App\Models\Medicine;
 use App\Models\Prescription;
 use App\Models\User;
@@ -410,9 +411,30 @@ class PrescriptionController extends Controller
         return Inertia::render('doctor/PrescriptionTemplates');
     }
 
-    public function doctorGenerics(): Response
+    public function doctorGenerics(Request $request): Response
     {
-        return Inertia::render('doctor/Generics');
+        $query = trim((string) $request->input('query', ''));
+
+        $builder = Generic::query()->select(['id', 'name', 'descriptions']);
+
+        if ($query !== '') {
+            $builder->where(function ($q) use ($query) {
+                $q->where('name', 'like', '%' . $query . '%')
+                    ->orWhere('descriptions', 'like', '%' . $query . '%');
+            });
+        }
+
+        $generics = $builder
+            ->orderBy('name')
+            ->paginate(10)
+            ->withQueryString();
+
+        return Inertia::render('doctor/Generics', [
+            'generics' => $generics,
+            'filters' => [
+                'query' => $query,
+            ],
+        ]);
     }
 
     /** POST /doctor/prescriptions — delegate to API controller */
