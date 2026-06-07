@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\AppointmentResource;
 use App\Http\Resources\PrescriptionResource;
 use App\Models\Appointment;
+use App\Models\Category;
 use App\Models\DoctorSchedule;
 use App\Models\DoctorScheduleRange;
 use App\Models\DoctorUnavailableRange;
@@ -651,11 +652,14 @@ class DoctorController extends Controller
                 'medicines.strength',
                 'medicines.generic_id',
                 'medicines.supplier_id',
+                'medicines.category_id',
                 'generics.name as generic_name',
                 'suppliers.name as supplier_name',
+                'categories.name as category_name',
             ])
             ->leftJoin('generics', 'generics.id', '=', 'medicines.generic_id')
-            ->leftJoin('suppliers', 'suppliers.id', '=', 'medicines.supplier_id');
+            ->leftJoin('suppliers', 'suppliers.id', '=', 'medicines.supplier_id')
+            ->leftJoin('categories', 'categories.id', '=', 'medicines.category_id');
 
         if ($query !== '') {
             $normalized = preg_replace('/\s+/', ' ', Str::lower($query));
@@ -665,7 +669,8 @@ class DoctorController extends Controller
                 $builder->where(function ($q) use ($query) {
                     $q->where('medicines.name', 'like', '%' . $query . '%')
                       ->orWhere('generics.name', 'like', '%' . $query . '%')
-                      ->orWhere('suppliers.name', 'like', '%' . $query . '%');
+                      ->orWhere('suppliers.name', 'like', '%' . $query . '%')
+                      ->orWhere('categories.name', 'like', '%' . $query . '%');
                 });
             }
         }
@@ -704,6 +709,7 @@ class DoctorController extends Controller
             'strength' => ['nullable', 'string', 'max:60'],
             'generic_id' => ['nullable', 'integer', 'exists:generics,id'],
             'supplier_id' => ['nullable', 'integer', 'exists:suppliers,id'],
+            'category_id' => ['nullable', 'integer', 'exists:categories,id'],
         ]);
 
         $medicine = Medicine::create([
@@ -711,11 +717,12 @@ class DoctorController extends Controller
             'strength' => $validated['strength'] ?? null,
             'generic_id' => $validated['generic_id'] ?? null,
             'supplier_id' => $validated['supplier_id'] ?? null,
+            'category_id' => $validated['category_id'] ?? null,
         ]);
 
         return response()->json([
             'message' => 'Medicine created successfully.',
-            'medicine' => $medicine->only(['id', 'name', 'strength', 'generic_id', 'supplier_id']),
+            'medicine' => $medicine->only(['id', 'name', 'strength', 'generic_id', 'supplier_id', 'category_id']),
         ], 201);
     }
 
@@ -737,6 +744,7 @@ class DoctorController extends Controller
             'strength' => ['nullable', 'string', 'max:60'],
             'generic_id' => ['nullable', 'integer', 'exists:generics,id'],
             'supplier_id' => ['nullable', 'integer', 'exists:suppliers,id'],
+            'category_id' => ['nullable', 'integer', 'exists:categories,id'],
         ]);
 
         $medicine->update([
@@ -744,11 +752,12 @@ class DoctorController extends Controller
             'strength' => $validated['strength'] ?? null,
             'generic_id' => $validated['generic_id'] ?? null,
             'supplier_id' => $validated['supplier_id'] ?? null,
+            'category_id' => $validated['category_id'] ?? null,
         ]);
 
         return response()->json([
             'message' => 'Medicine updated successfully.',
-            'medicine' => $medicine->only(['id', 'name', 'strength', 'generic_id', 'supplier_id']),
+            'medicine' => $medicine->only(['id', 'name', 'strength', 'generic_id', 'supplier_id', 'category_id']),
         ]);
     }
 
@@ -847,6 +856,40 @@ class DoctorController extends Controller
         return response()->json([
             'message' => 'Generic deleted successfully.',
         ]);
+    }
+
+    public function categories(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'query' => ['nullable', 'string', 'max:255'],
+            'limit' => ['nullable', 'integer', 'min:1', 'max:1000'],
+            'page' => ['nullable', 'integer', 'min:1'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+        ]);
+
+        $query = trim((string) ($validated['query'] ?? ''));
+        $limit = array_key_exists('limit', $validated) ? (int) $validated['limit'] : null;
+        $perPage = array_key_exists('per_page', $validated) ? (int) $validated['per_page'] : 10;
+
+        $builder = Category::query()->select(['id', 'name', 'image']);
+
+        if ($query !== '') {
+            $builder->where('name', 'like', '%' . $query . '%');
+        }
+
+        $builder->orderBy('name');
+
+        if ($limit !== null) {
+            $builder->limit($limit);
+
+            return response()->json($builder->get());
+        }
+
+        $paginator = $builder
+            ->paginate($perPage)
+            ->appends($request->query());
+
+        return response()->json($paginator);
     }
 
     public function suppliers(Request $request): JsonResponse

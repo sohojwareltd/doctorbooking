@@ -16,19 +16,24 @@ export default function DoctorMedicines({ medicines = {}, filters = {} }) {
   const searchTimerRef = useRef(null);
   const [generics, setGenerics] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loadingGenerics, setLoadingGenerics] = useState(false);
   const [loadingSuppliers, setLoadingSuppliers] = useState(false);
+  const [loadingCategories, setLoadingCategories] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [searchTerm, setSearchTerm] = useState(filters?.query ?? '');
   const [modalOpen, setModalOpen] = useState(false);
-  const [form, setForm] = useState({ id: null, name: '', strength: '', generic_id: '', supplier_id: '' });
+  const [form, setForm] = useState({ id: null, name: '', strength: '', generic_id: '', supplier_id: '', category_id: '' });
   const [showGenericDropdown, setShowGenericDropdown] = useState(false);
   const [genericSearch, setGenericSearch] = useState('');
   const [showSupplierDropdown, setShowSupplierDropdown] = useState(false);
   const [supplierSearch, setSupplierSearch] = useState('');
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  const [categorySearch, setCategorySearch] = useState('');
   const genericDropdownRef = useRef(null);
   const supplierDropdownRef = useRef(null);
+  const categoryDropdownRef = useRef(null);
 
   const isEditing = form.id !== null;
   const filteredGenerics = generics.filter((generic) =>
@@ -36,6 +41,9 @@ export default function DoctorMedicines({ medicines = {}, filters = {} }) {
   );
   const filteredSuppliers = suppliers.filter((supplier) =>
     (supplier?.name || '').toLowerCase().includes(supplierSearch.trim().toLowerCase()),
+  );
+  const filteredCategories = categories.filter((category) =>
+    (category?.name || '').toLowerCase().includes(categorySearch.trim().toLowerCase()),
   );
 
   const prevLink = (medicines.links || []).find((item) => String(item.label).toLowerCase().includes('previous'));
@@ -80,13 +88,16 @@ export default function DoctorMedicines({ medicines = {}, filters = {} }) {
       if (supplierDropdownRef.current && !supplierDropdownRef.current.contains(e.target)) {
         setShowSupplierDropdown(false);
       }
+      if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(e.target)) {
+        setShowCategoryDropdown(false);
+      }
     };
 
-    if ((showGenericDropdown || showSupplierDropdown) && modalOpen) {
+    if ((showGenericDropdown || showSupplierDropdown || showCategoryDropdown) && modalOpen) {
       document.addEventListener('click', handleClickOutside);
       return () => document.removeEventListener('click', handleClickOutside);
     }
-  }, [showGenericDropdown, showSupplierDropdown, modalOpen]);
+  }, [showGenericDropdown, showSupplierDropdown, showCategoryDropdown, modalOpen]);
 
   const loadGenerics = async () => {
     try {
@@ -126,13 +137,34 @@ export default function DoctorMedicines({ medicines = {}, filters = {} }) {
     }
   };
 
-  const clearForm = () => setForm({ id: null, name: '', strength: '', generic_id: '', supplier_id: '' });
+  const loadCategories = async () => {
+    try {
+      setLoadingCategories(true);
+      const res = await fetch('/api/doctor/categories?per_page=999', {
+        headers: { Accept: 'application/json' },
+        credentials: 'same-origin',
+      });
+      if (!res.ok) throw new Error('Failed to load categories');
+      const payload = await res.json();
+      const data = Array.isArray(payload?.data) ? payload.data : Array.isArray(payload) ? payload : [];
+      setCategories(data);
+    } catch {
+      toastError('Unable to load categories.');
+      setCategories([]);
+    } finally {
+      setLoadingCategories(false);
+    }
+  };
+
+  const clearForm = () => setForm({ id: null, name: '', strength: '', generic_id: '', supplier_id: '', category_id: '' });
   const closeModal = () => {
     setModalOpen(false);
     setShowGenericDropdown(false);
     setShowSupplierDropdown(false);
+    setShowCategoryDropdown(false);
     setGenericSearch('');
     setSupplierSearch('');
+    setCategorySearch('');
     clearForm();
   };
 
@@ -140,7 +172,8 @@ export default function DoctorMedicines({ medicines = {}, filters = {} }) {
     clearForm();
     setGenericSearch('');
     setSupplierSearch('');
-    await Promise.all([loadGenerics(), loadSuppliers()]);
+    setCategorySearch('');
+    await Promise.all([loadGenerics(), loadSuppliers(), loadCategories()]);
     setModalOpen(true);
   };
 
@@ -174,6 +207,7 @@ export default function DoctorMedicines({ medicines = {}, filters = {} }) {
           strength,
           generic_id: form.generic_id || null,
           supplier_id: form.supplier_id || null,
+          category_id: form.category_id || null,
         }),
       });
 
@@ -194,15 +228,17 @@ export default function DoctorMedicines({ medicines = {}, filters = {} }) {
   };
 
   const onEdit = async (row) => {
-    await Promise.all([loadGenerics(), loadSuppliers()]);
+    await Promise.all([loadGenerics(), loadSuppliers(), loadCategories()]);
     setGenericSearch('');
     setSupplierSearch('');
+    setCategorySearch('');
     setForm({
       id: row.id,
       name: row.name || '',
       strength: row.strength || '',
       generic_id: row.generic_id || '',
       supplier_id: row.supplier_id || '',
+      category_id: row.category_id || '',
     });
     setModalOpen(true);
   };
@@ -278,7 +314,7 @@ export default function DoctorMedicines({ medicines = {}, filters = {} }) {
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search by medicine, generic, or supplier..."
+                placeholder="Search by medicine, generic, supplier, or category..."
                 className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm text-slate-900 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
               />
             </div>
@@ -297,6 +333,7 @@ export default function DoctorMedicines({ medicines = {}, filters = {} }) {
                         <th className="px-6 py-4 text-left">Medicine</th>
                         <th className="px-6 py-4 text-left">Strength</th>
                         <th className="px-6 py-4 text-left">Generic</th>
+                        <th className="px-6 py-4 text-left">Category</th>
                         <th className="px-6 py-4 text-left">Supplier</th>
                         <th className="px-6 py-4 text-right w-28">Actions</th>
                       </tr>
@@ -308,6 +345,7 @@ export default function DoctorMedicines({ medicines = {}, filters = {} }) {
                           <td className="px-6 py-4 text-sm font-semibold text-slate-900">{row.name}</td>
                           <td className="px-6 py-4 text-sm text-slate-600">{row.strength || '—'}</td>
                           <td className="px-6 py-4 text-sm text-indigo-600 font-medium">{row.generic_name || '—'}</td>
+                          <td className="px-6 py-4 text-sm font-medium text-teal-700">{row.category_name || '—'}</td>
                           <td className="px-6 py-4 text-sm text-slate-700 font-medium">{row.supplier_name || '—'}</td>
                           <td className="px-6 py-4 text-right">
                             <div className="flex items-center justify-end gap-2">
@@ -534,6 +572,69 @@ export default function DoctorMedicines({ medicines = {}, filters = {} }) {
                         ))}
                         {filteredSuppliers.length === 0 && (
                           <div className="px-4 py-3 text-xs text-slate-500">No supplier found.</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-slate-900">Category</label>
+                  <div className="relative" ref={categoryDropdownRef}>
+                    <button
+                      type="button"
+                      onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
+                      disabled={saving || loadingCategories}
+                      className="flex w-full items-center justify-between rounded-lg border border-slate-200 bg-white py-3 px-4 text-sm text-slate-900 transition hover:border-slate-300 focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20 disabled:opacity-50"
+                    >
+                      <span>
+                        {loadingCategories ? 'Loading...' : form.category_id ? categories.find((c) => c.id === parseInt(form.category_id, 10))?.name || 'Select a category' : 'Select a category'}
+                      </span>
+                      <ChevronDown className="h-4 w-4 text-slate-400" />
+                    </button>
+
+                    {showCategoryDropdown && (
+                      <div className="absolute top-full left-0 right-0 z-10 mt-2 max-h-48 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg">
+                        <div className="sticky top-0 z-10 border-b border-slate-100 bg-white p-2">
+                          <div className="relative">
+                            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+                            <input
+                              type="text"
+                              value={categorySearch}
+                              onChange={(e) => setCategorySearch(e.target.value)}
+                              placeholder="Search category..."
+                              className="w-full rounded-md border border-slate-200 py-2 pl-8 pr-3 text-xs text-slate-900 focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
+                            />
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setForm((prev) => ({ ...prev, category_id: '' }));
+                            setShowCategoryDropdown(false);
+                          }}
+                          className="w-full px-4 py-3 text-left text-sm font-medium text-slate-600 hover:bg-slate-50"
+                        >
+                          None
+                        </button>
+                        {filteredCategories.map((category) => (
+                          <button
+                            key={category.id}
+                            type="button"
+                            onClick={() => {
+                              setForm((prev) => ({ ...prev, category_id: String(category.id) }));
+                              setShowCategoryDropdown(false);
+                            }}
+                            className={`w-full px-4 py-3 text-left text-sm transition ${form.category_id === String(category.id)
+                                ? 'bg-[#EEF2FF] text-[#2D3A74] font-semibold'
+                                : 'hover:bg-slate-50 text-slate-700'
+                              }`}
+                          >
+                            {category.name}
+                          </button>
+                        ))}
+                        {filteredCategories.length === 0 && (
+                          <div className="px-4 py-3 text-xs text-slate-500">No category found.</div>
                         )}
                       </div>
                     )}

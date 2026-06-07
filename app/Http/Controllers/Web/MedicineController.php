@@ -22,17 +22,21 @@ class MedicineController extends Controller
                 'medicines.strength',
                 'medicines.generic_id',
                 'medicines.supplier_id',
+                'medicines.category_id',
                 'generics.name as generic_name',
                 'suppliers.name as supplier_name',
+                'categories.name as category_name',
             ])
             ->leftJoin('generics', 'generics.id', '=', 'medicines.generic_id')
-            ->leftJoin('suppliers', 'suppliers.id', '=', 'medicines.supplier_id');
+            ->leftJoin('suppliers', 'suppliers.id', '=', 'medicines.supplier_id')
+            ->leftJoin('categories', 'categories.id', '=', 'medicines.category_id');
 
         if ($query !== '') {
             $builder->where(function ($q) use ($query) {
                 $q->where('medicines.name', 'like', '%' . $query . '%')
                     ->orWhere('generics.name', 'like', '%' . $query . '%')
-                    ->orWhere('suppliers.name', 'like', '%' . $query . '%');
+                    ->orWhere('suppliers.name', 'like', '%' . $query . '%')
+                    ->orWhere('categories.name', 'like', '%' . $query . '%');
             });
         }
 

@@ -40,6 +40,8 @@ class PrescriptionTemplateController extends Controller
             'instructions' => ['nullable', 'string', 'max:10000'],
             'medicines' => ['nullable', 'array'],
             'medicines.*.medicine_name' => ['required_with:medicines', 'string', 'max:255'],
+            'medicines.*.category_name' => ['nullable', 'string', 'max:120'],
+            'medicines.*.strength' => ['nullable', 'string', 'max:60'],
             'medicines.*.dose' => ['nullable', 'string', 'max:255'],
             'medicines.*.duration' => ['nullable', 'string', 'max:255'],
             'medicines.*.instruction' => ['nullable', 'string', 'max:1000'],
@@ -99,6 +101,8 @@ class PrescriptionTemplateController extends Controller
             'instructions' => ['nullable', 'string', 'max:10000'],
             'medicines' => ['nullable', 'array'],
             'medicines.*.medicine_name' => ['required_with:medicines', 'string', 'max:255'],
+            'medicines.*.category_name' => ['nullable', 'string', 'max:120'],
+            'medicines.*.strength' => ['nullable', 'string', 'max:60'],
             'medicines.*.dose' => ['nullable', 'string', 'max:255'],
             'medicines.*.duration' => ['nullable', 'string', 'max:255'],
             'medicines.*.instruction' => ['nullable', 'string', 'max:1000'],
@@ -176,6 +180,8 @@ class PrescriptionTemplateController extends Controller
 
             $normalized[] = [
                 'medicine_name' => $name,
+                'category_name' => $this->nullableTrimmed($row['category_name'] ?? null),
+                'strength' => $this->nullableTrimmed($row['strength'] ?? null),
                 'dose' => $this->nullableTrimmed($row['dose'] ?? null),
                 'duration' => $this->nullableTrimmed($row['duration'] ?? null),
                 'instruction' => $this->nullableTrimmed($row['instruction'] ?? null),

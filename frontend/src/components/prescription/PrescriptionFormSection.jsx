@@ -73,6 +73,9 @@ export default function PrescriptionMedicineSection({
                     onChange={(e) => isDoctor && onNameChange?.(idx, e.target.value)}
                     placeholder="Medicine"
                   />
+                  {m.category_name ? (
+                    <p className="mt-0.5 text-[10px] font-medium text-teal-700">{m.category_name}</p>
+                  ) : null}
                   {showMedicineMatchDropdown ? (
                     <div className="absolute left-0 z-50 mt-1 min-w-[min(520px,calc(100vw-3rem))] w-[max(100%,min(520px,calc(100vw-3rem)))] max-h-80 overflow-y-auto overscroll-contain rounded-md border border-[#c7d6f7] bg-white shadow-xl">
                       {matchedSuggestions.map((med, optionIdx) => (
@@ -92,6 +95,8 @@ export default function PrescriptionMedicineSection({
                           </div>
                           <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-slate-500">
                             <span>Generic: {med.generic_name || 'N/A'}</span>
+                            <span className="text-slate-300">|</span>
+                            <span>Category: {med.category_name || 'N/A'}</span>
                             <span className="text-slate-300">|</span>
                             <span>Supplier: {med.supplier_name || 'N/A'}</span>
                           </div>
@@ -122,16 +127,13 @@ export default function PrescriptionMedicineSection({
                   />
                 </div>
                 <div className="col-span-2 flex items-center gap-1">
-                  <select
+                  <input
                     className="w-full border-0 bg-transparent px-0 py-0.5 text-xs text-slate-900 focus:outline-none"
                     value={m.instruction || ''}
-                    disabled={!isDoctor}
+                    readOnly={!isDoctor}
                     onChange={(e) => isDoctor && onInstructionChange?.(idx, e.target.value)}
-                  >
-                    <option value="">None</option>
-                    <option value="After meal">After meal</option>
-                    <option value="Before meal">Before meal</option>
-                  </select>
+                    placeholder="Instruction"
+                  />
                   {isDoctor && (
                   <button
                     type="button"

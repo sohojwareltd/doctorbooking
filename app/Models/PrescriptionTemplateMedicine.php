@@ -10,6 +10,8 @@ class PrescriptionTemplateMedicine extends Model
     protected $fillable = [
         'template_id',
         'medicine_name',
+        'category_name',
+        'strength',
         'dose',
         'duration',
         'instruction',

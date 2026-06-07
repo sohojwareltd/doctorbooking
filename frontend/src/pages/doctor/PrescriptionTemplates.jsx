@@ -7,6 +7,8 @@ import { toastError, toastSuccess } from '../../utils/toast';
 
 const emptyMedicineRow = () => ({
   medicine_name: '',
+  category_name: '',
+  strength: '',
   dose: '',
   duration: '',
   instruction: '',
@@ -95,11 +97,28 @@ function buildInvestigationSelection(values, catalog) {
   };
 }
 
-function buildMedicineWithStrength(name, strength) {
+function buildMedicineLabel(name, category, strength) {
   const cleanName = String(name || '').trim();
+  const cleanCategory = String(category || '').trim();
   const cleanStrength = String(strength || '').trim();
   if (!cleanName) return '';
-  return cleanStrength ? `${cleanName} ${cleanStrength}` : cleanName;
+
+  let label = cleanName;
+  const normalizedLabel = normalizeMedicineName(label);
+
+  if (cleanCategory && !normalizedLabel.includes(normalizeMedicineName(cleanCategory))) {
+    label = `${label} ${cleanCategory}`;
+  }
+
+  if (cleanStrength && !label.toLowerCase().includes(cleanStrength.toLowerCase())) {
+    label = `${label} ${cleanStrength}`;
+  }
+
+  return label;
+}
+
+function buildMedicineWithStrength(name, strength) {
+  return buildMedicineLabel(name, '', strength);
 }
 
 export default function PrescriptionTemplates() {
@@ -194,6 +213,8 @@ export default function PrescriptionTemplates() {
     const medicines = Array.isArray(template?.medicines) && template.medicines.length
       ? template.medicines.map((item) => ({
         medicine_name: String(item?.medicine_name || '').trim(),
+        category_name: String(item?.category_name || '').trim(),
+        strength: String(item?.strength || '').trim(),
         dose: String(item?.dose || '').trim(),
         duration: String(item?.duration || '').trim(),
         instruction: String(item?.instruction || '').trim(),
@@ -250,6 +271,7 @@ export default function PrescriptionTemplates() {
           name: String(item.name || '').trim(),
           generic_name: String(item.generic_name || '').trim(),
           supplier_name: String(item.supplier_name || '').trim(),
+          category_name: String(item.category_name || '').trim(),
           strength: String(item.strength || '').trim(),
         }))
         : [];
@@ -356,6 +378,8 @@ export default function PrescriptionTemplates() {
       medicines: form.medicines
         .map((item) => ({
           medicine_name: String(item?.medicine_name || '').trim(),
+          category_name: String(item?.category_name || '').trim() || null,
+          strength: String(item?.strength || '').trim() || null,
           dose: String(item?.dose || '').trim() || null,
           duration: String(item?.duration || '').trim() || null,
           instruction: String(item?.instruction || '').trim() || null,
@@ -515,7 +539,7 @@ export default function PrescriptionTemplates() {
 
       {showModal && typeof document !== 'undefined' ? createPortal(
         <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-[rgba(15,23,42,0.46)] p-4 pt-8 backdrop-blur-[4px]">
-          <div className="w-full max-w-4xl overflow-hidden rounded-2xl border border-slate-200/80 bg-white/95 shadow-[0_24px_60px_-30px_rgba(15,23,42,0.5)] backdrop-blur-md">
+          <div className="w-full max-w-5xl overflow-visible rounded-2xl border border-slate-200/80 bg-white/95 shadow-[0_24px_60px_-30px_rgba(15,23,42,0.5)] backdrop-blur-md">
             <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3">
               <h3 className="text-base font-bold text-slate-800">{isEditing ? 'Edit Template' : 'Create Template'}</h3>
               <button type="button" onClick={closeModal} className="rounded-md border border-slate-200 p-1.5 text-slate-600 transition hover:bg-slate-50">
@@ -625,8 +649,11 @@ export default function PrescriptionTemplates() {
                   </button>
                 </div>
                 <div className="space-y-2">
-                  {form.medicines.map((row, index) => (
-                    <div key={`${index}-template-medicine`} className="grid gap-2 md:grid-cols-[2fr_1fr_1fr_1fr_auto]">
+                  {form.medicines.map((row, index) => {
+                    const showMedicineMatchDropdown = focusedMedicineIndex === index && (medicineMatchesByRow[index] || []).length > 0;
+
+                    return (
+                    <div key={`${index}-template-medicine`} className={`grid gap-2 md:grid-cols-[2fr_1fr_1fr_1fr_auto] ${showMedicineMatchDropdown ? 'relative z-40' : ''}`}>
                       <div className="relative">
                         <input
                           type="text"
@@ -641,33 +668,44 @@ export default function PrescriptionTemplates() {
                             }, 120);
                           }}
                           onChange={(e) => {
-                            updateMedicineRow(index, { medicine_name: e.target.value });
+                            updateMedicineRow(index, {
+                              medicine_name: e.target.value,
+                              category_name: '',
+                              strength: '',
+                            });
                             void queryMedicineMatches(e.target.value, index);
                           }}
                           className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
                           placeholder="Medicine"
                         />
-                        {focusedMedicineIndex === index && (medicineMatchesByRow[index] || []).length > 0 ? (
-                          <div className="absolute left-0 right-0 z-20 mt-1 max-h-64 overflow-y-auto overscroll-contain rounded-md border border-[#c7d6f7] bg-white shadow-lg">
+                        {row.category_name ? (
+                          <p className="mt-0.5 text-[10px] font-medium text-teal-700">{row.category_name}</p>
+                        ) : null}
+                        {showMedicineMatchDropdown ? (
+                          <div className="absolute left-0 z-50 mt-1 min-w-[min(560px,calc(100vw-3rem))] w-[max(100%,min(560px,calc(100vw-3rem)))] max-h-96 overflow-y-auto overscroll-contain rounded-md border border-[#c7d6f7] bg-white shadow-xl">
                             {(medicineMatchesByRow[index] || []).map((med, optionIndex) => (
                               <button
                                 key={`${med.id ?? med.name}-${med.strength}-${optionIndex}`}
                                 type="button"
-                                className="w-full border-b border-slate-100 px-3 py-2 text-left text-xs last:border-b-0 hover:bg-[#edf2ff]"
+                                className="w-full border-b border-slate-100 px-3 py-2.5 text-left text-xs last:border-b-0 hover:bg-[#edf2ff]"
                                 onMouseDown={(event) => {
                                   event.preventDefault();
                                   updateMedicineRow(index, {
-                                    medicine_name: buildMedicineWithStrength(med.name, med.strength),
+                                    medicine_name: buildMedicineLabel(med.name, med.category_name, med.strength),
+                                    category_name: String(med.category_name || '').trim(),
+                                    strength: String(med.strength || '').trim(),
                                   });
                                   setFocusedMedicineIndex(null);
                                 }}
                               >
                                 <div className="flex items-start justify-between gap-3">
                                   <span className="font-semibold text-slate-800">{med.name}</span>
-                                  <span className="text-slate-500">{med.strength || 'No strength'}</span>
+                                  <span className="shrink-0 text-slate-500">{med.strength || 'No strength'}</span>
                                 </div>
                                 <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-slate-500">
                                   <span>Generic: {med.generic_name || 'N/A'}</span>
+                                  <span className="text-slate-300">|</span>
+                                  <span>Category: {med.category_name || 'N/A'}</span>
                                   <span className="text-slate-300">|</span>
                                   <span>Supplier: {med.supplier_name || 'N/A'}</span>
                                 </div>
@@ -706,7 +744,8 @@ export default function PrescriptionTemplates() {
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
               </div>

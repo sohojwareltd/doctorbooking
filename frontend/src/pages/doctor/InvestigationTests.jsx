@@ -138,7 +138,7 @@ export default function InvestigationTests() {
   return (
     <DoctorLayout title="Investigation Tests">
       <Head title="Investigation Tests" />
-      <div className="mx-auto max-w-[1200px]">
+      <div className="mx-auto max-w-[1400px]">
         <section className="surface-card overflow-hidden rounded-3xl">
           <div className="border-b border-slate-100 px-6 py-5">
             <div className="flex flex-wrap items-center justify-between gap-4">
@@ -172,7 +172,7 @@ export default function InvestigationTests() {
                 <tr>
                   <th className="px-6 py-4 text-left">ID</th>
                   <th className="px-6 py-4 text-left">Test Name</th>
-                  <th className="px-6 py-4 text-right">Actions</th>
+                  <th className="px-6 py-4 text-right w-28">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white">

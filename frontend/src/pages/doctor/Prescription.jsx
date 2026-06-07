@@ -36,6 +36,7 @@ const emptyComplaint = () => ({ description: '', duration: '' });
 const emptyMedicine = () => ({
     name: '',
     strength: '',
+    category_name: '',
     dosage: '',
     duration: '',
     instruction: '',
@@ -112,11 +113,28 @@ function findBestCatalogInvestigation(catalogSource, rawName) {
     return null;
 }
 
-function buildMedicineWithStrength(name, strength) {
+function buildMedicineLabel(name, category, strength) {
     const cleanName = String(name || '').trim();
+    const cleanCategory = String(category || '').trim();
     const cleanStrength = String(strength || '').trim();
     if (!cleanName) return '';
-    return cleanStrength ? `${cleanName} ${cleanStrength}` : cleanName;
+
+    let label = cleanName;
+    const normalizedLabel = normalizeMedicineName(label);
+
+    if (cleanCategory && !normalizedLabel.includes(normalizeMedicineName(cleanCategory))) {
+        label = `${label} ${cleanCategory}`;
+    }
+
+    if (cleanStrength && !label.toLowerCase().includes(cleanStrength.toLowerCase())) {
+        label = `${label} ${cleanStrength}`;
+    }
+
+    return label;
+}
+
+function buildMedicineWithStrength(name, strength) {
+    return buildMedicineLabel(name, '', strength);
 }
 
 function formatDisplayDate(ymd) {
@@ -221,6 +239,7 @@ function parseMedicationsText(text, doseText = '') {
             return {
                 name,
                 strength: '',
+                category_name: '',
                 dosage,
                 duration,
                 instruction,
@@ -688,6 +707,7 @@ export default function Prescription({
     const [selectedTemplate, setSelectedTemplate] = useState(null);
     const [loadingTemplateDetails, setLoadingTemplateDetails] = useState(false);
     const [applyingTemplate, setApplyingTemplate] = useState(false);
+    const shouldAutoApplyTemplateRef = useRef(false);
     const [investigationCatalog, setInvestigationCatalog] = useState([]);
     const [medicineMatchesByRow, setMedicineMatchesByRow] = useState({});
     const medicineMatchCacheRef = useRef(new Map());
@@ -946,24 +966,58 @@ export default function Prescription({
                 },
             });
 
-            const parsedInstructions = parseInstructionsText(selectedTemplate.instructions || '');
-            const combinedAdvice = [parsedInstructions.lifestyle, parsedInstructions.diet_rest, parsedInstructions.emergency_note]
-                .filter(Boolean)
-                .join('\n');
-            dispatch({
-                type: 'setField',
-                path: ['advice', 'lifestyle'],
-                value: combinedAdvice,
-            });
+            const instructionText = String(selectedTemplate.instructions || '').trim();
+            const hasStructuredSections = /^(Lifestyle Advice:|Diet\s*\/\s*Rest:|Emergency Note:)/im.test(instructionText);
+
+            if (hasStructuredSections) {
+                const parsedInstructions = parseInstructionsText(instructionText);
+                const combinedAdvice = [parsedInstructions.lifestyle, parsedInstructions.diet_rest, parsedInstructions.emergency_note]
+                    .filter(Boolean)
+                    .join('\n');
+
+                dispatch({
+                    type: 'setField',
+                    path: ['advice', 'lifestyle'],
+                    value: combinedAdvice,
+                });
+                dispatch({
+                    type: 'setField',
+                    path: ['advice', 'diet_rest'],
+                    value: parsedInstructions.diet_rest,
+                });
+                dispatch({
+                    type: 'setField',
+                    path: ['follow_up', 'emergency_note'],
+                    value: parsedInstructions.emergency_note,
+                });
+            } else {
+                dispatch({
+                    type: 'setField',
+                    path: ['advice', 'lifestyle'],
+                    value: instructionText,
+                });
+                dispatch({
+                    type: 'setField',
+                    path: ['advice', 'diet_rest'],
+                    value: '',
+                });
+            }
 
             const mappedMedicines = (Array.isArray(selectedTemplate.medicines) ? selectedTemplate.medicines : [])
-                .map((item) => ({
-                    name: String(item?.medicine_name || '').trim(),
-                    strength: '',
-                    dosage: String(item?.dose || '').trim(),
-                    duration: String(item?.duration || '').trim(),
-                    instruction: String(item?.instruction || '').trim(),
-                }))
+                .map((item) => {
+                    const storedName = String(item?.medicine_name || '').trim();
+                    const categoryName = String(item?.category_name || '').trim();
+                    const strength = String(item?.strength || '').trim();
+
+                    return {
+                        name: storedName || buildMedicineLabel('', categoryName, strength),
+                        strength,
+                        category_name: categoryName,
+                        dosage: String(item?.dose || '').trim(),
+                        duration: String(item?.duration || '').trim(),
+                        instruction: String(item?.instruction || '').trim(),
+                    };
+                })
                 .filter((item) => item.name);
 
             dispatch({
@@ -1015,6 +1069,7 @@ export default function Prescription({
                     strength: med.strength || '',
                     generic_name: med.generic_name || '',
                     supplier_name: med.supplier_name || '',
+                    category_name: med.category_name || '',
                 }))
                 : [];
 
@@ -1041,7 +1096,7 @@ export default function Prescription({
             type: 'setArrayItem',
             path: ['medicines'],
             index: idx,
-            patch: { name: value },
+            patch: { name: value, category_name: '' },
         });
         void queryMedicineMatches(value, idx);
     };
@@ -1052,8 +1107,9 @@ export default function Prescription({
             path: ['medicines'],
             index: idx,
             patch: {
-                name: buildMedicineWithStrength(med.name, med.strength),
+                name: buildMedicineLabel(med.name, med.category_name, med.strength),
                 strength: String(med.strength || '').trim(),
+                category_name: String(med.category_name || '').trim(),
             },
         });
     };
@@ -1211,6 +1267,19 @@ export default function Prescription({
     useEffect(() => {
         void loadTemplateDetails(selectedTemplateId);
     }, [selectedTemplateId]);
+
+    useEffect(() => {
+        if (!shouldAutoApplyTemplateRef.current || !selectedTemplateId || loadingTemplateDetails || !selectedTemplate) {
+            return;
+        }
+
+        if (String(selectedTemplate.id) !== String(selectedTemplateId)) {
+            return;
+        }
+
+        shouldAutoApplyTemplateRef.current = false;
+        applySelectedTemplate();
+    }, [selectedTemplateId, selectedTemplate, loadingTemplateDetails]);
 
     useEffect(() => {
         if (prescription?.id) void loadReports();
@@ -1551,7 +1620,10 @@ export default function Prescription({
                                         <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Prescription Template</label>
                                         <select
                                             value={selectedTemplateId}
-                                            onChange={(e) => setSelectedTemplateId(e.target.value)}
+                                            onChange={(e) => {
+                                                shouldAutoApplyTemplateRef.current = e.target.value !== '';
+                                                setSelectedTemplateId(e.target.value);
+                                            }}
                                             className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 transition focus:border-[#2D3A74] focus:ring-2 focus:ring-[#2D3A74]/20"
                                             disabled={loadingTemplates}
                                         >
