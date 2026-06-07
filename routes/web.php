@@ -24,7 +24,9 @@ use Inertia\Inertia;
 Route::get('/', [PublicController::class, 'home'])->name('home');
 Route::get('/about', [PublicController::class, 'about'])->name('about');
 Route::get('/contact', [PublicController::class, 'contact'])->name('contact');
-Route::post('/contact', fn () => redirect()->back())->name('contact.submit');
+Route::post('/contact', [PublicController::class, 'contactSubmit'])->name('contact.submit');
+Route::get('/purchase', [PublicController::class, 'purchase'])->name('purchase');
+Route::post('/purchase/track', [PublicController::class, 'trackPurchaseEvent'])->name('purchase.track');
 
 Route::middleware('guest')->group(function () {
     Route::get('/forgot-password/otp', fn (Request $request) => Inertia::render('Auth/forgot-password-otp', [
