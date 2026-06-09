@@ -6,13 +6,20 @@ use App\Http\Controllers\Web\Auth\PasswordOtpController;
 use App\Http\Controllers\Web\ChamberController;
 use App\Http\Controllers\Web\CompoundUserController;
 use App\Http\Controllers\Web\DashboardController;
+use App\Http\Middleware\HandleAppearance;
+use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Controllers\Web\MedicineController;
 use App\Http\Controllers\Web\PatientController;
+use App\Http\Middleware\PreventResponseCaching;
 use App\Http\Controllers\Web\PrescriptionController as WebPrescriptionController;
 use App\Http\Controllers\Web\ProfileController;
 use App\Http\Controllers\Web\PublicController;
+use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Http\Request;
+use Illuminate\Session\Middleware\StartSession;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
+use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Inertia\Inertia;
 
 /*
@@ -27,6 +34,19 @@ Route::get('/contact', [PublicController::class, 'contact'])->name('contact');
 Route::post('/contact', [PublicController::class, 'contactSubmit'])->name('contact.submit');
 Route::get('/purchase', [PublicController::class, 'purchase'])->name('purchase');
 Route::post('/purchase/track', [PublicController::class, 'trackPurchaseEvent'])->name('purchase.track');
+Route::get('/test-mail', function () {
+  
+
+    Mail::raw('Brevo SMTP test email from doctorbooking.', function ($message) {
+        $message->to('ahmedtamim19050@gmail.com')
+            ->subject('Doctorbooking SMTP test');
+    });
+
+    return response()->json([
+        'status' => 'sent',
+        'to' => 'ahmedtamim19050@gmail.com',
+    ]);
+})->name('test-mail');
 
 Route::middleware('guest')->group(function () {
     Route::get('/forgot-password/otp', fn (Request $request) => Inertia::render('Auth/forgot-password-otp', [
