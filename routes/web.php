@@ -8,6 +8,7 @@ use App\Http\Controllers\Web\CompoundUserController;
 use App\Http\Controllers\Web\DashboardController;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Mail\LeadContactMail;
 use App\Http\Controllers\Web\MedicineController;
 use App\Http\Controllers\Web\PatientController;
 use App\Http\Middleware\PreventResponseCaching;
@@ -34,17 +35,24 @@ Route::get('/contact', [PublicController::class, 'contact'])->name('contact');
 Route::post('/contact', [PublicController::class, 'contactSubmit'])->name('contact.submit');
 Route::get('/purchase', [PublicController::class, 'purchase'])->name('purchase');
 Route::post('/purchase/track', [PublicController::class, 'trackPurchaseEvent'])->name('purchase.track');
-Route::get('/test-mail', function () {
-  
+Route::get('/test-mail-preview', function () {
+    return view('emails.lead-contact', [
+        'sender_name' => 'Test Customer',
+        'sender_phone' => '01700000000',
+    ]);
+})->name('test-mail-preview');
 
-    Mail::raw('Brevo SMTP test email from doctorbooking.', function ($message) {
-        $message->to('sohojwareltd@gmail.com')
-            ->subject('Doctorbooking SMTP test');
-    });
+Route::get('/test-mail', function () {
+    Mail::to((string) config('services.lead_notification.email', env('MAIL_FROM_ADDRESS')))
+        ->send(new LeadContactMail(
+            name: 'Test Customer',
+            phone: '01700000000',
+        ));
 
     return response()->json([
         'status' => 'sent',
-        'to' => 'sohojwareltd@gmail.com',
+        'template' => 'emails.lead-contact',
+        'to' => (string) config('services.lead_notification.email', env('MAIL_FROM_ADDRESS')),
     ]);
 })->name('test-mail');
 

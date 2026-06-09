@@ -1120,13 +1120,10 @@
 					const formData = new FormData(leadForm);
 					const payload = {
 						name: String(formData.get('name') || '').trim(),
-						phone: String(formData.get('phone') || '').trim(),
-						email: String(formData.get('email') || '').trim() || null,
-						subject: String(formData.get('subject') || '').trim(),
-						message: String(formData.get('message') || '').trim()
+						phone: String(formData.get('phone') || '').trim()
 					};
 
-					if (!payload.name || !payload.phone || !payload.subject || !payload.message) {
+					if (!payload.name || !payload.phone) {
 						showStatus('err', 'অনুগ্রহ করে প্রয়োজনীয় সব তথ্য পূরণ করুন।');
 						return;
 					}
@@ -1137,7 +1134,7 @@
 					statusBox.textContent = '';
 
 					await trackEvent('lead_submit_attempt', {
-						has_email: !!payload.email
+						source: 'purchase_form'
 					});
 
 					try {

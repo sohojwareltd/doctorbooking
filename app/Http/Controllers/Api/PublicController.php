@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Mail\LeadContactMail;
 use App\Models\Appointment;
 use App\Models\Chamber;
 use App\Models\DoctorSchedule;
@@ -10,6 +11,7 @@ use App\Models\DoctorScheduleRange;
 use App\Models\DoctorUnavailableRange;
 use App\Models\User;
 use App\Services\AppointmentSlotService;
+use App\Services\Sms\SmsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -29,40 +31,26 @@ class PublicController extends Controller
     }
 
     /** POST /api/public/contact */
-    public function contact(Request $request): JsonResponse
+    public function contact(Request $request, SmsService $smsService): JsonResponse
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'phone' => ['required', 'string', 'max:50'],
-            'email' => ['nullable', 'email', 'max:255'],
-            'subject' => ['required', 'string', 'max:255'],
-            'message' => ['required', 'string', 'max:3000'],
         ]);
 
-        $doctor = User::whereHas('role', fn ($q) => $q->where('name', 'doctor'))->first();
-        $recipientEmail = $doctor?->email;
+        $recipientEmail = trim((string) config('services.lead_notification.email', ''));
 
         if (! $recipientEmail) {
             return response()->json([
-                'message' => 'Doctor email is not configured yet.',
+                'message' => 'Lead notification email is not configured yet.',
             ], 422);
         }
 
         try {
-            Mail::send('emails.contact-doctor', [
-                'sender_name' => $validated['name'],
-                'sender_phone' => $validated['phone'],
-                'sender_email' => $validated['email'] ?? null,
-                'subject_text' => $validated['subject'],
-                'message_text' => $validated['message'],
-            ], function ($mail) use ($validated, $recipientEmail) {
-                $mail->to($recipientEmail)
-                    ->subject('New contact message: ' . Str::limit((string) $validated['subject'], 120));
-
-                if (! empty($validated['email'])) {
-                    $mail->replyTo($validated['email'], $validated['name']);
-                }
-            });
+            Mail::to($recipientEmail)->send(new LeadContactMail(
+                name: $validated['name'],
+                phone: $validated['phone'],
+            ));
         } catch (\Throwable $exception) {
             Log::error('Failed to send doctor contact email', [
                 'error' => $exception->getMessage(),
@@ -73,8 +61,28 @@ class PublicController extends Controller
             ], 500);
         }
 
+        $smsTargets = array_values(array_unique(array_filter([
+            trim((string) config('services.lead_notification.phone', '')),
+            trim((string) ($validated['phone'] ?? '')),
+        ])));
+
+        $smsResults = [];
+        if (! empty($smsTargets)) {
+            $leadSms = 'New lead: ' . $validated['name'] . ' (' . $validated['phone'] . ').';
+            foreach ($smsTargets as $targetPhone) {
+                $smsResults[$targetPhone] = $smsService->send($targetPhone, $leadSms);
+            }
+        }
+
+        $smsSent = collect($smsResults)->filter(fn ($result) => (bool) ($result['success'] ?? false))->count();
+
         return response()->json([
             'message' => 'Your message has been sent successfully.',
+            'sms' => [
+                'targets' => $smsTargets,
+                'sent_count' => $smsSent,
+                'results' => $smsResults,
+            ],
         ]);
     }
 

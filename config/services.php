@@ -44,4 +44,9 @@ return [
         'timeout' => env('SMS_TIMEOUT', 15),
     ],
 
+    'lead_notification' => [
+        'email' => env('LEAD_NOTIFY_EMAIL', env('MAIL_FROM_ADDRESS')),
+        'phone' => env('LEAD_NOTIFY_PHONE'),
+    ],
+
 ];
