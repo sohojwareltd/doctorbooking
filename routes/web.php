@@ -38,13 +38,13 @@ Route::get('/test-mail', function () {
   
 
     Mail::raw('Brevo SMTP test email from doctorbooking.', function ($message) {
-        $message->to('ahmedtamim19050@gmail.com')
+        $message->to('sohojwareltd@gmail.com')
             ->subject('Doctorbooking SMTP test');
     });
 
     return response()->json([
         'status' => 'sent',
-        'to' => 'ahmedtamim19050@gmail.com',
+        'to' => 'sohojwareltd@gmail.com',
     ]);
 })->name('test-mail');
 
