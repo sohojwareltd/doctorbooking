@@ -14,7 +14,8 @@ class LeadContactMail extends Mailable
 
     public function __construct(
         public string $name,
-        public string $phone
+        public string $phone,
+        public string $comment = ''
     ) {
     }
 
@@ -32,6 +33,7 @@ class LeadContactMail extends Mailable
             with: [
                 'sender_name' => $this->name,
                 'sender_phone' => $this->phone,
+                'sender_comment' => trim($this->comment),
             ],
         );
     }

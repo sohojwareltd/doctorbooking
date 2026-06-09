@@ -817,15 +817,21 @@
                         <div class="row">
                             <div class="field">
                                 <label for="name">নাম</label>
-                                <input id="name" name="name" type="text" required
+                                <input id="name" name="name" type="text" required maxlength="80"
                                     placeholder="ডা. আপনার নাম">
                             </div>
                             <div class="field">
                                 <label for="phone">মোবাইল</label>
-                                <input id="phone" name="phone" type="tel" required
+                                <input id="phone" name="phone" type="tel" required maxlength="20"
                                     placeholder="01XXXXXXXXX">
                             </div>
                         </div>
+                        <div class="field mt-3">
+                            <label for="comment">মন্তব্য</label>
+                            <textarea id="comment" name="comment" maxlength="500"
+                                placeholder="আপনার মন্তব্য লিখুন (ঐচ্ছিক)"></textarea>
+                        </div>
+                        {{-- <div class="note">নাম সর্বোচ্চ ৮০ অক্ষর এবং মোবাইল সর্বোচ্চ ২০ অক্ষর সমর্থিত।</div> --}}
 
                         <button class="btn btn-primary mt-3" id="leadSubmitBtn" type="submit"
                             data-track-click="lead_submit_click">ডেমো রিকোয়েস্ট পাঠান</button>
@@ -1172,6 +1178,10 @@
             const leadForm = document.getElementById('purchaseLeadForm');
             const submitBtn = document.getElementById('leadSubmitBtn');
             const statusBox = document.getElementById('formStatus');
+            const NAME_MAX = 80;
+            const PHONE_MAX = 20;
+            const COMMENT_MAX = 500;
+            const phonePattern = /^[0-9+\-\s()]+$/;
 
             function showStatus(type, message) {
                 statusBox.className = 'status ' + type;
@@ -1185,11 +1195,32 @@
                     const formData = new FormData(leadForm);
                     const payload = {
                         name: String(formData.get('name') || '').trim(),
-                        phone: String(formData.get('phone') || '').trim()
+                        phone: String(formData.get('phone') || '').trim(),
+                        comment: String(formData.get('comment') || '').trim()
                     };
 
                     if (!payload.name || !payload.phone) {
                         showStatus('err', 'অনুগ্রহ করে প্রয়োজনীয় সব তথ্য পূরণ করুন।');
+                        return;
+                    }
+
+                    if (payload.name.length > NAME_MAX) {
+                        showStatus('err', 'নাম সর্বোচ্চ ৮০ অক্ষরের মধ্যে লিখুন।');
+                        return;
+                    }
+
+                    if (payload.phone.length > PHONE_MAX) {
+                        showStatus('err', 'মোবাইল নম্বর সর্বোচ্চ ২০ অক্ষরের মধ্যে লিখুন।');
+                        return;
+                    }
+
+                    if (!phonePattern.test(payload.phone)) {
+                        showStatus('err', 'মোবাইল নম্বর সঠিক ফরম্যাটে লিখুন।');
+                        return;
+                    }
+
+                    if (payload.comment.length > COMMENT_MAX) {
+                        showStatus('err', 'মন্তব্য সর্বোচ্চ ৫০০ অক্ষরের মধ্যে লিখুন।');
                         return;
                     }
 
@@ -1230,7 +1261,8 @@
                             via: 'api_public_contact'
                         });
                     } catch (error) {
-                        showStatus('err', 'রিকোয়েস্ট পাঠাতে সমস্যা হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।');
+                        const errorMessage = String(error && error.message ? error.message : '').trim();
+                        showStatus('err', errorMessage || 'রিকোয়েস্ট পাঠাতে সমস্যা হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।');
                         await trackEvent('lead_submit_failed', {
                             reason: String(error && error.message ? error.message : 'unknown')
                         });

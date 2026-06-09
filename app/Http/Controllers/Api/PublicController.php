@@ -34,15 +34,23 @@ class PublicController extends Controller
     public function contact(Request $request, SmsService $smsService): JsonResponse
     {
         $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'phone' => ['required', 'string', 'max:50'],
+            'name' => ['required', 'string', 'max:80'],
+            'phone' => ['required', 'string', 'max:20', 'regex:/^[0-9+\-\s()]+$/'],
+            'comment' => ['nullable', 'string', 'max:500'],
+        ], [
+            'name.required' => 'নাম অবশ্যই দিতে হবে।',
+            'name.max' => 'নাম ৮০ অক্ষরের মধ্যে লিখুন।',
+            'phone.required' => 'মোবাইল নম্বর অবশ্যই দিতে হবে।',
+            'phone.max' => 'মোবাইল নম্বর ২০ অক্ষরের মধ্যে লিখুন।',
+            'phone.regex' => 'মোবাইল নম্বর সঠিক ফরম্যাটে লিখুন।',
+            'comment.max' => 'মন্তব্য ৫০০ অক্ষরের মধ্যে লিখুন।',
         ]);
 
         $recipientEmail = trim((string) config('services.lead_notification.email', ''));
 
         if (! $recipientEmail) {
             return response()->json([
-                'message' => 'Lead notification email is not configured yet.',
+                'message' => 'নোটিফিকেশন ইমেইল কনফিগার করা নেই।',
             ], 422);
         }
 
@@ -50,6 +58,7 @@ class PublicController extends Controller
             Mail::to($recipientEmail)->send(new LeadContactMail(
                 name: $validated['name'],
                 phone: $validated['phone'],
+                comment: (string) ($validated['comment'] ?? ''),
             ));
         } catch (\Throwable $exception) {
             Log::error('Failed to send doctor contact email', [
@@ -57,18 +66,17 @@ class PublicController extends Controller
             ]);
 
             return response()->json([
-                'message' => 'Could not send message right now. Please try again later.',
+                'message' => 'এই মুহূর্তে মেইল পাঠানো যায়নি। অনুগ্রহ করে আবার চেষ্টা করুন।',
             ], 500);
         }
 
         $smsTargets = array_values(array_unique(array_filter([
             trim((string) config('services.lead_notification.phone', '')),
-            trim((string) ($validated['phone'] ?? '')),
         ])));
 
         $smsResults = [];
         if (! empty($smsTargets)) {
-            $leadSms = 'New lead: ' . $validated['name'] . ' (' . $validated['phone'] . ').';
+            $leadSms = 'নতুন লিড: ' . $validated['name'] . ' | মোবাইল: ' . $validated['phone'];
             foreach ($smsTargets as $targetPhone) {
                 $smsResults[$targetPhone] = $smsService->send($targetPhone, $leadSms);
             }
@@ -77,7 +85,7 @@ class PublicController extends Controller
         $smsSent = collect($smsResults)->filter(fn ($result) => (bool) ($result['success'] ?? false))->count();
 
         return response()->json([
-            'message' => 'Your message has been sent successfully.',
+            'message' => 'আপনার রিকোয়েস্ট সফলভাবে পাঠানো হয়েছে।',
             'sms' => [
                 'targets' => $smsTargets,
                 'sent_count' => $smsSent,
