@@ -1,5 +1,7 @@
 <!doctype html>
 <html lang="bn">
+
+
 @php
     $metaImage = asset('favicon.ico');
     $faviconUrl = asset('favicon.svg') . '?v=20260429';
@@ -31,6 +33,31 @@
         rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
         integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+
+    <script>
+        ! function(f, b, e, v, n, t, s) {
+            if (f.fbq) return;
+            n = f.fbq = function() {
+                n.callMethod ?
+                    n.callMethod.apply(n, arguments) : n.queue.push(arguments)
+            };
+            if (!f._fbq) f._fbq = n;
+            n.push = n;
+            n.loaded = !0;
+            n.version = '2.0';
+            n.queue = [];
+            t = b.createElement(e);
+            t.async = !0;
+            t.src = v;
+            s = b.getElementsByTagName(e)[0];
+            s.parentNode.insertBefore(t, s)
+        }(window, document, 'script',
+            'https://connect.facebook.net/en_US/fbevents.js');
+        fbq('init', '2434140617079834');
+        fbq('track', 'PageView');
+    </script>
+    <noscript><img height="1" width="1" style="display:none"
+            src="https://www.facebook.com/tr?id=2434140617079834&ev=PageView&noscript=1" /></noscript>
 
     <style>
         :root {
@@ -779,7 +806,8 @@
                         </div>
                         <div class="col">
                             <button type="button" class="gallery-tile" data-bs-toggle="modal"
-                                data-bs-target="#galleryModal" data-gallery-index="3" data-track-click="gallery_open_4">
+                                data-bs-target="#galleryModal" data-gallery-index="3"
+                                data-track-click="gallery_open_4">
                                 <img src="{{ asset('landing/pic-4.webp') }}" alt="রোগীর প্রোফাইল">
                                 <span class="gallery-tile-label">রোগীর মেডিকেল প্রোফাইল</span>
                             </button>
@@ -828,8 +856,7 @@
                         </div>
                         <div class="field mt-3">
                             <label for="comment">মন্তব্য</label>
-                            <textarea id="comment" name="comment" maxlength="500"
-                                placeholder="আপনার মন্তব্য লিখুন (ঐচ্ছিক)"></textarea>
+                            <textarea id="comment" name="comment" maxlength="500" placeholder="আপনার মন্তব্য লিখুন (ঐচ্ছিক)"></textarea>
                         </div>
                         {{-- <div class="note">নাম সর্বোচ্চ ৮০ অক্ষর এবং মোবাইল সর্বোচ্চ ২০ অক্ষর সমর্থিত।</div> --}}
 
@@ -1262,7 +1289,8 @@
                         });
                     } catch (error) {
                         const errorMessage = String(error && error.message ? error.message : '').trim();
-                        showStatus('err', errorMessage || 'রিকোয়েস্ট পাঠাতে সমস্যা হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।');
+                        showStatus('err', errorMessage ||
+                            'রিকোয়েস্ট পাঠাতে সমস্যা হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।');
                         await trackEvent('lead_submit_failed', {
                             reason: String(error && error.message ? error.message : 'unknown')
                         });
