@@ -156,8 +156,14 @@ export default function PublicBookAppointment() {
     if (!selectedChamberId) {
       setUnavailableRanges([]);
       setClosedWeekdays([]);
+      setFullyBookedDates([]);
       return;
     }
+
+    setUnavailableRanges([]);
+    setClosedWeekdays([]);
+    setFullyBookedDates([]);
+
     let mounted = true;
     const run = async () => {
       try {
@@ -328,7 +334,9 @@ export default function PublicBookAppointment() {
   }, [formData.date, selectedChamberId]);
 
   const handleDateClick = (info) => {
-    const clickedDate = info.dateStr;
+    const clickedDate = normalizeCalendarDate(info);
+
+    if (!clickedDate) return;
 
     if (clickedDate < getTodayYmd()) {
       const message = 'Previous dates are not available for booking. Please choose today or a future date.';
@@ -511,8 +519,13 @@ export default function PublicBookAppointment() {
   const isStep2Complete = Boolean(selectedChamberId && formData.date && previewSerial && previewTime && !loadingPreview);
 
   const calendarRenderKey = useMemo(
-    () => `${closedWeekdays.join(',')}|${unavailableRanges.map((r) => `${r?.start_date || ''}-${r?.end_date || ''}`).join(',')}`,
-    [closedWeekdays, unavailableRanges]
+    () => [
+      selectedChamberId ?? 'none',
+      closedWeekdays.join(','),
+      unavailableRanges.map((r) => `${r?.start_date || ''}-${r?.end_date || ''}`).join(','),
+      fullyBookedDates.join(','),
+    ].join('|'),
+    [selectedChamberId, closedWeekdays, unavailableRanges, fullyBookedDates]
   );
 
   const steps = [

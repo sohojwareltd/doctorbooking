@@ -254,14 +254,14 @@ class PublicController extends Controller
             }
         }
 
-        // Also mark days that have schedule but no remaining slots as disabled.
+        // Mark dates that cannot be booked (closed schedule or no remaining slots).
         $fullyBookedDates = [];
         $today = now()->startOfDay();
         $until = now()->copy()->addDays(45)->startOfDay();
         for ($cursor = $today->copy(); $cursor->lte($until); $cursor->addDay()) {
             $dateString = $cursor->toDateString();
             $availability = $this->slotService->getAvailabilityForDate($doctor, $dateString, $chamberId);
-            if (! $availability['is_closed'] && $availability['slots']->isEmpty()) {
+            if ($availability['is_closed'] || $availability['slots']->isEmpty()) {
                 $fullyBookedDates[] = $dateString;
             }
         }
