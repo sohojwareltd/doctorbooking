@@ -1,6 +1,6 @@
 {
   "frontend/src/main.jsx": {
-    "file": "assets/main-SIC10G_v.js",
+    "file": "assets/main-CmIOfwtf.js",
     "name": "main",
     "src": "frontend/src/main.jsx",
     "isEntry": true,
@@ -14,7 +14,7 @@
     ]
   },
   "node_modules/canvg/lib/index.es.js": {
-    "file": "assets/index.es-D3BHU3w6.js",
+    "file": "assets/index.es-C6lrncdw.js",
     "name": "index.es",
     "src": "node_modules/canvg/lib/index.es.js",
     "isDynamicEntry": true,

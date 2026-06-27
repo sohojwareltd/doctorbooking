@@ -728,13 +728,15 @@ export default function PrescriptionTemplates() {
                         className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
                         placeholder="Duration"
                       />
-                      <input
-                        type="text"
+                      <select
                         value={row.instruction}
                         onChange={(e) => updateMedicineRow(index, { instruction: e.target.value })}
                         className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
-                        placeholder="Instruction"
-                      />
+                      >
+                        <option value="">None</option>
+                        <option value="After meal">After meal</option>
+                        <option value="Before meal">Before meal</option>
+                      </select>
                       <button
                         type="button"
                         onClick={() => removeMedicineRow(index)}

@@ -127,13 +127,16 @@ export default function PrescriptionMedicineSection({
                   />
                 </div>
                 <div className="col-span-2 flex items-center gap-1">
-                  <input
+                  <select
                     className="w-full border-0 bg-transparent px-0 py-0.5 text-xs text-slate-900 focus:outline-none"
                     value={m.instruction || ''}
-                    readOnly={!isDoctor}
+                    disabled={!isDoctor}
                     onChange={(e) => isDoctor && onInstructionChange?.(idx, e.target.value)}
-                    placeholder="Instruction"
-                  />
+                  >
+                    <option value="">None</option>
+                    <option value="After meal">After meal</option>
+                    <option value="Before meal">Before meal</option>
+                  </select>
                   {isDoctor && (
                   <button
                     type="button"
