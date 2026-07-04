@@ -1,0 +1,22 @@
+; Portable PHP config for Doctor Booking offline desktop
+[PHP]
+extension_dir = "ext"
+extension=curl
+extension=fileinfo
+extension=gd
+extension=intl
+extension=mbstring
+extension=openssl
+extension=pdo_sqlite
+extension=sodium
+extension=sqlite3
+extension=zip
+
+memory_limit = 256M
+max_execution_time = 120
+upload_max_filesize = 32M
+post_max_size = 32M
+date.timezone = Asia/Dhaka
+
+[sqlite3]
+sqlite3.defensive = 0

@@ -1,0 +1,67 @@
+{
+  "name": "doctor-booking-desktop",
+  "version": "1.0.0",
+  "description": "Doctor Booking desktop app for Windows",
+  "main": "main.js",
+  "author": "Sohojware",
+  "license": "ISC",
+  "scripts": {
+    "start": "electron .",
+    "prepare:server": "powershell -ExecutionPolicy Bypass -File prepare-server.ps1",
+    "build": "npm run prepare:server && electron-builder --win portable",
+    "build:all": "npm run prepare:server && electron-builder --win",
+    "build:portable": "npm run prepare:server && electron-builder --win portable"
+  },
+  "build": {
+    "appId": "com.doctorbooking.desktop",
+    "productName": "Doctor Booking",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "server-launcher.js",
+      "preload.js",
+      "loading.html",
+      "assets/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "resources/server",
+        "to": "server",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "resources/php",
+        "to": "php",
+        "filter": ["**/*"]
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        },
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "assets/icon.png",
+      "signAndEditExecutable": false
+    },
+    "portable": {
+      "artifactName": "DoctorBooking-portable.exe"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "DoctorBooking-Setup.exe"
+    }
+  },
+  "devDependencies": {
+    "electron": "^35.0.0",
+    "electron-builder": "^25.1.8"
+  }
+}
