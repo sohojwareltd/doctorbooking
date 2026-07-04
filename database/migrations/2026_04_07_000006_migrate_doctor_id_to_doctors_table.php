@@ -26,9 +26,9 @@ return new class extends Migration
     public function up(): void
     {
         // ── 1. Drop all doctor_id FK constraints ────────────────────────────
-        foreach ($this->tables as $table => $constraint) {
-            Schema::table($table, function (Blueprint $t) use ($constraint) {
-                $t->dropForeign($constraint);
+        foreach (array_keys($this->tables) as $table) {
+            Schema::table($table, function (Blueprint $t) {
+                $t->dropForeign(['doctor_id']);
             });
         }
 

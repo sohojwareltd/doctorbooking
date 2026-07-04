@@ -119,7 +119,7 @@ class Appointment extends Model
 
         return $query->where(function (Builder $q) use ($normalizedPhone, $normalizedEmail) {
             if ($normalizedPhone !== null && $normalizedPhone !== '') {
-                $q->orWhereRaw('REPLACE(phone, " ", "") = ?', [$normalizedPhone]);
+                $q->orWhereRaw("REPLACE(phone, ' ', '') = ?", [$normalizedPhone]);
             }
             if ($normalizedEmail !== null && $normalizedEmail !== '') {
                 $q->orWhereRaw('LOWER(email) = ?', [strtolower($normalizedEmail)]);

@@ -55,6 +55,7 @@ export default function PublicBookAppointment() {
   const [selectedChamberId, setSelectedChamberId] = useState(null);
   const [selectedChamber, setSelectedChamber] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const submitLockRef = useRef(false);
   const [success, setSuccess] = useState('');
   const [successDetails, setSuccessDetails] = useState(null);
   const [error, setError] = useState('');
@@ -374,7 +375,7 @@ export default function PublicBookAppointment() {
 
   const handleSubmit = async (e) => {
     if (e?.preventDefault) e.preventDefault();
-    if (submitting) return;
+    if (submitting || submitLockRef.current) return;
 
     if (!selectedChamberId || !formData.date || !formData.name || !formData.phone) {
       const message = 'Please complete required fields (chamber, date, name, and phone) before confirming.';
@@ -398,6 +399,7 @@ export default function PublicBookAppointment() {
       return;
     }
 
+    submitLockRef.current = true;
     setSubmitting(true);
     setSuccess('');
     setSuccessDetails(null);
@@ -472,6 +474,7 @@ export default function PublicBookAppointment() {
       setError(message);
       toastError(message);
     } finally {
+      submitLockRef.current = false;
       setSubmitting(false);
     }
   };

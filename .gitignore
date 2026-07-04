@@ -26,3 +26,8 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+/database/database.sqlite
+.env.mysql.backup
+/releases/
+*.apk
+*.exe

@@ -423,8 +423,12 @@ class PublicController extends Controller
                 $linkedUser = $tokenModel->tokenable;
             }
         }
+        // Public booking: only attach logged-in patient accounts (not doctor/admin sessions)
         if ($linkedUser === null && $request->user()) {
-            $linkedUser = $request->user();
+            $sessionUser = $request->user();
+            if ($sessionUser->hasRole('patient')) {
+                $linkedUser = $sessionUser;
+            }
         }
         if ($linkedUser === null && ! empty($validated['email'])) {
             $linkedUser = User::where('email', $validated['email'])

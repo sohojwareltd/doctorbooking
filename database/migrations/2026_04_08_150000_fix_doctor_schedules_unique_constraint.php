@@ -15,13 +15,17 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('doctor_schedules', function (Blueprint $table) {
-            // Create new unique constraint first (also provides an index on doctor_id
-            // so MySQL can keep the foreign key when we drop the old index)
             $table->unique(['doctor_id', 'chamber_id', 'day_of_week'], 'doctor_schedules_doctor_chamber_day_unique');
         });
 
-        // Now safe to drop the old unique index because the new one also covers doctor_id
-        DB::statement('ALTER TABLE doctor_schedules DROP INDEX doctor_schedules_doctor_id_day_of_week_unique');
+        $connection = Schema::getConnection()->getDriverName();
+        if ($connection === 'mysql' || $connection === 'mariadb') {
+            DB::statement('ALTER TABLE doctor_schedules DROP INDEX doctor_schedules_doctor_id_day_of_week_unique');
+        } else {
+            Schema::table('doctor_schedules', function (Blueprint $table) {
+                $table->dropUnique('doctor_schedules_doctor_id_day_of_week_unique');
+            });
+        }
     }
 
     /**
@@ -30,10 +34,16 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('doctor_schedules', function (Blueprint $table) {
-            // Restore old unique constraint first
             $table->unique(['doctor_id', 'day_of_week']);
         });
 
-        DB::statement('ALTER TABLE doctor_schedules DROP INDEX doctor_schedules_doctor_chamber_day_unique');
+        $connection = Schema::getConnection()->getDriverName();
+        if ($connection === 'mysql' || $connection === 'mariadb') {
+            DB::statement('ALTER TABLE doctor_schedules DROP INDEX doctor_schedules_doctor_chamber_day_unique');
+        } else {
+            Schema::table('doctor_schedules', function (Blueprint $table) {
+                $table->dropUnique('doctor_schedules_doctor_chamber_day_unique');
+            });
+        }
     }
 };
