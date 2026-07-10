@@ -188,12 +188,29 @@ function applyAppointmentPatientSnapshot(appointment, snapshot) {
   return {
     ...appointment,
     name: snapshot.name,
-    phone: snapshot.phone,
+    phone: snapshot.phone ?? appointment.phone,
     patient_name: snapshot.name,
     patient_phone: snapshot.phone ?? appointment.patient_phone,
     patient_age: snapshot.age ?? appointment.patient_age,
     patient_gender: snapshot.gender ?? appointment.patient_gender,
   };
+}
+
+function normalizeAppointmentPatient(appointment, snapshot = null) {
+  if (!appointment) return appointment;
+
+  const withSnapshot = snapshot ? applyAppointmentPatientSnapshot(appointment, snapshot) : appointment;
+
+  // Guest / no linked account: API patient_name already matches appointments.name
+  if (!withSnapshot.user_id || withSnapshot.is_guest) {
+    return {
+      ...withSnapshot,
+      name: withSnapshot.name || withSnapshot.patient_name,
+      phone: withSnapshot.phone || withSnapshot.patient_phone,
+    };
+  }
+
+  return withSnapshot;
 }
 
 export default function DoctorAppointments() {
@@ -302,22 +319,21 @@ export default function DoctorAppointments() {
         const items = Array.isArray(data.appointments) ? data.appointments : (data.appointments?.data ?? []);
         if (fetchRequestIdRef.current !== requestId) return;
 
-        setRows(items);
-        setPageMeta({
-          currentPage: data.meta?.current_page ?? 1,
-          lastPage: data.meta?.last_page ?? 1,
-          total: data.meta?.total ?? items.length,
-        });
-
         const enriched = await Promise.all(
           items.map(async (item) => {
-            const snapshot = await fetchAppointmentPatientSnapshot(item.id);
-            return applyAppointmentPatientSnapshot(item, snapshot);
+            const needsSnapshot = item.user_id && !item.is_guest;
+            const snapshot = needsSnapshot ? await fetchAppointmentPatientSnapshot(item.id) : null;
+            return normalizeAppointmentPatient(item, snapshot);
           }),
         );
 
         if (fetchRequestIdRef.current === requestId) {
           setRows(enriched);
+          setPageMeta({
+            currentPage: data.meta?.current_page ?? 1,
+            lastPage: data.meta?.last_page ?? 1,
+            total: data.meta?.total ?? items.length,
+          });
         }
       }
     } finally {
@@ -336,26 +352,6 @@ export default function DoctorAppointments() {
   useEffect(() => {
     fetchAppointments(buildParams(currentPage));
   }, [currentPage, searchTerm, statusFilter, datePreset, genderFilter, chamberFilter]);
-
-  useEffect(() => {
-    if (!selectedPatient?.id || selectedPatient?.name) return undefined;
-
-    let cancelled = false;
-
-    (async () => {
-      const snapshot = await fetchAppointmentPatientSnapshot(selectedPatient.id);
-      if (cancelled || !snapshot?.name) return;
-
-      setSelectedPatient((prev) => {
-        if (!prev || prev.id !== selectedPatient.id) return prev;
-        return applyAppointmentPatientSnapshot(prev, snapshot);
-      });
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedPatient?.id, selectedPatient?.name]);
 
   // Patient search for create modal
   useEffect(() => {
@@ -404,8 +400,9 @@ export default function DoctorAppointments() {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  const getPatientName = (appointment) => appointment?.name || appointment?.patient_name || appointment?.user?.name || `Patient #${appointment?.user_id || ''}`;
-  const getPatientPhone = (appointment) => appointment?.phone || appointment?.patient_phone || appointment?.user?.phone || null;
+  // appointments.name first — never prefer linked user account name
+  const getPatientName = (appointment) => appointment?.name || appointment?.patient_name || `Patient #${appointment?.user_id || ''}`;
+  const getPatientPhone = (appointment) => appointment?.phone || appointment?.patient_phone || null;
   const getPatientAge = (appointment) => appointment?.patient_age || appointment?.user?.age || '';
   const getPatientAddress = (appointment) => appointment?.address || appointment?.patient_address || '';
   const getChamberName = (appointment) => appointment?.chamber_name || appointment?.chamber?.name || 'N/A';
