@@ -152,6 +152,50 @@ function GenderIconAvatar({ gender }) {
   );
 }
 
+const appointmentPatientSnapshotCache = new Map();
+
+async function fetchAppointmentPatientSnapshot(appointmentId) {
+  if (!appointmentId) return null;
+  if (appointmentPatientSnapshotCache.has(appointmentId)) {
+    return appointmentPatientSnapshotCache.get(appointmentId);
+  }
+
+  try {
+    const res = await fetch(`/doctor/prescriptions/create?appointment_id=${appointmentId}`, {
+      headers: {
+        Accept: 'application/json',
+        'X-Inertia': 'true',
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+      credentials: 'same-origin',
+    });
+    if (!res.ok) return null;
+
+    const data = await res.json();
+    const snapshot = data?.props?.selectedPatient ?? null;
+    if (snapshot) {
+      appointmentPatientSnapshotCache.set(appointmentId, snapshot);
+    }
+    return snapshot;
+  } catch {
+    return null;
+  }
+}
+
+function applyAppointmentPatientSnapshot(appointment, snapshot) {
+  if (!appointment || !snapshot?.name) return appointment;
+
+  return {
+    ...appointment,
+    name: snapshot.name,
+    phone: snapshot.phone,
+    patient_name: snapshot.name,
+    patient_phone: snapshot.phone ?? appointment.patient_phone,
+    patient_age: snapshot.age ?? appointment.patient_age,
+    patient_gender: snapshot.gender ?? appointment.patient_gender,
+  };
+}
+
 export default function DoctorAppointments() {
   const { auth } = usePage().props;
   const isCompounder = auth?.user?.role === 'compounder';
@@ -168,6 +212,7 @@ export default function DoctorAppointments() {
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [chambers, setChambers] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const fetchRequestIdRef = useRef(0);
 
   // Create appointment modal states
   const defaultApptForm = () => ({
@@ -244,6 +289,9 @@ export default function DoctorAppointments() {
   const fetchAppointments = async (params = {}) => {
     setLoading(true);
     const query = new URLSearchParams(params).toString();
+    const requestId = fetchRequestIdRef.current + 1;
+    fetchRequestIdRef.current = requestId;
+
     try {
       const res = await fetch(`/api/doctor/appointments?${query}`, {
         headers: { Accept: 'application/json' },
@@ -252,15 +300,30 @@ export default function DoctorAppointments() {
       if (res.ok) {
         const data = await res.json();
         const items = Array.isArray(data.appointments) ? data.appointments : (data.appointments?.data ?? []);
+        if (fetchRequestIdRef.current !== requestId) return;
+
         setRows(items);
         setPageMeta({
           currentPage: data.meta?.current_page ?? 1,
           lastPage: data.meta?.last_page ?? 1,
           total: data.meta?.total ?? items.length,
         });
+
+        const enriched = await Promise.all(
+          items.map(async (item) => {
+            const snapshot = await fetchAppointmentPatientSnapshot(item.id);
+            return applyAppointmentPatientSnapshot(item, snapshot);
+          }),
+        );
+
+        if (fetchRequestIdRef.current === requestId) {
+          setRows(enriched);
+        }
       }
     } finally {
-      setLoading(false);
+      if (fetchRequestIdRef.current === requestId) {
+        setLoading(false);
+      }
     }
   };
 
@@ -273,6 +336,26 @@ export default function DoctorAppointments() {
   useEffect(() => {
     fetchAppointments(buildParams(currentPage));
   }, [currentPage, searchTerm, statusFilter, datePreset, genderFilter, chamberFilter]);
+
+  useEffect(() => {
+    if (!selectedPatient?.id || selectedPatient?.name) return undefined;
+
+    let cancelled = false;
+
+    (async () => {
+      const snapshot = await fetchAppointmentPatientSnapshot(selectedPatient.id);
+      if (cancelled || !snapshot?.name) return;
+
+      setSelectedPatient((prev) => {
+        if (!prev || prev.id !== selectedPatient.id) return prev;
+        return applyAppointmentPatientSnapshot(prev, snapshot);
+      });
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedPatient?.id, selectedPatient?.name]);
 
   // Patient search for create modal
   useEffect(() => {
@@ -321,8 +404,8 @@ export default function DoctorAppointments() {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  const getPatientName = (appointment) => appointment?.patient_name || appointment?.user?.name || appointment?.name || `Patient #${appointment?.user_id || ''}`;
-  const getPatientPhone = (appointment) => appointment?.patient_phone || appointment?.user?.phone || null;
+  const getPatientName = (appointment) => appointment?.name || appointment?.patient_name || appointment?.user?.name || `Patient #${appointment?.user_id || ''}`;
+  const getPatientPhone = (appointment) => appointment?.phone || appointment?.patient_phone || appointment?.user?.phone || null;
   const getPatientAge = (appointment) => appointment?.patient_age || appointment?.user?.age || '';
   const getPatientAddress = (appointment) => appointment?.address || appointment?.patient_address || '';
   const getChamberName = (appointment) => appointment?.chamber_name || appointment?.chamber?.name || 'N/A';
