@@ -1,4 +1,4 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { ArrowRight, Building2, CalendarCheck2, Clock3, Mail, MapPin, Phone, ShieldCheck } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import HeroSection from '../components/sections/HeroSection';
@@ -6,6 +6,7 @@ import HeroSection from '../components/sections/HeroSection';
 import PublicLayout from '../layouts/PublicLayout';
 
 export default function Welcome({ home, doctor, chambers = [] }) {
+    const { site, publicDoctor } = usePage().props;
     const [apiChambers, setApiChambers] = useState(Array.isArray(chambers) ? chambers : []);
     const [chambersLoading, setChambersLoading] = useState(!Array.isArray(chambers) || chambers.length === 0);
     const [contactForm, setContactForm] = useState({
@@ -18,7 +19,9 @@ export default function Welcome({ home, doctor, chambers = [] }) {
     const [contactSubmitting, setContactSubmitting] = useState(false);
     const [contactStatus, setContactStatus] = useState({ type: '', message: '' });
     const meta = home?.meta || {};
-    const doctorName = doctor?.name || 'Dr. Sarah Johnson';
+    const doctorName = doctor?.name || publicDoctor?.name || 'Doctor';
+    const faviconUrl = home?.branding?.faviconUrl || site?.branding?.faviconUrl || '/favicon.svg?v=20260429';
+    const faviconType = faviconUrl.includes('.svg') ? 'image/svg+xml' : 'image/png';
     const doctorInitials = doctorName
         .split(' ')
         .map((part) => part.trim()[0])
@@ -209,10 +212,10 @@ export default function Welcome({ home, doctor, chambers = [] }) {
 
     return (
         <>
-            <Head title={meta.title || `${doctorName} - Doctor Portfolio`}>
-                <link rel="icon" href="/favicon.svg?v=20260429" sizes="any" />
-                <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=20260429" />
-                <link rel="shortcut icon" type="image/x-icon" href="/favicon.svg?v=20260429" />
+            <Head title={`${doctorName} - Doctor Portfolio`}>
+                <link rel="icon" href={faviconUrl} sizes="any" />
+                <link rel="icon" type={faviconType} href={faviconUrl} />
+                <link rel="shortcut icon" href={faviconUrl} />
                 <meta
                     name="description"
                     content={
