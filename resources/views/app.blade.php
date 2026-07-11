@@ -19,6 +19,11 @@
                 }
             }
 
+            $faviconPath = strtolower((string) (parse_url($faviconUrl, PHP_URL_PATH) ?? $faviconUrl));
+            $faviconType = str_ends_with($faviconPath, '.svg')
+                ? 'image/svg+xml'
+                : (str_ends_with($faviconPath, '.ico') ? 'image/x-icon' : 'image/png');
+
             $cachedDoctorImage = \Illuminate\Support\Facades\Cache::remember(
                 'meta:doctor_profile_image',
                 now()->addMinutes(30),
@@ -63,8 +68,8 @@
 
         <link rel="canonical" href="{{ $metaUrl }}">
         <link rel="icon" href="{{ $faviconUrl }}" sizes="any">
-        <link rel="icon" type="image/svg+xml" href="{{ $faviconUrl }}">
-        <link rel="shortcut icon" type="image/x-icon" href="{{ $faviconUrl }}">
+        <link rel="icon" type="{{ $faviconType }}" href="{{ $faviconUrl }}">
+        <link rel="shortcut icon" type="{{ $faviconType }}" href="{{ $faviconUrl }}">
         {{-- <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}?v=20260429"> --}}
         <title inertia>{{ config('app.name', 'Doctor Booking') }}</title>
 

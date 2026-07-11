@@ -6,7 +6,7 @@ import HeroSection from '../components/sections/HeroSection';
 import PublicLayout from '../layouts/PublicLayout';
 
 export default function Welcome({ home, doctor, chambers = [] }) {
-    const { site, publicDoctor } = usePage().props;
+    const { publicDoctor } = usePage().props;
     const [apiChambers, setApiChambers] = useState(Array.isArray(chambers) ? chambers : []);
     const [chambersLoading, setChambersLoading] = useState(!Array.isArray(chambers) || chambers.length === 0);
     const [contactForm, setContactForm] = useState({
@@ -18,10 +18,7 @@ export default function Welcome({ home, doctor, chambers = [] }) {
     });
     const [contactSubmitting, setContactSubmitting] = useState(false);
     const [contactStatus, setContactStatus] = useState({ type: '', message: '' });
-    const meta = home?.meta || {};
     const doctorName = doctor?.name || publicDoctor?.name || 'Doctor';
-    const faviconUrl = home?.branding?.faviconUrl || site?.branding?.faviconUrl || '/favicon.svg?v=20260429';
-    const faviconType = faviconUrl.includes('.svg') ? 'image/svg+xml' : 'image/png';
     const doctorInitials = doctorName
         .split(' ')
         .map((part) => part.trim()[0])
@@ -213,13 +210,10 @@ export default function Welcome({ home, doctor, chambers = [] }) {
     return (
         <>
             <Head title={`${doctorName} - Doctor Portfolio`}>
-                <link rel="icon" href={faviconUrl} sizes="any" />
-                <link rel="icon" type={faviconType} href={faviconUrl} />
-                <link rel="shortcut icon" href={faviconUrl} />
                 <meta
                     name="description"
                     content={
-                        meta.description ||
+                        shortBio ||
                         `${doctorName} offers a modern, organized healthcare experience with a focus on trust, accessibility, and patient-first treatment.`
                     }
                 />

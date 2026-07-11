@@ -9,9 +9,19 @@ class SiteContentSeeder extends Seeder
 {
     public function run(): void
     {
+        $payload = $this->homePayload();
+
+        $existing = SiteContent::where('key', 'home')->first();
+        if ($existing) {
+            $existingValue = SiteContent::normalizeValue($existing->value);
+            if (is_array($existingValue['branding'] ?? null)) {
+                $payload['branding'] = $existingValue['branding'];
+            }
+        }
+
         SiteContent::updateOrCreate(
             ['key' => 'home'],
-            ['value' => $this->homePayload()]
+            ['value' => $payload]
         );
     }
 
